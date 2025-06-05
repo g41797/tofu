@@ -1,147 +1,219 @@
-# Zig’s Yet Another Messaging Protocol
+# YAAAMP - Yet Another Application Asynchronous Messaging Protocol
 
+## Overview
 
-## Software Requirements
+YAAAMP is a lightweight, asynchronous, peer-to-peer, transport-agnostic, message-based protocol designed for application-layer communication.
 
-### 1. Peer-to-Peer Communication
-Designed for equal peers communicating directly, without central servers or fixed roles.
+- **Duplex**: Supports two-way communication.
+- **Asynchronous**: Enables non-blocking message exchanges.
+- **Peer-to-Peer**: Equal roles after connection establishment.
+- **Transport-Agnostic**: Operates over reliable transports (e.g., TCP, WebSocket).
+- **Message-Based**: Uses discrete messages.
 
-### 2. Message-Based Communication
-Uses discrete, self-contained messages to structure communication.
+> **Note**: TCP/IP terminology (e.g., client, server) is used for clarity, but YAAAMP is not tied to TCP/IP.
 
-### 3. Asynchronous and Duplex
-Either side can send messages independently at any time.
+## Unified Communication Approach
 
-### 4. Role Symmetry
-No strict client/server model after initial contact - both peers behave equally.
+YAAAMP’s unified communication approach enhances simplicity and consistency through:  
+- Using the same **Start Send Message** operation for:  
+  - Protocol operations (e.g., setting up or closing connections).  
+  - Application data exchanges.  
+- Enabling a shared mindset that:  
+  - Simplifies working with protocol and application tasks.  
+  - Provides a consistent, intuitive workflow.  
+- Streamlining development and improving maintainability.
 
-### 5. Supports Text and Binary Data
-Messages can include both readable and encoded content.
+## Message Classification
 
-### 6. Transport Independence
-Works over any reliable byte-stream transport, not tied to a specific protocol.
+Messages are classified as:
 
-### 7. Explicit Message Boundaries
-Messages are clearly separated using CRLF delimiters for headers and a declared body length.
+- **`request`**: Expects one or more `response` messages.
+- **`response`**: Sent in reply to a `request`.
+- **`signal`**: One-way notification; no reply expected.
 
-### 8. Lightweight and Minimal
-No external dependencies or complex runtime behavior - easy to embed and understand.
+## Message Categories
 
-### 9. Flexible for Applications
-Applications can define and interpret messages freely, adapting the protocol to their needs.
+Messages are categorized into:
 
-### 10. Asynchronous API Design
-Communication is managed via:
-- A non-blocking start-send operation  
-- A wait operation with timeout support  
+- **Protocol Messages**:
+  - Handle protocol-level coordination (e.g., connection setup, teardown).
+  - Created by the application but processed by both protocol and application layers.
+  - Types:
+    - `welcome`: Used during initial handshake (typically `request`/`response` pair).
+    - `hello`: Initiates client-server contact (typically `request`/`response` pair).
+    - `bye`: Signals disconnection (can be `request`/`response` or `signal`).
+    - `control`: For future extensions (can be `request`, `response`, or `signal`).
 
-This encourages cooperative, event-driven processing.
+- **Application Messages**:
+  - Created and consumed solely by the application.
+  - Transmitted transparently by the protocol.
 
-### 11. Native Zig Implementation
-Fully written in Zig using only the standard library - no C libraries or FFI required.
+## Message Structure
 
-### 12. Interoperable Across Languages
-The protocol can be reimplemented in other languages, with possible adjustments for asynchronous behavior depending on language features.
+A YAAAMP message consists of:
 
----
+1. **Binary Fixed-Size Header** (16 bytes, required).
+2. **Text Headers Section** (Optional, HTTP-style key-value pairs).
+3. **Body** (Optional, application-specific payload, opaque to the protocol).
 
-#  Addendum: Protocol Comparisons
+### Binary Header Format
 
-Each table below compares ZYAMP to another messaging protocol.
+The binary header is 16 bytes, encoded in the sender’s native byte order.
 
-##  ZYAMP vs HTTP
+| Field                     | Size       | Description                                                                 |
+|---------------------------|------------|-----------------------------------------------------------------------------|
+| Channel Number            | 2 bytes    | Identifies a logical peer or channel (native byte order).                   |
+| Type                      | 3 bits     | Message type: <br> - `0`: Application message <br> - `1`: `welcome` <br> - `2`: `hello` <br> - `3`: `bye` <br> - `4`: `control` <br> - `5-7`: Reserved |
+| Mode                      | 2 bits     | Message kind: <br> - `0`: Invalid <br> - `1`: `request` <br> - `2`: `response` <br> - `3`: `signal` |
+| Origin                    | 1 bit      | Indicates whether the message was created by the application or protocol layer: <br> - `0`: Application-created <br> - `1`: Protocol-created |
+| More Responses Expected   | 1 bit      | For `response` messages: <br> - `0`: Last or only response <br> - `1`: More responses expected |
+| Reserved Bit              | 1 bit      | Reserved; set to `0` by senders, ignored by receivers.                      |
+| Status                    | 1 byte     | Indicates the status of a `response`, but may be placed within `signal`: <br> - `0`: OK (Success) <br> - Non-zero: Error status <br>     - For `Origin = 0`: Application-defined error <br>     - For `Origin = 1`: Protocol-defined error |
+| Message ID                | 8 bytes    | Unique identifier for `request` and `signal` messages, assigned sequentially by the protocol layer by default. `response` messages copy the `request`’s ID. Must be unique during the process lifecycle. Application may provide its own value for enhanced security. |
+| Text Headers Length       | 2 bytes    | Length of text headers (native byte order). `0` means no headers.           |
+| Body Length               | 2 bytes    | Length of body (native byte order). `0` means no body.                      |
 
-| Feature                 | ZYAMP          | HTTP                  |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | No                 |
-| Asynchronous Messaging | Yes          | No Synchronous        |
-| Duplex Communication   | Yes          | No One-way per req    |
-| Transport Agnostic     | Yes         | No TCP/IP only        |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Supported          |
-| Use Case               | Embedded, P2P  | Web, APIs             |
+## Roles
 
-##  ZYAMP vs MQTT
+### During Handshake
+- **Client**: Initiates contact.
+- **Server**: Accepts contact.
 
-| Feature                 | ZYAMP          | MQTT                  |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | No Broker-based       |
-| Asynchronous Messaging | Yes         | Yes               |
-| Duplex Communication   | Yes          | No Via broker         |
-| Transport Agnostic     | Yes          | No Mostly TCP         |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Yes               |
-| Use Case               | P2P, Embedded  | IoT, Telemetry        |
+### Post-Handshake
+- **Peer**: Both sides act as equals, sending/receiving messages per application logic.
 
-##  ZYAMP vs AMQP
+### Protocol Layers
+- **ClPr**: Client-side protocol logic during handshake.
+- **SrPr**: Server-side protocol logic during handshake.
+- **PrPr**: Peer protocol logic after connection establishment.
 
-| Feature                 | ZYAMP          | AMQP                  |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | No Broker-based       |
-| Asynchronous Messaging | Yes         | Yes               |
-| Duplex Communication   | Yes          | Broker-mediated    |
-| Transport Agnostic     | Yes          |TCP only           |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Yes               |
-| Use Case               | Custom, IPC    | Enterprise Messaging  |
+## API Operations
 
-##  ZYAMP vs NNG
+Each protocol layer (ClPr, SrPr, PrPr) provides:
 
-| Feature                 | ZYAMP          | NNG                   |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | Yes               |
-| Asynchronous Messaging | Yes          | Yes               |
-| Duplex Communication   | Yes         | Yes               |
-| Transport Agnostic     | Yes         | Yes               |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Yes               |
-| Use Case               | Lightweight    | Scalable Messaging    |
+- **Start Send Message**:
+  - Initiates sending a message (non-blocking).
+  - Parameters: Message type, mode, headers, body, optional application-provided Message ID.
+- **Wait With Timeout**:
+  - Waits for incoming messages or status updates (e.g., delivery confirmation, errors).
+  - Returns: Status code or received message.
+  - Includes a timeout to prevent indefinite blocking.
 
-##  ZYAMP vs gRPC
+## Message Flow Examples
 
-| Feature                 | ZYAMP          | gRPC                  |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | No Client-server      |
-| Asynchronous Messaging | Yes         | Via Streams            |
-| Duplex Communication   | Yes         | Via Streams            |
-| Transport Agnostic     | Yes         | No HTTP/2 Only        |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Protobuf           |
-| Use Case               | Embedded, P2P  | Service APIs          |
+### Welcome Sequence
+Server announces its presence or readiness:
 
-##  ZYAMP vs CoAP (UDP)
+1. Server creates a `welcome` `request` with a unique `Message ID` and optional capabilities in headers/body.
+2. Server sends the `request` to its SrPr.
+3. SrPr processes it (e.g., opens a listening socket) and sends a `welcome` `response` with the same `Message ID`.
+4. Server receives the `response` via `Wait With Timeout`.
 
-| Feature                 | ZYAMP          | CoAP                  |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | UDP peer           |
-| Asynchronous Messaging | Yes         | No Mostly Req-Res     |
-| Duplex Communication   | Yes         | Not duplex         |
-| Transport Agnostic     | Yes         | UDP Only           |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Yes               |
-| Use Case               | Custom Systems | Constrained Devices   |
+### Hello Sequence (Client Initiates Connection)
+Typical client-server connection establishment:
 
-##  ZYAMP vs CoAP over TCP
+1. Client creates a `hello` `request` with a unique `Message ID` and optional identity/parameters.
+2. Client sends the `request` to its ClPr.
+3. ClPr connects to the server’s SrPr and forwards the `request`.
+4. SrPr passes the `request` to the server.
+5. Server processes it and sends a `hello` `response` with the same `Message ID` (`Status = OK` if accepted).
+6. ClPr passes the `response` to the client.
+7. On success, both transition to `Peer` role.
+8. If `Status` is non-`OK`, the connection fails, and ClPr notifies the client.
 
-| Feature                 | ZYAMP          | CoAP over TCP         |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | No Mostly client/server |
-| Asynchronous Messaging | Yes         | No Mostly Req-Res     |
-| Duplex Communication   | Yes          | Yes          |
-| Transport Agnostic     | Yes         | TCP Only           |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | Yes               |
-| Use Case               | P2P, Zig Apps  | Reliable IoT Messaging |
+- `hello` `request` and `response` may include application-specific data in headers/body, transmitted transparently.
+- A non-`OK` `hello` `response` indicates a failed connection.
 
-##  ZYAMP vs CAN
+### Bye Sequence (Disconnection)
 
-| Feature                 | ZYAMP          | CAN                   |
-|------------------------|----------------|-----------------------|
-| Peer-to-Peer           | Yes         | Yes               |
-| Asynchronous Messaging | Yes         | Yes               |
-| Duplex Communication   | Yes         | No Half-duplex        |
-| Transport Agnostic     | Yes         | No Hardware tied      |
-| Message Boundaries     | Framed      | Framed             |
-| Binary Payloads        | Yes      | No Very limited (<=8B) |
-| Use Case               | Software Apps  | Vehicles, Automation  |---
+#### Application-Initiated
+1. A peer creates a `bye` message (`request` or `signal`) with a unique `Message ID`.
+2. The `bye` is sent to the local PrPr and transmitted to the remote peer.
+3. For a `request`, the remote peer responds with a `bye` `response` with the same `Message ID`. The connection closes.
 
+#### Protocol-Initiated
+1. PrPr detects a transport failure or timeout.
+2. PrPr creates a `bye` `signal` with a `Message ID` and delivers it locally.
+3. PrPr attempts to send a `bye` to the remote peer (if possible) and cleans up resources.
+
+## Extensibility
+
+YAAAMP supports future extensions via:
+
+- **`control` Messages**: For new features.
+- **Text Headers**: Flexible key-value pairs for metadata or parameters.
+
+## DIY (Do It Yourself)
+
+YAAAMP provides flexibility for developers to customize features via its extensible design:  
+- Supports custom features, such as:  
+  - Authentication using credentials or tokens in `hello` message text headers.  
+  - Body compression by specifying a compression type (e.g., `Content-Encoding: gzip`) in text headers.  
+  - Additional features like custom error codes, session management, or priority handling via text headers or message body.  
+- Allows freedom in data serialization:  
+  - No enforced marshalling scheme.  
+  - Developers can choose formats like JSON or Protobuf.  
+- Enables tailoring YAAAMP to application needs while the protocol:  
+  - Focuses on efficient and reliable message transmission.
+
+## Message Flow Diagrams
+
+The following ASCII diagrams illustrate the message flows described in the **Message Flow Examples** section. These diagrams depict the interactions between entities (e.g., Server, Client, protocol layers) for the **Welcome Sequence**, **Hello Sequence**, and **Bye Sequence** (both application-initiated and protocol-initiated cases). 
+
+### Welcome Sequence Diagram
+```
+Server          SrPr
+  |               |
+  |  welcome req  |
+  |-------------->|
+  |               |
+  |  welcome res  |
+  |<--------------|
+  |               |
+```
+
+### Hello Sequence Diagram
+```
+Client    ClPr        SrPr       Server
+  |        |           |           |
+  | hello  |           |           |
+  | req    |           |           |
+  |------->|           |           |
+  |        | hello     |           |
+  |        |   req---->|------->|
+  |        |           |           |
+  |        |           | hello res |
+  |        | hello<----|<-------|
+  |        |   res     |           |
+  |        |<---------|           |
+  |<-------|           |           |
+  |        |           |           |
+```
+
+### Bye Sequence Diagrams
+
+#### Application-Initiated
+```
+Peer1     PrPr1       PrPr2     Peer2
+  |          |          |          |
+  | bye req  |          |          |
+  |--------->|---------->|-------->|
+  |          |          |          |
+  |          | bye res  |          |
+  |          |<---------|<-------|
+  |<--------|---------|           |
+  |          |          |          |
+```
+
+#### Protocol-Initiated
+```
+Peer1     PrPr1       PrPr2     Peer2
+  |          |          |          |
+  |          | (failure) |          |
+  | bye      |          |          |
+  | signal   |          |          |
+  |<--------|          |          |
+  |          | bye      |          |
+  |          | signal-->|-------->|
+  |          |          |          |
+```
