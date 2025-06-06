@@ -1,27 +1,27 @@
-# YAAAMP - Yet Another Application Asynchronous Messaging Protocol
+# YAAAMP - Yet Another Asynchronous Application Messaging Protocol
 
 ## Overview
 
-YAAAMP is a lightweight, asynchronous, peer-to-peer, transport-agnostic, message-based protocol designed for application-layer communication.
+YAAAMP (Yet Another Asynchronous Application Messaging Protocol) is a lightweight protocol designed for application-layer communication, with the following characteristics:
 
 - **Duplex**: Supports two-way communication.
 - **Asynchronous**: Enables non-blocking message exchanges.
-- **Peer-to-Peer**: Equal roles after connection establishment.
-- **Transport-Agnostic**: Operates over reliable transports (e.g., TCP, WebSocket).
-- **Message-Based**: Uses discrete messages.
+- **Peer-to-Peer**: Allows equal roles after connection establishment.
+- **Transport-Agnostic**: Operates over reliable transports like TCP or WebSocket.
+- **Message-Based**: Uses discrete messages for communication.
 
 > **Note**: TCP/IP terminology (e.g., client, server) is used for clarity, but YAAAMP is not tied to TCP/IP.
 
 ## Unified Communication Approach
 
-YAAAMP’s unified communication approach enhances simplicity and consistency through:  
-- Using the same **Start Send Message** operation for:  
-  - Protocol operations (e.g., setting up or closing connections).  
-  - Application data exchanges.  
-- Enabling a shared mindset that:  
-  - Simplifies working with protocol and application tasks.  
-  - Provides a consistent, intuitive workflow.  
-- Streamlining development and improving maintainability.
+YAAAMP’s unified communication approach simplifies interaction between the protocol and application by:  
+- Treating both protocol tasks (e.g., setting up or closing connections) and application data exchanges in the same way, reducing complexity.  
+- Supporting an asynchronous mindset:  
+  - Communication between the protocol software and the application is non-blocking, allowing both to work independently without waiting for each other.  
+  - This ensures efficient, seamless interaction, aligning with YAAAMP’s asynchronous design.  
+- Enabling a consistent workflow that:  
+  - Makes it easier to handle both protocol and application tasks.  
+  - Improves development and maintainability with a unified, intuitive approach.
 
 ## Message Classification
 
@@ -58,20 +58,56 @@ A YAAAMP message consists of:
 
 ### Binary Header Format
 
-The binary header is 16 bytes, encoded in the sender’s native byte order.
+The binary header is 16 bytes, encoded in the sender’s native byte order, with the following fields:
 
-| Field                     | Size       | Description                                                                 |
-|---------------------------|------------|-----------------------------------------------------------------------------|
-| Channel Number            | 2 bytes    | Identifies a logical peer or channel (native byte order).                   |
-| Type                      | 3 bits     | Message type: <br> - `0`: Application message <br> - `1`: `welcome` <br> - `2`: `hello` <br> - `3`: `bye` <br> - `4`: `control` <br> - `5-7`: Reserved |
-| Mode                      | 2 bits     | Message kind: <br> - `0`: Invalid <br> - `1`: `request` <br> - `2`: `response` <br> - `3`: `signal` |
-| Origin                    | 1 bit      | Indicates whether the message was created by the application or protocol layer: <br> - `0`: Application-created <br> - `1`: Protocol-created |
-| More Responses Expected   | 1 bit      | For `response` messages: <br> - `0`: Last or only response <br> - `1`: More responses expected |
-| Reserved Bit              | 1 bit      | Reserved; set to `0` by senders, ignored by receivers.                      |
-| Status                    | 1 byte     | Indicates the status of a `response`, but may be placed within `signal`: <br> - `0`: OK (Success) <br> - Non-zero: Error status <br>     - For `Origin = 0`: Application-defined error <br>     - For `Origin = 1`: Protocol-defined error |
-| Message ID                | 8 bytes    | Unique identifier for `request` and `signal` messages, assigned sequentially by the protocol layer by default. `response` messages copy the `request`’s ID. Must be unique during the process lifecycle. Application may provide its own value for enhanced security. |
-| Text Headers Length       | 2 bytes    | Length of text headers (native byte order). `0` means no headers.           |
-| Body Length               | 2 bytes    | Length of body (native byte order). `0` means no body.                      |
+- **Channel Number**:
+  - **Size**: 2 bytes.
+  - **Description**: Identifies a logical peer or channel (native byte order). The Channel Number is unique because it is assigned by the protocol, with its uniqueness maintained within the scope of the process lifecycle.
+- **Type**:
+  - **Size**: 3 bits.
+  - **Description**: Specifies the message type:
+    - `0`: Application message.
+    - `1`: `welcome`.
+    - `2`: `hello`.
+    - `3`: `bye`.
+    - `4`: `control`.
+    - `5-7`: Reserved.
+- **Mode**:
+  - **Size**: 2 bits.
+  - **Description**: Defines the message kind:
+    - `0`: Invalid.
+    - `1`: `request`.
+    - `2`: `response`.
+    - `3`: `signal`.
+- **Origin**:
+  - **Size**: 1 bit.
+  - **Description**: Indicates the message’s creator:
+    - `0`: Application-created.
+    - `1`: Protocol-created.
+- **More Responses Expected**:
+  - **Size**: 1 bit.
+  - **Description**: For `response` messages:
+    - `0`: Last or only response.
+    - `1`: More responses expected.
+- **Reserved Bit**:
+  - **Size**: 1 bit.
+  - **Description**: Reserved; set to `0` by senders, ignored by receivers.
+- **Status**:
+  - **Size**: 1 byte.
+  - **Description**: Indicates the status of a `response`, but may be placed within `signal`:
+    - `0`: OK (Success).
+    - Non-zero: Error status:
+      - For `Origin = 0`: Application-defined error.
+      - For `Origin = 1`: Protocol-defined error.
+- **Message ID**:
+  - **Size**: 8 bytes.
+  - **Description**: Unique identifier for `request` and `signal` messages, assigned sequentially by the protocol layer by default. `response` messages copy the `request`’s ID. Must be unique during the process lifecycle. Application may provide its own value for enhanced security.
+- **Text Headers Length**:
+  - **Size**: 2 bytes.
+  - **Description**: Length of text headers (native byte order). `0` means no headers.
+- **Body Length**:
+  - **Size**: 2 bytes.
+  - **Description**: Length of body (native byte order). `0` means no body.
 
 ## Roles
 
@@ -143,6 +179,26 @@ YAAAMP supports future extensions via:
 - **`control` Messages**: For new features.
 - **Text Headers**: Flexible key-value pairs for metadata or parameters.
 
+## Implementation Considerations
+
+- YAAAMP’s asynchronous nature requires a multithreaded environment to support non-blocking message exchanges.
+- Unsuitable languages include:
+  - PHP: Lacks native multithreading support.
+  - Python: Limited by the Global Interpreter Lock (GIL) in CPython.
+  - JavaScript: Constrained by its single-threaded event-loop model (even in Node.js).
+- YAAAMP is unlikely to be used in browsers or web clients due to:
+  - Reliance on binary headers and low-level transport-agnostic communication.
+  - Web environment security and threading limitations.
+- Suitable programming environments:
+  - C++: Offers fine-grained thread management and performance optimization.
+  - Rust: Provides safe concurrency with its ownership model.
+  - Go: Features goroutines and channels for scalable concurrency.
+  - Zig: Supports manual memory management and multithreading with low-level control.
+- Niche use-cases for YAAAMP:
+  - Real-time multiplayer game servers.
+  - Distributed system messaging.
+  - IoT device networks.
+
 ## DIY (Do It Yourself)
 
 YAAAMP provides flexibility for developers to customize features via its extensible design:  
@@ -158,7 +214,7 @@ YAAAMP provides flexibility for developers to customize features via its extensi
 
 ## Message Flow Diagrams
 
-The following ASCII diagrams illustrate the message flows described in the **Message Flow Examples** section. These diagrams depict the interactions between entities (e.g., Server, Client, protocol layers) for the **Welcome Sequence**, **Hello Sequence**, and **Bye Sequence** (both application-initiated and protocol-initiated cases). 
+The following ASCII diagrams illustrate the message flows described in the **Message Flow Examples** section. These diagrams depict the interactions between entities (e.g., Server, Client, protocol layers) for the **Welcome Sequence**, **Hello Sequence**, and **Bye Sequence** (both application-initiated and protocol-initiated cases). They use simple text-based representations suitable for Markdown rendering.
 
 ### Welcome Sequence Diagram
 ```
@@ -180,12 +236,12 @@ Client    ClPr        SrPr       Server
   | req    |           |           |
   |------->|           |           |
   |        | hello     |           |
-  |        |   req---->|------->|
+  |        |   req---->|---------->|
   |        |           |           |
   |        |           | hello res |
-  |        | hello<----|<-------|
+  |        | hello<----|<----------|
   |        |   res     |           |
-  |        |<---------|           |
+  |        |<----------|           |
   |<-------|           |           |
   |        |           |           |
 ```
@@ -197,23 +253,20 @@ Client    ClPr        SrPr       Server
 Peer1     PrPr1       PrPr2     Peer2
   |          |          |          |
   | bye req  |          |          |
-  |--------->|---------->|-------->|
+  |--------->|--------->|--------->|
   |          |          |          |
   |          | bye res  |          |
-  |          |<---------|<-------|
-  |<--------|---------|           |
-  |          |          |          |
+  |          |<---------|<---------|
+  |<---------|
+  
 ```
 
 #### Protocol-Initiated
 ```
 Peer1     PrPr1       PrPr2     Peer2
   |          |          |          |
-  |          | (failure) |          |
-  | bye      |          |          |
-  | signal   |          |          |
-  |<--------|          |          |
-  |          | bye      |          |
-  |          | signal-->|-------->|
-  |          |          |          |
-```
+  |          |(failure) |          |
+  | bye      |          |  bye     |
+  | signal   |          |  signal  |
+  |<---------|          |--------->|
+  ```
