@@ -89,9 +89,9 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
   - **Description**: For `response` messages:
     - `0`: Last or only response.
     - `1`: More responses expected.
-- **Reserved Bit**:
+- **Protocol Control Bit (PCB)**:
   - **Size**: 1 bit.
-  - **Description**: Reserved; set to `0` by senders, ignored by receivers.
+  - **Description**: Used and filled exclusively by the protocol for housekeeping purposes. Completely opaque to the application and must not be modified by it.
 - **Status**:
   - **Size**: 1 byte.
   - **Description**: Indicates the status of a `response`, but may be placed within `signal`:
@@ -125,7 +125,7 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
 
 ## API Operations
 
-Each protocol layer (ClPr, SrPr, PrPr) provides:
+Protocol provides:
 
 - **Start Send Message**:
   - Initiates sending a message (non-blocking).
