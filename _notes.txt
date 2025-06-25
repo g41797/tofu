@@ -1,0 +1,68 @@
+YAAAMP
+    https://github.com/g41797/yaaamp
+
+Posts
+
+    https://ziggit.dev/t/zig-ways-of-the-code-reusing/10452/4
+    https://ziggit.dev/t/wanted-zig-based-multithreaded-projects/10420
+    https://ziggit.dev/t/zyamp-or-do-we-need-yet-another-messaging-protocol/10319
+    https://www.reddit.com/r/Zig/comments/1l5gofs/wanted_zigbased_multithreaded_projects/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+
+Interesting  Projects
+
+    https://github.com/Thomvanoorschot/backstage
+    https://github.com/Thomvanoorschot/async_zocket
+    https://github.com/Thomvanoorschot/wire
+    https://github.com/tardy-org/tardy
+    https://github.com/tardy-org/zzz
+    https://github.com/mitchellh/libxev
+    https://github.com/Syndica/sig
+    https://github.com/nikneym/jolt
+    https://github.com/rockorager/ourio
+    https://github.com/karlseguin/http.zig
+    https://github.com/lightpanda-io/zig-async-io
+    https://github.com/karlseguin/buffer.zig
+
+Interfaces
+    Tagged union interfaces
+    Comptime Interfaces using a switch on implementations
+    Runtime interfaces with a Vtable
+    Runtime interfaces with anyopaque and @ptrCast(@alignCast(p))
+    Runtime interfaces with @fieldParentPtr
+
+    https://github.com/ComputerBread/videos-code-snippets/tree/main/zig-comptime-polymorphism
+
+Working with Zig's anytype
+    https://musing.permutationlock.com/posts/blog-working_with_anytype.html
+
+Zig Interfaces
+    https://github.com/alexnask/interface.zig
+
+Zimpl Zig interfaces
+    https://github.com/permutationlock/zimpl
+    https://github.com/permutationlock/zimpl/blob/main/why.md
+
+Zig-aio: lightweight abstraction over io_uring and coroutines
+    https://ziggit.dev/t/zig-aio-lightweight-abstraction-over-io-uring-and-coroutines/4767
+
+An event loop in Zig using io_uring and coroutines
+    https://github.com/saltzm/async_io_uring
+
+Welcome to Lord of the io_uring
+    https://unixism.net/loti/index.html
+
+What is io_uring?
+    https://unixism.net/loti/what_is_io_uring.html
+
+A Programmer-Friendly I/O Abstraction Over io_uring and kqueue
+    https://tigerbeetle.com/blog/2022-11-23-a-friendly-abstraction-over-iouring-and-kqueue/
+
+Proactor pattern
+    https://en.wikipedia.org/wiki/Proactor_pattern
+
+Why you should use io_uring for network I/O
+    https://developers.redhat.com/articles/2023/04/12/why-you-should-use-iouring-network-io
+
+io_uring and networking in 2023
+    https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023
+

@@ -1,0 +1,25 @@
+name: MacOS
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: false
+      
+      - uses: mlugg/setup-zig@v1
+        with:
+          version:   0.14.0
+          use-cache: false
+
+      - run: zig build test -freference-trace --summary all
+
