@@ -13,15 +13,26 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    // const mailbox = b.dependency("mailbox", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    //
-    // const zul = b.dependency("zul", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    const nats = b.dependency("nats", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const mailbox = b.dependency("mailbox", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+
+    const temp = b.dependency("temp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const xev = b.dependency("libxev", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const lib = b.addStaticLibrary(.{
         .name = "yaaamp",
@@ -33,8 +44,10 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
-    // lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
-    // lib.root_module.addImport("zul", zul.module("zul"));
+    lib.root_module.addImport("nats", nats.module("nats"));
+    lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
+    lib.root_module.addImport("temp", temp.module("temp"));
+    lib.root_module.addImport("xev", xev.module("xev"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -50,8 +63,10 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
-    // lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
-    // lib_unit_tests.root_module.addImport("zul", zul.module("zul"));
+    lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
+    lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
+    lib_unit_tests.root_module.addImport("temp", temp.module("temp"));
+    lib_unit_tests.root_module.addImport("xev", xev.module("xev"));
 
     b.installArtifact(lib_unit_tests);
 
@@ -70,7 +85,6 @@ pub fn build(b: *std.Build) void {
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
-    // test_step.dependOn(&exe_unit_tests.step);
 }
 
 const std = @import("std");
