@@ -9,9 +9,10 @@ test "create file for address of uds socket" {
     try testing.expectEqual(uds_path.len > 0, true);
 }
 
-
 test {
     _ = @import("root.zig");
+    _ = @import("protocol_test.zig");
+    _ = @import("TextHeaderIterator_tests.zig");
     @import("std").testing.refAllDecls(@This());
 }
 

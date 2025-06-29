@@ -32,6 +32,8 @@ Interfaces
 
     https://github.com/ComputerBread/videos-code-snippets/tree/main/zig-comptime-polymorphism
 
+    https://www.openmymind.net/Zig-Interfaces/
+
 Working with Zig's anytype
     https://musing.permutationlock.com/posts/blog-working_with_anytype.html
 
