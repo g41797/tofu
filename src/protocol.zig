@@ -203,6 +203,61 @@ pub const Message = struct {
     }
 };
 
+pub const Exchanger = struct {
+    impl: *anyopaque,
+    functions: *const ExchangerFunctions,
+
+    pub const ExchangerFunctions = struct {
+        /// Initiates asynchronous send of Message to peer
+        /// Returns errors (TBD) or filled BinaryHeader of the Message.
+        start_send: *const fn (impl: *anyopaque, msg: *Message) anyerror!BinaryHeader,
+
+        /// Waits *Message on internal queue.
+        /// If during timeout_ns message was not received, return null.
+        wait_receive: *const fn (impl: *anyopaque, timeout_ns: u64) anyerror!?*Message,
+
+        /// Gets *Message from internal pool.
+        /// Waits no more then timeout_ns till message will be available.
+        /// If message is not available, allocates new and returns result (force == true) or null otherwice.
+        get: *const fn (impl: *anyopaque, timeout_ns: u64, force: bool) ?*Message,
+
+        /// Returns *Message to internal pool.
+        put: *const fn (impl: *anyopaque, msg: *Message) void,
+
+        /// Free *Message
+        free: *const fn (impl: *anyopaque, msg: *Message) void,
+    };
+
+    // Initiates asynchronous send of Message to peer
+    // Returns errors (TBD) or filled BinaryHeader of the Message.
+    pub fn start_send(exc: *Exchanger, msg: *Message) !BinaryHeader {
+        return try exc.functions.start_send(exc.impl, msg);
+    }
+
+    // Waits *Message on internal queue.
+    // If during timeout_ns message was not received, return null.
+    pub fn wait_receive(exc: *Exchanger, timeout_ns: u64) !?*Message {
+        return try exc.functions.wait_receive(exc.impl, timeout_ns);
+    }
+
+    // Gets *Message from internal pool.
+    // Waits no more then timeout_ns till message will be available.
+    // If message is not available, allocates new and returns result (force == true) or null otherwice.
+    pub fn get(exc: *Exchanger, timeout_ns: u64, force: bool) ?*Message {
+        return try exc.functions.get(exc.impl, timeout_ns, force);
+    }
+
+    // Returns *Message to internal pool.
+    pub fn put(exc: *Exchanger, msg: *Message) void {
+        return exc.functions.put(exc.imp, msg);
+    }
+
+    // Free *Message
+    pub fn free(exc: *Exchanger, msg: *Message) void {
+        return exc.functions.free(exc.imp, msg);
+    }
+};
+
 const is_be = builtin.target.cpu.arch.endian() == .big;
 
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
