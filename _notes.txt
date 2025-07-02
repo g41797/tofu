@@ -68,3 +68,8 @@ Why you should use io_uring for network I/O
 io_uring and networking in 2023
     https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023
 
+Choosing an Allocator
+    https://ziggit.dev/t/choosing-an-allocator/10743/12?u=g41797
+
+Deinit - return error
+    https://ziggit.dev/t/convention-for-init-deinit/4865/13?u=g41797

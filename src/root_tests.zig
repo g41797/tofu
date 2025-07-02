@@ -25,3 +25,4 @@ const Allocator = mem.Allocator;
 
 const libxev = @import("xev");
 const temp = @import("temp");
+const protocol = @import("protocol.zig");

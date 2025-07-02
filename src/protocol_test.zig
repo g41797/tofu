@@ -32,8 +32,14 @@ test "BinaryHeader marshalling and demarshalling" {
     try std.testing.expectEqual(header.body_len, demarshaled.body_len);
 }
 
+test "get first dumb AMP" {
+    var amp = try protocol.init(std.testing.allocator, .{});
+    _ = try amp.deinit();
+}
+
 const std = @import("std");
 const testing = std.testing;
 
 const protocol = @import("protocol.zig");
 const BinaryHeader = protocol.BinaryHeader;
+const AMP = protocol.AMP;

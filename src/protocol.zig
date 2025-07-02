@@ -183,7 +183,14 @@ pub const Message = struct {
         return;
     }
 
-    pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?[]const u8, body: ?[]const u8) !void {
+    pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?*TextHeaders, body: ?[]const u8) !void {
+        _ = bhdr;
+        _ = thdrs;
+        _ = body;
+        return msg.validate();
+    }
+
+    pub fn setNotSafe(msg: *Message, bhdr: *BinaryHeader, thdrs: ?[]const u8, body: ?[]const u8) !void {
         _ = bhdr;
         _ = thdrs;
         _ = body;
@@ -203,11 +210,11 @@ pub const Message = struct {
     }
 };
 
-pub const Exchanger = struct {
+pub const AMP = struct {
     impl: *anyopaque,
-    functions: *const ExchangerFunctions,
+    functions: *const Functions,
 
-    pub const ExchangerFunctions = struct {
+    pub const Functions = struct {
         /// Initiates asynchronous send of Message to peer
         /// Returns errors (TBD) or filled BinaryHeader of the Message.
         start_send: *const fn (impl: *anyopaque, msg: *Message) anyerror!BinaryHeader,
@@ -226,42 +233,62 @@ pub const Exchanger = struct {
 
         /// Free *Message
         free: *const fn (impl: *anyopaque, msg: *Message) void,
+
+        deinit: *const fn (impl: *anyopaque) anyerror!void,
     };
 
     // Initiates asynchronous send of Message to peer
     // Returns errors (TBD) or filled BinaryHeader of the Message.
-    pub fn start_send(exc: *Exchanger, msg: *Message) !BinaryHeader {
-        return try exc.functions.start_send(exc.impl, msg);
+    pub fn start_send(amp: *AMP, msg: *Message) !BinaryHeader {
+        return try amp.functions.start_send(amp.impl, msg);
     }
 
     // Waits *Message on internal queue.
     // If during timeout_ns message was not received, return null.
-    pub fn wait_receive(exc: *Exchanger, timeout_ns: u64) !?*Message {
-        return try exc.functions.wait_receive(exc.impl, timeout_ns);
+    pub fn wait_receive(amp: *AMP, timeout_ns: u64) !?*Message {
+        return try amp.functions.wait_receive(amp.impl, timeout_ns);
     }
 
     // Gets *Message from internal pool.
     // Waits no more then timeout_ns till message will be available.
     // If message is not available, allocates new and returns result (force == true) or null otherwice.
-    pub fn get(exc: *Exchanger, timeout_ns: u64, force: bool) ?*Message {
-        return try exc.functions.get(exc.impl, timeout_ns, force);
+    pub fn get(amp: *AMP, timeout_ns: u64, force: bool) ?*Message {
+        return try amp.functions.get(amp.impl, timeout_ns, force);
     }
 
     // Returns *Message to internal pool.
-    pub fn put(exc: *Exchanger, msg: *Message) void {
-        return exc.functions.put(exc.imp, msg);
+    pub fn put(amp: *AMP, msg: *Message) void {
+        return amp.functions.put(amp.impl, msg);
     }
 
     // Free *Message
-    pub fn free(exc: *Exchanger, msg: *Message) void {
-        return exc.functions.free(exc.imp, msg);
+    pub fn free(amp: *AMP, msg: *Message) void {
+        return amp.functions.free(amp.impl, msg);
+    }
+
+    // Release resources
+    pub fn deinit(amp: *AMP) !void {
+        return amp.functions.deinit(amp.impl);
     }
 };
+
+pub const Options = struct {
+    // Placeholder
+};
+
+pub fn init(allocator: Allocator, options: Options) !AMP {
+    var gt: Gate = .{};
+
+    try gt.init(allocator, options);
+
+    return gt.amp();
+}
 
 const is_be = builtin.target.cpu.arch.endian() == .big;
 
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
+const Gate = @import("protocol/Gate.zig");
 
 const std = @import("std");
 const builtin = @import("builtin");
