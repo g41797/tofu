@@ -3,6 +3,8 @@ YAAAMP
 
 Posts
 
+    https://ziggit.dev/t/allocators-and-thread-safety-and-not-only/10789
+
     https://ziggit.dev/t/zig-ways-of-the-code-reusing/10452/4
     https://ziggit.dev/t/wanted-zig-based-multithreaded-projects/10420
     https://ziggit.dev/t/zyamp-or-do-we-need-yet-another-messaging-protocol/10319
