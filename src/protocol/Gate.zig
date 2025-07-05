@@ -35,9 +35,9 @@ pub fn wait_receive(impl: *anyopaque, timeout_ns: u64) anyerror!?*Message {
     return gt._wait_receive(timeout_ns);
 }
 
-pub fn get(impl: *anyopaque, timeout_ns: u64, force: bool) ?*Message {
+pub fn get(impl: *anyopaque, force: bool) ?*Message {
     const gt: *Gate = @ptrCast(@alignCast(impl));
-    return gt._get(timeout_ns, force);
+    return gt._get(force);
 }
 
 pub fn put(impl: *anyopaque, msg: *Message) void {
@@ -67,9 +67,8 @@ inline fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
     return null;
 }
 
-inline fn _get(gt: *Gate, timeout_ns: u64, force: bool) ?*Message {
+inline fn _get(gt: *Gate, force: bool) ?*Message {
     _ = gt;
-    _ = timeout_ns;
     _ = force;
     return null;
 }

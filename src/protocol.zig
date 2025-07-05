@@ -169,17 +169,10 @@ pub const Message = struct {
     thdrs: TextHeaders = undefined,
     body: Appendable = undefined,
 
-    pub fn init(msg: *Message, allocator: Allocator, blen: u16) !void {
-        msg.bhdr = .{};
-        try msg.thdrs.init(allocator, 64);
-        try msg.body.init(allocator, blen, null);
-        return;
-    }
-
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
-        try msg.thdrs.reset();
-        try msg.body.reset();
+        msg.thdrs.reset();
+        msg.body.reset();
         return;
     }
 
@@ -201,18 +194,11 @@ pub const Message = struct {
         _ = msg;
         return;
     }
-
-    pub fn deinit(msg: *Message) void {
-        msg.bhdr = .{};
-        try msg.thdrs.deinit();
-        try msg.body.deinit();
-        return;
-    }
 };
 
 pub const AMP = struct {
-    impl: *anyopaque,
-    functions: *const Functions,
+    impl: *anyopaque = undefined,
+    functions: *const Functions = undefined,
 
     pub const Functions = struct {
         /// Initiates asynchronous send of Message to peer
@@ -224,9 +210,9 @@ pub const AMP = struct {
         wait_receive: *const fn (impl: *anyopaque, timeout_ns: u64) anyerror!?*Message,
 
         /// Gets *Message from internal pool.
-        /// Waits no more then timeout_ns till message will be available.
         /// If message is not available, allocates new and returns result (force == true) or null otherwice.
-        get: *const fn (impl: *anyopaque, timeout_ns: u64, force: bool) ?*Message,
+        /// If pool was closed, returns null
+        get: *const fn (impl: *anyopaque, force: bool) ?*Message,
 
         /// Returns *Message to internal pool.
         put: *const fn (impl: *anyopaque, msg: *Message) void,
@@ -250,10 +236,10 @@ pub const AMP = struct {
     }
 
     // Gets *Message from internal pool.
-    // Waits no more then timeout_ns till message will be available.
     // If message is not available, allocates new and returns result (force == true) or null otherwice.
-    pub fn get(amp: *AMP, timeout_ns: u64, force: bool) ?*Message {
-        return try amp.functions.get(amp.impl, timeout_ns, force);
+    // If pool was closed, returns null
+    pub fn get(amp: *AMP, force: bool) ?*Message {
+        return try amp.functions.get(amp.impl, force);
     }
 
     // Returns *Message to internal pool.
@@ -289,6 +275,7 @@ const is_be = builtin.target.cpu.arch.endian() == .big;
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 const Gate = @import("protocol/Gate.zig");
+const Pool = @import("protocol/Pool.zig");
 
 const std = @import("std");
 const builtin = @import("builtin");
