@@ -6,16 +6,26 @@ pub const Pool = @This();
 const blen: u16 = 256;
 const tlen: u16 = 64;
 
-first: ?*Message = null,
+first: ?*Message = undefined,
 allocator: Allocator = undefined,
-
+mutex: Mutex = undefined,
+closed: bool = undefined,
 pub fn init(allocator: Allocator) Pool {
-    var pool: Pool = .{};
-    pool.allocator = allocator;
-    return pool;
+    return .{
+        .allocator = allocator,
+        .first = null,
+        .mutex = .{},
+        .closed = false,
+    };
 }
 
 pub fn get(pool: *Pool, force: bool) ?*Message {
+    pool.mutex.lock();
+    defer pool.mutex.unlock();
+    if (pool.closed) {
+        return null;
+    }
+
     var result: ?*Message = null;
     if (pool.first != null) {
         result = pool.first;
@@ -35,6 +45,13 @@ pub fn get(pool: *Pool, force: bool) ?*Message {
 }
 
 pub fn put(pool: *Pool, msg: *Message) void {
+    pool.mutex.lock();
+    defer pool.mutex.unlock();
+    if (pool.closed) {
+        pool.free(msg);
+        return;
+    }
+
     msg.prev = null;
     msg.next = null;
 
@@ -51,7 +68,7 @@ pub fn put(pool: *Pool, msg: *Message) void {
     return;
 }
 
-pub fn alloc(pool: *Pool) !*Message {
+inline fn alloc(pool: *Pool) !*Message {
     var msg = try pool.allocator.create(Message);
     msg.* = .{};
     msg.bhdr = .{};
@@ -68,6 +85,27 @@ pub fn free(pool: *Pool, msg: *Message) void {
 }
 
 pub fn freeAll(pool: *Pool) void {
+    pool.mutex.lock();
+    defer pool.mutex.unlock();
+    if (pool.closed) {
+        return;
+    }
+    pool._freeAll();
+    return;
+}
+
+pub fn close(pool: *Pool) void {
+    pool.mutex.lock();
+    defer pool.mutex.unlock();
+    if (pool.closed) {
+        return;
+    }
+    pool._freeAll();
+    pool.closed = true;
+    return;
+}
+
+fn _freeAll(pool: *Pool) void {
     var chain = pool.first;
     while (chain != null) {
         const next = chain.?.next;
@@ -82,8 +120,7 @@ pub const Appendable = @import("nats").Appendable;
 
 pub const protocol = @import("../protocol.zig");
 const Message = protocol.Message;
-// const BinaryHeader = protocol.BinaryHeader;
-// const TextHeaderIterator = @import("../TextHeaderIterator.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;

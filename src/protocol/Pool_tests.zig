@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 test "Pool init" {
-    _ = Pool.init(std.testing.allocator);
+    var pool = Pool.init(std.testing.allocator);
+    pool.close();
 }
 
 test "Pool base finctionality" {
@@ -40,6 +41,8 @@ test "Pool base finctionality" {
     pool.free(msg2.?);
 
     try testing.expectEqual(null, pool.get(false));
+
+    pool.close();
 }
 
 const Pool = @import("Pool.zig");

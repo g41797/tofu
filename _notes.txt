@@ -36,6 +36,14 @@ Interfaces
 
     https://www.openmymind.net/Zig-Interfaces/
 
+    https://codeberg.org/dude_the_builder/zig_in_depth/src/branch/main/35_interface
+
+    https://zig.news/yglcode/code-study-interface-idiomspatterns-in-zig-standard-libraries-4lkj
+
+    https://zig.news/kilianvounckx/zig-interfaces-for-the-uninitiated-an-update-4gf1
+
+    https://twdev.blog/2025/01/zig_interfaces/
+
 Working with Zig's anytype
     https://musing.permutationlock.com/posts/blog-working_with_anytype.html
 
@@ -75,3 +83,13 @@ Choosing an Allocator
 
 Deinit - return error
     https://ziggit.dev/t/convention-for-init-deinit/4865/13?u=g41797
+
+
+LLVM Atomic Instructions and Concurrency Guide
+    https://llvm.org/docs/Atomics.html
+
+Zig atomics
+    https://codeberg.org/dude_the_builder/zig_in_depth/src/branch/main/44_atomics/src/main.zig
+
+Zig book
+    https://pedropark99.github.io/zig-book/

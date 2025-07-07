@@ -46,6 +46,7 @@ Messages are categorized into:
     - `hello`: Initiates client-server contact (typically `request`/`response` pair).
     - `bye`: Signals disconnection (can be `request`/`response` or `signal`).
     - `control`: For future extensions (can be `request`, `response`, or `signal`).
+    - `shutdown`: Close all connections, release memory ((typically `request`/`response` pair)). 
 
 - **Application Messages**:
   - Created and consumed solely by the application.

@@ -33,8 +33,8 @@ test "BinaryHeader marshalling and demarshalling" {
 }
 
 test "get first dumb AMP" {
-    var amp = try protocol.init(std.testing.allocator, .{});
-    _ = try amp.deinit();
+    const amp = try protocol.start(std.testing.allocator, .{});
+    _ = try protocol.stop(std.testing.allocator, amp);
 }
 
 const std = @import("std");

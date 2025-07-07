@@ -5,24 +5,31 @@ pub const Gate = @This();
 
 allocator: Allocator = undefined,
 options: protocol.Options = undefined,
+pool: Pool = undefined,
+mutex: Mutex = undefined,
 
 pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
     gt.allocator = allocator;
     gt.options = options;
+    gt.pool = Pool.init(gt.allocator);
+    gt.mutex = .{};
+    return;
 }
 
 pub fn amp(gt: *Gate) AMP {
-    return .{
+    const result: AMP = .{
         .impl = gt,
         .functions = &.{
             .start_send = start_send,
             .wait_receive = wait_receive,
-            .deinit = deinit,
+            .shutdown = shutdown,
             .get = get,
             .put = put,
-            .free = free,
         },
+        .running = Atomic(bool).init(true),
+        .shutdown_finished = Atomic(bool).init(false),
     };
+    return result;
 }
 
 pub fn start_send(impl: *anyopaque, msg: *Message) !BinaryHeader {
@@ -50,9 +57,13 @@ pub fn free(impl: *anyopaque, msg: *Message) void {
     return gt._free(msg);
 }
 
-pub fn deinit(impl: *anyopaque) !void {
+pub fn shutdown(impl: *anyopaque) !void {
     const gt: *Gate = @ptrCast(@alignCast(impl));
-    return gt._deinit();
+
+    try gt._shutdown();
+    var allocator = gt.allocator;
+    allocator.destroy(gt);
+    return;
 }
 
 inline fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
@@ -68,34 +79,40 @@ inline fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
 }
 
 inline fn _get(gt: *Gate, force: bool) ?*Message {
-    _ = gt;
-    _ = force;
-    return null;
+    return gt.pool.get(force);
 }
 
 inline fn _put(gt: *Gate, msg: *Message) void {
-    _ = gt;
-    _ = msg;
+    gt.pool.put(msg);
+
     return;
 }
 
 inline fn _free(gt: *Gate, msg: *Message) void {
-    _ = gt;
-    _ = msg;
+    gt.pool.free(msg);
+
     return;
 }
 
-inline fn _deinit(gt: *Gate) !void {
-    _ = gt;
+inline fn _shutdown(gt: *Gate) !void {
+    gt.pool.close();
+
     return;
 }
 
-const is_be = builtin.target.cpu.arch.endian() == .big;
+pub fn _freeMsg(msg: *Message) void {
+    const allocator = msg.thdrs.buffer.allocator;
+    msg.thdrs.deinit();
+    msg.body.deinit();
+    allocator.destroy(msg);
+    return;
+}
 
 pub const protocol = @import("../protocol.zig");
 pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 
+const Pool = @import("Pool.zig");
 const AMP = protocol.AMP;
 const Options = protocol.Options;
 const Message = protocol.Message;
@@ -104,3 +121,5 @@ const BinaryHeader = protocol.BinaryHeader;
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
+const Atomic = std.atomic.Value;

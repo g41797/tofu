@@ -7,7 +7,7 @@ pub const MessageType = enum(u3) {
     hello = 2,
     bye = 3,
     control = 4,
-    _reserved5,
+    shutdown = 5,
     _reserved6,
     _reserved7,
 };
@@ -115,7 +115,7 @@ pub const TextHeaders = struct {
         var next = it.next();
 
         while (next != null) : (next = it.next()) {
-            try hdrs.appendTextHeader(next.?);
+            try hdrs.appendTextHeader(next);
         }
 
         return;
@@ -157,7 +157,7 @@ pub const TextHeaders = struct {
         if (raw == null) {
             return error.WithoutHeaders;
         }
-        return TextHeaderIterator.init(raw.?);
+        return TextHeaderIterator.init(raw);
     }
 };
 
@@ -165,9 +165,9 @@ pub const Message = struct {
     prev: ?*Message = null,
     next: ?*Message = null,
 
-    bhdr: BinaryHeader = undefined,
-    thdrs: TextHeaders = undefined,
-    body: Appendable = undefined,
+    bhdr: BinaryHeader = .{},
+    thdrs: TextHeaders = .{},
+    body: Appendable = .{},
 
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
@@ -177,21 +177,40 @@ pub const Message = struct {
     }
 
     pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?*TextHeaders, body: ?[]const u8) !void {
-        _ = bhdr;
-        _ = thdrs;
-        _ = body;
+        msg._reset();
+        msg.bhdr = bhdr.*;
+        if (thdrs != null) {
+            const it = thdrs.?.hiter();
+            try msg.thdrs.appendSafe(it);
+        }
+        if (body != null) {
+            try msg.body.copy(body.?);
+        }
+
         return msg.validate();
     }
 
     pub fn setNotSafe(msg: *Message, bhdr: *BinaryHeader, thdrs: ?[]const u8, body: ?[]const u8) !void {
-        _ = bhdr;
-        _ = thdrs;
-        _ = body;
-        return msg.validate();
+        msg._reset();
+        msg.bhdr = bhdr.*;
+        if (thdrs != null) {
+            try msg.thdrs.appendNotSafe(thdrs.?);
+        }
+        if (body != null) {
+            try msg.body.copy(body.?);
+        }
+
+        return;
     }
 
     pub fn validate(msg: *Message) !void {
         _ = msg;
+        return;
+    }
+
+    fn _reset(msg: *Message) void {
+        msg.thdrs.reset();
+        msg.body.reset();
         return;
     }
 };
@@ -199,6 +218,8 @@ pub const Message = struct {
 pub const AMP = struct {
     impl: *anyopaque = undefined,
     functions: *const Functions = undefined,
+    running: Atomic(bool) = undefined,
+    shutdown_finished: Atomic(bool) = undefined,
 
     pub const Functions = struct {
         /// Initiates asynchronous send of Message to peer
@@ -217,21 +238,25 @@ pub const AMP = struct {
         /// Returns *Message to internal pool.
         put: *const fn (impl: *anyopaque, msg: *Message) void,
 
-        /// Free *Message
-        free: *const fn (impl: *anyopaque, msg: *Message) void,
-
-        deinit: *const fn (impl: *anyopaque) anyerror!void,
+        /// Stop all activities/threads/io, release memory in internal pool
+        shutdown: *const fn (impl: *anyopaque) anyerror!void,
     };
 
     // Initiates asynchronous send of Message to peer
     // Returns errors (TBD) or filled BinaryHeader of the Message.
     pub fn start_send(amp: *AMP, msg: *Message) !BinaryHeader {
+        if (!amp.running.load(.monotonic)) {
+            return error.ShutdownStarted;
+        }
         return try amp.functions.start_send(amp.impl, msg);
     }
 
     // Waits *Message on internal queue.
     // If during timeout_ns message was not received, return null.
     pub fn wait_receive(amp: *AMP, timeout_ns: u64) !?*Message {
+        if (!amp.running.load(.monotonic)) {
+            return error.ShutdownStarted;
+        }
         return try amp.functions.wait_receive(amp.impl, timeout_ns);
     }
 
@@ -239,22 +264,43 @@ pub const AMP = struct {
     // If message is not available, allocates new and returns result (force == true) or null otherwice.
     // If pool was closed, returns null
     pub fn get(amp: *AMP, force: bool) ?*Message {
+        if (!amp.running.load(.monotonic)) {
+            return null;
+        }
         return try amp.functions.get(amp.impl, force);
     }
 
     // Returns *Message to internal pool.
-    pub fn put(amp: *AMP, msg: *Message) void {
+    pub fn put(amp: *AMP, msg: *Message) !void {
+        if (!amp.running.load(.monotonic)) {
+            try amp.free(msg);
+            return;
+        }
         return amp.functions.put(amp.impl, msg);
     }
 
     // Free *Message
-    pub fn free(amp: *AMP, msg: *Message) void {
-        return amp.functions.free(amp.impl, msg);
+    pub fn free(amp: *AMP, msg: *Message) !void {
+        if (amp.shutdown_finished.load(.monotonic)) {
+            return error.ShutdownFinished;
+        }
+
+        Gate._freeMsg(msg);
+        return;
     }
 
-    // Release resources
-    pub fn deinit(amp: *AMP) !void {
-        return amp.functions.deinit(amp.impl);
+    // Stop all activities/threads/io, release memory in internal pool
+    pub fn shutdown(amp: *AMP) !void {
+        amp.running.store(false, .release);
+        if (amp.shutdown_finished.load(.monotonic)) {
+            return;
+        }
+
+        defer amp.shutdown_finished.store(true, .release);
+
+        try amp.functions.shutdown(amp.impl);
+
+        return;
     }
 };
 
@@ -262,12 +308,24 @@ pub const Options = struct {
     // Placeholder
 };
 
-pub fn init(allocator: Allocator, options: Options) !AMP {
-    var gt: Gate = .{};
+pub fn start(allocator: Allocator, options: Options) !*AMP {
+    const amp = try allocator.create(AMP);
+    errdefer allocator.destroy(amp);
+
+    var gt = try allocator.create(Gate);
+    errdefer allocator.destroy(gt);
+    gt.* = .{};
 
     try gt.init(allocator, options);
 
-    return gt.amp();
+    amp.* = gt.amp();
+    return amp;
+}
+
+pub fn stop(allocator: Allocator, amp: *AMP) !void {
+    _ = try amp.shutdown();
+    allocator.destroy(amp);
+    return;
 }
 
 const is_be = builtin.target.cpu.arch.endian() == .big;
@@ -280,3 +338,6 @@ const Pool = @import("protocol/Pool.zig");
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
+const Atomic = std.atomic.Value;
+const AtomicOrder = std.builtin.AtomicOrder;
