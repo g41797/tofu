@@ -1,6 +1,12 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test "sequential message id" {
+    const mid = protocol.next_mid();
+    const nextmid = protocol.next_mid();
+    try testing.expectEqual(mid + 1, nextmid);
+}
+
 test "BinaryHeader marshalling and demarshalling" {
     var header = BinaryHeader{
         .channel_number = 0x1234,
@@ -36,6 +42,12 @@ test "get first dumb AMP" {
     const amp = try protocol.start(std.testing.allocator, .{});
     _ = try protocol.stop(std.testing.allocator, amp);
 }
+
+// test "random from u16" {
+//     const rand = std.crypto.random;
+//
+//     _ = rand.int(u16);
+// }
 
 const std = @import("std");
 const testing = std.testing;

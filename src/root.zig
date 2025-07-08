@@ -2,6 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 pub const protocol = @import("protocol.zig");
+pub const MessageType = protocol.MessageType;
+pub const MessageMode = protocol.MessageMode;
+pub const OriginFlag = protocol.OriginFlag;
+pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
+pub const ProtoFields = protocol.ProtoFields;
+pub const BinaryHeader = protocol.BinaryHeader;
+pub const TextHeader = protocol.TextHeader;
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
+pub const TextHeaders = protocol.TextHeaders;
+pub const Message = protocol.Message;
+pub const Options = protocol.Options;
+pub const AMP = protocol.AMP;
+
+pub const Appendable = @import("nats").Appendable;
 
 const std = @import("std");

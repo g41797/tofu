@@ -3,7 +3,8 @@ YAAAMP
 
 Posts
 
-    https://ziggit.dev/t/allocators-and-thread-safety-and-not-only/10789
+    https://ziggit.dev/t/allocators-and-thread-safety-and-not-only
+    https://ziggit.dev/t/new-linkedlist-api-footgun
 
     https://ziggit.dev/t/zig-ways-of-the-code-reusing/10452/4
     https://ziggit.dev/t/wanted-zig-based-multithreaded-projects/10420
@@ -84,12 +85,33 @@ Choosing an Allocator
 Deinit - return error
     https://ziggit.dev/t/convention-for-init-deinit/4865/13?u=g41797
 
-
 LLVM Atomic Instructions and Concurrency Guide
     https://llvm.org/docs/Atomics.html
 
 Zig atomics
     https://codeberg.org/dude_the_builder/zig_in_depth/src/branch/main/44_atomics/src/main.zig
 
+Atomic reference counting (with Zig code samples)
+    https://ravendb.net/articles/atomic-reference-counting-with-zig-code-samples
+
 Zig book
     https://pedropark99.github.io/zig-book/
+
+An open-source scientific and technical publishing system
+    https://quarto.org/
+
+Publishing a Quarto website through GitHub Pages (updated)
+    https://www.youtube.com/watch?v=wZ9pZOFSCko
+
+Making a Website with GitHub/Quarto
+    https://steffilazerte.ca/posts/github-website/
+
+Zig's HashMap - Part 1
+    https://www.openmymind.net/Zigs-HashMap-Part-1/
+
+Zig's new LinkedList API (it's time to learn @fieldParentPtr)
+    https://www.openmymind.net/Zigs-New-LinkedList-API/
+
+Generate random numbers
+    https://cookbook.ziglang.cc/06-01-rand.html
+

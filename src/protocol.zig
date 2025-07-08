@@ -328,6 +328,12 @@ pub fn stop(allocator: Allocator, amp: *AMP) !void {
     return;
 }
 
+var uid: Atomic(u64) = .init(1);
+
+pub fn next_mid() u64 {
+    return uid.fetchAdd(1, .monotonic);
+}
+
 const is_be = builtin.target.cpu.arch.endian() == .big;
 
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
@@ -341,3 +347,4 @@ const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;
+const AtomicRwOper = std.builtin.AtomicRwOper;

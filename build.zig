@@ -43,6 +43,13 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
+    _ = b.addModule("yaaamp", .{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = false,
+    });
+
     lib.root_module.addImport("nats", nats.module("nats"));
     lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib.root_module.addImport("temp", temp.module("temp"));
