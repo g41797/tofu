@@ -32,3 +32,27 @@ test "create file for address of uds socket" {
     const uds_path = try tempFile.parent_dir.realpath(tempFile.basename, &buffer);
     try testing.expectEqual(uds_path.len > 0, true);
 }
+
+// test "SinglyLinkedList test1" {
+//     const L = std.SinglyLinkedList(u32);
+//     var list = L{};
+//
+//     try testing.expect(list.len() == 0);
+//
+//     var one = L.Node{ .data = 1 };
+//
+//     list.remove(&one);
+// }
+//
+// test "SinglyLinkedList test2" {
+//     const L = std.SinglyLinkedList(u32);
+//     var list = L{};
+//
+//     try testing.expect(list.len() == 0);
+//
+//     var one = L.Node{ .data = 1 };
+//     list.prepend(&one);
+//
+//     var two = L.Node{ .data = 2 };
+//     list.remove(&two);
+// }

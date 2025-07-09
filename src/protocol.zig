@@ -213,33 +213,47 @@ pub const Message = struct {
         msg.body.reset();
         return;
     }
+
+    pub fn deinit(msg: *Message) void {
+        msg.bhdr = .{};
+        msg.thdrs.deinit();
+        msg.body.deinit();
+        return;
+    }
+
+    fn destroy(msg: *Message) void {
+        // The same allocator is used for creation of Message and it's fields
+        const allocator = msg.thdrs.buffer.allocator;
+        msg.deinit();
+        allocator.destroy(msg);
+    }
 };
 
 pub const AMP = struct {
-    impl: *anyopaque = undefined,
-    functions: *const Functions = undefined,
+    impl: *const anyopaque = undefined,
+    functions: *const AMPFunctions = undefined,
     running: Atomic(bool) = undefined,
     shutdown_finished: Atomic(bool) = undefined,
 
-    pub const Functions = struct {
+    pub const AMPFunctions = struct {
         /// Initiates asynchronous send of Message to peer
         /// Returns errors (TBD) or filled BinaryHeader of the Message.
-        start_send: *const fn (impl: *anyopaque, msg: *Message) anyerror!BinaryHeader,
+        start_send: *const fn (impl: *const anyopaque, msg: *Message) anyerror!BinaryHeader,
 
         /// Waits *Message on internal queue.
         /// If during timeout_ns message was not received, return null.
-        wait_receive: *const fn (impl: *anyopaque, timeout_ns: u64) anyerror!?*Message,
+        wait_receive: *const fn (impl: *const anyopaque, timeout_ns: u64) anyerror!?*Message,
 
         /// Gets *Message from internal pool.
         /// If message is not available, allocates new and returns result (force == true) or null otherwice.
         /// If pool was closed, returns null
-        get: *const fn (impl: *anyopaque, force: bool) ?*Message,
+        get: *const fn (impl: *const anyopaque, force: bool) ?*Message,
 
         /// Returns *Message to internal pool.
-        put: *const fn (impl: *anyopaque, msg: *Message) void,
+        put: *const fn (impl: *const anyopaque, msg: *Message) void,
 
         /// Stop all activities/threads/io, release memory in internal pool
-        shutdown: *const fn (impl: *anyopaque) anyerror!void,
+        shutdown: *const fn (impl: *const anyopaque) anyerror!void,
     };
 
     // Initiates asynchronous send of Message to peer
@@ -285,7 +299,7 @@ pub const AMP = struct {
             return error.ShutdownFinished;
         }
 
-        Gate._freeMsg(msg);
+        msg.destroy();
         return;
     }
 

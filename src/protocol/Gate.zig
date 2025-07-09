@@ -32,33 +32,33 @@ pub fn amp(gt: *Gate) AMP {
     return result;
 }
 
-pub fn start_send(impl: *anyopaque, msg: *Message) !BinaryHeader {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn start_send(impl: *const anyopaque, msg: *Message) !BinaryHeader {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._start_send(msg);
 }
 
-pub fn wait_receive(impl: *anyopaque, timeout_ns: u64) anyerror!?*Message {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn wait_receive(impl: *const anyopaque, timeout_ns: u64) anyerror!?*Message {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._wait_receive(timeout_ns);
 }
 
-pub fn get(impl: *anyopaque, force: bool) ?*Message {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn get(impl: *const anyopaque, force: bool) ?*Message {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._get(force);
 }
 
-pub fn put(impl: *anyopaque, msg: *Message) void {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn put(impl: *const anyopaque, msg: *Message) void {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._put(msg);
 }
 
-pub fn free(impl: *anyopaque, msg: *Message) void {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn free(impl: *const anyopaque, msg: *Message) void {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._free(msg);
 }
 
-pub fn shutdown(impl: *anyopaque) !void {
-    const gt: *Gate = @ptrCast(@alignCast(impl));
+pub fn shutdown(impl: *const anyopaque) !void {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
 
     try gt._shutdown();
     var allocator = gt.allocator;
@@ -100,10 +100,10 @@ inline fn _shutdown(gt: *Gate) !void {
     return;
 }
 
-pub fn _freeMsg(msg: *Message) void {
+pub fn freeMsg(msg: *Message) void {
+    // The same allocator was used for creation of Message and it's fields
     const allocator = msg.thdrs.buffer.allocator;
-    msg.thdrs.deinit();
-    msg.body.deinit();
+    msg.deinit();
     allocator.destroy(msg);
     return;
 }

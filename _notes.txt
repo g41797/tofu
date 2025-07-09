@@ -115,3 +115,14 @@ Zig's new LinkedList API (it's time to learn @fieldParentPtr)
 Generate random numbers
     https://cookbook.ziglang.cc/06-01-rand.html
 
+std.mem.Allocator is always passed by value in the Zig codebase
+    https://ziggit.dev/t/should-allocators-be-passed-in-as-a-value-or-as-a-pointer/5236/3?u=g41797
+
+Allocgate is coming in Zig 0.9, and you will have to change your code
+    https://pithlessly.github.io/allocgate.html
+
+Leveraging Zig's Allocators
+    https://www.openmymind.net/Leveraging-Zigs-Allocators/
+
+Zen of Zig
+    https://www.reddit.com/r/Zig/comments/17xd46v/what_is_the_zig_philosophy_on_apis_and_abstraction/
