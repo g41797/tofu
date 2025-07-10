@@ -126,3 +126,12 @@ Leveraging Zig's Allocators
 
 Zen of Zig
     https://www.reddit.com/r/Zig/comments/17xd46v/what_is_the_zig_philosophy_on_apis_and_abstraction/
+
+ArenaAllocator
+    https://www.openmymind.net/learning_zig/heap_memory/#arena
+
+Using Allocators in Zig: A Comprehensive Guide
+    https://gencmurat.com/en/posts/using-allocators-in-zig/
+
+Malloc to a list of struct in Zig?
+    https://stackoverflow.com/questions/61422445/malloc-to-a-list-of-struct-in-zig

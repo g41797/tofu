@@ -113,6 +113,7 @@ pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 
 const Pool = @import("Pool.zig");
+const channels = @import("channels.zig");
 const AMP = protocol.AMP;
 const Options = protocol.Options;
 const Message = protocol.Message;

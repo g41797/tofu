@@ -42,11 +42,15 @@ pub const ProtoFields = packed struct(u8) {
     pcb: ProtocolControlBitFlag = .zero,
 };
 
+pub const ChannelNumber = u16;
+
+pub const MessageID = u64;
+
 pub const BinaryHeader = packed struct {
-    channel_number: u16 = 0,
+    channel_number: ChannelNumber = 0,
     proto: ProtoFields = .{},
     status: u8 = 0,
-    message_id: u64 = 0,
+    message_id: MessageID = 0,
     text_headers_len: u16 = 0,
     body_len: u16 = 0,
 
