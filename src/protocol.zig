@@ -236,6 +236,7 @@ pub const Message = struct {
 pub const AMP = struct {
     impl: *const anyopaque = undefined,
     functions: *const AMPFunctions = undefined,
+    allocator: Allocator = undefined,
     running: Atomic(bool) = undefined,
     shutdown_finished: Atomic(bool) = undefined,
 
@@ -299,10 +300,7 @@ pub const AMP = struct {
 
     // Free *Message
     pub fn free(amp: *AMP, msg: *Message) !void {
-        if (amp.shutdown_finished.load(.monotonic)) {
-            return error.ShutdownFinished;
-        }
-
+        _ = amp;
         msg.destroy();
         return;
     }
@@ -318,6 +316,14 @@ pub const AMP = struct {
 
         try amp.functions.shutdown(amp.impl);
 
+        return;
+    }
+
+    // Shutdown + free of amp memory
+    pub fn destroy(amp: *AMP) !void {
+        _ = try amp.shutdown();
+        const allocator = amp.allocator;
+        allocator.destroy(amp);
         return;
     }
 };
@@ -340,15 +346,9 @@ pub fn start(allocator: Allocator, options: Options) !*AMP {
     return amp;
 }
 
-pub fn stop(allocator: Allocator, amp: *AMP) !void {
-    _ = try amp.shutdown();
-    allocator.destroy(amp);
-    return;
-}
+var uid: Atomic(MessageID) = .init(1);
 
-var uid: Atomic(u64) = .init(1);
-
-pub fn next_mid() u64 {
+pub fn next_mid() MessageID {
     return uid.fetchAdd(1, .monotonic);
 }
 

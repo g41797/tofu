@@ -10,7 +10,7 @@ first: ?*Message = undefined,
 allocator: Allocator = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
-pub fn init(allocator: Allocator) Pool {
+pub fn init(allocator: Allocator) !Pool {
     return .{
         .allocator = allocator,
         .first = null,

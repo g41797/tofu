@@ -46,9 +46,15 @@ test "ChannelNodeQueue tests" {
     try testing.expectEqual(null, cq.dequeue());
 }
 
+test "Channels basic tests" {
+    var acns = try ActiveChannels.init(std.testing.allocator, 3);
+    acns.deinit();
+}
+
 const channels = @import("channels.zig");
 const ChannelNode = channels.ChannelNode;
 const ChannelNodeQueue = channels.ChannelNodeQueue;
+const ActiveChannels = channels.ActiveChannels;
 
 const std = @import("std");
 const testing = std.testing;

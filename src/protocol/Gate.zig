@@ -6,12 +6,14 @@ pub const Gate = @This();
 allocator: Allocator = undefined,
 options: protocol.Options = undefined,
 pool: Pool = undefined,
+acns: ActiveChannels = undefined,
 mutex: Mutex = undefined,
 
 pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
     gt.allocator = allocator;
     gt.options = options;
-    gt.pool = Pool.init(gt.allocator);
+    gt.pool = try Pool.init(gt.allocator);
+    gt.acns = try ActiveChannels.init(allocator, 255);
     gt.mutex = .{};
     return;
 }
@@ -26,6 +28,7 @@ pub fn amp(gt: *Gate) AMP {
             .get = get,
             .put = put,
         },
+        .allocator = gt.allocator,
         .running = Atomic(bool).init(true),
         .shutdown_finished = Atomic(bool).init(false),
     };
@@ -59,9 +62,8 @@ pub fn free(impl: *const anyopaque, msg: *Message) void {
 
 pub fn shutdown(impl: *const anyopaque) !void {
     var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-
-    try gt._shutdown();
     var allocator = gt.allocator;
+    gt.deinit();
     allocator.destroy(gt);
     return;
 }
@@ -94,9 +96,9 @@ inline fn _free(gt: *Gate, msg: *Message) void {
     return;
 }
 
-inline fn _shutdown(gt: *Gate) !void {
+fn deinit(gt: *Gate) void {
     gt.pool.close();
-
+    gt.acns.deinit();
     return;
 }
 
@@ -112,12 +114,16 @@ pub const protocol = @import("../protocol.zig");
 pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 
-const Pool = @import("Pool.zig");
-const channels = @import("channels.zig");
 const AMP = protocol.AMP;
 const Options = protocol.Options;
 const Message = protocol.Message;
 const BinaryHeader = protocol.BinaryHeader;
+const ChannelNumber = protocol.ChannelNumber;
+const MessageID = protocol.MessageID;
+
+const Pool = @import("Pool.zig");
+const channels = @import("channels.zig");
+const ActiveChannels = channels.ActiveChannels;
 
 const std = @import("std");
 const builtin = @import("builtin");

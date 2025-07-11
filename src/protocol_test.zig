@@ -40,7 +40,7 @@ test "BinaryHeader marshalling and demarshalling" {
 
 test "get first dumb AMP" {
     const amp = try protocol.start(std.testing.allocator, .{});
-    _ = try protocol.stop(std.testing.allocator, amp);
+    _ = try amp.destroy();
 }
 
 // test "random from u16" {

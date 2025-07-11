@@ -23,3 +23,5 @@ jobs:
 
       - run: zig build test -freference-trace --summary all
 
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+

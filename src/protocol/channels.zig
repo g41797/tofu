@@ -90,8 +90,99 @@ pub const ChannelNodeQueue = struct {
     }
 };
 
+pub const ActiveChannels = struct {
+    allocator: Allocator = undefined,
+    nodes: []ChannelNode = undefined,
+    removed: ChannelNodeQueue = .{},
+    free: ChannelNodeQueue = .{},
+    active: AutoHashMap(ChannelNumber, MessageID) = undefined,
+
+    pub fn init(allocator: Allocator, rrchn: u8) !ActiveChannels {
+        if (rrchn == 0) {
+            return error.RecentlyRemovedChannelsNumber;
+        }
+        var nodes: []ChannelNode = try allocator.alloc(ChannelNode, rrchn);
+
+        var channels: ActiveChannels = .{
+            .allocator = allocator,
+            .nodes = nodes,
+            .removed = .{},
+            .free = .{},
+            .active = .init(allocator),
+        };
+
+        try channels.active.ensureTotalCapacity(256);
+
+        for (0..rrchn) |i| {
+            const node = &nodes[i];
+            channels.free.enqueue(node);
+        }
+
+        return channels;
+    }
+
+    pub fn deinit(cns: *ActiveChannels) void {
+        cns.allocator.free(cns.nodes);
+        cns.active.deinit();
+    }
+
+    pub fn createChannel(cns: *ActiveChannels) struct { ChannelNumber, MessageID } {
+        while (true) {
+            const rv = rand.int(ChannelNumber);
+
+            if (cns.active.contains(rv)) {
+                continue;
+            }
+
+            if (cns.removed.exists(rv)) {
+                continue;
+            }
+
+            const mid: MessageID = protocol.next_mid();
+
+            cns.active.put(rv, mid) catch unreachable;
+
+            return .{ rv, mid };
+        }
+    }
+
+    pub inline fn exists(cns: *ActiveChannels, cn: ChannelNumber) bool {
+        return cns.active.contains(cn);
+    }
+
+    pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
+        const wasRemoved = cns.active.remove(cn);
+
+        const alreadyRemoved = cns.removed.remove(cn);
+
+        if (alreadyRemoved != null) {
+            cns.removed.enqueue(alreadyRemoved.?);
+            return true;
+        }
+
+        if (!wasRemoved) {
+            return false;
+        }
+
+        const free = cns.free.dequeue();
+        if (free != null) {
+            free.?.cn = cn;
+            cns.removed.enqueue(free.?);
+            return true;
+        }
+
+        const rewrcn = cns.free.dequeue().?;
+        rewrcn.cn = cn;
+        cns.removed.enqueue(rewrcn);
+        return true;
+    }
+};
+
 pub const protocol = @import("../protocol.zig");
 pub const ChannelNumber = protocol.ChannelNumber;
+pub const MessageID = protocol.MessageID;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const AutoHashMap = std.AutoHashMap;
+const rand = std.crypto.random;
