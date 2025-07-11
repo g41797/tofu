@@ -109,6 +109,9 @@ Making a Website with GitHub/Quarto
 Zig's HashMap - Part 1
     https://www.openmymind.net/Zigs-HashMap-Part-1/
 
+Zig hashmaps explained
+    https://devlog.hexops.com/2022/zig-hashmaps-explained/
+
 Zig's new LinkedList API (it's time to learn @fieldParentPtr)
     https://www.openmymind.net/Zigs-New-LinkedList-API/
 
@@ -135,3 +138,6 @@ Using Allocators in Zig: A Comprehensive Guide
 
 Malloc to a list of struct in Zig?
     https://stackoverflow.com/questions/61422445/malloc-to-a-list-of-struct-in-zig
+
+Zig | 75 , Multiple Return Values
+    https://medium.com/@mikecode/zig-75-multiple-return-values-80cc621314e5
