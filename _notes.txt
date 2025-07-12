@@ -141,3 +141,9 @@ Malloc to a list of struct in Zig?
 
 Zig | 75 , Multiple Return Values
     https://medium.com/@mikecode/zig-75-multiple-return-values-80cc621314e5
+
+Rules
+    https://github.com/Thomvanoorschot/zigma/blob/main/.cursor/rules/zig.mdc
+    https://github.com/Thomvanoorschot/zigma/blob/main/.cursor/llmstxt/zig.llms.txt
+    Please refer to our conversation on July 12, 2025, at 09:54 AM IDT
+

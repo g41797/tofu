@@ -225,7 +225,7 @@ pub const Message = struct {
         return;
     }
 
-    fn destroy(msg: *Message) void {
+    pub fn destroy(msg: *Message) void {
         // The same allocator is used for creation of Message and it's fields
         const allocator = msg.thdrs.buffer.allocator;
         msg.deinit();
@@ -298,15 +298,16 @@ pub const AMP = struct {
         return amp.functions.put(amp.impl, msg);
     }
 
-    // Free *Message
-    pub fn free(amp: *AMP, msg: *Message) !void {
-        _ = amp;
-        msg.destroy();
+    // Shutdown + free of amp memory
+    pub fn destroy(amp: *AMP) !void {
+        _ = try amp.shutdown();
+        const allocator = amp.allocator;
+        allocator.destroy(amp);
         return;
     }
 
     // Stop all activities/threads/io, release memory in internal pool
-    pub fn shutdown(amp: *AMP) !void {
+    fn shutdown(amp: *AMP) !void {
         amp.running.store(false, .release);
         if (amp.shutdown_finished.load(.monotonic)) {
             return;
@@ -319,11 +320,10 @@ pub const AMP = struct {
         return;
     }
 
-    // Shutdown + free of amp memory
-    pub fn destroy(amp: *AMP) !void {
-        _ = try amp.shutdown();
-        const allocator = amp.allocator;
-        allocator.destroy(amp);
+    // Free *Message
+    pub fn free(amp: *AMP, msg: *Message) !void {
+        _ = amp;
+        msg.destroy();
         return;
     }
 };

@@ -15,6 +15,12 @@ pub const Message = protocol.Message;
 pub const Options = protocol.Options;
 pub const AMP = protocol.AMP;
 
+pub const status = @import("status.zig");
+pub const AMPStatus = status.AMPStatus;
+pub const AMPError = status.AMPError;
+pub const raw_to_status = status.raw_to_status;
+pub const raw_to_error = status.raw_to_error;
+
 pub const Appendable = @import("nats").Appendable;
 
 const std = @import("std");

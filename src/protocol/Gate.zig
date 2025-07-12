@@ -7,6 +7,7 @@ allocator: Allocator = undefined,
 options: protocol.Options = undefined,
 pool: Pool = undefined,
 acns: ActiveChannels = undefined,
+msgs: MSGMailBox = undefined,
 mutex: Mutex = undefined,
 
 pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
@@ -14,6 +15,7 @@ pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
     gt.options = options;
     gt.pool = try Pool.init(gt.allocator);
     gt.acns = try ActiveChannels.init(allocator, 255);
+    gt.msgs = .{};
     gt.mutex = .{};
     return;
 }
@@ -55,11 +57,6 @@ pub fn put(impl: *const anyopaque, msg: *Message) void {
     return gt._put(msg);
 }
 
-pub fn free(impl: *const anyopaque, msg: *Message) void {
-    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-    return gt._free(msg);
-}
-
 pub fn shutdown(impl: *const anyopaque) !void {
     var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     var allocator = gt.allocator;
@@ -90,15 +87,17 @@ inline fn _put(gt: *Gate, msg: *Message) void {
     return;
 }
 
-inline fn _free(gt: *Gate, msg: *Message) void {
-    gt.pool.free(msg);
-
-    return;
-}
-
 fn deinit(gt: *Gate) void {
     gt.pool.close();
     gt.acns.deinit();
+
+    var allocated = gt.msgs.close();
+    while (allocated != null) {
+        const next = allocated.?.next;
+        allocated.?.destroy();
+        allocated = next;
+    }
+
     return;
 }
 
@@ -112,7 +111,6 @@ pub fn freeMsg(msg: *Message) void {
 
 pub const protocol = @import("../protocol.zig");
 pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
-pub const Appendable = @import("nats").Appendable;
 
 const AMP = protocol.AMP;
 const Options = protocol.Options;
@@ -121,9 +119,21 @@ const BinaryHeader = protocol.BinaryHeader;
 const ChannelNumber = protocol.ChannelNumber;
 const MessageID = protocol.MessageID;
 
+pub const status = @import("../status.zig");
+pub const AMPStatus = status.AMPStatus;
+pub const AMPError = status.AMPError;
+pub const raw_to_status = status.raw_to_status;
+pub const raw_to_error = status.raw_to_error;
+pub const status_to_raw = status.status_to_raw;
+
 const Pool = @import("Pool.zig");
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
+
+pub const Appendable = @import("nats").Appendable;
+
+const mailbox = @import("mailbox");
+pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 const std = @import("std");
 const builtin = @import("builtin");
