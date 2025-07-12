@@ -21,6 +21,11 @@ pub const AMPError = status.AMPError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 
+pub const configurators = @import("configurators.zig");
+pub const TCPConfigurator = configurators.TCPConfigurator;
+pub const UDSConfigurator = configurators.UDSConfigurator;
+pub const Configurator = configurators.Configurator;
+
 pub const Appendable = @import("nats").Appendable;
 
 const std = @import("std");
