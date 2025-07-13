@@ -156,11 +156,8 @@ pub const TextHeaders = struct {
         return;
     }
 
-    pub fn hiter(hdrs: *TextHeaders) !TextHeaderIterator {
+    pub fn hiter(hdrs: *TextHeaders) TextHeaderIterator {
         const raw = hdrs.buffer.body();
-        if (raw == null) {
-            return error.WithoutHeaders;
-        }
         return TextHeaderIterator.init(raw);
     }
 };

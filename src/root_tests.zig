@@ -4,7 +4,7 @@
 test {
     _ = @import("root.zig");
     _ = @import("TextHeaderIterator_tests.zig");
-
+    _ = @import("configurator_tests.zig");
     _ = @import("protocol_test.zig");
     _ = @import("protocol/Pool_tests.zig");
     _ = @import("protocol/channels_tests.zig");

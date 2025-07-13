@@ -49,7 +49,7 @@ Working with Zig's anytype
     https://musing.permutationlock.com/posts/blog-working_with_anytype.html
 
 Zig Interfaces
-    https://github.com/alexnask/interface.zig
+    https://github.com/permutationlock/zimpl
 
 Zimpl Zig interfaces
     https://github.com/permutationlock/zimpl
@@ -109,6 +109,9 @@ Making a Website with GitHub/Quarto
 Zig's HashMap - Part 1
     https://www.openmymind.net/Zigs-HashMap-Part-1/
 
+Zig's HashMap - Part 2 (StringHashMap)
+    https://www.openmymind.net/Zigs-HashMap-Part-2/
+
 Zig hashmaps explained
     https://devlog.hexops.com/2022/zig-hashmaps-explained/
 
@@ -147,3 +150,27 @@ Rules
     https://github.com/Thomvanoorschot/zigma/blob/main/.cursor/llmstxt/zig.llms.txt
     Please refer to our conversation on July 12, 2025, at 09:54 AM IDT
 
+What Color is Your Function?
+    https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/
+
+I'm not feeling the async pressure
+    https://lucumr.pocoo.org/2020/1/1/async-pressure/
+
+Backpressure explained — the resisted flow of data through software
+    https://medium.com/@jayphelps/backpressure-explained-the-flow-of-data-through-software-2350b3e77ce7
+
+Zig's New Async I/O
+    https://kristoff.it/blog/zig-new-async-io/
+
+TCP Server in Zig - Part 1 - Single Threaded
+    https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/
+TCP Server in Zig - Part 5a - Poll
+    https://www.openmymind.net/TCP-Server-In-Zig-Part-5a-Poll/
+TCP Server in Zig - Part 5b - Poll
+    https://www.openmymind.net/TCP-Server-In-Zig-Part-5b-Poll/
+
+getaddrinfo(3) — Linux manual page
+    https://man7.org/linux/man-pages/man3/getaddrinfo.3.html
+
+http.zig
+    https://github.com/karlseguin/http.zig

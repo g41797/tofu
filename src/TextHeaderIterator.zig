@@ -8,7 +8,7 @@ const TextHeaderIterator = @This();
 bytes: ?[]const u8 = null,
 index: usize = 0,
 
-pub fn init(bytes: []const u8) TextHeaderIterator {
+pub fn init(bytes: ?[]const u8) TextHeaderIterator {
     return .{
         .bytes = bytes,
         .index = 0,
