@@ -174,3 +174,6 @@ getaddrinfo(3) — Linux manual page
 
 http.zig
     https://github.com/karlseguin/http.zig
+
+Comparing tags of tagged unions
+    https://ziggit.dev/t/comparing-tags-of-tagged-unions/6154

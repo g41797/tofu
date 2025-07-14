@@ -6,13 +6,11 @@ const Map = std.StringHashMap([]const u8);
 test "base configurator test" {
     const allocator = testing.allocator;
 
-    var th: TextHeaders = .{};
-    _ = try th.init(allocator, 16);
-    defer th.deinit();
+    var msg = allocMsg();
+
+    defer msg.destroy();
 
     {
-        th.reset();
-
         var params = Map.init(allocator);
         defer params.deinit();
 
@@ -23,11 +21,15 @@ test "base configurator test" {
             .tcpClient = tcpClConf,
         };
 
-        _ = try cnfr.toConfiguration(&th);
+        _ = try cnfr.prepareRequest(msg);
 
-        fillMap(&params, &th) catch unreachable;
+        fillMap(&params, &msg.thdrs) catch unreachable;
 
         try testing.expectEqual(0, params.count());
+
+        var conftr: Configurator = @unionInit(Configurator, "wrong", .{});
+        _ = try conftr.updateFrom(msg);
+        try testing.expectEqual(true, conftr == .tcpClient);
     }
 }
 
@@ -42,10 +44,26 @@ fn fillMap(map: *Map, th: *TextHeaders) !void {
     return;
 }
 
-const protocol = @import("protocol.zig");
+fn allocMsg() *Message {
+    var msg: *Message = testing.allocator.create(Message) catch unreachable;
+    msg.* = .{};
+    msg.bhdr = .{};
+    msg.thdrs.init(testing.allocator, 64) catch unreachable;
+    msg.body.init(testing.allocator, 256, null) catch unreachable;
+    return msg;
+}
+
+pub const protocol = @import("protocol.zig");
+pub const MessageType = protocol.MessageType;
+pub const MessageMode = protocol.MessageMode;
+pub const OriginFlag = protocol.OriginFlag;
+pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
+pub const ProtoFields = protocol.ProtoFields;
+pub const BinaryHeader = protocol.BinaryHeader;
 pub const TextHeader = protocol.TextHeader;
-pub const TextHeaders = protocol.TextHeaders;
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
+pub const TextHeaders = protocol.TextHeaders;
+pub const Message = protocol.Message;
 
 const configurator = @import("configurator.zig");
 const Configurator = configurator.Configurator;
