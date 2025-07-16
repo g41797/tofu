@@ -88,11 +88,11 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
   - **Description**: Indicates the message’s creator:
     - `0`: Application-created.
     - `1`: Protocol-created.
-- **More Expected**:
+- **More Responses Expected**:
   - **Size**: 1 bit.
-  - **Description**: For sequence of messages with the same **Message ID**:
-    - `0`: Last or only message in the sequence.
-    - `1`: More messages with the same **Message ID** expected.
+  - **Description**: For sequence of responses with the same **Message ID**:
+    - `0`: Last or only response in the sequence.
+    - `1`: More responses with the same **Message ID** expected.
 - **Protocol Control Bit (PCB)**:
   - **Size**: 1 bit.
   - **Description**: Used and filled exclusively by the protocol for housekeeping purposes. Completely opaque to the application and must not be modified by it.

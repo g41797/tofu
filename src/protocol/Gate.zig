@@ -65,13 +65,18 @@ pub fn shutdown(impl: *const anyopaque) !void {
     return;
 }
 
-inline fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
-    _ = gt;
-    _ = msg;
+fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
+    _ = try msg.check_and_prepare();
+
+    if ((msg.bhdr.channel_number != 0) and !gt.acns.exists(msg.bhdr.channel_number)) {
+        msg.bhdr.status = status_to_raw(.invalid_channel_number);
+        return AMPError.InvalidChannelNumber;
+    }
+
     return .{};
 }
 
-inline fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
+fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
     _ = gt;
     _ = timeout_ns;
     return null;
@@ -88,9 +93,6 @@ inline fn _put(gt: *Gate, msg: *Message) void {
 }
 
 fn deinit(gt: *Gate) void {
-    gt.pool.close();
-    gt.acns.deinit();
-
     var allocated = gt.msgs.close();
     while (allocated != null) {
         const next = allocated.?.next;
@@ -98,7 +100,17 @@ fn deinit(gt: *Gate) void {
         allocated = next;
     }
 
+    gt.pool.close();
+    gt.acns.deinit();
+
     return;
+}
+
+fn start_send_app_message(gt: *Gate, msg: *Message) !BinaryHeader {
+    _ = gt;
+    _ = msg;
+
+    return AMPError.NotImplementedYet;
 }
 
 pub fn freeMsg(msg: *Message) void {
@@ -110,14 +122,18 @@ pub fn freeMsg(msg: *Message) void {
 }
 
 pub const protocol = @import("../protocol.zig");
+pub const MessageType = protocol.MessageType;
+pub const MessageMode = protocol.MessageMode;
+pub const OriginFlag = protocol.OriginFlag;
+pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
+pub const ProtoFields = protocol.ProtoFields;
+pub const BinaryHeader = protocol.BinaryHeader;
+pub const TextHeader = protocol.TextHeader;
 pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
-
-const AMP = protocol.AMP;
-const Options = protocol.Options;
-const Message = protocol.Message;
-const BinaryHeader = protocol.BinaryHeader;
-const ChannelNumber = protocol.ChannelNumber;
-const MessageID = protocol.MessageID;
+pub const TextHeaders = protocol.TextHeaders;
+pub const Message = protocol.Message;
+pub const Options = protocol.Options;
+pub const AMP = protocol.AMP;
 
 pub const status = @import("../status.zig");
 pub const AMPStatus = status.AMPStatus;

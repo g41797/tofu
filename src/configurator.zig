@@ -217,14 +217,14 @@ pub const Configurator = union(enum) {
     }
 };
 
-fn prepareForServer(msg: *Message) void {
+inline fn prepareForServer(msg: *Message) void {
     msg.bhdr.proto.type = .welcome;
     msg.bhdr.proto.mode = .request;
     msg.bhdr.proto.more = .last;
     msg.bhdr.proto.origin = .application;
 }
 
-fn prepareForClient(msg: *Message) void {
+inline fn prepareForClient(msg: *Message) void {
     msg.bhdr.proto.type = .hello;
     msg.bhdr.proto.mode = .request;
     msg.bhdr.proto.more = .last;
@@ -271,7 +271,7 @@ pub const protocol = @import("protocol.zig");
 pub const MessageType = protocol.MessageType;
 pub const MessageMode = protocol.MessageMode;
 pub const OriginFlag = protocol.OriginFlag;
-pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
+pub const MoreResponsesFlag = protocol.MoreResponsesFlag;
 pub const ProtoFields = protocol.ProtoFields;
 pub const BinaryHeader = protocol.BinaryHeader;
 pub const TextHeader = protocol.TextHeader;

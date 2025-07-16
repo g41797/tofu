@@ -177,3 +177,6 @@ http.zig
 
 Comparing tags of tagged unions
     https://ziggit.dev/t/comparing-tags-of-tagged-unions/6154
+
+how to set up a zig tcp server socket
+    https://stackoverflow.com/questions/78125709/how-to-set-up-a-zig-tcp-server-socket

@@ -3,27 +3,42 @@
 
 pub const AMPStatus = enum(u8) {
     success = 0,
-    invalid_order = 1,
-    insufficient_funds = 2,
-    market_closed = 3,
-    network_error = 4,
+    not_implemented_yet,
+    invalid_message,
+    invalid_message_type,
+    invalid_message_mode,
+    invalid_headers_len,
+    invalid_body_len,
+    invalid_more_usage,
+    invalid_channel_number,
+    invalid_address,
     unknown_error,
 };
 
 pub const AMPError = error{
-    InvalidOrder,
-    InsufficientFunds,
-    MarketClosed,
-    NetworkError,
+    NotImplementedYet,
+    InvalidMessage,
+    InvalidMessageType,
+    InvalidMessageMode,
+    InvalidHeadersLen,
+    InvalidBodyLen,
+    InvalidMoreUsage,
+    InvalidChannelNumber,
+    InvalidAddress,
     UnknownError,
 };
 
 // Comptime mapping from AMPStatus to AMPError.
 const StatusToErrorMap = std.enums.EnumMap(AMPStatus, AMPError).init(.{
-    .invalid_order = .InvalidOrder,
-    .insufficient_funds = .InsufficientFunds,
-    .market_closed = .MarketClosed,
-    .network_error = .NetworkError,
+    .not_implemented_yet = .NotImplementedYet,
+    .invalid_message = .InvalidMessage,
+    .invalid_message_type = .InvalidMessageType,
+    .invalid_message_mode = .InvalidMessageMode,
+    .invalid_headers_len = .InvalidHeadersLen,
+    .invalid_body_len = .InvalidBodyLen,
+    .invalid_channel_number = .InvalieChannelNumber,
+    .invalid_address = .InvalidAddress,
+    .invalid_more_usage = .InvalidMoreUsage,
 });
 
 pub inline fn raw_to_status(rs: u8) AMPStatus {
@@ -47,5 +62,7 @@ pub inline fn raw_to_error(rs: u8) AMPError!void {
 pub inline fn status_to_raw(status: AMPStatus) u8 {
     return (@intFromEnum(status));
 }
+
+pub const protocol = @import("protocol.zig");
 
 const std = @import("std");

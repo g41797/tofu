@@ -24,7 +24,7 @@ pub const OriginFlag = enum(u1) {
     protocol = 1,
 };
 
-pub const MoreMessagesFlag = enum(u1) {
+pub const MoreResponsesFlag = enum(u1) {
     last = 0,
     more = 1,
 };
@@ -38,7 +38,7 @@ pub const ProtoFields = packed struct(u8) {
     type: MessageType = .application,
     mode: MessageMode = .invalid,
     origin: OriginFlag = .application,
-    more: MoreMessagesFlag = .last,
+    more: MoreResponsesFlag = .last,
     pcb: ProtocolControlBitFlag = .zero,
 };
 
@@ -162,6 +162,25 @@ pub const TextHeaders = struct {
     }
 };
 
+pub const ValidCombination = enum {
+    WelcomeRequest,
+    WelcomeResponse,
+    HelloRequest,
+    HelloResponse,
+    ByeRequest,
+    ByeResponse,
+    ByeSignal,
+    ControlRequest,
+    ControlResponse,
+    ControlSignal,
+    ShutdownRequest,
+    ShutdownResponse,
+    AppRequest,
+    AppResponse,
+    AppSignal,
+    Invalid,
+};
+
 pub const Message = struct {
     prev: ?*Message = null,
     next: ?*Message = null,
@@ -204,8 +223,8 @@ pub const Message = struct {
         return;
     }
 
-    pub fn validate(msg: *Message) !void {
-        _ = msg;
+    inline fn validate(msg: *Message) !void {
+        _ = try check_and_prepare(msg);
         return;
     }
 
@@ -227,6 +246,121 @@ pub const Message = struct {
         const allocator = msg.thdrs.buffer.allocator;
         msg.deinit();
         allocator.destroy(msg);
+    }
+
+    pub fn check_and_prepare(msg: *Message) !ValidCombination {
+        var vc: ValidCombination = .Invalid;
+
+        if ((msg.bhdr.proto.mode != .response) and (msg.bhdr.proto.more == .more)) {
+            msg.bhdr.status = status_to_raw(.invalid_more_usage);
+            return AMPError.InvalidMoreUsage;
+        }
+
+        vc = switch (msg.bhdr.proto.type) {
+            .application => switch (msg.bhdr.proto.mode) {
+                .request => .AppRequest,
+                .response => .AppResponse,
+                .signal => .AppSignal,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            .welcome => switch (msg.bhdr.proto.mode) {
+                .request => .WelcomeRequest,
+                .response => .WelcomeResponse,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            .hello => switch (msg.bhdr.proto.mode) {
+                .request => .HelloRequest,
+                .response => .HelloResponse,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            .bye => switch (msg.bhdr.proto.mode) {
+                .request => .ByeRequest,
+                .response => .ByeResponse,
+                .signal => .ByeSignal,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            .control => switch (msg.bhdr.proto.mode) {
+                .request => .ControlRequest,
+                .response => .ControlResponse,
+                .signal => .ControlSignal,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            .shutdown => switch (msg.bhdr.proto.mode) {
+                .request => .ShutdownRequest,
+                .response => .ShutdownResponse,
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
+                    return AMPError.InvalidMessageMode;
+                },
+            },
+            else => {
+                msg.bhdr.status = status_to_raw(.invalid_message_type);
+                return AMPError.InvalidMessageType;
+            },
+        };
+
+        if (vc == .Invalid) {
+            msg.bhdr.status = status_to_raw(.invalid_message);
+            return AMPError.InvalidMessage;
+        }
+
+        if (msg.bhdr.channel_number == 0) {
+            switch (vc) {
+                .WelcomeRequest, .HelloRequest, .ShutdownRequest => {},
+                else => {
+                    msg.bhdr.status = status_to_raw(.invalid_channel_number);
+                    return AMPError.InvalidChannelNumber;
+                },
+            }
+        }
+
+        const actualHeadersLen = actuaLen(&msg.thdrs.buffer);
+        if (actualHeadersLen > std.math.maxInt(u16)) {
+            msg.bhdr.status = status_to_raw(.invalid_headers_len);
+            return AMPError.InvalidHeadersLen;
+        }
+
+        if (msg.bhdr.text_headers_len == 0) {
+            msg.bhdr.text_headers_len = @intCast(actualHeadersLen);
+        } else if (msg.bhdr.text_headers_len != actualHeadersLen) {
+            msg.bhdr.status = status_to_raw(.invalid_headers_len);
+            return AMPError.InvalidHeadersLen;
+        }
+
+        if ((msg.bhdr.text_headers_len == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
+            msg.bhdr.status = status_to_raw(.invalid_address);
+            return AMPError.InvalidAddress;
+        }
+
+        const actualBodyLen = actuaLen(&msg.body);
+        if (actualBodyLen > std.math.maxInt(u16)) {
+            msg.bhdr.status = status_to_raw(.invalid_headers_len);
+            return AMPError.InvalidHeadersLen;
+        }
+
+        if (msg.bhdr.body_len == 0) {
+            msg.bhdr.body_len = @intCast(actualBodyLen);
+        } else if (msg.bhdr.body_len != actualBodyLen) {
+            msg.bhdr.status = status_to_raw(.invalid_body_len);
+            return AMPError.InvalidBodyLen;
+        }
+
+        return vc;
     }
 };
 
@@ -349,12 +483,27 @@ pub fn next_mid() MessageID {
     return uid.fetchAdd(1, .monotonic);
 }
 
+pub inline fn actuaLen(apnd: *Appendable) usize {
+    if (apnd.body()) |b| {
+        return b.len;
+    }
+    return 0;
+}
+
 const is_be = builtin.target.cpu.arch.endian() == .big;
 
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
+
 const Gate = @import("protocol/Gate.zig");
 const Pool = @import("protocol/Pool.zig");
+
+pub const status = @import("status.zig");
+pub const AMPStatus = status.AMPStatus;
+pub const AMPError = status.AMPError;
+pub const raw_to_status = status.raw_to_status;
+pub const raw_to_error = status.raw_to_error;
+pub const status_to_raw = status.status_to_raw;
 
 const std = @import("std");
 const builtin = @import("builtin");
