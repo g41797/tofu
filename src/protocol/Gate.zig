@@ -37,16 +37,6 @@ pub fn amp(gt: *Gate) AMP {
     return result;
 }
 
-pub fn start_send(impl: *const anyopaque, msg: *Message) !BinaryHeader {
-    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-    return gt._start_send(msg);
-}
-
-pub fn wait_receive(impl: *const anyopaque, timeout_ns: u64) anyerror!?*Message {
-    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-    return gt._wait_receive(timeout_ns);
-}
-
 pub fn get(impl: *const anyopaque, force: bool) ?*Message {
     var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._get(force);
@@ -57,23 +47,46 @@ pub fn put(impl: *const anyopaque, msg: *Message) void {
     return gt._put(msg);
 }
 
+pub fn start_send(impl: *const anyopaque, msg: *Message) !BinaryHeader {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
+    return gt._start_send(msg);
+}
+
+pub fn wait_receive(impl: *const anyopaque, timeout_ns: u64) anyerror!?*Message {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
+    return gt._wait_receive(timeout_ns);
+}
+
 pub fn shutdown(impl: *const anyopaque) !void {
     var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-    var allocator = gt.allocator;
-    gt.deinit();
+    var allocator: Allocator = undefined;
+    {
+        gt.mutex.lock();
+        defer gt.mutex.unlock();
+
+        allocator = gt.allocator;
+        gt.deinit();
+    }
     allocator.destroy(gt);
     return;
 }
 
 fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
-    _ = try msg.check_and_prepare();
+    const vc = try msg.check_and_prepare();
 
-    if ((msg.bhdr.channel_number != 0) and !gt.acns.exists(msg.bhdr.channel_number)) {
-        msg.bhdr.status = status_to_raw(.invalid_channel_number);
-        return AMPError.InvalidChannelNumber;
+    {
+        gt.mutex.lock();
+        defer gt.mutex.unlock();
+
+        if ((msg.bhdr.channel_number != 0) and !gt.acns.exists(msg.bhdr.channel_number)) {
+            msg.bhdr.status = status_to_raw(.invalid_channel_number);
+            return AMPError.InvalidChannelNumber;
+        }
+
+        const ret = try sm[@intFromEnum(vc)].func(gt, msg);
+
+        return ret;
     }
-
-    return .{};
 }
 
 fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
@@ -106,32 +119,80 @@ fn deinit(gt: *Gate) void {
     return;
 }
 
-fn start_send_app_message(gt: *Gate, msg: *Message) !BinaryHeader {
+fn not_implemented(gt: *Gate, msg: *Message) !BinaryHeader {
     _ = gt;
-    _ = msg;
-
+    msg.bhdr.status = status_to_raw(.not_implemented_yet);
     return AMPError.NotImplementedYet;
 }
 
-pub fn freeMsg(msg: *Message) void {
-    // The same allocator was used for creation of Message and it's fields
-    const allocator = msg.thdrs.buffer.allocator;
-    msg.deinit();
-    allocator.destroy(msg);
-    return;
-}
+var sm = directEnumArray(VC, SendProc, 0, .{
+    .WelcomeRequest = SendProc{
+        .func = not_implemented,
+    },
+    .WelcomeResponse = SendProc{
+        .func = not_implemented,
+    },
+    .HelloRequest = SendProc{
+        .func = not_implemented,
+    },
+    .HelloResponse = SendProc{
+        .func = not_implemented,
+    },
+    .ByeRequest = SendProc{
+        .func = not_implemented,
+    },
+    .ByeResponse = SendProc{
+        .func = not_implemented,
+    },
+    .ByeSignal = SendProc{
+        .func = not_implemented,
+    },
+    .ControlRequest = SendProc{
+        .func = not_implemented,
+    },
+    .ControlResponse = SendProc{
+        .func = not_implemented,
+    },
+    .ControlSignal = SendProc{
+        .func = not_implemented,
+    },
+    .ShutdownRequest = SendProc{
+        .func = not_implemented,
+    },
+    .ShutdownResponse = SendProc{
+        .func = not_implemented,
+    },
+    .AppRequest = SendProc{
+        .func = not_implemented,
+    },
+    .AppResponse = SendProc{
+        .func = not_implemented,
+    },
+    .AppSignal = SendProc{
+        .func = not_implemented,
+    },
+});
+
+const send_method = *const fn (gt: *Gate, msg: *Message) anyerror!BinaryHeader;
+
+const SendProc = struct {
+    func: send_method = undefined,
+};
+
+pub const message = @import("../message.zig");
+pub const MessageType = message.MessageType;
+pub const MessageMode = message.MessageMode;
+pub const OriginFlag = message.OriginFlag;
+pub const MoreMessagesFlag = message.MoreMessagesFlag;
+pub const ProtoFields = message.ProtoFields;
+pub const BinaryHeader = message.BinaryHeader;
+pub const TextHeader = message.TextHeader;
+pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
+pub const TextHeaders = message.TextHeaders;
+pub const Message = message.Message;
+pub const VC = message.ValidCombination;
 
 pub const protocol = @import("../protocol.zig");
-pub const MessageType = protocol.MessageType;
-pub const MessageMode = protocol.MessageMode;
-pub const OriginFlag = protocol.OriginFlag;
-pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
-pub const ProtoFields = protocol.ProtoFields;
-pub const BinaryHeader = protocol.BinaryHeader;
-pub const TextHeader = protocol.TextHeader;
-pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
-pub const TextHeaders = protocol.TextHeaders;
-pub const Message = protocol.Message;
 pub const Options = protocol.Options;
 pub const AMP = protocol.AMP;
 
@@ -156,3 +217,4 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Atomic = std.atomic.Value;
+const directEnumArray = std.enums.directEnumArray;

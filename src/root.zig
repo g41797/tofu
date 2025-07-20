@@ -25,7 +25,8 @@ pub const configurator = @import("configurator.zig");
 pub const Configurator = configurator.Configurator;
 pub const TCPClientConfigurator = configurator.TCPClientConfigurator;
 pub const TCPServerConfigurator = configurator.TCPServerConfigurator;
-pub const UDSConfigurator = configurator.UDSConfigurator;
+pub const UDSClientConfigurator = configurator.UDSClientConfigurator;
+pub const UDSServerConfigurator = configurator.UDSServerConfigurator;
 
 pub const Appendable = @import("nats").Appendable;
 

@@ -40,7 +40,28 @@ test "BinaryHeader marshalling and demarshalling" {
 
 test "get first dumb AMP" {
     const amp = try protocol.start(std.testing.allocator, .{});
-    _ = try amp.destroy();
+    defer destroyDefer(amp);
+}
+
+const force_get = true;
+
+test "send wrong message" {
+    const amp = try protocol.start(std.testing.allocator, .{});
+    defer destroyDefer(amp);
+
+    var msg = amp.get(force_get);
+    try std.testing.expectEqual(true, msg != null);
+    amp.put(msg.?);
+
+    msg = amp.get(force_get);
+    try std.testing.expectEqual(true, msg != null);
+
+    try std.testing.expectError(AMPError.InvalidMessageMode, amp.start_send(msg.?));
+    amp.put(msg.?);
+}
+
+fn destroyDefer(amp: *AMP) void {
+    amp.destroy() catch unreachable;
 }
 
 // test "random from u16" {
@@ -55,3 +76,7 @@ const testing = std.testing;
 const protocol = @import("protocol.zig");
 const BinaryHeader = protocol.BinaryHeader;
 const AMP = protocol.AMP;
+
+pub const status = @import("status.zig");
+pub const AMPStatus = status.AMPStatus;
+pub const AMPError = status.AMPError;

@@ -30,7 +30,7 @@ YAAAMP’s unified communication approach simplifies interaction between the pro
 
 Messages are classified as:
 
-- **`request`**: Expects one or more `response` messages.
+- **`request`**: Expects one or more `response` message.
 - **`response`**: Sent in reply to a `request`.
 - **`signal`**: One-way notification; no reply expected.
 
@@ -88,11 +88,11 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
   - **Description**: Indicates the message’s creator:
     - `0`: Application-created.
     - `1`: Protocol-created.
-- **More Responses Expected**:
+- **More Messages Expected**:
   - **Size**: 1 bit.
-  - **Description**: For sequence of responses with the same **Message ID**:
-    - `0`: Last or only response in the sequence.
-    - `1`: More responses with the same **Message ID** expected.
+  - **Description**: For sequence of **APPLICATION** messages with the same **Message ID**:
+    - `0`: Last or only message in the sequence.
+    - `1`: More messages with the same **Message ID** expected.
 - **Protocol Control Bit (PCB)**:
   - **Size**: 1 bit.
   - **Description**: Used and filled exclusively by the protocol for housekeeping purposes. Completely opaque to the application and must not be modified by it.

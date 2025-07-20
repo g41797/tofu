@@ -118,8 +118,8 @@ fn _freeAll(pool: *Pool) void {
 
 pub const Appendable = @import("nats").Appendable;
 
-pub const protocol = @import("../protocol.zig");
-const Message = protocol.Message;
+pub const message = @import("../message.zig");
+const Message = message.Message;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
