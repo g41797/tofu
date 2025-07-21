@@ -81,10 +81,37 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
         if ((msg.bhdr.channel_number != 0) and !gt.acns.exists(msg.bhdr.channel_number)) {
             msg.bhdr.status = status_to_raw(.invalid_channel_number);
             return AMPError.InvalidChannelNumber;
+        } else {
+            // channel_number == 0 - Allowed for ShutdownRequest/Response
+            // For other messages - should be assigned
+            if (!((vc == .ShutdownRequest) or (vc == .ShutdownResponse))) {
+                var mID: ?MessageID = null;
+                if (msg.bhdr.message_id != 0) {
+                    mID = msg.bhdr.message_id;
+                }
+                const cres = gt.acns.createChannel(mID);
+                msg.bhdr.channel_number = cres.@"0";
+                msg.bhdr.message_id = cres.@"1";
+            }
         }
 
-        const ret = try sm[@intFromEnum(vc)].func(gt, msg);
-
+        const ret = switch (vc) {
+            .WelcomeRequest => gt.not_implemented(msg),
+            .WelcomeResponse => gt.not_allowed(msg),
+            .HelloRequest => gt.not_implemented(msg),
+            .HelloResponse => gt.not_implemented(msg),
+            .ByeRequest => gt.not_implemented(msg),
+            .ByeResponse => gt.not_implemented(msg),
+            .ByeSignal => gt.not_implemented(msg),
+            .ControlRequest => gt.not_implemented(msg),
+            .ControlResponse => gt.not_implemented(msg),
+            .ControlSignal => gt.not_implemented(msg),
+            .ShutdownRequest => gt.not_implemented(msg),
+            .ShutdownResponse => gt.not_allowed(msg),
+            .AppRequest => gt.not_implemented(msg),
+            .AppResponse => gt.not_implemented(msg),
+            .AppSignal => gt.not_implemented(msg),
+        };
         return ret;
     }
 }
@@ -119,65 +146,74 @@ fn deinit(gt: *Gate) void {
     return;
 }
 
-fn not_implemented(gt: *Gate, msg: *Message) !BinaryHeader {
+inline fn not_implemented(gt: *Gate, msg: *Message) !BinaryHeader {
     _ = gt;
     msg.bhdr.status = status_to_raw(.not_implemented_yet);
     return AMPError.NotImplementedYet;
 }
 
-var sm = directEnumArray(VC, SendProc, 0, .{
-    .WelcomeRequest = SendProc{
-        .func = not_implemented,
-    },
-    .WelcomeResponse = SendProc{
-        .func = not_implemented,
-    },
-    .HelloRequest = SendProc{
-        .func = not_implemented,
-    },
-    .HelloResponse = SendProc{
-        .func = not_implemented,
-    },
-    .ByeRequest = SendProc{
-        .func = not_implemented,
-    },
-    .ByeResponse = SendProc{
-        .func = not_implemented,
-    },
-    .ByeSignal = SendProc{
-        .func = not_implemented,
-    },
-    .ControlRequest = SendProc{
-        .func = not_implemented,
-    },
-    .ControlResponse = SendProc{
-        .func = not_implemented,
-    },
-    .ControlSignal = SendProc{
-        .func = not_implemented,
-    },
-    .ShutdownRequest = SendProc{
-        .func = not_implemented,
-    },
-    .ShutdownResponse = SendProc{
-        .func = not_implemented,
-    },
-    .AppRequest = SendProc{
-        .func = not_implemented,
-    },
-    .AppResponse = SendProc{
-        .func = not_implemented,
-    },
-    .AppSignal = SendProc{
-        .func = not_implemented,
-    },
-});
+inline fn not_allowed(gt: *Gate, msg: *Message) !BinaryHeader {
+    _ = gt;
+    msg.bhdr.status = status_to_raw(.not_allowed);
+    return AMPError.NotAllowed;
+}
 
-const send_method = *const fn (gt: *Gate, msg: *Message) anyerror!BinaryHeader;
-
-const SendProc = struct {
-    func: send_method = undefined,
-};
+//
+// usage: const ret = try sm[@intFromEnum(vc)].func(gt, msg);
+//
+// var sm = directEnumArray(VC, SendProc, 0, .{
+//     .WelcomeRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .WelcomeResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .HelloRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .HelloResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ByeRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ByeResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ByeSignal = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ControlRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ControlResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ControlSignal = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ShutdownRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .ShutdownResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .AppRequest = SendProc{
+//         .func = not_implemented,
+//     },
+//     .AppResponse = SendProc{
+//         .func = not_implemented,
+//     },
+//     .AppSignal = SendProc{
+//         .func = not_implemented,
+//     },
+// });
+//
+// const send_method = *const fn (gt: *Gate, msg: *Message) anyerror!BinaryHeader;
+//
+// const SendProc = struct {
+//     func: send_method = undefined,
+// };
 
 pub const message = @import("../message.zig");
 pub const MessageType = message.MessageType;
@@ -190,6 +226,7 @@ pub const TextHeader = message.TextHeader;
 pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
+pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
 pub const protocol = @import("../protocol.zig");

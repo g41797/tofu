@@ -3,13 +3,11 @@
 
 pub const Pool = @This();
 
-const blen: u16 = 256;
-const tlen: u16 = 64;
-
 first: ?*Message = undefined,
 allocator: Allocator = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
+
 pub fn init(allocator: Allocator) !Pool {
     return .{
         .allocator = allocator,
@@ -32,6 +30,7 @@ pub fn get(pool: *Pool, force: bool) ?*Message {
         pool.first = result.?.next;
         result.?.next = null;
         result.?.prev = null;
+        result.?.reset();
         return result;
     }
 
@@ -39,7 +38,7 @@ pub fn get(pool: *Pool, force: bool) ?*Message {
         return null;
     }
 
-    result = pool.alloc() catch return null;
+    result = Message.create(pool.allocator) catch return null;
 
     return result;
 }
@@ -66,15 +65,6 @@ pub fn put(pool: *Pool, msg: *Message) void {
     pool.first = msg;
 
     return;
-}
-
-inline fn alloc(pool: *Pool) !*Message {
-    var msg = try pool.allocator.create(Message);
-    msg.* = .{};
-    msg.bhdr = .{};
-    try msg.thdrs.init(pool.allocator, tlen);
-    try msg.body.init(pool.allocator, blen, null);
-    return msg;
 }
 
 pub fn free(pool: *Pool, msg: *Message) void {

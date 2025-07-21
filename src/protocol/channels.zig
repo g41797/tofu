@@ -126,7 +126,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    pub fn createChannel(cns: *ActiveChannels) struct { ChannelNumber, MessageID } {
+    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID) struct { ChannelNumber, MessageID } {
         while (true) {
             const rv = rand.int(ChannelNumber);
 
@@ -138,7 +138,12 @@ pub const ActiveChannels = struct {
                 continue;
             }
 
-            const mid: MessageID = protocol.next_mid();
+            var mid: MessageID = undefined;
+            if (mID) |mval| {
+                mid = mval;
+            } else {
+                mid = protocol.next_mid();
+            }
 
             cns.active.put(rv, mid) catch unreachable;
 

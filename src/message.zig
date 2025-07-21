@@ -35,7 +35,7 @@ pub const ProtocolControlBitFlag = enum(u1) {
 
 // Nested struct for protocol fields, now public
 pub const ProtoFields = packed struct(u8) {
-    type: MessageType = .application,
+    mtype: MessageType = .application,
     mode: MessageMode = .invalid,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
@@ -188,6 +188,18 @@ pub const Message = struct {
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
 
+    const blen: u16 = 256;
+    const tlen: u16 = 64;
+
+    pub fn create(allocator: Allocator) !*Message {
+        var msg = try allocator.create(Message);
+        msg.* = .{};
+        msg.bhdr = .{};
+        try msg.thdrs.init(allocator, tlen);
+        try msg.body.init(allocator, blen, null);
+        return msg;
+    }
+
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.reset();
@@ -233,7 +245,7 @@ pub const Message = struct {
         return;
     }
 
-    pub fn deinit(msg: *Message) void {
+    inline fn deinit(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.deinit();
         msg.body.deinit();
@@ -247,14 +259,25 @@ pub const Message = struct {
         allocator.destroy(msg);
     }
 
-    pub fn check_and_prepare(msg: *Message) !ValidCombination {
-        if ((msg.bhdr.proto.type != .application) and (msg.bhdr.proto.more == .more)) {
+    pub fn check_and_prepare(msg: *Message) !ValidCombination { // For applicatopm messages
+        const bhdr: BinaryHeader = msg.bhdr; // For debugging
+        const mtype = bhdr.proto.mtype;
+        const mode = bhdr.proto.mode;
+        const origin = bhdr.proto.origin;
+        const more = bhdr.proto.more;
+
+        if (origin != .application) {
+            msg.bhdr.status = status_to_raw(.not_allowed);
+            return AMPError.NotAllowed;
+        }
+
+        if ((mtype != .application) and (more == .more)) {
             msg.bhdr.status = status_to_raw(.invalid_more_usage);
             return AMPError.InvalidMoreUsage;
         }
 
-        const vc: ValidCombination = switch (msg.bhdr.proto.type) {
-            .application => switch (msg.bhdr.proto.mode) {
+        const vc: ValidCombination = switch (mtype) {
+            .application => switch (mode) {
                 .request => .AppRequest,
                 .response => .AppResponse,
                 .signal => .AppSignal,
@@ -263,15 +286,18 @@ pub const Message = struct {
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .welcome => switch (msg.bhdr.proto.mode) {
+            .welcome => switch (mode) {
                 .request => .WelcomeRequest,
-                .response => .WelcomeResponse,
+                .response => {
+                    msg.bhdr.status = status_to_raw(.not_allowed);
+                    return AMPError.NotAllowed;
+                },
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .hello => switch (msg.bhdr.proto.mode) {
+            .hello => switch (mode) {
                 .request => .HelloRequest,
                 .response => .HelloResponse,
                 else => {
@@ -279,7 +305,7 @@ pub const Message = struct {
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .bye => switch (msg.bhdr.proto.mode) {
+            .bye => switch (mode) {
                 .request => .ByeRequest,
                 .response => .ByeResponse,
                 .signal => .ByeSignal,
@@ -288,7 +314,7 @@ pub const Message = struct {
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .control => switch (msg.bhdr.proto.mode) {
+            .control => switch (mode) {
                 .request => .ControlRequest,
                 .response => .ControlResponse,
                 .signal => .ControlSignal,
@@ -297,9 +323,12 @@ pub const Message = struct {
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .shutdown => switch (msg.bhdr.proto.mode) {
+            .shutdown => switch (mode) {
                 .request => .ShutdownRequest,
-                .response => .ShutdownResponse,
+                .response => {
+                    msg.bhdr.status = status_to_raw(.not_allowed);
+                    return AMPError.NotAllowed;
+                },
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AMPError.InvalidMessageMode;
@@ -310,10 +339,10 @@ pub const Message = struct {
                 return AMPError.InvalidMessageType;
             },
         };
-
-        if (msg.bhdr.channel_number == 0) {
+        const channel_number = msg.bhdr.channel_number;
+        if (channel_number == 0) {
             switch (vc) {
-                .WelcomeRequest, .HelloRequest, .ShutdownRequest => {},
+                .WelcomeRequest, .HelloRequest, .ShutdownRequest, .ShutdownResponse => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
                     return AMPError.InvalidChannelNumber;

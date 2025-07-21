@@ -11,7 +11,7 @@ test "BinaryHeader marshalling and demarshalling" {
     var header = BinaryHeader{
         .channel_number = 0x1234,
         .proto = .{
-            .type = .control,
+            .mtype = .control,
             .mode = .request,
             .origin = .application,
             .more = .last,
@@ -30,7 +30,7 @@ test "BinaryHeader marshalling and demarshalling" {
     demarshaled.fromBytes(&buf);
 
     try std.testing.expectEqual(header.channel_number, demarshaled.channel_number);
-    try std.testing.expectEqual(header.proto.type, demarshaled.proto.type);
+    try std.testing.expectEqual(header.proto.mtype, demarshaled.proto.mtype);
     try std.testing.expectEqual(header.proto.mode, demarshaled.proto.mode);
     try std.testing.expectEqual(header.status, demarshaled.status);
     try std.testing.expectEqual(header.message_id, demarshaled.message_id);
@@ -58,6 +58,20 @@ test "send wrong message" {
 
     try std.testing.expectError(AMPError.InvalidMessageMode, amp.start_send(msg.?));
     amp.put(msg.?);
+
+    msg = amp.get(force_get);
+    var msgv = msg.?;
+    msgv.bhdr.proto.mtype = .welcome;
+    msgv.bhdr.proto.mode = .response;
+
+    try std.testing.expectError(AMPError.NotAllowed, amp.start_send(msgv));
+
+    msgv.reset();
+    msgv.bhdr.proto.mtype = .welcome;
+    msgv.bhdr.proto.mode = .request;
+    try std.testing.expectError(AMPError.InvalidAddress, amp.start_send(msgv));
+
+    amp.put(msgv);
 }
 
 fn destroyDefer(amp: *AMP) void {
@@ -74,8 +88,21 @@ const std = @import("std");
 const testing = std.testing;
 
 const protocol = @import("protocol.zig");
-const BinaryHeader = protocol.BinaryHeader;
 const AMP = protocol.AMP;
+
+pub const message = @import("message.zig");
+pub const MessageType = message.MessageType;
+pub const MessageMode = message.MessageMode;
+pub const OriginFlag = message.OriginFlag;
+pub const MoreMessagesFlag = message.MoreMessagesFlag;
+pub const ProtoFields = message.ProtoFields;
+pub const BinaryHeader = message.BinaryHeader;
+pub const TextHeader = message.TextHeader;
+pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
+pub const TextHeaders = message.TextHeaders;
+pub const Message = message.Message;
+pub const MessageID = message.MessageID;
+pub const VC = message.ValidCombination;
 
 pub const status = @import("status.zig");
 pub const AMPStatus = status.AMPStatus;

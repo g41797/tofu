@@ -180,3 +180,6 @@ Comparing tags of tagged unions
 
 how to set up a zig tcp server socket
     https://stackoverflow.com/questions/78125709/how-to-set-up-a-zig-tcp-server-socket
+
+Get last value of enum
+    https://ziggit.dev/t/get-last-value-of-enum/11062/4?u=g41797

@@ -218,21 +218,21 @@ pub const Configurator = union(enum) {
 };
 
 inline fn prepareForServer(msg: *Message) void {
-    msg.bhdr.proto.type = .welcome;
+    msg.bhdr.proto.mtype = .welcome;
     msg.bhdr.proto.mode = .request;
     msg.bhdr.proto.more = .last;
     msg.bhdr.proto.origin = .application;
 }
 
 inline fn prepareForClient(msg: *Message) void {
-    msg.bhdr.proto.type = .hello;
+    msg.bhdr.proto.mtype = .hello;
     msg.bhdr.proto.mode = .request;
     msg.bhdr.proto.more = .last;
     msg.bhdr.proto.origin = .application;
 }
 
 inline fn isFirstServerRequest(msg: *Message) bool {
-    if (msg.bhdr.proto.type != .welcome) {
+    if (msg.bhdr.proto.mtype != .welcome) {
         return false;
     }
     if (msg.bhdr.proto.mode != .request) {
@@ -249,7 +249,7 @@ inline fn isFirstServerRequest(msg: *Message) bool {
 }
 
 inline fn isFirstClientRequest(msg: *Message) bool {
-    if (msg.bhdr.proto.type != .hello) {
+    if (msg.bhdr.proto.mtype != .hello) {
         return false;
     }
     if (msg.bhdr.proto.mode != .request) {
