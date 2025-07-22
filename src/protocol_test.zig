@@ -64,6 +64,10 @@ test "send wrong message" {
     msgv.bhdr.proto.mtype = .welcome;
     msgv.bhdr.proto.mode = .response;
 
+    try std.testing.expectError(AMPError.InvalidMessageId, amp.start_send(msgv));
+
+    msgv.bhdr.message_id = 1234;
+
     try std.testing.expectError(AMPError.NotAllowed, amp.start_send(msgv));
 
     msgv.reset();

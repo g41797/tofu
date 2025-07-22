@@ -22,11 +22,11 @@ pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 
 pub const configurator = @import("configurator.zig");
-pub const Configurator = configurator.Configurator;
 pub const TCPClientConfigurator = configurator.TCPClientConfigurator;
 pub const TCPServerConfigurator = configurator.TCPServerConfigurator;
 pub const UDSClientConfigurator = configurator.UDSClientConfigurator;
 pub const UDSServerConfigurator = configurator.UDSServerConfigurator;
+pub const Configurator = configurator.Configurator;
 
 pub const Appendable = @import("nats").Appendable;
 

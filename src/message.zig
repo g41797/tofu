@@ -259,12 +259,28 @@ pub const Message = struct {
         allocator.destroy(msg);
     }
 
+    pub fn actual_body_len(msg: *Message) usize {
+        return actuaLen(&msg.body);
+    }
+
+    pub fn actual_headers_len(msg: *Message) usize {
+        return actuaLen(&msg.thdrs.buffer);
+    }
+
     pub fn check_and_prepare(msg: *Message) !ValidCombination { // For applicatopm messages
+
+        msg.bhdr.status = status_to_raw(.success);
+
         const bhdr: BinaryHeader = msg.bhdr; // For debugging
         const mtype = bhdr.proto.mtype;
         const mode = bhdr.proto.mode;
         const origin = bhdr.proto.origin;
         const more = bhdr.proto.more;
+
+        if ((mode == .response) and (bhdr.message_id == 0)) {
+            msg.bhdr.status = status_to_raw(.invalid_message_id);
+            return AMPError.InvalidMessageId;
+        }
 
         if (origin != .application) {
             msg.bhdr.status = status_to_raw(.not_allowed);
@@ -316,8 +332,11 @@ pub const Message = struct {
             },
             .control => switch (mode) {
                 .request => .ControlRequest,
-                .response => .ControlResponse,
                 .signal => .ControlSignal,
+                .response => {
+                    msg.bhdr.status = status_to_raw(.not_allowed);
+                    return AMPError.NotAllowed;
+                },
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AMPError.InvalidMessageMode;
@@ -350,7 +369,7 @@ pub const Message = struct {
             }
         }
 
-        const actualHeadersLen = actuaLen(&msg.thdrs.buffer);
+        const actualHeadersLen = msg.actual_headers_len();
         if (actualHeadersLen > std.math.maxInt(u16)) {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
             return AMPError.InvalidHeadersLen;
@@ -368,7 +387,7 @@ pub const Message = struct {
             return AMPError.InvalidAddress;
         }
 
-        const actualBodyLen = actuaLen(&msg.body);
+        const actualBodyLen = msg.actual_body_len();
         if (actualBodyLen > std.math.maxInt(u16)) {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
             return AMPError.InvalidHeadersLen;

@@ -12,6 +12,7 @@ pub const AMPStatus = enum(u8) {
     invalid_body_len,
     invalid_more_usage,
     invalid_channel_number,
+    invalid_message_id,
     invalid_address,
     unknown_error,
 };
@@ -26,6 +27,7 @@ pub const AMPError = error{
     InvalidBodyLen,
     InvalidMoreUsage,
     InvalidChannelNumber,
+    InvalidMessageId,
     InvalidAddress,
     UnknownError,
 };
@@ -40,6 +42,7 @@ const StatusToErrorMap = std.enums.EnumMap(AMPStatus, AMPError).init(.{
     .invalid_headers_len = .InvalidHeadersLen,
     .invalid_body_len = .InvalidBodyLen,
     .invalid_channel_number = .InvalieChannelNumber,
+    .invalid_message_id = .InvalieMessageId,
     .invalid_address = .InvalidAddress,
     .invalid_more_usage = .InvalidMoreUsage,
 });

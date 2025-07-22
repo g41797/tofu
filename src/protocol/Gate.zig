@@ -97,20 +97,18 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
 
         const ret = switch (vc) {
             .WelcomeRequest => gt.not_implemented(msg),
-            .WelcomeResponse => gt.not_allowed(msg),
             .HelloRequest => gt.not_implemented(msg),
             .HelloResponse => gt.not_implemented(msg),
             .ByeRequest => gt.not_implemented(msg),
             .ByeResponse => gt.not_implemented(msg),
             .ByeSignal => gt.not_implemented(msg),
             .ControlRequest => gt.not_implemented(msg),
-            .ControlResponse => gt.not_implemented(msg),
             .ControlSignal => gt.not_implemented(msg),
             .ShutdownRequest => gt.not_implemented(msg),
-            .ShutdownResponse => gt.not_allowed(msg),
             .AppRequest => gt.not_implemented(msg),
             .AppResponse => gt.not_implemented(msg),
             .AppSignal => gt.not_implemented(msg),
+            else => gt.not_allowed(msg),
         };
         return ret;
     }
