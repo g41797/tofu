@@ -14,9 +14,9 @@ test "base configurator test" {
         var params = Map.init(allocator);
         defer params.deinit();
 
-        var tcpClConf = TCPClientConfigurator.init(null, null);
+        var conf: Configurator = .{ .tcp_client = TCPClientConfigurator.init(null, null) };
 
-        _ = try tcpClConf.prepareRequest(msg);
+        _ = try conf.prepareRequest(msg);
 
         fillMap(&params, &msg.thdrs) catch unreachable;
 
@@ -53,7 +53,7 @@ pub const TextHeaders = protocol.TextHeaders;
 pub const Message = protocol.Message;
 
 const configurator = @import("configurator.zig");
-
+const Configurator = configurator.Configurator;
 const TCPClientConfigurator = configurator.TCPClientConfigurator;
 const TCPServerConfigurator = configurator.TCPServerConfigurator;
 const UDSClientConfigurator = configurator.UDSClientConfigurator;

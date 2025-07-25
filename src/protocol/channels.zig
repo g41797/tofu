@@ -96,6 +96,7 @@ pub const ActiveChannels = struct {
     removed: ChannelNodeQueue = .{},
     free: ChannelNodeQueue = .{},
     active: AutoHashMap(ChannelNumber, MessageID) = undefined,
+    mutex: Mutex = undefined,
 
     pub fn init(allocator: Allocator, rrchn: u8) !ActiveChannels {
         if (rrchn == 0) {
@@ -118,15 +119,23 @@ pub const ActiveChannels = struct {
             channels.free.enqueue(node);
         }
 
+        channels.mutex = .{};
+
         return channels;
     }
 
     pub fn deinit(cns: *ActiveChannels) void {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
         cns.allocator.free(cns.nodes);
         cns.active.deinit();
     }
 
     pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID) struct { ChannelNumber, MessageID } {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
         while (true) {
             const rv = rand.int(ChannelNumber);
 
@@ -151,11 +160,17 @@ pub const ActiveChannels = struct {
         }
     }
 
-    pub inline fn exists(cns: *ActiveChannels, cn: ChannelNumber) bool {
+    pub fn exists(cns: *ActiveChannels, cn: ChannelNumber) bool {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
         return cns.active.contains(cn);
     }
 
     pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
         const wasRemoved = cns.active.remove(cn);
 
         const alreadyRemoved = cns.removed.remove(cn);
@@ -189,5 +204,6 @@ pub const MessageID = protocol.MessageID;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
 const AutoHashMap = std.AutoHashMap;
 const rand = std.crypto.random;

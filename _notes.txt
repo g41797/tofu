@@ -45,6 +45,8 @@ Interfaces
 
     https://twdev.blog/2025/01/zig_interfaces/
 
+    https://gist.github.com/fidelicura/9b1f55d312ae6fc3974cf45848285b2a
+
 Working with Zig's anytype
     https://musing.permutationlock.com/posts/blog-working_with_anytype.html
 
@@ -183,3 +185,56 @@ how to set up a zig tcp server socket
 
 Get last value of enum
     https://ziggit.dev/t/get-last-value-of-enum/11062/4?u=g41797
+
+Mongoose - Embedded Web Server / Embedded Network Library
+    https://github.com/cesanta/mongoose
+
+    User Guide
+        https://mongoose.ws/documentation/#user-guide
+
+    API Reference
+        https://mongoose.ws/documentation/#api-reference
+
+Socketwrapper - Simple to use linux socket/networking library
+    https://github.com/tglane/socketwrapper
+
+A socket network library for Linux.
+    https://github.com/caikelun/libsvx
+
+tree.h from OpenBSD, ported to Zig
+    https://github.com/iacore/tree.zig
+
+Red-Black Tree in Zig
+    https://github.com/Haeryu/rbtree/tree/master
+    https://haeryu.github.io/2025/04/24/zig-rbtree.html
+
+C Behavior of connect() with O_NONBLOCK on a Unix domain socket
+    https://forums.freebsd.org/threads/behavior-of-connect-with-o_nonblock-on-a-unix-domain-socket.75963/
+
+Writing an Async Runtime
+    http://muki.gg/posts/async-runtime
+
+EnumMap is unusable for enums with many fields due to eval branch quota
+    https://github.com/ziglang/zig/issues/16980
+
+@setEvalBranchQuota issues
+    https://ziggit.dev/t/are-there-any-drawbacks-to-giving-setevalbranchquota-a-large-number/4194
+    https://news.ycombinator.com/item?id=27026990
+    devdocs.io/zig/index#setEvalBranchQuota
+
+poll function
+    https://notes.shichao.io/unp/ch6/#poll-function
+
+LWS
+    https://libwebsockets.org/
+    https://github.com/warmcat/libwebsockets
+    https://libwebsockets.org/git/libwebsockets/tree/READMEs
+
+unix - sockets for local interprocess communication
+    https://man7.org/linux/man-pages/man7/unix.7.html
+
+Why UNIX socket files end with and equal sign in ls?
+    https://superuser.com/questions/1794589/why-unix-socket-files-end-with-and-equal-sign-in-ls [e.g. ls -Fa /tmp]
+
+Is `/tmp` the right place for UNIX-domain socket files?
+    https://stackoverflow.com/questions/43124765/is-tmp-the-right-place-for-unix-domain-socket-files

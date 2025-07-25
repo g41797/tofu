@@ -9,6 +9,7 @@ pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 msgs: MSGMailBox = undefined,
 mutex: Mutex = undefined,
+shutdown_started: bool = undefined,
 
 pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
     gt.allocator = allocator;
@@ -17,6 +18,7 @@ pub fn init(gt: *Gate, allocator: Allocator, options: Options) !void {
     gt.acns = try ActiveChannels.init(allocator, 255);
     gt.msgs = .{};
     gt.mutex = .{};
+    gt.shutdown_started = false;
     return;
 }
 
@@ -55,20 +57,6 @@ pub fn start_send(impl: *const anyopaque, msg: *Message) !BinaryHeader {
 pub fn wait_receive(impl: *const anyopaque, timeout_ns: u64) anyerror!?*Message {
     var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
     return gt._wait_receive(timeout_ns);
-}
-
-pub fn shutdown(impl: *const anyopaque) !void {
-    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
-    var allocator: Allocator = undefined;
-    {
-        gt.mutex.lock();
-        defer gt.mutex.unlock();
-
-        allocator = gt.allocator;
-        gt.deinit();
-    }
-    allocator.destroy(gt);
-    return;
 }
 
 fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
@@ -141,6 +129,23 @@ fn deinit(gt: *Gate) void {
     gt.pool.close();
     gt.acns.deinit();
 
+    return;
+}
+
+pub fn shutdown(impl: *const anyopaque) !void {
+    var gt: *Gate = @constCast(@ptrCast(@alignCast(impl)));
+    var allocator: Allocator = undefined;
+    {
+        gt.mutex.lock();
+        defer gt.mutex.unlock();
+
+        gt.shutdown_started = true;
+        gt.msgs.interrupt() catch {};
+
+        allocator = gt.allocator;
+        gt.deinit();
+    }
+    allocator.destroy(gt);
     return;
 }
 

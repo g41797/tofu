@@ -208,27 +208,29 @@ pub const Message = struct {
     }
 
     pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?*TextHeaders, body: ?[]const u8) !void {
-        msg._reset();
         msg.bhdr = bhdr.*;
-        if (thdrs != null) {
-            const it = thdrs.?.hiter();
+        msg._reset();
+
+        if (thdrs) |hdrs| {
+            const it = hdrs.hiter();
             try msg.thdrs.appendSafe(it);
         }
-        if (body != null) {
-            try msg.body.copy(body.?);
+        if (body) |data| {
+            try msg.body.copy(data);
         }
 
         return msg.validate();
     }
 
     pub fn setNotSafe(msg: *Message, bhdr: *BinaryHeader, thdrs: ?[]const u8, body: ?[]const u8) !void {
-        msg._reset();
         msg.bhdr = bhdr.*;
-        if (thdrs != null) {
-            try msg.thdrs.appendNotSafe(thdrs.?);
+        msg._reset();
+
+        if (thdrs) |hdrs| {
+            try msg.thdrs.appendNotSafe(hdrs);
         }
-        if (body != null) {
-            try msg.body.copy(body.?);
+        if (body) |data| {
+            try msg.body.copy(data);
         }
 
         return;
@@ -374,13 +376,7 @@ pub const Message = struct {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
             return AMPError.InvalidHeadersLen;
         }
-
-        if (msg.bhdr.text_headers_len == 0) {
-            msg.bhdr.text_headers_len = @intCast(actualHeadersLen);
-        } else if (msg.bhdr.text_headers_len != actualHeadersLen) {
-            msg.bhdr.status = status_to_raw(.invalid_headers_len);
-            return AMPError.InvalidHeadersLen;
-        }
+        msg.bhdr.text_headers_len = @intCast(actualHeadersLen);
 
         if ((msg.bhdr.text_headers_len == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
             msg.bhdr.status = status_to_raw(.invalid_address);
@@ -392,13 +388,7 @@ pub const Message = struct {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
             return AMPError.InvalidHeadersLen;
         }
-
-        if (msg.bhdr.body_len == 0) {
-            msg.bhdr.body_len = @intCast(actualBodyLen);
-        } else if (msg.bhdr.body_len != actualBodyLen) {
-            msg.bhdr.status = status_to_raw(.invalid_body_len);
-            return AMPError.InvalidBodyLen;
-        }
+        msg.bhdr.body_len = @intCast(actualBodyLen);
 
         return vc;
     }

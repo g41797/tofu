@@ -1,6 +1,11 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+pub const Proto = enum {
+    tcp,
+    uds,
+};
+
 pub const TCPProto = "tcp";
 pub const UDSProto = "uds";
 
@@ -8,20 +13,20 @@ pub const DefaultProto = TCPProto;
 pub const DefaultAddr = "127.0.0.1";
 pub const DefaultPort = LazyPTOP;
 
-const ConfigPrintFormat = "{s}|{s}|{d}";
+const ConfigPrintFormatTCP = "{s}|{s}|{d}";
+const ConfigPrintFormatUDS = "{s}|{s}";
 
 // For the client - Part of Hello headers
 // "~connect_to: proto|addr or empty|port
 // "~connect_to: tcp|127.0.0.1|7099
-// "~connect_to: uds||7099
+// "~connect_to: uds|/tmp/7099.port
 pub const ConnectToHeader = "~connect_to";
 
-// For the server - Part of Welcome headers
+// For the server - Part of Welcome headers, actually only this one is required
 // "~listen_on: proto|addr or empty|port
 // "~listen_on: tcp|127.0.0.1|7099  - on loopback only
 // "~listen_on: tcp||7099           - on every host IP address
-// "~listen_on: uds||7099
-
+// "~listen_on: uds|/tmp/7099.port
 pub const ListenOnHeader = "~listen_on";
 
 pub const TCPClientConfigurator = struct {
@@ -45,19 +50,19 @@ pub const TCPClientConfigurator = struct {
         return cnf;
     }
 
-    pub fn prepareRequest(self: *TCPClientConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) !void {
         prepareForClient(msg);
 
         try self.toConfiguration(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *TCPClientConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) !void {
         if ((self.addr == null) or (self.port == null)) {
             return error.WrongInitialConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormat, .{ TCPProto, self.addr.?, self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addr.?, self.port.? }) catch unreachable;
         try config.append(ConnectToHeader, confHeader);
         return;
     }
@@ -83,116 +88,127 @@ pub const TCPServerConfigurator = struct {
         return cnf;
     }
 
-    pub fn prepareRequest(self: *TCPServerConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) !void {
         prepareForServer(msg);
 
         try self.toConfiguration(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *TCPServerConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) !void {
         if ((self.ip == null) or (self.port == null)) {
             return error.WrongInitialConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormat, .{ TCPProto, self.ip.?, self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.ip.?, self.port.? }) catch unreachable;
         try config.append(ListenOnHeader, confHeader);
         return;
     }
 };
 
 pub const UDSClientConfigurator = struct {
-    port: ?u16 = null,
+    path: []const u8 = undefined,
 
-    pub fn init(port: ?u16) UDSClientConfigurator {
-        var cnf: UDSClientConfigurator = .{};
-        if (port) |pr| {
-            cnf.port = pr;
-        } else {
-            cnf.port = DefaultPort;
-        }
-        return;
+    pub fn init(path: []const u8) UDSClientConfigurator {
+        return .{
+            .path = path,
+        };
     }
 
-    pub fn prepareRequest(self: *UDSClientConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) !void {
         prepareForClient(msg);
 
         try self.toConfiguration(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *UDSClientConfigurator, config: *TextHeaders) !void {
-        if (self.port == null) {
-            return error.WrongInitialConfiguration;
-        }
-
+    pub fn toConfiguration(self: *const UDSClientConfigurator, config: *TextHeaders) !void {
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormat, .{ UDSProto, "", self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{
+            UDSProto,
+            self.path,
+        }) catch unreachable;
         try config.append(ConnectToHeader, confHeader);
         return;
     }
 };
 
 pub const UDSServerConfigurator = struct {
-    port: ?u16 = null,
+    path: []const u8 = undefined,
 
-    pub fn init(port: ?u16) UDSServerConfigurator {
-        var cnf: UDSServerConfigurator = .{};
-        if (port) |pr| {
-            cnf.port = pr;
-        } else {
-            cnf.port = DefaultPort;
-        }
-        return;
+    pub fn init(path: []const u8) UDSServerConfigurator {
+        return .{
+            .path = path,
+        };
     }
 
-    pub fn prepareRequest(self: *UDSServerConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) !void {
         prepareForServer(msg);
 
         try self.toConfiguration(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *UDSServerConfigurator, config: *TextHeaders) !void {
-        if (self.port == null) {
-            return error.WrongInitialConfiguration;
-        }
-
+    pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) !void {
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormat, .{ UDSProto, "", self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.path }) catch unreachable;
         try config.append(ListenOnHeader, confHeader);
         return;
     }
 };
 
 pub const WrongConfigurator = struct {
-    pub fn prepareRequest(self: *WrongConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) !void {
         _ = self;
         _ = msg;
         return error.WrongConfigurator;
     }
 };
 
-inline fn prepareForServer(msg: *Message) void {
-    msg.bhdr.proto.mtype = .welcome;
-    msg.bhdr.proto.mode = .request;
-    msg.bhdr.proto.more = .last;
-    msg.bhdr.proto.origin = .application;
+pub const Configurator = union(enum) {
+    tcp_server: TCPServerConfigurator,
+    tcp_client: TCPClientConfigurator,
+    uds_server: UDSServerConfigurator,
+    uds_client: UDSClientConfigurator,
+    wrong: WrongConfigurator,
 
-    msg.bhdr.channel_number = 0;
-    msg.bhdr.message_id = 0;
-    msg.bhdr.status = 0;
-    msg.bhdr.text_headers_len = 0; // Protocol will use actual headers length
+    pub fn prepareRequest(self: *const Configurator, msg: *Message) !void {
+        return switch (self.*) {
+            inline else => |conf| try conf.prepareRequest(msg),
+        };
+    }
+};
+
+inline fn prepareForServer(msg: *Message) void {
+    msg.bhdr.proto = .{
+        .mtype = .welcome,
+        .mode = .request,
+        .more = .last,
+        .origin = .application,
+    };
+
+    msg.bhdr = .{
+        .channel_number = 0,
+        .message_id = 0,
+        .status = 0,
+        .text_headers_len = 0, // Protocol will use actual headers length
+        .body_len = 0, // Protocol will use actual body length
+    };
 }
 
 inline fn prepareForClient(msg: *Message) void {
-    msg.bhdr.proto.mtype = .hello;
-    msg.bhdr.proto.mode = .request;
-    msg.bhdr.proto.more = .last;
-    msg.bhdr.proto.origin = .application;
+    msg.bhdr.proto = .{
+        .mtype = .hello,
+        .mode = .request,
+        .more = .last,
+        .origin = .application,
+    };
 
-    msg.bhdr.channel_number = 0;
-    msg.bhdr.message_id = 0;
-    msg.bhdr.status = 0;
-    msg.bhdr.text_headers_len = 0; // Protocol will use actual headers length
+    msg.bhdr = .{
+        .channel_number = 0,
+        .message_id = 0,
+        .status = 0,
+        .text_headers_len = 0, // Protocol will use actual headers length
+        .body_len = 0, // Protocol will use actual body length
+    };
 }
 
 inline fn isFirstServerRequest(msg: *Message) bool {
@@ -244,3 +260,30 @@ pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
 const std = @import("std");
+
+const Age = union(enum) {
+    cat: Cat,
+    dog: Dog,
+
+    pub fn getAge(self: *const Age) u32 {
+        return switch (self.*) {
+            inline else => |animal| animal.getAge(),
+        };
+    }
+};
+
+const Cat = struct {
+    age: u32,
+
+    pub fn getAge(self: *const Cat) u32 {
+        return self.age;
+    }
+};
+
+const Dog = struct {
+    age: u32,
+
+    pub fn getAge(self: *const Dog) u32 {
+        return self.age;
+    }
+};
