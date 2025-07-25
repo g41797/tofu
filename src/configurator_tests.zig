@@ -4,23 +4,23 @@
 const Map = std.StringHashMap([]const u8);
 
 test "base configurator test" {
-    const allocator = testing.allocator;
+    // const allocator = testing.allocator;
 
     var msg = allocMsg();
 
     defer msg.destroy();
 
     {
-        var params = Map.init(allocator);
-        defer params.deinit();
+        // var params = Map.init(allocator);
+        // defer params.deinit();
 
         var conf: Configurator = .{ .tcp_client = TCPClientConfigurator.init(null, null) };
 
         _ = try conf.prepareRequest(msg);
 
-        fillMap(&params, &msg.thdrs) catch unreachable;
+        const restored = Configurator.fromMessage(msg);
 
-        try testing.expectEqual(1, params.count());
+        try std.testing.expectEqual(true, conf.eql(restored));
     }
 }
 

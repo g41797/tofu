@@ -175,6 +175,113 @@ pub const Configurator = union(enum) {
             inline else => |conf| try conf.prepareRequest(msg),
         };
     }
+
+    pub fn eql(self: Configurator, other: Configurator) bool {
+        return activeTag(self) == activeTag(other);
+    }
+
+    pub fn fromMessage(msg: *Message) Configurator {
+        const cftr: Configurator = .{
+            .wrong = .{},
+        };
+        if (msg.actual_headers_len() == 0) {
+            return cftr;
+        }
+        var it = msg.thdrs.hiter();
+
+        var next = it.next();
+
+        while (next != null) : (next = it.next()) {
+            if (std.mem.eql(u8, next.?.name, ConnectToHeader)) {
+                return clientFromString(next.?.value);
+            }
+            if (std.mem.eql(u8, next.?.name, ListenOnHeader)) {
+                return serverFromString(next.?.value);
+            }
+        }
+
+        return cftr;
+    }
+
+    fn clientFromString(string: []const u8) Configurator {
+        var cftr: Configurator = .{
+            .wrong = .{},
+        };
+
+        brk: while (true) {
+            var split = std.mem.splitScalar(u8, string, '|');
+            var parts: [3][]const u8 = undefined;
+            var count: usize = 0;
+
+            while (split.next()) |part| : (count += 1) {
+                if (count > 3) {
+                    break :brk;
+                }
+                parts[count] = part;
+            }
+
+            if (count < 2) {
+                break;
+            }
+
+            if (count == 2) {
+                if (!std.mem.eql(u8, parts[0], UDSProto)) {
+                    break;
+                }
+                cftr = .{
+                    .uds_client = .init(parts[1]),
+                };
+                break;
+            }
+
+            const port = std.fmt.parseInt(u16, parts[2], 10) catch break :brk;
+            cftr = .{
+                .tcp_client = .init(parts[1], port),
+            };
+            break;
+        }
+        return cftr;
+    }
+
+    fn serverFromString(string: []const u8) Configurator {
+        var cftr: Configurator = .{
+            .wrong = .{},
+        };
+
+        brk: while (true) {
+            var split = std.mem.splitScalar(u8, string, '|');
+            var parts: [3][]const u8 = undefined;
+            var count: usize = 0;
+
+            while (split.next()) |part| : (count += 1) {
+                if (count > 3) {
+                    break :brk;
+                }
+                parts[count] = part;
+            }
+
+            if (count < 2) {
+                break;
+            }
+
+            if (count == 2) {
+                if (!std.mem.eql(u8, parts[0], UDSProto)) {
+                    break;
+                }
+                cftr = .{
+                    .uds_server = .init(parts[1]),
+                };
+                break;
+            }
+
+            const port = std.fmt.parseInt(u16, parts[2], 10) catch break :brk;
+            cftr = .{
+                .tcp_server = .init(parts[1], port),
+            };
+            break;
+        }
+        return cftr;
+    }
 };
 
 inline fn prepareForServer(msg: *Message) void {
@@ -260,30 +367,4 @@ pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
 const std = @import("std");
-
-const Age = union(enum) {
-    cat: Cat,
-    dog: Dog,
-
-    pub fn getAge(self: *const Age) u32 {
-        return switch (self.*) {
-            inline else => |animal| animal.getAge(),
-        };
-    }
-};
-
-const Cat = struct {
-    age: u32,
-
-    pub fn getAge(self: *const Cat) u32 {
-        return self.age;
-    }
-};
-
-const Dog = struct {
-    age: u32,
-
-    pub fn getAge(self: *const Dog) u32 {
-        return self.age;
-    }
-};
+const activeTag = std.meta.activeTag;
