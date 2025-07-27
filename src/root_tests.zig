@@ -7,6 +7,7 @@ test {
     _ = @import("configurator_tests.zig");
     _ = @import("protocol_test.zig");
     _ = @import("protocol/Pool_tests.zig");
+    _ = @import("protocol/Notifier_tests.zig");
     _ = @import("protocol/channels_tests.zig");
     @import("std").testing.refAllDecls(@This());
 }

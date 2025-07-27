@@ -244,6 +244,8 @@ pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
 
 const Pool = @import("Pool.zig");
+const Notifier = @import("Notifier.zig");
+
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
 

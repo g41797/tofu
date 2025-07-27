@@ -285,36 +285,20 @@ pub const Configurator = union(enum) {
 };
 
 inline fn prepareForServer(msg: *Message) void {
+    msg.bhdr = .{};
+
     msg.bhdr.proto = .{
         .mtype = .welcome,
         .mode = .request,
-        .more = .last,
-        .origin = .application,
-    };
-
-    msg.bhdr = .{
-        .channel_number = 0,
-        .message_id = 0,
-        .status = 0,
-        .text_headers_len = 0, // Protocol will use actual headers length
-        .body_len = 0, // Protocol will use actual body length
     };
 }
 
 inline fn prepareForClient(msg: *Message) void {
+    msg.bhdr = .{};
+
     msg.bhdr.proto = .{
         .mtype = .hello,
         .mode = .request,
-        .more = .last,
-        .origin = .application,
-    };
-
-    msg.bhdr = .{
-        .channel_number = 0,
-        .message_id = 0,
-        .status = 0,
-        .text_headers_len = 0, // Protocol will use actual headers length
-        .body_len = 0, // Protocol will use actual body length
     };
 }
 

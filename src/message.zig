@@ -162,7 +162,7 @@ pub const TextHeaders = struct {
     }
 };
 
-pub const ValidCombination = enum {
+pub const ValidCombination = enum(u4) {
     WelcomeRequest,
     WelcomeResponse,
     HelloRequest,
@@ -178,6 +178,17 @@ pub const ValidCombination = enum {
     AppRequest,
     AppResponse,
     AppSignal,
+};
+
+pub const MessagePriority = enum(u1) {
+    regular = 0,
+    oob = 1,
+};
+
+pub const MessageNotification = packed struct(u8) {
+    priority: MessagePriority = .regular,
+    combination: ValidCombination = undefined,
+    _reserved: u3 = undefined,
 };
 
 pub const Message = struct {

@@ -25,6 +25,9 @@ Interesting  Projects
     https://github.com/karlseguin/http.zig
     https://github.com/lightpanda-io/zig-async-io
     https://github.com/karlseguin/buffer.zig
+    https://codeberg.org/tao-guo/iofthetiger
+    https://github.com/rsepassi/zigcoro
+
 
 Interfaces
     Tagged union interfaces
