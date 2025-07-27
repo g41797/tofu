@@ -7,9 +7,7 @@ const INFINITE_TIMEOUT_MS = -1;
 pub const Notifier = @This();
 
 sender: socket_t = undefined,
-spoll: pollfd = undefined,
 receiver: socket_t = undefined,
-rpoll: pollfd = undefined,
 
 pub fn init(allocator: Allocator) !Notifier {
     var tempFile = try temp.create_file(allocator, "yaaamp*.port");
@@ -44,23 +42,18 @@ pub fn init(allocator: Allocator) !Notifier {
 
     return .{
         .sender = sender_fd,
-        .spoll = .{
-            .fd = sender_fd,
-            .events = POLL.OUT,
-            .revents = 0,
-        },
         .receiver = receiver_fd,
-        .rpoll = .{
-            .fd = receiver_fd,
-            .events = POLL.IN,
-            .revents = 0,
-        },
     };
 }
 
 pub fn isReadyToRecv(ntfr: *Notifier) bool {
-    ntfr.rpoll.revents = 0;
-    const cpoll: [*c]pollfd = &ntfr.rpoll;
+    var rpoll: pollfd = .{
+        .fd = ntfr.receiver,
+        .events = POLL.IN,
+        .revents = 0,
+    };
+
+    const cpoll: [*c]pollfd = &rpoll;
 
     const pollstatus = system.poll(cpoll, 1, SEC_TIMEOUT_MS);
 
@@ -68,7 +61,7 @@ pub fn isReadyToRecv(ntfr: *Notifier) bool {
         return false;
     }
 
-    if (ntfr.rpoll.revents & std.posix.POLL.HUP != 0) {
+    if (rpoll.revents & std.posix.POLL.HUP != 0) {
         return false;
     }
 
@@ -76,8 +69,12 @@ pub fn isReadyToRecv(ntfr: *Notifier) bool {
 }
 
 pub fn isReadyToSend(ntfr: *Notifier) bool {
-    ntfr.spoll.revents = 0;
-    const cpoll: [*c]pollfd = &ntfr.rpoll;
+    var spoll: pollfd = .{
+        .fd = ntfr.sender,
+        .events = POLL.OUT,
+        .revents = 0,
+    };
+    const cpoll: [*c]pollfd = &spoll;
 
     const pollstatus = system.poll(cpoll, 1, SEC_TIMEOUT_MS);
 
@@ -85,7 +82,7 @@ pub fn isReadyToSend(ntfr: *Notifier) bool {
         return false;
     }
 
-    if (ntfr.spoll.revents & std.posix.POLL.HUP != 0) {
+    if (spoll.revents & std.posix.POLL.HUP != 0) {
         return false;
     }
 

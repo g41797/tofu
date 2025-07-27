@@ -5,7 +5,7 @@ test "base Notifier" {
     var ntfr = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
 
-    try testing.expectEqual(false, ntfr.isReadyToSend());
+    try testing.expectEqual(true, ntfr.isReadyToSend());
     try testing.expectEqual(false, ntfr.isReadyToRecv());
 
     try ntfr.sendNotification(123);
