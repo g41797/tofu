@@ -241,3 +241,10 @@ Why UNIX socket files end with and equal sign in ls?
 
 Is `/tmp` the right place for UNIX-domain socket files?
     https://stackoverflow.com/questions/43124765/is-tmp-the-right-place-for-unix-domain-socket-files
+
+Working with bit flags
+    https://ziggit.dev/t/working-with-bit-flags/11165
+
+
+Are file descriptors for linux sockets always in increasing order
+    https://stackoverflow.com/questions/9376189/are-file-descriptors-for-linux-sockets-always-in-increasing-order

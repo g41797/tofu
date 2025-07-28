@@ -47,21 +47,23 @@ pub fn init(allocator: Allocator) !Notifier {
 }
 
 pub fn isReadyToRecv(ntfr: *Notifier) bool {
-    var rpoll: pollfd = .{
-        .fd = ntfr.receiver,
-        .events = POLL.IN,
-        .revents = 0,
+    var rpoll: [1]pollfd = .{
+        .{
+            .fd = ntfr.receiver,
+            .events = POLL.IN,
+            .revents = 0,
+        },
     };
 
-    const cpoll: [*c]pollfd = &rpoll;
-
-    const pollstatus = system.poll(cpoll, 1, SEC_TIMEOUT_MS);
+    const pollstatus = posix.poll(&rpoll, SEC_TIMEOUT_MS) catch {
+        return false;
+    };
 
     if (pollstatus == 0) {
         return false;
     }
 
-    if (rpoll.revents & std.posix.POLL.HUP != 0) {
+    if (rpoll[0].revents & std.posix.POLL.HUP != 0) {
         return false;
     }
 
@@ -69,20 +71,23 @@ pub fn isReadyToRecv(ntfr: *Notifier) bool {
 }
 
 pub fn isReadyToSend(ntfr: *Notifier) bool {
-    var spoll: pollfd = .{
-        .fd = ntfr.sender,
-        .events = POLL.OUT,
-        .revents = 0,
+    var spoll: [1]pollfd = .{
+        .{
+            .fd = ntfr.sender,
+            .events = POLL.OUT,
+            .revents = 0,
+        },
     };
-    const cpoll: [*c]pollfd = &spoll;
 
-    const pollstatus = system.poll(cpoll, 1, SEC_TIMEOUT_MS);
+    const pollstatus = posix.poll(&spoll, SEC_TIMEOUT_MS) catch {
+        return false;
+    };
 
     if (pollstatus == 0) {
         return false;
     }
 
-    if (spoll.revents & std.posix.POLL.HUP != 0) {
+    if (spoll[0].revents & std.posix.POLL.HUP != 0) {
         return false;
     }
 
