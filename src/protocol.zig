@@ -1,6 +1,102 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+/// Defines the strategy for allocating messages from a pool.
+pub const AllocationStrategy = enum {
+    /// Attempts to allocate a message from the pool, returning null if the pool is empty.
+    poolOnly,
+    /// Allocates a message from the pool or creates a new one if the pool is empty.
+    always,
+};
+
+/// Represents a sender-receiver interface for asynchronous message passing.
+pub const Sr = struct {
+    ptr: ?*anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        /// Retrieves a message from the internal pool based on the specified allocation strategy.
+        ///
+        /// Thread-safe.
+        get: *const fn (ptr: ?*anyopaque, strategy: AllocationStrategy) ?*Message,
+
+        /// Returns a message to the internal pool. If the pool is closed, destroys the message.
+        ///
+        /// Thread-safe.
+        put: *const fn (ptr: ?*anyopaque, msg: *Message) void,
+
+        /// Initiates an asynchronous send of a message to a peer.
+        /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
+        /// Returns an error if the message is invalid.
+        asyncSend: *const fn (ptr: ?*anyopaque, msg: *Message) anyerror!BinaryHeader,
+
+        /// Waits for a message on the internal queue.
+        /// Returns null if no message is received within the specified timeout (in nanoseconds).
+        waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) anyerror!?*Message,
+    };
+
+    /// Retrieves a message from the internal pool based on the specified allocation strategy.
+    ///
+    /// Thread-safe.
+    pub fn get(sr: Sr, strategy: AllocationStrategy) ?*Message {
+        return sr.vtable.get(sr.ptr, strategy);
+    }
+
+    /// Returns a message to the internal pool. If the pool is closed, destroys the message.
+    ///
+    /// Thread-safe.
+    pub fn put(sr: Sr, msg: *Message) void {
+        sr.vtable.put(sr.ptr, msg);
+    }
+
+    /// Initiates an asynchronous send of a message to a peer.
+    /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
+    /// Returns an error if the message is invalid.
+    pub fn asyncSend(sr: Sr, msg: *Message) anyerror!BinaryHeader {
+        return sr.vtable.asyncSend(sr.ptr, msg);
+    }
+
+    /// Waits for a message on the internal queue.
+    /// Returns null if no message is received within the specified timeout (in nanoseconds).
+    pub fn waitReceive(sr: Sr, timeout_ns: u64) anyerror!?*Message {
+        return sr.vtable.waitReceive(sr.ptr, timeout_ns);
+    }
+};
+
+/// Represents an asynchronous message passing engine interface.
+pub const Ampe = struct {
+    ptr: ?*anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        /// Creates a new sender-receiver.
+        /// Call `destroy` on the result to stop communication and free associated memory.
+        ///
+        /// Thread-safe.
+        create: *const fn (ptr: ?*anyopaque) anyerror!*Sr,
+
+        /// Destroys a sender-receiver, stopping communication and freeing associated memory.
+        ///
+        /// Thread-safe.
+        destroy: *const fn (ptr: ?*anyopaque, sr: *Sr) anyerror!void,
+    };
+
+    /// Creates a new sender-receiver.
+    /// Call `destroy` on the result to stop communication and free associated memory.
+    ///
+    /// Thread-safe.
+    pub fn create(ampe: Ampe) anyerror!*Sr {
+        return ampe.vtable.create(ampe.ptr);
+    }
+
+    /// Destroys a sender-receiver, stopping communication and freeing associated memory.
+    ///
+    /// Thread-safe.
+    pub fn destroy(ampe: Ampe, sr: *Sr) anyerror!void {
+        return ampe.vtable.destroy(ampe.ptr, sr);
+    }
+};
+
 pub const AMP = struct {
     impl: *const anyopaque = undefined,
     functions: *const AMPFunctions = undefined,

@@ -248,3 +248,12 @@ Working with bit flags
 
 Are file descriptors for linux sockets always in increasing order
     https://stackoverflow.com/questions/9376189/are-file-descriptors-for-linux-sockets-always-in-increasing-order
+
+Io.zig -  current development
+    https://github.com/ziglang/zig/tree/Io.net
+    https://github.com/ziglang/zig/blob/Io.net/lib/std/Io.zig
+
+    pub fn io(pool: *Pool) Io {...
+    https://github.com/ziglang/zig/blob/Io.net/lib/std/Io/ThreadPool.zig#L88
+
+    https://github.com/ziglang/zig/tree/async-await-demo/lib/std
