@@ -88,10 +88,28 @@ fn destroyDefer(amp: *AMP) void {
 //     _ = rand.int(u16);
 // }
 
+test "Ampe not implemented yet" {
+    var plr = try Poller.init(std.testing.allocator, .{});
+    defer plr.deinit();
+
+    const ampe = plr.ampe();
+
+    try testing.expectError(error.NotImplementedYet, ampe.create());
+
+    var sr: Sr = .{
+        .ptr = undefined,
+        .vtable = undefined,
+    };
+    try testing.expectError(error.NotImplementedYet, ampe.destroy(&sr));
+}
+
 const std = @import("std");
 const testing = std.testing;
 
 const protocol = @import("protocol.zig");
+const Ampe = protocol.Ampe;
+const Sr = protocol.Sr;
+
 const AMP = protocol.AMP;
 
 pub const message = @import("message.zig");
@@ -111,3 +129,5 @@ pub const VC = message.ValidCombination;
 pub const status = @import("status.zig");
 pub const AMPStatus = status.AMPStatus;
 pub const AMPError = status.AMPError;
+
+pub const Poller = @import("protocol/Poller.zig");

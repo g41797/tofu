@@ -9,6 +9,18 @@ pub const Notifier = @This();
 sender: socket_t = undefined,
 receiver: socket_t = undefined,
 
+pub fn create(allocator: Allocator) !*Notifier {
+    const ntfr = try allocator.create(Notifier);
+    errdefer allocator.destroy(ntfr);
+    try ntfr.init(allocator);
+    return ntfr;
+}
+
+pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
+    ntfr.deinit();
+    allocator.destroy(ntfr);
+}
+
 pub fn init(allocator: Allocator) !Notifier {
     var tempFile = try temp.create_file(allocator, "yaaamp*.port");
     tempFile.retain = false;

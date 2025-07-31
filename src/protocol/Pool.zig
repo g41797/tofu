@@ -8,9 +8,22 @@ allocator: Allocator = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
 
-pub fn init(allocator: Allocator) !Pool {
+pub fn create(gpa: Allocator) !*Pool {
+    const pool = try gpa.create(Pool);
+    errdefer gpa.destroy(pool);
+    try pool.init(gpa);
+    return pool;
+}
+
+pub fn destroy(pool: *Pool) void {
+    const gpa = pool.allocator;
+    pool.close();
+    gpa.destroy(pool);
+}
+
+pub fn init(gpa: Allocator) !Pool {
     return .{
-        .allocator = allocator,
+        .allocator = gpa,
         .first = null,
         .mutex = .{},
         .closed = false,

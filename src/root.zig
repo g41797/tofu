@@ -13,7 +13,8 @@ pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const TextHeaders = protocol.TextHeaders;
 pub const Message = protocol.Message;
 pub const Options = protocol.Options;
-pub const AMP = protocol.AMP;
+pub const Ampe = protocol.Ampe;
+pub const Sr = protocol.Sr;
 
 pub const status = @import("status.zig");
 pub const AMPStatus = status.AMPStatus;
@@ -27,6 +28,8 @@ pub const TCPServerConfigurator = configurator.TCPServerConfigurator;
 pub const UDSClientConfigurator = configurator.UDSClientConfigurator;
 pub const UDSServerConfigurator = configurator.UDSServerConfigurator;
 pub const Configurator = configurator.Configurator;
+
+pub const Poller = @import("protocol/Poller.zig");
 
 pub const Appendable = @import("nats").Appendable;
 

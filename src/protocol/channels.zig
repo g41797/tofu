@@ -98,18 +98,31 @@ pub const ActiveChannels = struct {
     active: AutoHashMap(ChannelNumber, MessageID) = undefined,
     mutex: Mutex = undefined,
 
-    pub fn init(allocator: Allocator, rrchn: u8) !ActiveChannels {
+    pub fn create(gpa: Allocator) !*ActiveChannels {
+        const cns = try gpa.create(ActiveChannels);
+        errdefer gpa.destroy(cns);
+        try cns.init(gpa);
+        return cns;
+    }
+
+    pub fn destroy(cns: *ActiveChannels) void {
+        const gpa = cns.allocator;
+        cns.deinit();
+        gpa.destroy(cns);
+    }
+
+    pub fn init(gpa: Allocator, rrchn: u8) !ActiveChannels {
         if (rrchn == 0) {
             return error.RecentlyRemovedChannelsNumber;
         }
-        var nodes: []ChannelNode = try allocator.alloc(ChannelNode, rrchn);
+        var nodes: []ChannelNode = try gpa.alloc(ChannelNode, rrchn);
 
         var channels: ActiveChannels = .{
-            .allocator = allocator,
+            .allocator = gpa,
             .nodes = nodes,
             .removed = .{},
             .free = .{},
-            .active = .init(allocator),
+            .active = .init(gpa),
         };
 
         try channels.active.ensureTotalCapacity(256);
