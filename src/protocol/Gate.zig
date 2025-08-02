@@ -70,17 +70,14 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
             msg.bhdr.status = status_to_raw(.invalid_channel_number);
             return AMPError.InvalidChannelNumber;
         } else {
-            // channel_number == 0 - Allowed for ShutdownRequest/Response
-            // For other messages - should be assigned
-            if (!((vc == .ShutdownRequest) or (vc == .ShutdownResponse))) {
-                var mID: ?MessageID = null;
-                if (msg.bhdr.message_id != 0) {
-                    mID = msg.bhdr.message_id;
-                }
-                const cres = gt.acns.createChannel(mID);
-                msg.bhdr.channel_number = cres.@"0";
-                msg.bhdr.message_id = cres.@"1";
+            // channel_number == 0 - - should be assigned
+            var mID: ?MessageID = null;
+            if (msg.bhdr.message_id != 0) {
+                mID = msg.bhdr.message_id;
             }
+            const cres = gt.acns.createChannel(mID, gt);
+            msg.bhdr.channel_number = cres.@"0";
+            msg.bhdr.message_id = cres.@"1";
         }
 
         const ret = switch (vc) {
@@ -92,7 +89,6 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
             .ByeSignal => gt.not_implemented(msg),
             .ControlRequest => gt.not_implemented(msg),
             .ControlSignal => gt.not_implemented(msg),
-            .ShutdownRequest => gt.not_implemented(msg),
             .AppRequest => gt.not_implemented(msg),
             .AppResponse => gt.not_implemented(msg),
             .AppSignal => gt.not_implemented(msg),

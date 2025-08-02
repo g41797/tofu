@@ -88,19 +88,15 @@ fn destroyDefer(amp: *AMP) void {
 //     _ = rand.int(u16);
 // }
 
-test "Ampe not implemented yet" {
-    var plr = try Poller.init(std.testing.allocator, .{});
+test "Ampe create/destroy" {
+    var plr = Poller.init(std.testing.allocator, .{}) catch unreachable;
     defer plr.deinit();
 
     const ampe = plr.ampe();
 
-    try testing.expectError(error.NotImplementedYet, ampe.create());
+    const sr = try ampe.create();
 
-    var sr: Sr = .{
-        .ptr = undefined,
-        .vtable = undefined,
-    };
-    try testing.expectError(error.NotImplementedYet, ampe.destroy(&sr));
+    try ampe.destroy(sr);
 }
 
 const std = @import("std");

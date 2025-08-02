@@ -30,6 +30,7 @@ pub const UDSServerConfigurator = configurator.UDSServerConfigurator;
 pub const Configurator = configurator.Configurator;
 
 pub const Poller = @import("protocol/Poller.zig");
+const SenderReceiver = @import("protocol/SenderReceiver.zig");
 
 pub const Appendable = @import("nats").Appendable;
 

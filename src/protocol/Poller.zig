@@ -3,8 +3,14 @@
 
 pub const Poller = @This();
 
+mutex: Mutex = undefined,
 allocator: Allocator = undefined,
 options: protocol.Options = undefined,
+msgs: [2]MSGMailBox = undefined,
+ntfr: Notifier = undefined,
+pool: Pool = undefined,
+acns: ActiveChannels = undefined,
+maxid: u32 = undefined,
 
 pub fn ampe(plr: *Poller) Ampe {
     const result: Ampe = .{
@@ -18,39 +24,69 @@ pub fn ampe(plr: *Poller) Ampe {
 }
 
 pub fn init(gpa: Allocator, options: Options) !Poller {
-    const plr: Poller = .{
+    var plr: Poller = .{
+        .mutex = .{},
         .allocator = gpa,
         .options = options,
+        .msgs = .{ .{}, .{} },
+        .maxid = 0,
     };
 
+    plr.ntfr = try Notifier.init(plr.allocator);
+    plr.pool = try Pool.init(plr.allocator);
+    plr.acns = try ActiveChannels.init(plr.allocator, 255);
     return plr;
 }
 
 pub fn deinit(plr: *Poller) void {
     const gpa = plr.allocator;
     _ = gpa;
+    plr.ntfr.deinit();
+
+    for (plr.msgs, 0..) |_, i| {
+        var mbx = plr.msgs[i];
+        var allocated = mbx.close();
+        while (allocated != null) {
+            const next = allocated.?.next;
+            allocated.?.destroy();
+            allocated = next;
+        }
+    }
+
+    plr.pool.close();
+    plr.acns.deinit();
+
     plr.* = undefined;
 }
 
-pub fn create(ptr: ?*anyopaque) anyerror!*Sr {
+pub fn create(ptr: ?*anyopaque) !*Sr {
     const plr: *Poller = @alignCast(@ptrCast(ptr));
     return plr._create();
 }
 
-pub fn destroy(ptr: ?*anyopaque, sr: *Sr) anyerror!void {
+pub fn destroy(ptr: ?*anyopaque, sr: *Sr) !void {
     const plr: *Poller = @alignCast(@ptrCast(ptr));
     return plr._destroy(sr);
 }
 
-inline fn _create(plr: *Poller) anyerror!*Sr {
-    _ = plr;
-    return error.NotImplementedYet;
+inline fn _create(plr: *Poller) !*Sr {
+    plr.maxid += 1;
+
+    const srptr = try plr.allocator.create(Sr);
+    errdefer plr.allocator.destroy(srptr);
+
+    var srs = try SenderReceiver.create(plr, plr.maxid);
+
+    srptr.* = srs.sr();
+
+    return srptr;
 }
 
-inline fn _destroy(plr: *Poller, sr: *Sr) anyerror!void {
-    _ = plr;
-    _ = sr;
-    return error.NotImplementedYet;
+inline fn _destroy(plr: *Poller, sr: *Sr) !void {
+    const srs: *SenderReceiver = @alignCast(@ptrCast(sr.ptr));
+    srs.destroy();
+    plr.allocator.destroy(sr);
+    return;
 }
 
 pub const message = @import("../message.zig");
@@ -84,6 +120,8 @@ const Notifier = @import("Notifier.zig");
 
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
+
+const SenderReceiver = @import("SenderReceiver.zig");
 
 pub const Appendable = @import("nats").Appendable;
 

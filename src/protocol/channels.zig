@@ -90,12 +90,18 @@ pub const ChannelNodeQueue = struct {
     }
 };
 
+pub const ActiveChannel = struct {
+    chn: ChannelNumber = undefined,
+    hid: MessageID = undefined,
+    ctx: ?*anyopaque = undefined,
+};
+
 pub const ActiveChannels = struct {
     allocator: Allocator = undefined,
     nodes: []ChannelNode = undefined,
     removed: ChannelNodeQueue = .{},
     free: ChannelNodeQueue = .{},
-    active: AutoHashMap(ChannelNumber, MessageID) = undefined,
+    active: AutoHashMap(ChannelNumber, ActiveChannel) = undefined,
     mutex: Mutex = undefined,
 
     pub fn create(gpa: Allocator) !*ActiveChannels {
@@ -145,7 +151,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID) struct { ChannelNumber, MessageID } {
+    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID, ptr: ?*anyopaque) struct { ChannelNumber, MessageID } {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
@@ -167,7 +173,12 @@ pub const ActiveChannels = struct {
                 mid = protocol.next_mid();
             }
 
-            cns.active.put(rv, mid) catch unreachable;
+            const ach: ActiveChannel = .{
+                .chn = rv,
+                .hid = mid,
+                .ctx = ptr,
+            };
+            cns.active.put(rv, ach) catch unreachable;
 
             return .{ rv, mid };
         }
@@ -180,10 +191,61 @@ pub const ActiveChannels = struct {
         return cns.active.contains(cn);
     }
 
+    pub fn ctx(cns: *ActiveChannels, cn: ChannelNumber) ?*anyopaque {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
+        const achn = cns.active.get(cn) catch {
+            return null;
+        };
+
+        return achn.ctx;
+    }
+
+    pub fn activeChannel(cns: *ActiveChannels, cn: ChannelNumber) !ActiveChannel {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
+        const achn = cns.active.get(cn) catch |err| {
+            return err;
+        };
+
+        return achn;
+    }
+
     pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
+        return _removeChannel(cns, cn);
+    }
+
+    pub fn removeChannels(cns: *ActiveChannels, ptr: ?*anyopaque) !usize {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
+        var removedChns: usize = 0;
+
+        var chns_to_remove = std.ArrayList(ChannelNumber).init(cns.allocator);
+        defer chns_to_remove.deinit();
+
+        var it = cns.active.iterator();
+        while (it.next()) |kv_pair| {
+            if (kv_pair.value_ptr.ctx == ptr) {
+                try chns_to_remove.append(kv_pair.key_ptr.*);
+            }
+        }
+
+        for (chns_to_remove.items) |cnm| {
+            if (_removeChannel(cns, cnm)) {
+                removedChns += 1;
+            }
+        }
+
+        return removedChns;
+    }
+
+    fn _removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
         const wasRemoved = cns.active.remove(cn);
 
         const alreadyRemoved = cns.removed.remove(cn);
@@ -210,6 +272,23 @@ pub const ActiveChannels = struct {
         return true;
     }
 };
+
+pub fn channelsGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
+    cns.mutex.lock();
+    defer cns.mutex.unlock();
+
+    var chns = std.ArrayList(ChannelNumber).init(cns.allocator);
+    errdefer chns.deinit();
+
+    var it = cns.active.iterator();
+    while (it.next()) |kv_pair| {
+        if (kv_pair.value_ptr.ctx == ptr) {
+            try chns.append(kv_pair.key_ptr.*);
+        }
+    }
+
+    return chns;
+}
 
 pub const protocol = @import("../protocol.zig");
 pub const ChannelNumber = protocol.ChannelNumber;

@@ -173,22 +173,25 @@ pub const ValidCombination = enum(u4) {
     ControlRequest,
     ControlResponse,
     ControlSignal,
-    ShutdownRequest,
-    ShutdownResponse,
     AppRequest,
     AppResponse,
     AppSignal,
+    _reserved1,
+    _reserved2,
+    _reserved3,
 };
 
-pub const MessagePriority = enum(u1) {
-    regular = 0,
-    oob = 1,
+pub const NotificationKind = enum(u2) {
+    regularMsg = 0,
+    oobMsg = 1,
+    msgless = 2,
+    _reserved = 3,
 };
 
-pub const MessageNotification = packed struct(u8) {
-    priority: MessagePriority = .regular,
+pub const Notification = packed struct(u8) {
+    kind: NotificationKind = .regularMsg,
     combination: ValidCombination = undefined,
-    _reserved: u3 = undefined,
+    _reserved: u2 = undefined,
 };
 
 pub const Message = struct {
@@ -355,17 +358,6 @@ pub const Message = struct {
                     return AMPError.InvalidMessageMode;
                 },
             },
-            .shutdown => switch (mode) {
-                .request => .ShutdownRequest,
-                .response => {
-                    msg.bhdr.status = status_to_raw(.not_allowed);
-                    return AMPError.NotAllowed;
-                },
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
-                },
-            },
             else => {
                 msg.bhdr.status = status_to_raw(.invalid_message_type);
                 return AMPError.InvalidMessageType;
@@ -374,7 +366,7 @@ pub const Message = struct {
         const channel_number = msg.bhdr.channel_number;
         if (channel_number == 0) {
             switch (vc) {
-                .WelcomeRequest, .HelloRequest, .ShutdownRequest, .ShutdownResponse => {},
+                .WelcomeRequest, .HelloRequest => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
                     return AMPError.InvalidChannelNumber;
