@@ -75,9 +75,9 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
             if (msg.bhdr.message_id != 0) {
                 mID = msg.bhdr.message_id;
             }
-            const cres = gt.acns.createChannel(mID, gt);
-            msg.bhdr.channel_number = cres.@"0";
-            msg.bhdr.message_id = cres.@"1";
+            const ach = gt.acns.createChannel(mID, gt);
+            msg.bhdr.channel_number = ach.chn;
+            msg.bhdr.message_id = ach.hid;
         }
 
         const ret = switch (vc) {
@@ -105,7 +105,16 @@ fn _wait_receive(gt: *Gate, timeout_ns: u64) !?*Message {
 }
 
 inline fn _get(gt: *Gate, force: bool) ?*Message {
-    return gt.pool.get(force);
+    var as: AllocationStrategy = undefined;
+    if (force) {
+        as = .always;
+    } else {
+        as = .poolOnly;
+    }
+    const msg = gt.pool.get(as) catch {
+        return null;
+    };
+    return msg;
 }
 
 inline fn _put(gt: *Gate, msg: *Message) void {
@@ -229,7 +238,9 @@ pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
 pub const protocol = @import("../protocol.zig");
+pub const AllocationStrategy = protocol.AllocationStrategy;
 pub const Options = protocol.Options;
+
 pub const AMP = protocol.AMP;
 
 pub const status = @import("../status.zig");

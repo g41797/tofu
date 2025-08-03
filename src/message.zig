@@ -181,19 +181,6 @@ pub const ValidCombination = enum(u4) {
     _reserved3,
 };
 
-pub const NotificationKind = enum(u2) {
-    regularMsg = 0,
-    oobMsg = 1,
-    msgless = 2,
-    _reserved = 3,
-};
-
-pub const Notification = packed struct(u8) {
-    kind: NotificationKind = .regularMsg,
-    combination: ValidCombination = undefined,
-    _reserved: u2 = undefined,
-};
-
 pub const Message = struct {
     prev: ?*Message = null,
     next: ?*Message = null,

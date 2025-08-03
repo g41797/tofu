@@ -4,6 +4,19 @@
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;
 
+pub const NotificationKind = enum(u2) {
+    regularMsg = 0,
+    oobMsg = 1,
+    msgless = 2,
+    _reserved = 3,
+};
+
+pub const Notification = packed struct(u8) {
+    kind: NotificationKind = .regularMsg,
+    combination: ValidCombination = undefined,
+    _reserved: u2 = undefined,
+};
+
 pub const Notifier = @This();
 
 sender: socket_t = undefined,
@@ -106,7 +119,13 @@ pub fn isReadyToSend(ntfr: *Notifier) bool {
     return true;
 }
 
-pub fn recvNotification(ntfr: *Notifier) !u8 {
+pub fn recvNotification(ntfr: *Notifier) !Notification {
+    const byte = try _recvNotification(ntfr);
+    const ntptr: *const Notification = @ptrCast(&byte);
+    return (ntptr.*);
+}
+
+inline fn _recvNotification(ntfr: *Notifier) !u8 {
     var byte_array: [1]u8 = undefined;
     _ = std.posix.recv(ntfr.receiver, &byte_array, 0) catch |err| {
         return err;
@@ -114,10 +133,15 @@ pub fn recvNotification(ntfr: *Notifier) !u8 {
     return byte_array[0];
 }
 
-pub fn sendNotification(ntfr: *Notifier, notif: u8) !void {
+pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
+    const byteptr: *const u8 = @ptrCast(&notif);
+    return _sendNotification(ntfr, byteptr.*);
+}
+
+inline fn _sendNotification(ntfr: *Notifier, notif: u8) !void {
     var byte_array = [_]u8{notif};
-    _ = std.posix.send(ntfr.sender, &byte_array, 0) catch |err| {
-        return err;
+    _ = std.posix.send(ntfr.sender, &byte_array, 0) catch {
+        return AMPError.NotificationFailure;
     };
     return;
 }
@@ -126,6 +150,16 @@ pub fn deinit(ntfr: *Notifier) void {
     posix.close(ntfr.sender);
     posix.close(ntfr.receiver);
 }
+
+pub const message = @import("../message.zig");
+pub const ValidCombination = message.ValidCombination;
+
+pub const status = @import("../status.zig");
+pub const AMPStatus = status.AMPStatus;
+pub const AMPError = status.AMPError;
+pub const raw_to_status = status.raw_to_status;
+pub const raw_to_error = status.raw_to_error;
+pub const status_to_raw = status.status_to_raw;
 
 const temp = @import("temp");
 const nats = @import("nats");

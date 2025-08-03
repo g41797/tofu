@@ -30,11 +30,11 @@ pub fn init(gpa: Allocator) !Pool {
     };
 }
 
-pub fn get(pool: *Pool, force: bool) ?*Message {
+pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
     pool.mutex.lock();
     defer pool.mutex.unlock();
     if (pool.closed) {
-        return null;
+        return error.ClosedPool;
     }
 
     var result: ?*Message = null;
@@ -44,16 +44,18 @@ pub fn get(pool: *Pool, force: bool) ?*Message {
         result.?.next = null;
         result.?.prev = null;
         result.?.reset();
-        return result;
+        return result.?;
     }
 
-    if (!force) {
-        return null;
+    if (ac == .poolOnly) {
+        return error.EmptyPool;
     }
 
-    result = Message.create(pool.allocator) catch return null;
+    const msg = Message.create(pool.allocator) catch |err| {
+        return err;
+    };
 
-    return result;
+    return msg;
 }
 
 pub fn put(pool: *Pool, msg: *Message) void {
@@ -123,6 +125,9 @@ pub const Appendable = @import("nats").Appendable;
 
 pub const message = @import("../message.zig");
 const Message = message.Message;
+
+pub const protocol = @import("../protocol.zig");
+pub const AllocationStrategy = protocol.AllocationStrategy;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

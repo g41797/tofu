@@ -3,7 +3,6 @@
 
 pub const SenderReceiver = @This();
 
-mutex: Mutex = undefined,
 prnt: *Poller = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
@@ -38,7 +37,6 @@ pub fn destroy(srs: *SenderReceiver) void {
 
 pub fn init(prnt: *Poller, id: u32) SenderReceiver {
     const srs: SenderReceiver = .{
-        .mutex = .{},
         .prnt = prnt,
         .id = id,
         .allocator = prnt.allocator,
@@ -63,23 +61,38 @@ pub fn deinit(srs: *SenderReceiver) void {
 
 pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) !*Message {
     const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    _ = srs;
-    _ = strategy;
-    return error.NotImplementedYet;
+    const msg = try srs.prnt.pool.get(strategy);
+    return msg;
 }
 
 pub fn put(ptr: ?*anyopaque, msg: *Message) void {
     const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    _ = srs;
-    _ = msg;
+    srs.prnt.pool.put(msg);
     return;
 }
 
 pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
+    const vc = try msg.check_and_prepare();
+
     const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    _ = srs;
-    _ = msg;
-    return error.NotImplementedYet;
+
+    if ((msg.bhdr.channel_number != 0) and (!srs.prnt.acns.exists(msg.bhdr.channel_number))) {
+        return AMPError.InvalidChannelNumber;
+    }
+
+    var mID: ?MessageID = null;
+    if (msg.bhdr.message_id != 0) {
+        mID = msg.bhdr.message_id;
+    }
+
+    const ach = srs.prnt.acns.createChannel(mID, srs);
+
+    msg.bhdr.channel_number = ach.chn;
+    msg.bhdr.message_id = ach.hid;
+
+    try srs.prnt.submitMsg(vc, msg);
+
+    return msg.bhdr;
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) !?*Message {

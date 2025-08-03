@@ -151,7 +151,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID, ptr: ?*anyopaque) struct { ChannelNumber, MessageID } {
+    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID, ptr: ?*anyopaque) ActiveChannel {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
@@ -180,7 +180,7 @@ pub const ActiveChannels = struct {
             };
             cns.active.put(rv, ach) catch unreachable;
 
-            return .{ rv, mid };
+            return ach;
         }
     }
 

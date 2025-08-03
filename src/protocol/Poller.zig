@@ -89,6 +89,22 @@ inline fn _destroy(plr: *Poller, sr: *Sr) !void {
     return;
 }
 
+pub fn submitMsg(plr: *Poller, hint: VC, msg: *Message) !void {
+    const nkd: Notifier.NotificationKind = switch (hint) {
+        .ByeSignal => .oobMsg,
+        else => .regularMsg,
+    };
+
+    try plr.msgs[@intFromEnum(nkd)].send(msg);
+
+    try plr.ntfr.sendNotification(.{
+        .kind = nkd,
+        .combination = hint,
+    });
+
+    return;
+}
+
 pub const message = @import("../message.zig");
 pub const MessageType = message.MessageType;
 pub const MessageMode = message.MessageMode;
