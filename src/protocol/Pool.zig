@@ -7,11 +7,13 @@ first: ?*Message = undefined,
 allocator: Allocator = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
+alerter: ?Notifier.Alerter = undefined,
+emptyWasReturned: bool = undefined,
 
 pub fn create(gpa: Allocator) !*Pool {
     const pool = try gpa.create(Pool);
     errdefer gpa.destroy(pool);
-    try pool.init(gpa);
+    try pool.init(gpa, null);
     return pool;
 }
 
@@ -21,12 +23,14 @@ pub fn destroy(pool: *Pool) void {
     gpa.destroy(pool);
 }
 
-pub fn init(gpa: Allocator) !Pool {
+pub fn init(gpa: Allocator, alrtr: ?Notifier.Alerter) !Pool {
     return .{
         .allocator = gpa,
         .first = null,
         .mutex = .{},
         .closed = false,
+        .alerter = alrtr,
+        .emptyWasReturned = false,
     };
 }
 
@@ -48,6 +52,7 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
     }
 
     if (ac == .poolOnly) {
+        pool.emptyWasReturned = true;
         return error.EmptyPool;
     }
 
@@ -73,6 +78,10 @@ pub fn put(pool: *Pool, msg: *Message) void {
 
     if (pool.first == null) {
         pool.first = msg;
+        if ((pool.emptyWasReturned) and (pool.alerter != null)) {
+            pool.alerter.?.send_alert(.freedMemory) catch {};
+        }
+        pool.emptyWasReturned = false;
         return;
     }
 
@@ -128,6 +137,9 @@ const Message = message.Message;
 
 pub const protocol = @import("../protocol.zig");
 pub const AllocationStrategy = protocol.AllocationStrategy;
+
+const Notifier = @import("Notifier.zig");
+const Alert = Notifier.Alert;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

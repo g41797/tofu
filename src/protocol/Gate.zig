@@ -14,7 +14,7 @@ shutdown_started: bool = undefined,
 pub fn init(gt: *Gate, gpa: Allocator, options: Options) !void {
     gt.allocator = gpa;
     gt.options = options;
-    gt.pool = try Pool.init(gt.allocator);
+    gt.pool = try Pool.init(gt.allocator, null);
     gt.acns = try ActiveChannels.init(gpa, 255);
     gt.msgs = .{};
     gt.mutex = .{};

@@ -4,17 +4,39 @@
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;
 
-pub const NotificationKind = enum(u2) {
+pub const NotificationKind = enum(u1) {
+    message = 0,
+    alert = 1,
+};
+
+pub const MessagePriority = enum(u1) {
     regularMsg = 0,
     oobMsg = 1,
-    msgless = 2,
+};
+
+pub const Alert = enum(u2) {
+    freedMemory = 0,
+    srRemoved = 1,
+    shutdownStarted = 2,
     _reserved = 3,
 };
 
+pub const SendAlert = *const fn (context: ?*anyopaque, alrt: Alert) anyerror!void;
+
+pub const Alerter = struct {
+    ptr: ?*anyopaque,
+    func: SendAlert = undefined,
+
+    pub fn send_alert(ar: *Alerter, alert: Alert) anyerror!void {
+        return ar.func(ar.ptr, alert);
+    }
+};
+
 pub const Notification = packed struct(u8) {
-    kind: NotificationKind = .regularMsg,
-    combination: ValidCombination = undefined,
-    _reserved: u2 = undefined,
+    kind: NotificationKind = undefined,
+    priority: MessagePriority = undefined,
+    hint: ValidCombination = undefined,
+    alert: Alert = undefined,
 };
 
 pub const Notifier = @This();

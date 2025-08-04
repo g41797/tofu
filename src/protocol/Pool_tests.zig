@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 test "Pool init" {
-    var pool = try Pool.init(std.testing.allocator);
+    var pool = try Pool.init(std.testing.allocator, null);
     pool.close();
 }
 
 test "Pool base finctionality" {
-    var pool = try Pool.init(std.testing.allocator);
+    var pool = try Pool.init(std.testing.allocator, null);
     try testing.expectError(error.EmptyPool, pool.get(.poolOnly));
 
     var msg1 = try pool.get(.always);

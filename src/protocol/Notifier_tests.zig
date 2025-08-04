@@ -9,8 +9,9 @@ test "base Notifier" {
     try testing.expectEqual(false, ntfr.isReadyToRecv());
 
     const notif: Notification = .{
-        .kind = .oobMsg,
-        .combination = .ByeSignal,
+        .kind = .message,
+        .hint = .ByeSignal,
+        .priority = .oobMsg,
     };
 
     try ntfr.sendNotification(notif);

@@ -11,6 +11,7 @@ ntfr: Notifier = undefined,
 pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
+ntfsEnabled: bool = undefined,
 
 pub fn ampe(plr: *Poller) Ampe {
     const result: Ampe = .{
@@ -19,6 +20,14 @@ pub fn ampe(plr: *Poller) Ampe {
             .create = create,
             .destroy = destroy,
         },
+    };
+    return result;
+}
+
+pub fn alerter(plr: *Poller) Notifier.Alerter {
+    const result: Notifier.Alerter = .{
+        .ptr = plr,
+        .func = send_alert,
     };
     return result;
 }
@@ -32,9 +41,10 @@ pub fn init(gpa: Allocator, options: Options) !Poller {
         .maxid = 0,
     };
 
-    plr.ntfr = try Notifier.init(plr.allocator);
-    plr.pool = try Pool.init(plr.allocator);
     plr.acns = try ActiveChannels.init(plr.allocator, 255);
+    plr.ntfr = try Notifier.init(plr.allocator);
+    plr.pool = try Pool.init(plr.allocator, plr.alerter());
+
     return plr;
 }
 
@@ -89,17 +99,41 @@ inline fn _destroy(plr: *Poller, sr: *Sr) !void {
     return;
 }
 
-pub fn submitMsg(plr: *Poller, hint: VC, msg: *Message) !void {
-    const nkd: Notifier.NotificationKind = switch (hint) {
-        .ByeSignal => .oobMsg,
-        else => .regularMsg,
-    };
+pub fn submitMsg(plr: *Poller, msg: *Message, hint: VC, priority: Notifier.MessagePriority) !void {
+    plr.mutex.lock();
+    defer plr.mutex.unlock();
 
-    try plr.msgs[@intFromEnum(nkd)].send(msg);
+    if (!plr.ntfsEnabled) {
+        return AMPError.NotificationDisabled;
+    }
+
+    try plr.msgs[@intFromEnum(priority)].send(msg);
 
     try plr.ntfr.sendNotification(.{
-        .kind = nkd,
-        .combination = hint,
+        .kind = .message,
+        .hint = hint,
+        .priority = priority,
+    });
+
+    return;
+}
+
+pub fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) !void {
+    const plr: *Poller = @alignCast(@ptrCast(ptr));
+    return plr.sendAlert(alert);
+}
+
+pub fn sendAlert(plr: *Poller, alrt: Notifier.Alert) !void {
+    plr.mutex.lock();
+    defer plr.mutex.unlock();
+
+    if (!plr.ntfsEnabled) {
+        return AMPError.NotificationDisabled;
+    }
+
+    try plr.ntfr.sendNotification(.{
+        .kind = .alert,
+        .alert = alrt,
     });
 
     return;

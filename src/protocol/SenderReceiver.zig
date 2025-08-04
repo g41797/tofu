@@ -90,7 +90,12 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
     msg.bhdr.channel_number = ach.chn;
     msg.bhdr.message_id = ach.hid;
 
-    try srs.prnt.submitMsg(vc, msg);
+    const priority: Notifier.MessagePriority = switch (vc) {
+        .ByeSignal => .oobMsg,
+        else => .regularMsg,
+    };
+
+    try srs.prnt.submitMsg(msg, vc, priority);
 
     return msg.bhdr;
 }
