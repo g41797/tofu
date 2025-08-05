@@ -12,8 +12,11 @@ pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
+thread: ?Thread = null,
 
-pub fn ampe(plr: *Poller) Ampe {
+pub fn ampe(plr: *Poller) !Ampe {
+    try plr.*.createThread();
+
     const result: Ampe = .{
         .ptr = plr,
         .vtable = &.{
@@ -21,6 +24,7 @@ pub fn ampe(plr: *Poller) Ampe {
             .destroy = destroy,
         },
     };
+
     return result;
 }
 
@@ -42,8 +46,15 @@ pub fn init(gpa: Allocator, options: Options) !Poller {
     };
 
     plr.acns = try ActiveChannels.init(plr.allocator, 255);
+    errdefer plr.acns.deinit();
+
     plr.ntfr = try Notifier.init(plr.allocator);
+    errdefer plr.ntfr.deinit();
+
     plr.pool = try Pool.init(plr.allocator, plr.alerter());
+    errdefer plr.pool.close();
+
+    try plr.prepareForThreadRunning();
 
     return plr;
 }
@@ -51,20 +62,28 @@ pub fn init(gpa: Allocator, options: Options) !Poller {
 pub fn deinit(plr: *Poller) void {
     const gpa = plr.allocator;
     _ = gpa;
-    plr.ntfr.deinit();
+    {
+        plr.mutex.lock();
+        defer plr.mutex.unlock();
 
-    for (plr.msgs, 0..) |_, i| {
-        var mbx = plr.msgs[i];
-        var allocated = mbx.close();
-        while (allocated != null) {
-            const next = allocated.?.next;
-            allocated.?.destroy();
-            allocated = next;
+        for (plr.msgs, 0..) |_, i| {
+            var mbx = plr.msgs[i];
+            var allocated = mbx.close();
+            while (allocated != null) {
+                const next = allocated.?.next;
+                allocated.?.destroy();
+                allocated = next;
+            }
         }
+
+        plr.pool.close();
+        plr.acns.deinit();
+
+        plr.ntfr.deinit();
+        plr.ntfsEnabled = false;
     }
 
-    plr.pool.close();
-    plr.acns.deinit();
+    plr.waitFinish();
 
     plr.* = undefined;
 }
@@ -139,6 +158,36 @@ pub fn sendAlert(plr: *Poller, alrt: Notifier.Alert) !void {
     return;
 }
 
+fn createThread(plr: *Poller) !void {
+    plr.mutex.lock();
+    defer plr.mutex.unlock();
+
+    if (plr.thread != null) {
+        return;
+    }
+
+    plr.thread = try std.Thread.spawn(.{}, onThread, .{plr});
+
+    _ = try plr.ntfr.recvAck();
+
+    return;
+}
+
+fn prepareForThreadRunning(plr: *Poller) !void {
+    _ = plr;
+    return;
+}
+
+fn onThread(plr: *Poller) void {
+    plr.ntfr.sendAck(0) catch unreachable;
+}
+
+inline fn waitFinish(plr: *Poller) void {
+    if (plr.thread) |t| {
+        t.join();
+    }
+}
+
 pub const message = @import("../message.zig");
 pub const MessageType = message.MessageType;
 pub const MessageMode = message.MessageMode;
@@ -182,3 +231,4 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
+const Thread = std.Thread;

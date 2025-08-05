@@ -94,9 +94,13 @@ pub fn init(allocator: Allocator) !Notifier {
 }
 
 pub fn isReadyToRecv(ntfr: *Notifier) bool {
+    return _isReadyToRecv(ntfr.receiver);
+}
+
+pub fn _isReadyToRecv(receiver: socket_t) bool {
     var rpoll: [1]pollfd = .{
         .{
-            .fd = ntfr.receiver,
+            .fd = receiver,
             .events = POLL.IN,
             .revents = 0,
         },
@@ -118,9 +122,13 @@ pub fn isReadyToRecv(ntfr: *Notifier) bool {
 }
 
 pub fn isReadyToSend(ntfr: *Notifier) bool {
+    return _isReadyToSend(ntfr.sender);
+}
+
+pub fn _isReadyToSend(sender: socket_t) bool {
     var spoll: [1]pollfd = .{
         .{
-            .fd = ntfr.sender,
+            .fd = sender,
             .events = POLL.OUT,
             .revents = 0,
         },
@@ -142,14 +150,14 @@ pub fn isReadyToSend(ntfr: *Notifier) bool {
 }
 
 pub fn recvNotification(ntfr: *Notifier) !Notification {
-    const byte = try _recvNotification(ntfr);
+    const byte = try recvByte(ntfr.receiver);
     const ntptr: *const Notification = @ptrCast(&byte);
     return (ntptr.*);
 }
 
-inline fn _recvNotification(ntfr: *Notifier) !u8 {
+pub inline fn recvByte(receiver: socket_t) !u8 {
     var byte_array: [1]u8 = undefined;
-    _ = std.posix.recv(ntfr.receiver, &byte_array, 0) catch |err| {
+    _ = std.posix.recv(receiver, &byte_array, 0) catch |err| {
         return err;
     };
     return byte_array[0];
@@ -157,15 +165,41 @@ inline fn _recvNotification(ntfr: *Notifier) !u8 {
 
 pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
     const byteptr: *const u8 = @ptrCast(&notif);
-    return _sendNotification(ntfr, byteptr.*);
+
+    for (0..10) |_| {
+        if (ntfr.isReadyToSend()) {
+            return sendByte(ntfr.sender, byteptr.*);
+        }
+    }
+
+    return AMPError.NotificationFailure;
 }
 
-inline fn _sendNotification(ntfr: *Notifier, notif: u8) !void {
+pub inline fn sendByte(sender: socket_t, notif: u8) !void {
     var byte_array = [_]u8{notif};
-    _ = std.posix.send(ntfr.sender, &byte_array, 0) catch {
+    _ = std.posix.send(sender, &byte_array, 0) catch {
         return AMPError.NotificationFailure;
     };
     return;
+}
+
+pub fn sendAck(ntfr: *Notifier, ack: u8) !void {
+    for (0..10) |_| {
+        if (_isReadyToSend(ntfr.receiver)) {
+            return sendByte(ntfr.receiver, ack);
+        }
+    }
+
+    return AMPError.NotificationFailure;
+}
+
+pub fn recvAck(ntfr: *Notifier) !u8 {
+    for (0..10) |_| {
+        if (_isReadyToRecv(ntfr.sender)) {
+            return recvByte(ntfr.sender);
+        }
+    }
+    return AMPError.NotificationFailure;
 }
 
 pub fn deinit(ntfr: *Notifier) void {

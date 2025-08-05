@@ -19,6 +19,12 @@ test "base Notifier" {
 
     const ntfc = try ntfr.recvNotification();
     try testing.expectEqual(notif, ntfc);
+
+    try ntfr.sendAck(0xFF);
+
+    const ack = try ntfr.recvAck();
+
+    try testing.expectEqual(0xFF, ack);
 }
 
 const Notifier = @import("Notifier.zig");

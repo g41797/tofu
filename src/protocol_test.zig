@@ -92,7 +92,7 @@ test "Ampe create/destroy" {
     var plr = Poller.init(std.testing.allocator, .{}) catch unreachable;
     defer plr.deinit();
 
-    const ampe = plr.ampe();
+    const ampe = try plr.ampe();
 
     const sr = try ampe.create();
 
