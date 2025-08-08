@@ -397,6 +397,49 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
+pub const MessageQueue = struct {
+    const Self = @This();
+
+    first: ?*Message = null,
+    last: ?*Message = null,
+
+    pub fn enqueue(fifo: *Self, msg: *Message) void {
+        msg.prev = null;
+        msg.next = null;
+
+        if (fifo.last) |last| {
+            last.next = msg;
+            msg.prev = last;
+        } else {
+            fifo.first = msg;
+        }
+
+        fifo.last = msg;
+
+        return;
+    }
+
+    pub fn dequeue(fifo: *Self) ?*Message {
+        if (fifo.first == null) {
+            return null;
+        }
+
+        var result = fifo.first;
+        fifo.first = result.?.next;
+
+        if (fifo.first == null) {
+            fifo.last = null;
+        } else {
+            fifo.first.?.prev = fifo.first;
+        }
+
+        result.?.prev = null;
+        result.?.next = null;
+
+        return result;
+    }
+};
+
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 

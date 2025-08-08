@@ -14,6 +14,11 @@ maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
 
+// Accesable from the thread - don't lock/unlock
+sktsVtor: std.ArrayList(PolledSkt) = undefined,
+pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
+polled_map: std.AutoHashMap(channels.ChannelNumber, PolledSkt) = undefined,
+
 pub fn ampe(plr: *Poller) !Ampe {
     try plr.*.createThread();
 
@@ -174,12 +179,31 @@ fn createThread(plr: *Poller) !void {
 }
 
 fn prepareForThreadRunning(plr: *Poller) !void {
-    _ = plr;
+    var sktsVtor = try std.ArrayList(PolledSkt).initCapacity(plr.allocator, 256);
+    errdefer sktsVtor.deinit();
+
+    var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(plr.allocator, 256);
+    errdefer pollfdVtor.deinit();
+
+    var polled_map = std.AutoHashMap(channels.ChannelNumber, PolledSkt).init(plr.allocator);
+    errdefer polled_map.deinit();
+    try polled_map.ensureTotalCapacity(256);
+
+    plr.sktsVtor = sktsVtor;
+    plr.pollfdVtor = pollfdVtor;
+    plr.polled_map = polled_map;
+
     return;
 }
 
 fn onThread(plr: *Poller) void {
     plr.ntfr.sendAck(0) catch unreachable;
+
+    plr.polled_map.deinit();
+    plr.pollfdVtor.deinit();
+    plr.sktsVtor.deinit();
+
+    return;
 }
 
 inline fn waitFinish(plr: *Poller) void {
@@ -219,6 +243,9 @@ const Notifier = @import("Notifier.zig");
 
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
+
+const sockets = @import("sockets.zig");
+const PolledSkt = sockets.PolledSkt;
 
 const SenderReceiver = @import("SenderReceiver.zig");
 

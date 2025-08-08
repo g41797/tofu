@@ -27,7 +27,7 @@ Interesting  Projects
     https://github.com/karlseguin/buffer.zig
     https://codeberg.org/tao-guo/iofthetiger
     https://github.com/rsepassi/zigcoro
-
+    https://github.com/jetzig-framework/jetzig
 
 Interfaces
     Tagged union interfaces
