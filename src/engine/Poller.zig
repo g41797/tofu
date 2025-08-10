@@ -5,7 +5,7 @@ pub const Poller = @This();
 
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
-options: protocol.Options = undefined,
+options: engine.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
 pool: Pool = undefined,
@@ -15,7 +15,7 @@ ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
 
 // Accesable from the thread - don't lock/unlock
-sktsVtor: std.ArrayList(PolledSkt) = undefined,
+chnsVtor: std.ArrayList(channels.ChannelNumber) = undefined,
 pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
 polled_map: std.AutoHashMap(channels.ChannelNumber, PolledSkt) = undefined,
 
@@ -179,8 +179,8 @@ fn createThread(plr: *Poller) !void {
 }
 
 fn prepareForThreadRunning(plr: *Poller) !void {
-    var sktsVtor = try std.ArrayList(PolledSkt).initCapacity(plr.allocator, 256);
-    errdefer sktsVtor.deinit();
+    var chnsVtor = try std.ArrayList(channels.ChannelNumber).initCapacity(plr.allocator, 256);
+    errdefer chnsVtor.deinit();
 
     var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(plr.allocator, 256);
     errdefer pollfdVtor.deinit();
@@ -189,7 +189,7 @@ fn prepareForThreadRunning(plr: *Poller) !void {
     errdefer polled_map.deinit();
     try polled_map.ensureTotalCapacity(256);
 
-    plr.sktsVtor = sktsVtor;
+    plr.chnsVtor = chnsVtor;
     plr.pollfdVtor = pollfdVtor;
     plr.polled_map = polled_map;
 
@@ -201,7 +201,7 @@ fn onThread(plr: *Poller) void {
 
     plr.polled_map.deinit();
     plr.pollfdVtor.deinit();
-    plr.sktsVtor.deinit();
+    plr.chnsVtor.deinit();
 
     return;
 }
@@ -226,10 +226,10 @@ pub const Message = message.Message;
 pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
-pub const protocol = @import("../protocol.zig");
-pub const Options = protocol.Options;
-pub const Ampe = protocol.Ampe;
-pub const Sr = protocol.Sr;
+pub const engine = @import("../engine.zig");
+pub const Options = engine.Options;
+pub const Ampe = engine.Ampe;
+pub const Sr = engine.Sr;
 
 pub const status = @import("../status.zig");
 pub const AMPStatus = status.AMPStatus;

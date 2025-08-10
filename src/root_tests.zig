@@ -5,10 +5,10 @@ test {
     _ = @import("root.zig");
     _ = @import("TextHeaderIterator_tests.zig");
     _ = @import("configurator_tests.zig");
-    _ = @import("protocol_test.zig");
-    _ = @import("protocol/Pool_tests.zig");
-    _ = @import("protocol/Notifier_tests.zig");
-    _ = @import("protocol/channels_tests.zig");
+    _ = @import("engine_test.zig");
+    _ = @import("engine/Pool_tests.zig");
+    _ = @import("engine/Notifier_tests.zig");
+    _ = @import("engine/channels_tests.zig");
     @import("std").testing.refAllDecls(@This());
 }
 
@@ -21,7 +21,7 @@ const Allocator = mem.Allocator;
 
 const libxev = @import("xev");
 const temp = @import("temp");
-const protocol = @import("protocol.zig");
+const engine = @import("engine.zig");
 
 const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;

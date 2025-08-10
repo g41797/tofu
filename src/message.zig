@@ -21,7 +21,7 @@ pub const MessageMode = enum(u2) {
 
 pub const OriginFlag = enum(u1) {
     application = 0,
-    protocol = 1,
+    engine = 1,
 };
 
 pub const MoreMessagesFlag = enum(u1) {
@@ -29,17 +29,17 @@ pub const MoreMessagesFlag = enum(u1) {
     more = 1,
 };
 
-pub const ProtocolControlBitFlag = enum(u1) {
-    zero = 0, // Used and filled exclusively by the protocol for housekeeping. Opaque to the application and must not be modified.
+pub const ControlBitFlag = enum(u1) {
+    zero = 0, // Used and filled exclusively by the engine for housekeeping. Opaque to the application and must not be modified.
 };
 
-// Nested struct for protocol fields, now public
+// Nested struct for engine fields, now public
 pub const ProtoFields = packed struct(u8) {
     mtype: MessageType = .application,
     mode: MessageMode = .invalid,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
-    pcb: ProtocolControlBitFlag = .zero,
+    cb: ControlBitFlag = .zero,
 };
 
 pub const ChannelNumber = u16;

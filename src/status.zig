@@ -81,6 +81,6 @@ pub inline fn status_to_raw(status: AMPStatus) u8 {
     return (@intFromEnum(status));
 }
 
-pub const protocol = @import("protocol.zig");
+pub const engine = @import("engine.zig");
 
 const std = @import("std");

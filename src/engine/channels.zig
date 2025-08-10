@@ -170,7 +170,7 @@ pub const ActiveChannels = struct {
             if (mID) |mval| {
                 mid = mval;
             } else {
-                mid = protocol.next_mid();
+                mid = engine.next_mid();
             }
 
             const ach: ActiveChannel = .{
@@ -271,28 +271,43 @@ pub const ActiveChannels = struct {
         cns.removed.enqueue(rewrcn);
         return true;
     }
-};
 
-pub fn channelsGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
-    cns.mutex.lock();
-    defer cns.mutex.unlock();
+    pub fn channelsGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
 
-    var chns = std.ArrayList(ChannelNumber).init(cns.allocator);
-    errdefer chns.deinit();
+        var chns = std.ArrayList(ChannelNumber).init(cns.allocator);
+        errdefer chns.deinit();
 
-    var it = cns.active.iterator();
-    while (it.next()) |kv_pair| {
-        if (kv_pair.value_ptr.ctx == ptr) {
-            try chns.append(kv_pair.key_ptr.*);
+        var it = cns.active.iterator();
+        while (it.next()) |kv_pair| {
+            if (kv_pair.value_ptr.ctx == ptr) {
+                try chns.append(kv_pair.key_ptr.*);
+            }
         }
+
+        return chns;
     }
 
-    return chns;
-}
+    pub fn allChannels(cns: *ActiveChannels, chns: *std.ArrayList(ChannelNumber)) !void {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+        chns.resize(0);
 
-pub const protocol = @import("../protocol.zig");
-pub const ChannelNumber = protocol.ChannelNumber;
-pub const MessageID = protocol.MessageID;
+        errdefer chns.resize(0);
+
+        var it = cns.active.iterator();
+        while (it.next()) |kv_pair| {
+            try chns.append(kv_pair.key_ptr.*);
+        }
+
+        return;
+    }
+};
+
+pub const engine = @import("../engine.zig");
+pub const ChannelNumber = engine.ChannelNumber;
+pub const MessageID = engine.MessageID;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

@@ -8,13 +8,11 @@ pub const PolledSkt = union(enum) {
 };
 
 pub const NotificationSkt = struct {
-    prnt: *Poller = undefined,
     skt: Skt = undefined,
 
-    pub fn init(prnt: *Poller) NotificationSkt {
+    pub fn init(skt: Skt) NotificationSkt { // prnt.ntfr.receiver
         return .{
-            .prnt = prnt,
-            .skt = prnt.ntfr.receiver,
+            .skt = skt,
         };
     }
 
@@ -30,12 +28,9 @@ pub const NotificationSkt = struct {
 };
 
 pub const AcceptSkt = struct {
-    prnt: *Poller = undefined,
-    root: channels.ActiveChannel = undefined,
     skt: Skt = undefined,
 
-    pub fn init(prnt: *Poller, wlcm: *Message) AMPError!AcceptSkt {
-        _ = prnt;
+    pub fn init(wlcm: *Message) AMPError!AcceptSkt {
         _ = wlcm;
         return AMPError.NotImplementedYet;
     }
@@ -57,9 +52,9 @@ pub const Side = enum(u1) {
 };
 
 pub const IoSkt = struct {
-    prnt: *Poller = undefined,
+    pool: *Pool = undefined,
     side: Side = undefined,
-    root: channels.ActiveChannel = undefined,
+    // root: channels.ActiveChannel = undefined,
     skt: Skt = undefined,
     connected: bool = undefined,
     sendQ: MessageQueue = undefined,
@@ -67,14 +62,14 @@ pub const IoSkt = struct {
     currRecv: ?*Message = undefined,
     hello: ?*Message = undefined,
 
-    pub fn initServerSide(prnt: *Poller, sskt: Skt) AMPError!IoSkt {
-        _ = prnt;
+    pub fn initServerSide(pool: *Pool, sskt: Skt) AMPError!IoSkt {
+        _ = pool;
         _ = sskt;
         return AMPError.NotImplementedYet;
     }
 
-    pub fn initClientSide(prnt: *Poller, hello: *Message) AMPError!IoSkt {
-        _ = prnt;
+    pub fn initClientSide(pool: *Pool, hello: *Message) AMPError!IoSkt {
+        _ = pool;
         _ = hello;
         return AMPError.NotImplementedYet;
     }
@@ -249,10 +244,10 @@ const VC = message.ValidCombination;
 
 const Poller = @import("Poller.zig");
 
-const protocol = @import("../protocol.zig");
-const Options = protocol.Options;
-const Sr = protocol.Sr;
-const AllocationStrategy = protocol.AllocationStrategy;
+const engine = @import("../engine.zig");
+const Options = engine.Options;
+const Sr = engine.Sr;
+const AllocationStrategy = engine.AllocationStrategy;
 
 const status = @import("../status.zig");
 const AMPStatus = status.AMPStatus;

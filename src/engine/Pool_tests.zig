@@ -38,8 +38,8 @@ test "Pool base finctionality" {
 
 const Pool = @import("Pool.zig");
 
-pub const protocol = @import("../protocol.zig");
-pub const AllocationStrategy = protocol.AllocationStrategy;
+pub const engine = @import("../engine.zig");
+pub const AllocationStrategy = engine.AllocationStrategy;
 
 const std = @import("std");
 const testing = std.testing;

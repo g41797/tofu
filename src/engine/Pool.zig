@@ -135,8 +135,8 @@ pub const Appendable = @import("nats").Appendable;
 pub const message = @import("../message.zig");
 const Message = message.Message;
 
-pub const protocol = @import("../protocol.zig");
-pub const AllocationStrategy = protocol.AllocationStrategy;
+pub const engine = @import("../engine.zig");
+pub const AllocationStrategy = engine.AllocationStrategy;
 
 const Notifier = @import("Notifier.zig");
 const Alert = Notifier.Alert;

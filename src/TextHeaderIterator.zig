@@ -76,7 +76,7 @@ pub fn next(it: *TextHeaderIterator) ?TextHeader {
     }
 }
 
-const protocol = @import("protocol.zig");
-const TextHeader = protocol.TextHeader;
+const engine = @import("engine.zig");
+const TextHeader = engine.TextHeader;
 
 const std = @import("std");

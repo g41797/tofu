@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 test "sequential message id" {
-    const mid = protocol.next_mid();
-    const nextmid = protocol.next_mid();
+    const mid = engine.next_mid();
+    const nextmid = engine.next_mid();
     try testing.expectEqual(mid + 1, nextmid);
 }
 
@@ -15,7 +15,7 @@ test "BinaryHeader marshalling and demarshalling" {
             .mode = .request,
             .origin = .application,
             .more = .last,
-            .pcb = .zero, // Protocol sets this; application must not modify
+            .cb = .zero, // Protocol sets this; application must not modify
         },
         .status = 0xFF,
         .message_id = 0xAABBCCDDEEFF0011,
@@ -39,14 +39,14 @@ test "BinaryHeader marshalling and demarshalling" {
 }
 
 test "get first dumb AMP" {
-    const amp = try protocol.start(std.testing.allocator, .{});
+    const amp = try engine.start(std.testing.allocator, .{});
     defer destroyDefer(amp);
 }
 
 const force_get = true;
 
 test "send wrong message" {
-    const amp = try protocol.start(std.testing.allocator, .{});
+    const amp = try engine.start(std.testing.allocator, .{});
     defer destroyDefer(amp);
 
     var msg = amp.get(force_get);
@@ -102,11 +102,11 @@ test "Ampe create/destroy" {
 const std = @import("std");
 const testing = std.testing;
 
-const protocol = @import("protocol.zig");
-const Ampe = protocol.Ampe;
-const Sr = protocol.Sr;
+const engine = @import("engine.zig");
+const Ampe = engine.Ampe;
+const Sr = engine.Sr;
 
-const AMP = protocol.AMP;
+const AMP = engine.AMP;
 
 pub const message = @import("message.zig");
 pub const MessageType = message.MessageType;
@@ -126,4 +126,4 @@ pub const status = @import("status.zig");
 pub const AMPStatus = status.AMPStatus;
 pub const AMPError = status.AMPError;
 
-pub const Poller = @import("protocol/Poller.zig");
+pub const Poller = @import("engine/Poller.zig");

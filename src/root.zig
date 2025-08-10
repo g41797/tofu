@@ -1,20 +1,20 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const protocol = @import("protocol.zig");
-pub const MessageType = protocol.MessageType;
-pub const MessageMode = protocol.MessageMode;
-pub const OriginFlag = protocol.OriginFlag;
-pub const MoreMessagesFlag = protocol.MoreMessagesFlag;
-pub const ProtoFields = protocol.ProtoFields;
-pub const BinaryHeader = protocol.BinaryHeader;
-pub const TextHeader = protocol.TextHeader;
+pub const engine = @import("engine.zig");
+pub const MessageType = engine.MessageType;
+pub const MessageMode = engine.MessageMode;
+pub const OriginFlag = engine.OriginFlag;
+pub const MoreMessagesFlag = engine.MoreMessagesFlag;
+pub const ProtoFields = engine.ProtoFields;
+pub const BinaryHeader = engine.BinaryHeader;
+pub const TextHeader = engine.TextHeader;
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
-pub const TextHeaders = protocol.TextHeaders;
-pub const Message = protocol.Message;
-pub const Options = protocol.Options;
-pub const Ampe = protocol.Ampe;
-pub const Sr = protocol.Sr;
+pub const TextHeaders = engine.TextHeaders;
+pub const Message = engine.Message;
+pub const Options = engine.Options;
+pub const Ampe = engine.Ampe;
+pub const Sr = engine.Sr;
 
 pub const status = @import("status.zig");
 pub const AMPStatus = status.AMPStatus;
@@ -29,8 +29,8 @@ pub const UDSClientConfigurator = configurator.UDSClientConfigurator;
 pub const UDSServerConfigurator = configurator.UDSServerConfigurator;
 pub const Configurator = configurator.Configurator;
 
-pub const Poller = @import("protocol/Poller.zig");
-const SenderReceiver = @import("protocol/SenderReceiver.zig");
+pub const Poller = @import("engine/Poller.zig");
+const SenderReceiver = @import("engine/SenderReceiver.zig");
 
 pub const Appendable = @import("nats").Appendable;
 

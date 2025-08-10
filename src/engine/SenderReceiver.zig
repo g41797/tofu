@@ -129,10 +129,10 @@ pub const VC = message.ValidCombination;
 
 pub const Poller = @import("Poller.zig");
 
-pub const protocol = @import("../protocol.zig");
-pub const Options = protocol.Options;
-pub const Sr = protocol.Sr;
-pub const AllocationStrategy = protocol.AllocationStrategy;
+pub const engine = @import("../engine.zig");
+pub const Options = engine.Options;
+pub const Sr = engine.Sr;
+pub const AllocationStrategy = engine.AllocationStrategy;
 
 pub const status = @import("../status.zig");
 pub const AMPStatus = status.AMPStatus;

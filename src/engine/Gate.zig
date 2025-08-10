@@ -4,7 +4,7 @@
 pub const Gate = @This();
 
 allocator: Allocator = undefined,
-options: protocol.Options = undefined,
+options: engine.Options = undefined,
 pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 msgs: MSGMailBox = undefined,
@@ -237,11 +237,11 @@ pub const Message = message.Message;
 pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
-pub const protocol = @import("../protocol.zig");
-pub const AllocationStrategy = protocol.AllocationStrategy;
-pub const Options = protocol.Options;
+pub const engine = @import("../engine.zig");
+pub const AllocationStrategy = engine.AllocationStrategy;
+pub const Options = engine.Options;
 
-pub const AMP = protocol.AMP;
+pub const AMP = engine.AMP;
 
 pub const status = @import("../status.zig");
 pub const AMPStatus = status.AMPStatus;
