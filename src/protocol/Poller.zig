@@ -259,3 +259,4 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
+const Skt = std.posix.socket_t;

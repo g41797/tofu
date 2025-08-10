@@ -92,7 +92,7 @@ pub const ChannelNodeQueue = struct {
 
 pub const ActiveChannel = struct {
     chn: ChannelNumber = undefined,
-    hid: MessageID = undefined,
+    mid: MessageID = undefined,
     ctx: ?*anyopaque = undefined,
 };
 
@@ -175,7 +175,7 @@ pub const ActiveChannels = struct {
 
             const ach: ActiveChannel = .{
                 .chn = rv,
-                .hid = mid,
+                .mid = mid,
                 .ctx = ptr,
             };
             cns.active.put(rv, ach) catch unreachable;

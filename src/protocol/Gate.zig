@@ -77,7 +77,7 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
             }
             const ach = gt.acns.createChannel(mID, gt);
             msg.bhdr.channel_number = ach.chn;
-            msg.bhdr.message_id = ach.hid;
+            msg.bhdr.message_id = ach.mid;
         }
 
         const ret = switch (vc) {

@@ -438,6 +438,14 @@ pub const MessageQueue = struct {
 
         return result;
     }
+
+    pub fn destroy(fifo: *Self) void {
+        var next = fifo.dequeue();
+        while (next != null) {
+            next.?.destroy();
+            next = fifo.dequeue();
+        }
+    }
 };
 
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");

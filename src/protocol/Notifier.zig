@@ -172,13 +172,13 @@ pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
         }
     }
 
-    return AMPError.NotificationFailure;
+    return AMPError.NotificationFailed;
 }
 
 pub inline fn sendByte(sender: socket_t, notif: u8) !void {
     var byte_array = [_]u8{notif};
     _ = std.posix.send(sender, &byte_array, 0) catch {
-        return AMPError.NotificationFailure;
+        return AMPError.NotificationFailed;
     };
     return;
 }
@@ -190,7 +190,7 @@ pub fn sendAck(ntfr: *Notifier, ack: u8) !void {
         }
     }
 
-    return AMPError.NotificationFailure;
+    return AMPError.NotificationFailed;
 }
 
 pub fn recvAck(ntfr: *Notifier) !u8 {
@@ -199,7 +199,7 @@ pub fn recvAck(ntfr: *Notifier) !u8 {
             return recvByte(ntfr.sender);
         }
     }
-    return AMPError.NotificationFailure;
+    return AMPError.NotificationFailed;
 }
 
 pub fn deinit(ntfr: *Notifier) void {
