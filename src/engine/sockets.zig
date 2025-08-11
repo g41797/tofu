@@ -1,6 +1,20 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+pub const Trigger = enum(u1) {
+    on = 1,
+    off = 0,
+};
+
+pub const Triggers = packed struct(u6) {
+    notify: Trigger = .off,
+    accept: Trigger = .off,
+    connect: Trigger = .off,
+    send: Trigger = .off,
+    recv: Trigger = .off,
+    pool: Trigger = .off,
+};
+
 pub const PolledSkt = union(enum) {
     notification: ?*NotificationSkt,
     accept: ?*AcceptSkt,
@@ -14,6 +28,11 @@ pub const NotificationSkt = struct {
         return .{
             .skt = skt,
         };
+    }
+
+    pub fn triggers(nskt: *NotificationSkt) ?Triggers {
+        _ = nskt;
+        return null;
     }
 
     pub fn recvNotification(nskt: *NotificationSkt) !Notification {
@@ -35,7 +54,12 @@ pub const AcceptSkt = struct {
         return AMPError.NotImplementedYet;
     }
 
-    pub fn accept(askt: *AcceptSkt) AMPError!?Skt {
+    pub fn triggers(askt: *AcceptSkt) ?Triggers {
+        _ = askt;
+        return null;
+    }
+
+    pub fn tryAccept(askt: *AcceptSkt) AMPError!?Skt {
         _ = askt;
         return AMPError.NotImplementedYet;
     }
@@ -58,20 +82,43 @@ pub const IoSkt = struct {
     skt: Skt = undefined,
     connected: bool = undefined,
     sendQ: MessageQueue = undefined,
-    currSend: ?*Message = undefined,
-    currRecv: ?*Message = undefined,
+    currSend: MsgSender = undefined,
+    currRecv: MsgReceiver = undefined,
     hello: ?*Message = undefined,
 
     pub fn initServerSide(pool: *Pool, sskt: Skt) AMPError!IoSkt {
-        _ = pool;
-        _ = sskt;
-        return AMPError.NotImplementedYet;
+        var ret: IoSkt = .{
+            .pool = pool,
+            .side = .server,
+            .skt = sskt,
+            .connected = true,
+            .sendQ = .{},
+            .currSend = MsgSender.init(),
+            .currRecv = MsgReceiver.init(),
+            .hello = null,
+        };
+
+        ret.currSend.set(sskt) catch unreachable;
+        ret.currRecv.set(sskt) catch unreachable;
+
+        return ret;
     }
 
     pub fn initClientSide(pool: *Pool, hello: *Message) AMPError!IoSkt {
-        _ = pool;
-        _ = hello;
-        return AMPError.NotImplementedYet;
+        return .{
+            .pool = pool,
+            .side = .client,
+            .connected = false,
+            .sendQ = .{},
+            .currSend = MsgSender.init(),
+            .currRecv = MsgReceiver.init(),
+            .hello = hello,
+        };
+    }
+
+    pub fn triggers(ioskt: *IoSkt) ?Triggers {
+        _ = ioskt;
+        return null;
     }
 
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AMPError!void {
@@ -115,6 +162,7 @@ pub const IoSkt = struct {
 };
 
 pub const MsgSender = struct {
+    ready: bool = undefined,
     skt: Skt = undefined,
     msg: ?*Message = undefined,
     bh: [BinaryHeader.BHSIZE]u8 = undefined,
@@ -122,12 +170,25 @@ pub const MsgSender = struct {
     vind: usize = undefined,
     sndlen: usize = undefined,
 
-    pub fn init(skt: Skt) MsgSender {
+    pub fn init() MsgSender {
         return .{
-            .skt = skt,
+            .ready = false,
             .msg = null,
             .sndlen = 0,
+            .vind = 3,
         };
+    }
+
+    pub fn set(ms: *MsgSender, skt: Skt) !void {
+        if (ms.ready) {
+            return AMPError.NotAllowed;
+        }
+        ms.skt = skt;
+        ms.ready = true;
+    }
+
+    pub inline fn isReady(ms: *MsgSender) bool {
+        return ms.ready;
     }
 
     pub fn deinit(ms: *MsgSender) void {
@@ -139,7 +200,10 @@ pub const MsgSender = struct {
         return;
     }
 
-    pub fn attach(ms: *MsgSender, msg: *Message) void {
+    pub fn attach(ms: *MsgSender, msg: *Message) !void {
+        if (!ms.ready) {
+            return AMPError.NotAllowed;
+        }
         if (ms.msg) |m| {
             m.destroy();
         }
@@ -170,59 +234,165 @@ pub const MsgSender = struct {
         return;
     }
 
+    inline fn wasAttached(ms: *MsgSender) bool {
+        return (ms.msg != null);
+    }
+
     pub fn dettach(ms: *MsgSender) ?*Message {
         const ret = ms.msg;
         ms.msg = null;
         ms.sndlen = 0;
+        ms.vind = 3;
         return ret;
     }
 
     pub fn send(ms: *MsgSender) !?*Message {
+        if (!ms.ready) {
+            return AMPError.NotAllowed;
+        }
         if (ms.msg == null) {
-            return error.NothingToWrite; // to  prevent bug
+            return error.NothingToSend; // to  prevent bug
         }
 
-        if (ms.sndlen == 0) {
-            const ret = ms.msg;
-            ms.msg = null;
-            return ret;
-        }
-
-        var rest: usize = 0;
         while (ms.vind < 3) : (ms.vind += 1) {
-            rest = ms.iov[ms.vind].len;
-            if (rest != 0) {
-                break;
+            while (ms.iov[ms.vind].len > 0) {
+                const wasSend = std.posix.send(ms.skt, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
+                    switch (e) {
+                        std.posix.SendError.WouldBlock => return null,
+                        std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AMPError.PeerDisconnected,
+                        else => return AMPError.CommunicatioinFailed,
+                    }
+                };
+
+                ms.iov[ms.vind].base += wasSend;
+                ms.iov[ms.vind].len -= wasSend;
+                ms.sndlen -= wasSend;
+
+                if (ms.sndlen > 0) {
+                    continue;
+                }
+
+                const ret = ms.msg;
+                ms.msg = null;
+                return ret;
             }
         }
+        return error.NothingToSend; // to  prevent bug
+    }
+};
 
-        if (rest == 0) {
-            return error.NothingToWrite; // to  prevent bug
-        }
+pub const MsgReceiver = struct {
+    ready: bool = undefined,
+    skt: Skt = undefined,
+    pool: *Pool = undefined,
+    ptrg: Trigger = undefined,
+    bh: [BinaryHeader.BHSIZE]u8 = undefined,
+    iov: [3]std.posix.iovec = undefined,
+    vind: usize = undefined,
+    rcvlen: usize = undefined,
+    msg: ?*Message = undefined,
 
-        return ms._send();
+    pub fn init(pool: *Pool) MsgReceiver {
+        return .{
+            .ready = false,
+            .pool = pool,
+            .msg = null,
+            .rcvlen = 0,
+            .vind = 3,
+            .ptrg = .off, // Possibly msg == null will be good enough
+        };
     }
 
-    inline fn _send(ms: *MsgSender) !?*Message {
-        const wasSend = std.posix.send(ms.skt, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
-            switch (e) {
-                std.posix.SendError.WouldBlock => return null,
-                std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AMPError.PeerDisconnected,
-                else => return AMPError.CommunicatioinFailed,
-            }
-        };
+    pub fn set(mr: *MsgReceiver, skt: Skt) !void {
+        if (mr.ready) {
+            return AMPError.NotAllowed;
+        }
+        mr.skt = skt;
+        mr.ready = true;
+    }
 
-        ms.iov[ms.vind].base += wasSend;
-        ms.iov[ms.vind].len -= wasSend;
-        ms.sndlen -= wasSend;
+    inline fn recvStarted(mr: *MsgReceiver) bool {
+        return (mr.msg != null);
+    }
 
-        if (ms.sndlen > 0) {
-            return null;
+    pub fn recv(mr: *MsgReceiver) !?*Message {
+        if (!mr.ready) {
+            return AMPError.NotAllowed;
+        }
+        if (mr.msg == null) {
+            mr.msg = mr.pool.get(.poolOnly) catch |e| {
+                mr.ptrg = .on;
+                switch (e) {
+                    error.ClosedPool => return AMPError.NotAllowed,
+                    error.EmptyPool => return AMPError.PoolEmpty,
+                    else => return AMPError.AllocationFailed,
+                }
+            };
+
+            mr.msg.?.reset();
+
+            mr.iov[0] = .{ .base = &mr.bh, .len = mr.bh.len };
+            mr.iov[1] = .{ .base = mr.msg.?.thdrs.buffer.buffer.?, .len = 0 };
+            mr.iov[2] = .{ .base = mr.msg.?.body.buffer.?, .len = 0 };
+
+            mr.vind = 0;
+            mr.rcvlen = 0;
         }
 
-        const ret = ms.msg;
-        ms.msg = null;
+        while (mr.vind < 3) : (mr.vind += 1) {
+            while (mr.iov[mr.vind].len > 0) {
+                const wasRecv = std.posix.recv(mr.skt, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len], 0) catch |e| {
+                    switch (e) {
+                        std.posix.RecvFromError.WouldBlock => return null,
+                        std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AMPError.PeerDisconnected,
+                        else => return AMPError.CommunicatioinFailed,
+                    }
+                };
+
+                mr.iov[mr.vind].base += wasRecv;
+                mr.iov[mr.vind].len -= wasRecv;
+                mr.rcvlen += wasRecv;
+            }
+
+            if (mr.vind == 0) {
+                mr.msg.?.bhdr.fromBytes(mr.bh);
+                if (mr.msg.?.bhdr.text_headers_len > 0) {
+                    mr.iov[1].len = mr.msg.?.bhdr.text_headers_len;
+
+                    // Allow direct receive to the buffer of appendable without copy
+                    mr.msg.?.thdrs.buffer.alloc(mr.iov[1].len) catch {
+                        return AMPError.AllocationFailed;
+                    };
+                    mr.msg.?.thdrs.buffer.change(mr.iov[1].len) catch unreachable;
+                }
+                if (mr.msg.?.bhdr.body_len > 0) {
+                    mr.iov[2].len = mr.msg.?.bhdr.body_len;
+
+                    // Allow direct receive to the buffer of appendable without copy
+                    mr.msg.?.body.buffer.alloc(mr.iov[2].len) catch {
+                        return AMPError.AllocationFailed;
+                    };
+                    mr.msg.?.body.buffer.change(mr.iov[2].len) catch unreachable;
+                }
+            }
+        }
+
+        const ret = mr.msg;
+        mr.msg = null;
         return ret;
+    }
+
+    pub inline fn isReady(mr: *MsgReceiver) bool {
+        return mr.ready;
+    }
+
+    pub fn deinit(mr: *MsgReceiver) void {
+        if (mr.msg) |m| {
+            m.destroy();
+        }
+        mr.msg = null;
+        mr.rcvlen = 0;
+        return;
     }
 };
 

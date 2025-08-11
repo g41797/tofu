@@ -18,6 +18,8 @@ pub const AMPStatus = enum(u8) {
     notification_failed,
     peer_disconnected,
     communication_failed,
+    pool_empty,
+    allocation_failed,
     unknown_error,
 };
 
@@ -37,6 +39,8 @@ pub const AMPError = error{
     NotificationFailed,
     PeerDisconnected,
     CommunicatioinFailure,
+    PoolEmpty,
+    AllocationFailed,
     UnknownError,
 };
 
@@ -57,6 +61,8 @@ const StatusToErrorMap = std.enums.EnumMap(AMPStatus, AMPError).init(.{
     .notification_failed = .NotificationFailed,
     .peer_disconnected = .PeerDisconnected,
     .communication_failed = .CommunicationFailed,
+    .pool_empty = .PoolEmpty,
+    .allocation_failed = .AllocationFailed,
 });
 
 pub inline fn raw_to_status(rs: u8) AMPStatus {
