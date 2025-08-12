@@ -16,9 +16,9 @@ pub const Triggers = packed struct(u6) {
 };
 
 pub const PolledSkt = union(enum) {
-    notification: ?*NotificationSkt,
-    accept: ?*AcceptSkt,
-    io: ?*IoSkt,
+    notification: NotificationSkt,
+    accept: AcceptSkt,
+    io: IoSkt,
 };
 
 pub const NotificationSkt = struct {
@@ -35,7 +35,7 @@ pub const NotificationSkt = struct {
         return null;
     }
 
-    pub fn recvNotification(nskt: *NotificationSkt) !Notification {
+    pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
         _ = nskt;
         return AMPError.NotImplementedYet;
     }
@@ -396,6 +396,73 @@ pub const MsgReceiver = struct {
     }
 };
 
+pub const SocketCreator = struct {
+    allocator: Allocator = undefined,
+    cnfgr: Configurator = undefined,
+
+    pub fn createSkt(sc: *SocketCreator, msg: *Message, allocator: Allocator) AMPError!Skt {
+        sc.allocator = allocator;
+        sc.cnfgr = configurator.fromMessage(msg);
+
+        switch (sc.cnfgr) {
+            .wrong => return AMPError.InvalidAddress,
+            .tcp_server => return sc.createTcpServer(&sc.cnf.tcp_server),
+            .tcp_client => return sc.createTcpClient(&sc.cnf.tcp_client),
+            .uds_server => return sc.createUdsServer(&sc.cnf.uds_server),
+            .uds_client => return sc.createUdsServer(&sc.cnf.uds_client),
+        }
+    }
+
+    pub fn createTcpServer(sc: *SocketCreator, cnf: *TCPServerConfigurator) AMPError!Skt {
+        _ = sc;
+
+        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.ip.?) catch {
+            return AMPError.InvalidAddress;
+        };
+
+        const skt = createTcpListenerSocket(&address) catch {
+            return AMPError.InvalidAddress;
+        };
+
+        return skt;
+    }
+
+    pub fn createTcpClient(sc: *SocketCreator, cnf: *TCPClientConfigurator) AMPError!Skt {
+        _ = sc;
+        _ = cnf;
+        return AMPError.NotImplementedYet;
+    }
+
+    pub fn createUdsServer(sc: *SocketCreator, cnf: *UDSServerConfigurator) AMPError!Skt {
+        _ = sc;
+        _ = cnf;
+        return AMPError.NotImplementedYet;
+    }
+
+    pub fn createUdsClient(sc: *SocketCreator, cnf: *UDSClientConfigurator) AMPError!Skt {
+        _ = sc;
+        _ = cnf;
+        return AMPError.NotImplementedYet;
+    }
+
+    // from IoUring.zig#L3473 (0.14.1)
+    fn createTcpListenerSocket(address: *std.net.Address) !posix.socket_t {
+        const kernel_backlog = 1;
+        const listener_socket = try posix.socket(address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+        errdefer posix.close(listener_socket);
+
+        try posix.setsockopt(listener_socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
+        try posix.bind(listener_socket, &address.any, address.getOsSockLen());
+        try posix.listen(listener_socket, kernel_backlog);
+
+        // set address to the OS-chosen IP/port.
+        var slen: posix.socklen_t = address.getOsSockLen();
+        try posix.getsockname(listener_socket, &address.any, &slen);
+
+        return listener_socket;
+    }
+};
+
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
 const MessageMode = message.MessageMode;
@@ -413,6 +480,14 @@ const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 
 const Poller = @import("Poller.zig");
+
+const configurator = @import("../configurator.zig");
+const Configurator = configurator.Configurator;
+const TCPServerConfigurator = configurator.TCPServerConfigurator;
+const TCPClientConfigurator = configurator.TCPClientConfigurator;
+const UDSServerConfigurator = configurator.UDSServerConfigurator;
+const UDSClientConfigurator = configurator.UDSClientConfigurator;
+const WrongConfigurator = configurator.WrongConfigurator;
 
 const engine = @import("../engine.zig");
 const Options = engine.Options;
@@ -439,6 +514,8 @@ const mailbox = @import("mailbox");
 pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 const std = @import("std");
+const posix = std.posix;
+const mem = std.mem;
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
