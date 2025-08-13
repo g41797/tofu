@@ -70,10 +70,12 @@ pub fn init(allocator: Allocator) !Notifier {
     const addr = try std.net.Address.initUnix(socket_file);
 
     // Create listening socket
-    const server_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
-    defer posix.close(server_fd);
-    try std.posix.bind(server_fd, &addr.any, addr.getOsSockLen());
-    try std.posix.listen(server_fd, @truncate(1));
+    // const server_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
+    // defer posix.close(server_fd);
+    // try std.posix.bind(server_fd, &addr.any, addr.getOsSockLen());
+    // try std.posix.listen(server_fd, @truncate(1));
+    var listSkt = try SCreator.createUdsListener(socket_file);
+    defer listSkt.deinit();
 
     // Create sender(client) socket
     const sender_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
@@ -81,7 +83,7 @@ pub fn init(allocator: Allocator) !Notifier {
     try posix.connect(sender_fd, &addr.any, addr.getOsSockLen());
 
     // Accept a sender connection - create receiver socket
-    const receiver_fd = try posix.accept(server_fd, null, null, 0);
+    const receiver_fd = try posix.accept(listSkt.socket, null, null, 0);
     errdefer posix.close(receiver_fd);
 
     try nats.Client.setSockNONBLOCK(sender_fd);
@@ -216,6 +218,10 @@ pub const AMPError = status.AMPError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
+
+const sockets = @import("sockets.zig");
+const Skt = sockets.Skt;
+const SCreator = sockets.SocketCreator;
 
 const temp = @import("temp");
 const nats = @import("nats");

@@ -21,12 +21,21 @@ pub const PolledSkt = union(enum) {
     io: IoSkt,
 };
 
-pub const NotificationSkt = struct {
-    skt: Skt = undefined,
+pub const Skt = struct {
+    socket: std.posix.socket_t = undefined,
+    address: std.net.Address = undefined,
 
-    pub fn init(skt: Skt) NotificationSkt { // prnt.ntfr.receiver
+    pub fn deinit(skr: *Skt) void {
+        posix.close(skr.socket);
+    }
+};
+
+pub const NotificationSkt = struct {
+    socket: Socket = undefined,
+
+    pub fn init(socket: Socket) NotificationSkt { // prnt.ntfr.receiver
         return .{
-            .skt = skt,
+            .socket = socket,
         };
     }
 
@@ -65,7 +74,7 @@ pub const AcceptSkt = struct {
     }
 
     pub fn deinit(askt: *AcceptSkt) void {
-        std.posix.close(askt.skt);
+        std.posix.close(askt.skt.socket);
         return;
     }
 };
@@ -98,8 +107,8 @@ pub const IoSkt = struct {
             .hello = null,
         };
 
-        ret.currSend.set(sskt) catch unreachable;
-        ret.currRecv.set(sskt) catch unreachable;
+        ret.currSend.set(sskt.socket) catch unreachable;
+        ret.currRecv.set(sskt.socket) catch unreachable;
 
         return ret;
     }
@@ -143,7 +152,7 @@ pub const IoSkt = struct {
     }
 
     pub fn deinit(ioskt: *IoSkt) void {
-        std.posix.close(ioskt.skt);
+        std.posix.close(ioskt.skt.socket);
         ioskt.sendQ.destroy();
         if (ioskt.currSend != null) {
             ioskt.currSend.?.destroy();
@@ -163,7 +172,7 @@ pub const IoSkt = struct {
 
 pub const MsgSender = struct {
     ready: bool = undefined,
-    skt: Skt = undefined,
+    socket: Socket = undefined,
     msg: ?*Message = undefined,
     bh: [BinaryHeader.BHSIZE]u8 = undefined,
     iov: [3]std.posix.iovec_const = undefined,
@@ -179,11 +188,11 @@ pub const MsgSender = struct {
         };
     }
 
-    pub fn set(ms: *MsgSender, skt: Skt) !void {
+    pub fn set(ms: *MsgSender, socket: Socket) !void {
         if (ms.ready) {
             return AMPError.NotAllowed;
         }
-        ms.skt = skt;
+        ms.socket = socket;
         ms.ready = true;
     }
 
@@ -256,7 +265,7 @@ pub const MsgSender = struct {
 
         while (ms.vind < 3) : (ms.vind += 1) {
             while (ms.iov[ms.vind].len > 0) {
-                const wasSend = std.posix.send(ms.skt, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
+                const wasSend = std.posix.send(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
                     switch (e) {
                         std.posix.SendError.WouldBlock => return null,
                         std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AMPError.PeerDisconnected,
@@ -283,7 +292,7 @@ pub const MsgSender = struct {
 
 pub const MsgReceiver = struct {
     ready: bool = undefined,
-    skt: Skt = undefined,
+    socket: Socket = undefined,
     pool: *Pool = undefined,
     ptrg: Trigger = undefined,
     bh: [BinaryHeader.BHSIZE]u8 = undefined,
@@ -303,11 +312,11 @@ pub const MsgReceiver = struct {
         };
     }
 
-    pub fn set(mr: *MsgReceiver, skt: Skt) !void {
+    pub fn set(mr: *MsgReceiver, socket: Socket) !void {
         if (mr.ready) {
             return AMPError.NotAllowed;
         }
-        mr.skt = skt;
+        mr.socket = socket;
         mr.ready = true;
     }
 
@@ -341,7 +350,7 @@ pub const MsgReceiver = struct {
 
         while (mr.vind < 3) : (mr.vind += 1) {
             while (mr.iov[mr.vind].len > 0) {
-                const wasRecv = std.posix.recv(mr.skt, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len], 0) catch |e| {
+                const wasRecv = std.posix.recv(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len], 0) catch |e| {
                     switch (e) {
                         std.posix.RecvFromError.WouldBlock => return null,
                         std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AMPError.PeerDisconnected,
@@ -400,68 +409,132 @@ pub const SocketCreator = struct {
     allocator: Allocator = undefined,
     cnfgr: Configurator = undefined,
 
-    pub fn createSkt(sc: *SocketCreator, msg: *Message, allocator: Allocator) AMPError!Skt {
-        sc.allocator = allocator;
-        sc.cnfgr = configurator.fromMessage(msg);
+    pub fn init(allocator: Allocator) SocketCreator {
+        return .{
+            .allocator = allocator,
+            .cnfgr = .wrong,
+        };
+    }
+
+    pub fn fromMessage(sc: *SocketCreator, msg: *Message) AMPError!Skt {
+        const cnfgr = Configurator.fromMessage(msg);
+
+        return sc.fromConfigurator(cnfgr);
+    }
+
+    pub fn fromConfigurator(sc: *SocketCreator, cnfgr: Configurator) AMPError!Skt {
+        sc.cnfgr = cnfgr;
 
         switch (sc.cnfgr) {
             .wrong => return AMPError.InvalidAddress,
-            .tcp_server => return sc.createTcpServer(&sc.cnf.tcp_server),
-            .tcp_client => return sc.createTcpClient(&sc.cnf.tcp_client),
-            .uds_server => return sc.createUdsServer(&sc.cnf.uds_server),
+            .tcp_server => return sc.createTcpServer(),
+            .tcp_client => return sc.createTcpClient(),
+            .uds_server => return sc.createUdsServer(),
             .uds_client => return sc.createUdsServer(&sc.cnf.uds_client),
         }
     }
 
-    pub fn createTcpServer(sc: *SocketCreator, cnf: *TCPServerConfigurator) AMPError!Skt {
-        _ = sc;
+    pub fn createTcpServer(sc: *SocketCreator) AMPError!Skt {
+        const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
         const address = std.net.Address.resolveIp(cnf.ip.?, cnf.ip.?) catch {
             return AMPError.InvalidAddress;
         };
 
-        const skt = createTcpListenerSocket(&address) catch {
+        const skt = createListenerSocket(&address) catch {
             return AMPError.InvalidAddress;
         };
 
         return skt;
     }
 
-    pub fn createTcpClient(sc: *SocketCreator, cnf: *TCPClientConfigurator) AMPError!Skt {
-        _ = sc;
-        _ = cnf;
-        return AMPError.NotImplementedYet;
+    pub fn createTcpClient(sc: *SocketCreator) AMPError!Skt {
+        const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_server;
+
+        const list = std.net.getAddressList(sc.allocator, cnf.addr.?, cnf.port.?) catch {
+            return AMPError.InvalidAddress;
+        };
+        defer list.deinit();
+
+        if (list.addrs.len == 0) {
+            return AMPError.InvalidAddress;
+        }
+
+        for (list.addrs) |addr| {
+            const ret = createConnectSocket(&addr) catch {
+                continue;
+            };
+            return ret;
+        }
+        return AMPError.InvalidAddress;
     }
 
-    pub fn createUdsServer(sc: *SocketCreator, cnf: *UDSServerConfigurator) AMPError!Skt {
-        _ = sc;
-        _ = cnf;
-        return AMPError.NotImplementedYet;
+    pub fn createUdsServer(sc: *SocketCreator) AMPError!Skt {
+        return createUdsListener(sc.cnfgr.uds_server.path);
     }
 
-    pub fn createUdsClient(sc: *SocketCreator, cnf: *UDSClientConfigurator) AMPError!Skt {
-        _ = sc;
-        _ = cnf;
-        return AMPError.NotImplementedYet;
+    pub fn createUdsListener(path: []const u8) AMPError!Skt {
+        var address = std.net.Address.initUnix(path) catch {
+            return AMPError.InvalidAddress;
+        };
+
+        const skt = createListenerSocket(&address) catch {
+            return AMPError.InvalidAddress;
+        };
+
+        return skt;
     }
 
-    // from IoUring.zig#L3473 (0.14.1)
-    fn createTcpListenerSocket(address: *std.net.Address) !posix.socket_t {
-        const kernel_backlog = 1;
-        const listener_socket = try posix.socket(address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
-        errdefer posix.close(listener_socket);
+    pub fn createUdsClient(sc: *SocketCreator) AMPError!Skt {
+        return createUdsSocket(sc.cnfgr.uds_client.path);
+    }
 
-        try posix.setsockopt(listener_socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
-        try posix.bind(listener_socket, &address.any, address.getOsSockLen());
-        try posix.listen(listener_socket, kernel_backlog);
+    pub fn createUdsSocket(path: []const u8) AMPError!Skt {
+        const address = std.net.Address.initUnix(path) catch {
+            return AMPError.InvalidAddress;
+        };
 
-        // set address to the OS-chosen IP/port.
+        const skt = createConnectSocket(&address) catch {
+            return AMPError.InvalidAddress;
+        };
+
+        return skt;
+    }
+
+    // from IoUring.zig#L3473 (0.14.1), slightly changed
+    fn createListenerSocket(address: *std.net.Address) !Skt {
+        var ret: Skt = .{
+            .address = address.*,
+            .socket = undefined,
+        };
+
+        const kernel_backlog = 64;
+        ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+        errdefer posix.close(ret.socket);
+
+        try posix.setsockopt(ret.socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
+        try posix.bind(ret.socket, &ret.address.any, address.getOsSockLen());
+        try posix.listen(ret.socket, kernel_backlog);
+
+        // set address to the OS-chosen information - check for UDS!!!.
         var slen: posix.socklen_t = address.getOsSockLen();
-        try posix.getsockname(listener_socket, &address.any, &slen);
+        try posix.getsockname(ret.socket, &ret.address.any, &slen);
 
-        return listener_socket;
+        return ret;
     }
 };
+
+pub fn createConnectSocket(address: *std.net.Address) !Skt {
+    var ret: Skt = .{
+        .address = address.*,
+        .socket = undefined,
+    };
+
+    ret.socket = posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+    errdefer posix.close(ret.socket);
+
+    return ret;
+}
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
@@ -519,4 +592,4 @@ const mem = std.mem;
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
-const Skt = std.posix.socket_t;
+const Socket = std.posix.socket_t;
