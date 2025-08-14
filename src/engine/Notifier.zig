@@ -157,10 +157,16 @@ pub fn recvNotification(ntfr: *Notifier) !Notification {
     return (ntptr.*);
 }
 
+pub fn recv_notification(receiver: socket_t) !Notification {
+    const byte = try recvByte(receiver);
+    const ntptr: *const Notification = @ptrCast(&byte);
+    return (ntptr.*);
+}
+
 pub inline fn recvByte(receiver: socket_t) !u8 {
     var byte_array: [1]u8 = undefined;
-    _ = std.posix.recv(receiver, &byte_array, 0) catch |err| {
-        return err;
+    _ = std.posix.recv(receiver, &byte_array, 0) catch {
+        return AMPError.NotificationFailed;
     };
     return byte_array[0];
 }
@@ -175,6 +181,11 @@ pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
     }
 
     return AMPError.NotificationFailed;
+}
+
+pub fn send_notification(sender: socket_t, notif: Notification) !void {
+    const byteptr: *const u8 = @ptrCast(&notif);
+    return sendByte(sender, byteptr.*);
 }
 
 pub inline fn sendByte(sender: socket_t, notif: u8) !void {

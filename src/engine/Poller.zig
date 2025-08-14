@@ -17,7 +17,7 @@ thread: ?Thread = null,
 // Accesable from the thread - don't lock/unlock
 chnsVtor: std.ArrayList(channels.ChannelNumber) = undefined,
 pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
-polled_map: std.AutoHashMap(channels.ChannelNumber, PolledSkt) = undefined,
+polled_map: std.AutoHashMap(channels.ChannelNumber, TriggeredSkt) = undefined,
 
 pub fn ampe(plr: *Poller) !Ampe {
     try plr.*.createThread();
@@ -185,7 +185,7 @@ fn prepareForThreadRunning(plr: *Poller) !void {
     var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(plr.allocator, 256);
     errdefer pollfdVtor.deinit();
 
-    var polled_map = std.AutoHashMap(channels.ChannelNumber, PolledSkt).init(plr.allocator);
+    var polled_map = std.AutoHashMap(channels.ChannelNumber, TriggeredSkt).init(plr.allocator);
     errdefer polled_map.deinit();
     try polled_map.ensureTotalCapacity(256);
 
@@ -245,7 +245,7 @@ const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
 
 const sockets = @import("sockets.zig");
-const PolledSkt = sockets.PolledSkt;
+const TriggeredSkt = sockets.TriggeredSkt;
 
 const SenderReceiver = @import("SenderReceiver.zig");
 

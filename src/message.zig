@@ -439,6 +439,10 @@ pub const MessageQueue = struct {
         return result;
     }
 
+    pub fn empty(fifo: *Self) bool {
+        return (fifo.first == null);
+    }
+
     pub fn destroy(fifo: *Self) void {
         var next = fifo.dequeue();
         while (next != null) {
