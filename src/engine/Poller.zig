@@ -3,6 +3,12 @@
 
 pub const Poller = @This();
 
+const PolledChannel = struct {
+    acn: channels.ActiveChannel = undefined,
+    tskt: TriggeredSkt = undefined,
+    trgrs: sockets.Triggers = undefined,
+};
+
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
 options: engine.Options = undefined,
@@ -14,10 +20,9 @@ maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
 
-// Accesable from the thread - don't lock/unlock
-chnsVtor: std.ArrayList(channels.ChannelNumber) = undefined,
+// Accessible from the thread - don't lock/unlock
 pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
-polled_map: std.AutoHashMap(channels.ChannelNumber, TriggeredSkt) = undefined,
+polled_map: std.AutoArrayHashMap(channels.ChannelNumber, PolledChannel) = undefined,
 
 pub fn ampe(plr: *Poller) !Ampe {
     try plr.*.createThread();
@@ -179,17 +184,13 @@ fn createThread(plr: *Poller) !void {
 }
 
 fn prepareForThreadRunning(plr: *Poller) !void {
-    var chnsVtor = try std.ArrayList(channels.ChannelNumber).initCapacity(plr.allocator, 256);
-    errdefer chnsVtor.deinit();
-
     var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(plr.allocator, 256);
     errdefer pollfdVtor.deinit();
 
-    var polled_map = std.AutoHashMap(channels.ChannelNumber, TriggeredSkt).init(plr.allocator);
+    var polled_map = std.AutoArrayHashMap(channels.ChannelNumber, PolledChannel).init(plr.allocator);
     errdefer polled_map.deinit();
     try polled_map.ensureTotalCapacity(256);
 
-    plr.chnsVtor = chnsVtor;
     plr.pollfdVtor = pollfdVtor;
     plr.polled_map = polled_map;
 
@@ -201,7 +202,6 @@ fn onThread(plr: *Poller) void {
 
     plr.polled_map.deinit();
     plr.pollfdVtor.deinit();
-    plr.chnsVtor.deinit();
 
     return;
 }

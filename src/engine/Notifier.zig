@@ -1,6 +1,22 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+pub const TempUdsPath = struct {
+    tempFile: temp.TempFile = undefined,
+    socket_path: [104:0]u8 = undefined,
+
+    pub fn buildPath(tup: *TempUdsPath, allocator: Allocator) ![]u8 {
+        tup.tempFile = try temp.create_file(allocator, "yaaamp*.port");
+        tup.tempFile.retain = false;
+        defer tup.tempFile.deinit();
+
+        const socket_file = try tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..104]);
+        // Remove socket file if it exists
+        tup.tempFile.parent_dir.deleteFile(tup.tempFile.basename) catch {};
+        return socket_file;
+    }
+};
+
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;
 
@@ -57,30 +73,17 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 }
 
 pub fn init(allocator: Allocator) !Notifier {
-    var tempFile = try temp.create_file(allocator, "yaaamp*.port");
-    tempFile.retain = false;
-    defer tempFile.deinit();
+    var tup: TempUdsPath = .{};
 
-    var socket_path: [104:0]u8 = undefined;
+    const socket_file = try tup.buildPath(allocator);
 
-    const socket_file = try tempFile.parent_dir.realpath(tempFile.basename, socket_path[0..104]);
-    // Remove socket file if it exists
-    tempFile.parent_dir.deleteFile(tempFile.basename) catch {};
-
-    const addr = try std.net.Address.initUnix(socket_file);
-
-    // Create listening socket
-    // const server_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
-    // defer posix.close(server_fd);
-    // try std.posix.bind(server_fd, &addr.any, addr.getOsSockLen());
-    // try std.posix.listen(server_fd, @truncate(1));
     var listSkt = try SCreator.createUdsListener(socket_file);
     defer listSkt.deinit();
 
     // Create sender(client) socket
     const sender_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
     errdefer posix.close(sender_fd);
-    try posix.connect(sender_fd, &addr.any, addr.getOsSockLen());
+    try posix.connect(sender_fd, &listSkt.address.any, listSkt.address.getOsSockLen());
 
     // Accept a sender connection - create receiver socket
     const receiver_fd = try posix.accept(listSkt.socket, null, null, 0);

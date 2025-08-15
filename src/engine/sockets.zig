@@ -173,6 +173,10 @@ pub const NotificationSkt = struct {
         return NotificationTriggers;
     }
 
+    pub inline fn getSocket(self: *NotificationSkt) Socket {
+        return self.socket;
+    }
+
     pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
         return Notifier.recv_notification(nskt.socket);
     }
@@ -200,6 +204,10 @@ pub const AcceptSkt = struct {
     pub fn triggers(askt: *AcceptSkt) ?Triggers {
         _ = askt;
         return AcceptTriggers;
+    }
+
+    pub inline fn getSocket(self: *AcceptSkt) Socket {
+        return self.skt.socket;
     }
 
     pub fn tryAccept(askt: *AcceptSkt) AMPError!?Skt {
@@ -320,6 +328,10 @@ pub const IoSkt = struct {
         return ret;
     }
 
+    pub inline fn getSocket(self: *IoSkt) Socket {
+        return self.skt.socket;
+    }
+
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AMPError!void {
         ioskt.sendQ.enqueue(sndmsg);
         return;
@@ -353,11 +365,30 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn tryRecv(ioskt: *IoSkt) AMPError!?*Message {
+    pub fn tryRecv(ioskt: *IoSkt) AMPError!MessageQueue {
         if (!ioskt.connected) {
             return AMPError.NotAllowed;
         }
-        return AMPError.NotImplementedYet;
+
+        var ret: MessageQueue = .{};
+
+        while (true) {
+            const received = ioskt.currRecv.recv() catch |e| {
+                switch (e) {
+                    AMPError.PoolEmpty => {
+                        return null;
+                    },
+                    else => return e,
+                }
+            };
+
+            if (received == null) {
+                break;
+            }
+            ret.enqueue(received.?);
+        }
+
+        return ret;
     }
 
     pub fn trySend(ioskt: *IoSkt) AMPError!?*Message {
@@ -652,6 +683,73 @@ pub const TriggeredSkt = union(enum) {
     notification: NotificationSkt,
     accept: AcceptSkt,
     io: IoSkt,
+
+    pub fn triggers(tsk: *TriggeredSkt) ?Triggers {
+        return switch (tsk.*) {
+            inline else => |sk| sk.triggers(),
+        };
+    }
+
+    pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
+        return switch (tsk.*) {
+            inline else => |sk| sk.getSocket(),
+        };
+    }
+
+    pub fn tryRecvNotification(tsk: *TriggeredSkt) !Notification {
+        return switch (tsk.*) {
+            .notification => |sk| sk.tryRecvNotification(),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn tryAccept(tsk: *TriggeredSkt) !?Skt {
+        return switch (tsk.*) {
+            .accept => |sk| sk.tryAccept(),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn tryConnect(tsk: *TriggeredSkt) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.tryConnect(),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn tryRecv(tsk: *TriggeredSkt) !MessageQueue {
+        return switch (tsk.*) {
+            .io => |sk| sk.tryRecv(),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn trySend(tsk: *TriggeredSkt) !?*Message {
+        return switch (tsk.*) {
+            .io => |sk| sk.trySend(),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.addToSend(sndmsg),
+            inline else => return AMPError.NotAllowed,
+        };
+    }
+
+    pub fn detach(tsk: *TriggeredSkt) ?*Message {
+        return switch (tsk.*) {
+            .io => |sk| sk.detach(),
+            inline else => return null,
+        };
+    }
+
+    pub fn deinit(tsk: *TriggeredSkt) void {
+        return switch (tsk.*) {
+            inline else => |sk| sk.deinit(),
+        };
+    }
 };
 
 const message = @import("../message.zig");
