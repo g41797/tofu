@@ -443,11 +443,19 @@ pub const MessageQueue = struct {
         return (fifo.first == null);
     }
 
-    pub fn destroy(fifo: *Self) void {
+    pub fn clear(fifo: *Self) void {
         var next = fifo.dequeue();
         while (next != null) {
             next.?.destroy();
             next = fifo.dequeue();
+        }
+    }
+
+    pub fn move(src: *Self, dest: *Self) void {
+        var next = src.dequeue();
+        while (next != null) {
+            dest.enqueue(next.?);
+            next = src.dequeue();
         }
     }
 };

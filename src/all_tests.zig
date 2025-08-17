@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 test {
-    _ = @import("root.zig");
     _ = @import("TextHeaderIterator_tests.zig");
     _ = @import("configurator_tests.zig");
     _ = @import("engine_test.zig");

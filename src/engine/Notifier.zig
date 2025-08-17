@@ -81,19 +81,17 @@ pub fn init(allocator: Allocator) !Notifier {
     defer listSkt.deinit();
 
     // Create sender(client) socket
-    const sender_fd = try posix.socket(posix.AF.UNIX, posix.SOCK.STREAM, 0);
-    errdefer posix.close(sender_fd);
-    try posix.connect(sender_fd, &listSkt.address.any, listSkt.address.getOsSockLen());
+    var senderSkt = try SCreator.createUdsSocket(socket_file);
+    errdefer senderSkt.deinit();
+
+    try posix.connect(senderSkt.socket, &listSkt.address.any, listSkt.address.getOsSockLen());
 
     // Accept a sender connection - create receiver socket
-    const receiver_fd = try posix.accept(listSkt.socket, null, null, 0);
+    const receiver_fd = try posix.accept(listSkt.socket, null, null, posix.SOCK.NONBLOCK);
     errdefer posix.close(receiver_fd);
 
-    try nats.Client.setSockNONBLOCK(sender_fd);
-    try nats.Client.setSockNONBLOCK(receiver_fd);
-
     return .{
-        .sender = sender_fd,
+        .sender = senderSkt.socket,
         .receiver = receiver_fd,
     };
 }

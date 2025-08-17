@@ -21,6 +21,7 @@ ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
 
 // Accessible from the thread - don't lock/unlock
+cnhsVtor: std.ArrayList(channels.ChannelNumber) = undefined,
 pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
 polled_map: std.AutoArrayHashMap(channels.ChannelNumber, PolledChannel) = undefined,
 
@@ -184,6 +185,9 @@ fn createThread(plr: *Poller) !void {
 }
 
 fn prepareForThreadRunning(plr: *Poller) !void {
+    var cnhsVtor = try std.ArrayList(channels.ChannelNumber).initCapacity(plr.allocator, 256);
+    errdefer cnhsVtor.deinit();
+
     var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(plr.allocator, 256);
     errdefer pollfdVtor.deinit();
 
@@ -191,6 +195,7 @@ fn prepareForThreadRunning(plr: *Poller) !void {
     errdefer polled_map.deinit();
     try polled_map.ensureTotalCapacity(256);
 
+    plr.cnhsVtor = cnhsVtor;
     plr.pollfdVtor = pollfdVtor;
     plr.polled_map = polled_map;
 
@@ -200,6 +205,7 @@ fn prepareForThreadRunning(plr: *Poller) !void {
 fn onThread(plr: *Poller) void {
     plr.ntfr.sendAck(0) catch unreachable;
 
+    plr.cnhsVtor.deinit();
     plr.polled_map.deinit();
     plr.pollfdVtor.deinit();
 

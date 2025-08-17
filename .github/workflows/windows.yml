@@ -1,0 +1,29 @@
+name: Windows
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows]
+
+    steps:
+      - run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: false
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+          use-cache: false
+
+      - run: zig build test -freference-trace --summary all
+
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+

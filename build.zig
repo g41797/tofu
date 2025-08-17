@@ -28,23 +28,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const xev = b.dependency("libxev", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const lib = b.addStaticLibrary(.{
         .name = "yaaamp",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/engine.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
 
     _ = b.addModule("yaaamp", .{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/engine.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
@@ -53,7 +48,6 @@ pub fn build(b: *std.Build) void {
     lib.root_module.addImport("nats", nats.module("nats"));
     lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib.root_module.addImport("temp", temp.module("temp"));
-    lib.root_module.addImport("xev", xev.module("xev"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -63,7 +57,7 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const lib_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/root_tests.zig"),
+        .root_source_file = b.path("src/all_tests.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
@@ -72,14 +66,13 @@ pub fn build(b: *std.Build) void {
     lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
     lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib_unit_tests.root_module.addImport("temp", temp.module("temp"));
-    lib_unit_tests.root_module.addImport("xev", xev.module("xev"));
 
     b.installArtifact(lib_unit_tests);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/root_tests.zig"),
+        .root_source_file = b.path("src/all_tests.zig"),
         .target = target,
         .optimize = optimize,
     });

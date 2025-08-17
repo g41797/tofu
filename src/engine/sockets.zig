@@ -95,7 +95,7 @@ pub const SocketCreator = struct {
     }
 
     pub fn createUdsSocket(path: []const u8) AMPError!Skt {
-        const address = std.net.Address.initUnix(path) catch {
+        var address = std.net.Address.initUnix(path) catch {
             return AMPError.InvalidAddress;
         };
 
@@ -135,7 +135,7 @@ pub fn createConnectSocket(address: *std.net.Address) !Skt {
         .socket = undefined,
     };
 
-    ret.socket = posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+    ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer posix.close(ret.socket);
 
     return ret;
@@ -230,6 +230,11 @@ pub const AcceptSkt = struct {
                 => return AMPError.PeerDisconnected,
                 else => return AMPError.CommunicatioinFailure,
             }
+        };
+        errdefer posix.close(skt.socket);
+
+        nats.Client.setSockNONBLOCK(skt.socket) catch { // Do we need it? accept with NONBLOCK should set it
+            return AMPError.CommunicatioinFailure;
         };
 
         return skt;
@@ -801,6 +806,8 @@ pub const Appendable = @import("nats").Appendable;
 
 const mailbox = @import("mailbox");
 pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+
+const nats = @import("nats");
 
 const std = @import("std");
 const posix = std.posix;
