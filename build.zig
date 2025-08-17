@@ -38,6 +38,11 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
+    // need libc for windows sockets
+    if (target.result.os.tag == .windows) {
+        lib.linkLibC();
+    }
+
     _ = b.addModule("yaaamp", .{
         .root_source_file = b.path("src/engine.zig"),
         .target = target,
