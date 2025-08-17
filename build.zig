@@ -41,6 +41,7 @@ pub fn build(b: *std.Build) void {
     // need libc for windows sockets
     if (target.result.os.tag == .windows) {
         lib.linkLibC();
+        lib.linkSystemLibrary("ws2_32");
     }
 
     _ = b.addModule("yaaamp", .{
@@ -72,6 +73,12 @@ pub fn build(b: *std.Build) void {
     lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib_unit_tests.root_module.addImport("temp", temp.module("temp"));
 
+    // need libc for windows sockets
+    if (target.result.os.tag == .windows) {
+        lib_unit_tests.linkLibC();
+        lib_unit_tests.linkSystemLibrary("ws2_32");
+    }
+
     b.installArtifact(lib_unit_tests);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
@@ -81,6 +88,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    // need libc for windows sockets
+    if (target.result.os.tag == .windows) {
+        exe_unit_tests.linkLibC();
+        exe_unit_tests.linkSystemLibrary("ws2_32");
+    }
 
     _ = b.addRunArtifact(exe_unit_tests);
 
