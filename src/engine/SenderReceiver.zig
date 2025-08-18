@@ -3,7 +3,7 @@
 
 pub const SenderReceiver = @This();
 
-prnt: *Poller = undefined,
+prnt: *Distributor = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
@@ -22,7 +22,7 @@ pub fn sr(srs: *SenderReceiver) Sr {
     return result;
 }
 
-pub fn create(prnt: *Poller, id: u32) !*SenderReceiver {
+pub fn create(prnt: *Distributor, id: u32) !*SenderReceiver {
     const srs = try prnt.allocator.create(SenderReceiver);
     errdefer prnt.allocator.destroy(srs);
     srs.* = SenderReceiver.init(prnt, id);
@@ -35,7 +35,7 @@ pub fn destroy(srs: *SenderReceiver) void {
     gpa.destroy(srs);
 }
 
-pub fn init(prnt: *Poller, id: u32) SenderReceiver {
+pub fn init(prnt: *Distributor, id: u32) SenderReceiver {
     const srs: SenderReceiver = .{
         .prnt = prnt,
         .id = id,
@@ -77,7 +77,7 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
     const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
 
     if ((msg.bhdr.channel_number != 0) and (!srs.prnt.acns.exists(msg.bhdr.channel_number))) {
-        return AMPError.InvalidChannelNumber;
+        return AmpeError.InvalidChannelNumber;
     }
 
     var mID: ?MessageID = null;
@@ -127,7 +127,7 @@ pub const Message = message.Message;
 pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
-pub const Poller = @import("Poller.zig");
+pub const Distributor = @import("Distributor.zig");
 
 pub const engine = @import("../engine.zig");
 pub const Options = engine.Options;
@@ -135,8 +135,8 @@ pub const Sr = engine.Sr;
 pub const AllocationStrategy = engine.AllocationStrategy;
 
 pub const status = @import("../status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;

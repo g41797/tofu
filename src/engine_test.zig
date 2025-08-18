@@ -56,7 +56,7 @@ test "send wrong message" {
     msg = amp.get(force_get);
     try std.testing.expectEqual(true, msg != null);
 
-    try std.testing.expectError(AMPError.InvalidMessageMode, amp.start_send(msg.?));
+    try std.testing.expectError(AmpeError.InvalidMessageMode, amp.start_send(msg.?));
     amp.put(msg.?);
 
     msg = amp.get(force_get);
@@ -64,16 +64,16 @@ test "send wrong message" {
     msgv.bhdr.proto.mtype = .welcome;
     msgv.bhdr.proto.mode = .response;
 
-    try std.testing.expectError(AMPError.InvalidMessageId, amp.start_send(msgv));
+    try std.testing.expectError(AmpeError.InvalidMessageId, amp.start_send(msgv));
 
     msgv.bhdr.message_id = 1234;
 
-    try std.testing.expectError(AMPError.NotAllowed, amp.start_send(msgv));
+    try std.testing.expectError(AmpeError.NotAllowed, amp.start_send(msgv));
 
     msgv.reset();
     msgv.bhdr.proto.mtype = .welcome;
     msgv.bhdr.proto.mode = .request;
-    try std.testing.expectError(AMPError.InvalidAddress, amp.start_send(msgv));
+    try std.testing.expectError(AmpeError.InvalidAddress, amp.start_send(msgv));
 
     amp.put(msgv);
 }
@@ -89,10 +89,10 @@ fn destroyDefer(amp: *AMP) void {
 // }
 
 test "Ampe create/destroy" {
-    var plr = Poller.init(std.testing.allocator, .{}) catch unreachable;
-    defer plr.deinit();
+    var dtr = Distributor.init(std.testing.allocator, .{}) catch unreachable;
+    defer dtr.deinit();
 
-    const ampe = try plr.ampe();
+    const ampe = try dtr.ampe();
 
     const sr = try ampe.create();
 
@@ -123,7 +123,7 @@ pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
 pub const status = @import("status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 
-pub const Poller = @import("engine/Poller.zig");
+pub const Distributor = @import("engine/Distributor.zig");

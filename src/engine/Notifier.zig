@@ -167,7 +167,7 @@ pub fn recv_notification(receiver: socket_t) !Notification {
 pub inline fn recvByte(receiver: socket_t) !u8 {
     var byte_array: [1]u8 = undefined;
     _ = std.posix.recv(receiver, &byte_array, 0) catch {
-        return AMPError.NotificationFailed;
+        return AmpeError.NotificationFailed;
     };
     return byte_array[0];
 }
@@ -181,7 +181,7 @@ pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
         }
     }
 
-    return AMPError.NotificationFailed;
+    return AmpeError.NotificationFailed;
 }
 
 pub fn send_notification(sender: socket_t, notif: Notification) !void {
@@ -192,7 +192,7 @@ pub fn send_notification(sender: socket_t, notif: Notification) !void {
 pub inline fn sendByte(sender: socket_t, notif: u8) !void {
     var byte_array = [_]u8{notif};
     _ = std.posix.send(sender, &byte_array, 0) catch {
-        return AMPError.NotificationFailed;
+        return AmpeError.NotificationFailed;
     };
     return;
 }
@@ -204,7 +204,7 @@ pub fn sendAck(ntfr: *Notifier, ack: u8) !void {
         }
     }
 
-    return AMPError.NotificationFailed;
+    return AmpeError.NotificationFailed;
 }
 
 pub fn recvAck(ntfr: *Notifier) !u8 {
@@ -213,7 +213,7 @@ pub fn recvAck(ntfr: *Notifier) !u8 {
             return recvByte(ntfr.sender);
         }
     }
-    return AMPError.NotificationFailed;
+    return AmpeError.NotificationFailed;
 }
 
 pub fn deinit(ntfr: *Notifier) void {
@@ -225,8 +225,8 @@ pub const message = @import("../message.zig");
 pub const ValidCombination = message.ValidCombination;
 
 pub const status = @import("../status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;

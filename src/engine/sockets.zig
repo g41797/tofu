@@ -21,48 +21,48 @@ pub const SocketCreator = struct {
         };
     }
 
-    pub fn fromMessage(sc: *SocketCreator, msg: *Message) AMPError!Skt {
+    pub fn fromMessage(sc: *SocketCreator, msg: *Message) AmpeError!Skt {
         const cnfgr = Configurator.fromMessage(msg);
 
         return sc.fromConfigurator(cnfgr);
     }
 
-    pub fn fromConfigurator(sc: *SocketCreator, cnfgr: Configurator) AMPError!Skt {
+    pub fn fromConfigurator(sc: *SocketCreator, cnfgr: Configurator) AmpeError!Skt {
         sc.cnfgr = cnfgr;
 
         switch (sc.cnfgr) {
-            .wrong => return AMPError.InvalidAddress,
+            .wrong => return AmpeError.InvalidAddress,
             .tcp_server => return sc.createTcpServer(),
             .tcp_client => return sc.createTcpClient(),
             .uds_server => return sc.createUdsServer(),
-            .uds_client => return sc.createUdsServer(&sc.cnf.uds_client),
+            .uds_client => return sc.createUdsClient(),
         }
     }
 
-    pub fn createTcpServer(sc: *SocketCreator) AMPError!Skt {
+    pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
         const address = std.net.Address.resolveIp(cnf.ip.?, cnf.ip.?) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         const skt = createListenerSocket(&address) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         return skt;
     }
 
-    pub fn createTcpClient(sc: *SocketCreator) AMPError!Skt {
+    pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_server;
 
         const list = std.net.getAddressList(sc.allocator, cnf.addr.?, cnf.port.?) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
         defer list.deinit();
 
         if (list.addrs.len == 0) {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         }
 
         for (list.addrs) |addr| {
@@ -71,36 +71,36 @@ pub const SocketCreator = struct {
             };
             return ret;
         }
-        return AMPError.InvalidAddress;
+        return AmpeError.InvalidAddress;
     }
 
-    pub fn createUdsServer(sc: *SocketCreator) AMPError!Skt {
+    pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
         return createUdsListener(sc.cnfgr.uds_server.path);
     }
 
-    pub fn createUdsListener(path: []const u8) AMPError!Skt {
+    pub fn createUdsListener(path: []const u8) AmpeError!Skt {
         var address = std.net.Address.initUnix(path) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         const skt = createListenerSocket(&address) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         return skt;
     }
 
-    pub fn createUdsClient(sc: *SocketCreator) AMPError!Skt {
+    pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
         return createUdsSocket(sc.cnfgr.uds_client.path);
     }
 
-    pub fn createUdsSocket(path: []const u8) AMPError!Skt {
+    pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
         var address = std.net.Address.initUnix(path) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         const skt = createConnectSocket(&address) catch {
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         };
 
         return skt;
@@ -146,13 +146,24 @@ pub const Trigger = enum(u1) {
     off = 0,
 };
 
-pub const Triggers = packed struct(u6) {
+pub const Triggers = packed struct(u8) {
     notify: Trigger = .off,
     accept: Trigger = .off,
     connect: Trigger = .off,
     send: Trigger = .off,
     recv: Trigger = .off,
     pool: Trigger = .off,
+    err: Trigger = .off,
+    timeout: Trigger = .off,
+
+    pub inline fn eql(self: Triggers, other: Triggers) bool {
+        return self == other;
+    }
+
+    pub inline fn off(self: Triggers) bool {
+        const z: u8 = @bitCast(self);
+        return (z == 0);
+    }
 };
 
 const NotificationTriggers: Triggers = .{
@@ -195,7 +206,7 @@ const AcceptTriggers: Triggers = .{
 pub const AcceptSkt = struct {
     skt: Skt = undefined,
 
-    pub fn init(wlcm: *Message, sc: *SocketCreator) AMPError!AcceptSkt {
+    pub fn init(wlcm: *Message, sc: *SocketCreator) AmpeError!AcceptSkt {
         return .{
             .skt = try sc.fromMessage(wlcm),
         };
@@ -210,7 +221,7 @@ pub const AcceptSkt = struct {
         return self.skt.socket;
     }
 
-    pub fn tryAccept(askt: *AcceptSkt) AMPError!?Skt {
+    pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
         var skt: Skt = .{};
 
         var addr_len = @sizeOf(skt.address);
@@ -219,7 +230,7 @@ pub const AcceptSkt = struct {
             askt.skt.socket,
             &skt.address.any,
             @ptrCast(&addr_len),
-            std.posix.SOCK.NONBLOCK,
+            std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC,
         ) catch |e| {
             switch (e) {
                 std.posix.AcceptError.WouldBlock => {
@@ -227,15 +238,11 @@ pub const AcceptSkt = struct {
                 },
                 std.posix.AcceptError.ConnectionAborted,
                 std.posix.AcceptError.ConnectionResetByPeer,
-                => return AMPError.PeerDisconnected,
-                else => return AMPError.CommunicatioinFailure,
+                => return AmpeError.PeerDisconnected,
+                else => return AmpeError.CommunicatioinFailure,
             }
         };
         errdefer posix.close(skt.socket);
-
-        nats.Client.setSockNONBLOCK(skt.socket) catch { // Do we need it? accept with NONBLOCK should set it
-            return AMPError.CommunicatioinFailure;
-        };
 
         return skt;
     }
@@ -261,7 +268,7 @@ pub const IoSkt = struct {
     currRecv: MsgReceiver = undefined,
     lastSend: ?*Message = undefined,
 
-    pub fn initServerSide(pool: *Pool, sskt: Skt) AMPError!IoSkt {
+    pub fn initServerSide(pool: *Pool, sskt: Skt) AmpeError!IoSkt {
         var ret: IoSkt = .{
             .pool = pool,
             .side = .server,
@@ -279,7 +286,7 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn initClientSide(pool: *Pool, hello: *Message, sc: *SocketCreator) AMPError!IoSkt {
+    pub fn initClientSide(pool: *Pool, hello: *Message, sc: *SocketCreator) AmpeError!IoSkt {
         const ret = .{
             .pool = pool,
             .side = .client,
@@ -303,7 +310,7 @@ pub const IoSkt = struct {
             std.posix.ConnectError.WouldBlock => {
                 ret.connected = false;
             },
-            else => return AMPError.PeerDisconnected,
+            else => return AmpeError.PeerDisconnected,
         };
 
         if (ret.connected) {
@@ -337,17 +344,17 @@ pub const IoSkt = struct {
         return self.skt.socket;
     }
 
-    pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AMPError!void {
+    pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
         ioskt.sendQ.enqueue(sndmsg);
         return;
     }
 
-    // tryConnect is called by Poller for succ. connection.
+    // tryConnect is called by Distributor for succ. connection.
     // So actually  tryConnect functionality - to allow further Hello send.
-    // For the failed connection Poller uses detach: get Hello request , convert to filed Hello response...
-    pub fn tryConnect(ioskt: *IoSkt) AMPError!void {
+    // For the failed connection Distributor uses detach: get Hello request , convert to filed Hello response...
+    pub fn tryConnect(ioskt: *IoSkt) AmpeError!void {
         if (ioskt.connected) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
 
         ioskt.connected = true;
@@ -370,9 +377,9 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn tryRecv(ioskt: *IoSkt) AMPError!MessageQueue {
+    pub fn tryRecv(ioskt: *IoSkt) AmpeError!MessageQueue {
         if (!ioskt.connected) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
 
         var ret: MessageQueue = .{};
@@ -380,7 +387,7 @@ pub const IoSkt = struct {
         while (true) {
             const received = ioskt.currRecv.recv() catch |e| {
                 switch (e) {
-                    AMPError.PoolEmpty => {
+                    AmpeError.PoolEmpty => {
                         return null;
                     },
                     else => return e,
@@ -396,11 +403,11 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn trySend(ioskt: *IoSkt) AMPError!?*Message {
+    pub fn trySend(ioskt: *IoSkt) AmpeError!?*Message {
         var ret: ?*Message = null;
 
         if (!ioskt.connected) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
 
         while (true) {
@@ -469,7 +476,7 @@ pub const MsgSender = struct {
 
     pub fn set(ms: *MsgSender, socket: Socket) !void {
         if (ms.ready) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
         ms.socket = socket;
         ms.ready = true;
@@ -490,7 +497,7 @@ pub const MsgSender = struct {
 
     pub fn attach(ms: *MsgSender, msg: *Message) !void {
         if (!ms.ready) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
         if (ms.msg) |m| {
             m.destroy();
@@ -534,9 +541,9 @@ pub const MsgSender = struct {
         return ret;
     }
 
-    pub fn send(ms: *MsgSender) AMPError!?*Message {
+    pub fn send(ms: *MsgSender) AmpeError!?*Message {
         if (!ms.ready) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
         if (ms.msg == null) {
             return error.NothingToSend; // to  prevent bug
@@ -547,8 +554,8 @@ pub const MsgSender = struct {
                 const wasSend = std.posix.send(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
                     switch (e) {
                         std.posix.SendError.WouldBlock => return null,
-                        std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AMPError.PeerDisconnected,
-                        else => return AMPError.CommunicatioinFailed,
+                        std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
+                        else => return AmpeError.CommunicatioinFailed,
                     }
                 };
 
@@ -593,7 +600,7 @@ pub const MsgReceiver = struct {
 
     pub fn set(mr: *MsgReceiver, socket: Socket) !void {
         if (mr.ready) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
         mr.socket = socket;
         mr.ready = true;
@@ -605,15 +612,15 @@ pub const MsgReceiver = struct {
 
     pub fn recv(mr: *MsgReceiver) !?*Message {
         if (!mr.ready) {
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
         if (mr.msg == null) {
             mr.msg = mr.pool.get(.poolOnly) catch |e| {
                 mr.ptrg = .on;
                 switch (e) {
-                    error.ClosedPool => return AMPError.NotAllowed,
-                    error.EmptyPool => return AMPError.PoolEmpty,
-                    else => return AMPError.AllocationFailed,
+                    error.ClosedPool => return AmpeError.NotAllowed,
+                    error.EmptyPool => return AmpeError.PoolEmpty,
+                    else => return AmpeError.AllocationFailed,
                 }
             };
 
@@ -632,8 +639,8 @@ pub const MsgReceiver = struct {
                 const wasRecv = std.posix.recv(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len], 0) catch |e| {
                     switch (e) {
                         std.posix.RecvFromError.WouldBlock => return null,
-                        std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AMPError.PeerDisconnected,
-                        else => return AMPError.CommunicatioinFailed,
+                        std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
+                        else => return AmpeError.CommunicatioinFailed,
                     }
                 };
 
@@ -649,7 +656,7 @@ pub const MsgReceiver = struct {
 
                     // Allow direct receive to the buffer of appendable without copy
                     mr.msg.?.thdrs.buffer.alloc(mr.iov[1].len) catch {
-                        return AMPError.AllocationFailed;
+                        return AmpeError.AllocationFailed;
                     };
                     mr.msg.?.thdrs.buffer.change(mr.iov[1].len) catch unreachable;
                 }
@@ -658,7 +665,7 @@ pub const MsgReceiver = struct {
 
                     // Allow direct receive to the buffer of appendable without copy
                     mr.msg.?.body.buffer.alloc(mr.iov[2].len) catch {
-                        return AMPError.AllocationFailed;
+                        return AmpeError.AllocationFailed;
                     };
                     mr.msg.?.body.buffer.change(mr.iov[2].len) catch unreachable;
                 }
@@ -704,46 +711,46 @@ pub const TriggeredSkt = union(enum) {
     pub fn tryRecvNotification(tsk: *TriggeredSkt) !Notification {
         return switch (tsk.*) {
             .notification => |sk| sk.tryRecvNotification(),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn tryAccept(tsk: *TriggeredSkt) !?Skt {
         return switch (tsk.*) {
             .accept => |sk| sk.tryAccept(),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn tryConnect(tsk: *TriggeredSkt) !void {
         return switch (tsk.*) {
             .io => |sk| sk.tryConnect(),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn tryRecv(tsk: *TriggeredSkt) !MessageQueue {
         return switch (tsk.*) {
             .io => |sk| sk.tryRecv(),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn trySend(tsk: *TriggeredSkt) !?*Message {
         return switch (tsk.*) {
             .io => |sk| sk.trySend(),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
         return switch (tsk.*) {
             .io => |sk| sk.addToSend(sndmsg),
-            inline else => return AMPError.NotAllowed,
+            inline else => return AmpeError.NotAllowed,
         };
     }
 
-    pub fn detach(tsk: *TriggeredSkt) ?*Message {
+    pub fn detach(tsk: *TriggeredSkt) ?*Message { // consider MessageQueue
         return switch (tsk.*) {
             .io => |sk| sk.detach(),
             inline else => return null,
@@ -773,7 +780,7 @@ const MessageQueue = message.MessageQueue;
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 
-const Poller = @import("Poller.zig");
+const Distributor = @import("Distributor.zig");
 
 const configurator = @import("../configurator.zig");
 const Configurator = configurator.Configurator;
@@ -789,8 +796,8 @@ const Sr = engine.Sr;
 const AllocationStrategy = engine.AllocationStrategy;
 
 const status = @import("../status.zig");
-const AMPStatus = status.AMPStatus;
-const AMPError = status.AMPError;
+const AmpeStatus = status.AmpeStatus;
+const AmpeError = status.AmpeError;
 const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const AMPStatus = enum(u8) {
+pub const AmpeStatus = enum(u8) {
     success = 0,
     not_allowed,
     not_implemented_yet,
@@ -23,7 +23,7 @@ pub const AMPStatus = enum(u8) {
     unknown_error,
 };
 
-pub const AMPError = error{
+pub const AmpeError = error{
     NotImplementedYet,
     NotAllowed,
     InvalidMessage,
@@ -44,8 +44,8 @@ pub const AMPError = error{
     UnknownError,
 };
 
-// Comptime mapping from AMPStatus to AMPError.
-const StatusToErrorMap = std.enums.EnumMap(AMPStatus, AMPError).init(.{
+// Comptime mapping from AmpeStatus to AmpeError.
+const StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .not_implemented_yet = .NotImplementedYet,
     .not_allowed = .NotAllowed,
     .invalid_message = .InvalidMessage,
@@ -65,28 +65,26 @@ const StatusToErrorMap = std.enums.EnumMap(AMPStatus, AMPError).init(.{
     .allocation_failed = .AllocationFailed,
 });
 
-pub inline fn raw_to_status(rs: u8) AMPStatus {
-    if (rs >= @intFromEnum(AMPStatus.unknown_error)) {
+pub inline fn raw_to_status(rs: u8) AmpeStatus {
+    if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
         return .UnknownError;
     }
     return @enumFromInt(rs);
 }
 
-pub inline fn raw_to_error(rs: u8) AMPError!void {
+pub inline fn raw_to_error(rs: u8) AmpeError!void {
     if (rs == 0) {
         return;
     }
-    if (rs >= @intFromEnum(AMPStatus.unknown_error)) {
+    if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
         return .UnknownError;
     }
 
     return StatusToErrorMap.get(@enumFromInt(rs)).?;
 }
 
-pub inline fn status_to_raw(status: AMPStatus) u8 {
+pub inline fn status_to_raw(status: AmpeStatus) u8 {
     return (@intFromEnum(status));
 }
-
-pub const engine = @import("engine.zig");
 
 const std = @import("std");

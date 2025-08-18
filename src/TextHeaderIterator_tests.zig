@@ -52,7 +52,6 @@ test "TextHeaderIterator empty" {
     try std.testing.expectEqual(null, it.next());
 }
 
-const engine = @import("engine.zig");
 pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 
 const std = @import("std");

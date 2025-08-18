@@ -248,8 +248,8 @@ pub const next_mid = Message.next_mid;
 pub const Appendable = @import("nats").Appendable;
 
 pub const status = @import("status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;

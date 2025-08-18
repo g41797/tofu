@@ -68,7 +68,7 @@ fn _start_send(gt: *Gate, msg: *Message) !BinaryHeader {
 
         if ((msg.bhdr.channel_number != 0) and !gt.acns.exists(msg.bhdr.channel_number)) {
             msg.bhdr.status = status_to_raw(.invalid_channel_number);
-            return AMPError.InvalidChannelNumber;
+            return AmpeError.InvalidChannelNumber;
         } else {
             // channel_number == 0 - - should be assigned
             var mID: ?MessageID = null;
@@ -157,13 +157,13 @@ pub fn shutdown(impl: *const anyopaque) !void {
 inline fn not_implemented(gt: *Gate, msg: *Message) !BinaryHeader {
     _ = gt;
     msg.bhdr.status = status_to_raw(.not_implemented_yet);
-    return AMPError.NotImplementedYet;
+    return AmpeError.NotImplementedYet;
 }
 
 inline fn not_allowed(gt: *Gate, msg: *Message) !BinaryHeader {
     _ = gt;
     msg.bhdr.status = status_to_raw(.not_allowed);
-    return AMPError.NotAllowed;
+    return AmpeError.NotAllowed;
 }
 
 //
@@ -244,8 +244,8 @@ pub const Options = engine.Options;
 pub const AMP = engine.AMP;
 
 pub const status = @import("../status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;

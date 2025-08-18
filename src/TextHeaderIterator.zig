@@ -76,7 +76,6 @@ pub fn next(it: *TextHeaderIterator) ?TextHeader {
     }
 }
 
-const engine = @import("engine.zig");
-const TextHeader = engine.TextHeader;
+const TextHeader = @import("message.zig").TextHeader;
 
 const std = @import("std");

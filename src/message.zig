@@ -282,17 +282,17 @@ pub const Message = struct {
 
         if ((mode == .response) and (bhdr.message_id == 0)) {
             msg.bhdr.status = status_to_raw(.invalid_message_id);
-            return AMPError.InvalidMessageId;
+            return AmpeError.InvalidMessageId;
         }
 
         if (origin != .application) {
             msg.bhdr.status = status_to_raw(.not_allowed);
-            return AMPError.NotAllowed;
+            return AmpeError.NotAllowed;
         }
 
         if ((mtype != .application) and (more == .more)) {
             msg.bhdr.status = status_to_raw(.invalid_more_usage);
-            return AMPError.InvalidMoreUsage;
+            return AmpeError.InvalidMoreUsage;
         }
 
         const vc: ValidCombination = switch (mtype) {
@@ -302,18 +302,18 @@ pub const Message = struct {
                 .signal => .AppSignal,
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
+                    return AmpeError.InvalidMessageMode;
                 },
             },
             .welcome => switch (mode) {
                 .request => .WelcomeRequest,
                 .response => {
                     msg.bhdr.status = status_to_raw(.not_allowed);
-                    return AMPError.NotAllowed;
+                    return AmpeError.NotAllowed;
                 },
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
+                    return AmpeError.InvalidMessageMode;
                 },
             },
             .hello => switch (mode) {
@@ -321,7 +321,7 @@ pub const Message = struct {
                 .response => .HelloResponse,
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
+                    return AmpeError.InvalidMessageMode;
                 },
             },
             .bye => switch (mode) {
@@ -330,7 +330,7 @@ pub const Message = struct {
                 .signal => .ByeSignal,
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
+                    return AmpeError.InvalidMessageMode;
                 },
             },
             .control => switch (mode) {
@@ -338,16 +338,16 @@ pub const Message = struct {
                 .signal => .ControlSignal,
                 .response => {
                     msg.bhdr.status = status_to_raw(.not_allowed);
-                    return AMPError.NotAllowed;
+                    return AmpeError.NotAllowed;
                 },
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AMPError.InvalidMessageMode;
+                    return AmpeError.InvalidMessageMode;
                 },
             },
             else => {
                 msg.bhdr.status = status_to_raw(.invalid_message_type);
-                return AMPError.InvalidMessageType;
+                return AmpeError.InvalidMessageType;
             },
         };
         const channel_number = msg.bhdr.channel_number;
@@ -356,7 +356,7 @@ pub const Message = struct {
                 .WelcomeRequest, .HelloRequest => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
-                    return AMPError.InvalidChannelNumber;
+                    return AmpeError.InvalidChannelNumber;
                 },
             }
         }
@@ -364,19 +364,19 @@ pub const Message = struct {
         const actualHeadersLen = msg.actual_headers_len();
         if (actualHeadersLen > std.math.maxInt(u16)) {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
-            return AMPError.InvalidHeadersLen;
+            return AmpeError.InvalidHeadersLen;
         }
         msg.bhdr.text_headers_len = @intCast(actualHeadersLen);
 
         if ((msg.bhdr.text_headers_len == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
             msg.bhdr.status = status_to_raw(.invalid_address);
-            return AMPError.InvalidAddress;
+            return AmpeError.InvalidAddress;
         }
 
         const actualBodyLen = msg.actual_body_len();
         if (actualBodyLen > std.math.maxInt(u16)) {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
-            return AMPError.InvalidHeadersLen;
+            return AmpeError.InvalidHeadersLen;
         }
         msg.bhdr.body_len = @intCast(actualBodyLen);
 
@@ -464,8 +464,8 @@ pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
 pub const Appendable = @import("nats").Appendable;
 
 pub const status = @import("status.zig");
-pub const AMPStatus = status.AMPStatus;
-pub const AMPError = status.AMPError;
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
 pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
