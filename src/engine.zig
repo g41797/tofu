@@ -255,7 +255,7 @@ pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
 
 const Gate = @import("engine/Gate.zig");
-const Pool = @import("engine/Pool.zig");
+pub const Pool = @import("engine/Pool.zig");
 
 const std = @import("std");
 const builtin = @import("builtin");

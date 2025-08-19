@@ -39,31 +39,30 @@ pub const Iterator = struct {
     }
 };
 
-pub const WaitTriggers = *const fn (context: ?*anyopaque, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers;
-
-pub const Poller = struct {
-    ptr: ?*anyopaque,
-    func: WaitTriggers = undefined,
-
-    pub fn waitTriggers(plr: *Poller, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers {
-        return plr.func(plr.ptr, it, timeout);
-    }
-};
+// pub const WaitTriggers = *const fn (context: ?*anyopaque, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers;
+//
+// pub const Poller = struct {
+//     ptr: ?*anyopaque,
+//     func: WaitTriggers = undefined,
+//
+//     pub fn waitTriggers(plr: *Poller, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers {
+//         return plr.func(plr.ptr, it, timeout);
+//     }
+// };
 
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
 options: engine.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
-pool: Pool = undefined,
+pool: engine.Pool = undefined,
 acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
+plr: poller.Poller = undefined,
 
 // Accessible from the thread - don't lock/unlock
-cnhsVtor: std.ArrayList(channels.ChannelNumber) = undefined,
-pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
 trgrd_map: TriggeredChannelsMap = undefined,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
@@ -89,12 +88,18 @@ pub fn alerter(dtr: *Distributor) Notifier.Alerter {
 }
 
 pub fn init(gpa: Allocator, options: Options) !Distributor {
+    // add here comptime creation based on os
+    const plru: poller.Poller = .{
+        .poll = try poller.Poll.init(gpa),
+    };
+
     var dtr: Distributor = .{
         .mutex = .{},
         .allocator = gpa,
         .options = options,
         .msgs = .{ .{}, .{} },
         .maxid = 0,
+        .plr = plru,
     };
 
     dtr.acns = try ActiveChannels.init(dtr.allocator, 255);
@@ -103,7 +108,7 @@ pub fn init(gpa: Allocator, options: Options) !Distributor {
     dtr.ntfr = try Notifier.init(dtr.allocator);
     errdefer dtr.ntfr.deinit();
 
-    dtr.pool = try Pool.init(dtr.allocator, dtr.alerter());
+    dtr.pool = try engine.Pool.init(dtr.allocator, dtr.alerter());
     errdefer dtr.pool.close();
 
     try dtr.prepareForThreadRunning();
@@ -136,6 +141,8 @@ pub fn deinit(dtr: *Distributor) void {
     }
 
     dtr.waitFinish();
+
+    dtr.plr.deinit();
 
     dtr.* = undefined;
 }
@@ -226,12 +233,6 @@ fn createThread(dtr: *Distributor) !void {
 }
 
 fn prepareForThreadRunning(dtr: *Distributor) !void {
-    var cnhsVtor = try std.ArrayList(channels.ChannelNumber).initCapacity(dtr.allocator, 256);
-    errdefer cnhsVtor.deinit();
-
-    var pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(dtr.allocator, 256);
-    errdefer pollfdVtor.deinit();
-
     var trgrd_map = TriggeredChannelsMap.init(dtr.allocator);
     errdefer trgrd_map.deinit();
     try trgrd_map.ensureTotalCapacity(256);
@@ -239,8 +240,6 @@ fn prepareForThreadRunning(dtr: *Distributor) !void {
     const it = trgrd_map.iterator();
     _ = it;
 
-    dtr.cnhsVtor = cnhsVtor;
-    dtr.pollfdVtor = pollfdVtor;
     dtr.trgrd_map = trgrd_map;
 
     return;
@@ -249,9 +248,7 @@ fn prepareForThreadRunning(dtr: *Distributor) !void {
 fn onThread(dtr: *Distributor) void {
     dtr.ntfr.sendAck(0) catch unreachable;
 
-    dtr.cnhsVtor.deinit();
     dtr.trgrd_map.deinit();
-    dtr.pollfdVtor.deinit();
 
     return;
 }
@@ -288,7 +285,6 @@ pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
 
-const Pool = @import("Pool.zig");
 const Notifier = @import("Notifier.zig");
 
 const channels = @import("channels.zig");
@@ -298,6 +294,8 @@ const sockets = @import("sockets.zig");
 const TriggeredSkt = sockets.TriggeredSkt;
 
 const SenderReceiver = @import("SenderReceiver.zig");
+
+const poller = @import("poller.zig");
 
 pub const Appendable = @import("nats").Appendable;
 
