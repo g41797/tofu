@@ -1,4 +1,4 @@
-// Copyright (c) 2025 g41797
+// SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
 const Map = std.StringHashMap([]const u8);
