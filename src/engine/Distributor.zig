@@ -100,8 +100,11 @@ pub fn init(gpa: Allocator, options: Options) !Distributor {
     dtr.pool = try Pool.init(dtr.allocator, dtr.alerter());
     errdefer dtr.pool.close();
 
-    try dtr.prepareForThreadRunning();
+    var trgrd_map = TriggeredChannelsMap.init(dtr.allocator);
+    errdefer trgrd_map.deinit();
+    try trgrd_map.ensureTotalCapacity(256);
 
+    dtr.trgrd_map = trgrd_map;
     return dtr;
 }
 
@@ -217,19 +220,6 @@ fn createThread(dtr: *Distributor) !void {
     dtr.thread = try std.Thread.spawn(.{}, onThread, .{dtr});
 
     _ = try dtr.ntfr.recvAck();
-
-    return;
-}
-
-fn prepareForThreadRunning(dtr: *Distributor) !void {
-    var trgrd_map = TriggeredChannelsMap.init(dtr.allocator);
-    errdefer trgrd_map.deinit();
-    try trgrd_map.ensureTotalCapacity(256);
-
-    const it = trgrd_map.iterator();
-    _ = it;
-
-    dtr.trgrd_map = trgrd_map;
 
     return;
 }

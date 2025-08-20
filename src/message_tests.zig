@@ -11,7 +11,7 @@ test "BinaryHeader marshalling and demarshalling" {
     var header = message.BinaryHeader{
         .channel_number = 0x1234,
         .proto = .{
-            .mtype = .control,
+            .mtype = .hello,
             .mode = .request,
             .origin = .application,
             .more = .last,

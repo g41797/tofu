@@ -20,6 +20,7 @@ pub const AmpeStatus = enum(u8) {
     communication_failed,
     pool_empty,
     allocation_failed,
+    wait_interrupted,
     unknown_error,
 };
 
@@ -41,6 +42,7 @@ pub const AmpeError = error{
     CommunicatioinFailure,
     PoolEmpty,
     AllocationFailed,
+    WaitInterrupted,
     UnknownError,
 };
 
@@ -63,6 +65,7 @@ const StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .communication_failed = .CommunicationFailed,
     .pool_empty = .PoolEmpty,
     .allocation_failed = .AllocationFailed,
+    .wait_interrupted = .WaitInterrupted,
 });
 
 pub inline fn raw_to_status(rs: u8) AmpeStatus {

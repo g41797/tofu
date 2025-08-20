@@ -1,7 +1,6 @@
 // Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-
 test "Ampe create/destroy" {
     var dtr = Distributor.init(std.testing.allocator, .{}) catch unreachable;
     defer dtr.deinit();
@@ -19,7 +18,6 @@ const testing = std.testing;
 const engine = @import("engine.zig");
 const Ampe = engine.Ampe;
 const Sr = engine.Sr;
-
 
 pub const message = @import("message.zig");
 pub const MessageType = message.MessageType;

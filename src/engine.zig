@@ -35,12 +35,17 @@ pub const Sr = struct {
 
         /// Waits for a message on the internal queue.
         /// Returns null if no message is received within the specified timeout (in nanoseconds).
-        /// The only error when it’s possible to continue calling this function is `error.Interrupted` (see `interruptWait`).
+        ///
+        /// Also may be received following Signals from engine itself:
+        /// - Bye - peer disconnected
+        /// - Status 'wait_interrupted' - see interruptWait call
+        /// - Status 'pool_empty' - there are not free messages for receive
+        ///   Allocate and 'put' messages to the pool, at least received status.
         ///
         /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
         waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) anyerror!?*Message,
 
-        /// Interrupts a `waitReceive` call, causing it to return `error.Interrupted`.
+        /// Interrupts a `waitReceive` call, causing it to return Status Signal with 'wait_interrupted' status.
         /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
         /// No accumulation; only the last interrupt is saved.
         ///
@@ -74,14 +79,19 @@ pub const Sr = struct {
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
-    /// The only error when it’s possible to continue calling this function is `error.Interrupted` (see `interruptWait`).
+    ///
+    /// Also may be received following Signals from engine itself:
+    /// - Bye - peer disconnected
+    /// - Status 'wait_interrupted' - see interruptWait call
+    /// - Status 'pool_empty' - there are not free messages for receive
+    ///  Allocate and 'put' messages to the pool, at least received status.
     ///
     /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
     pub fn waitReceive(sr: Sr, timeout_ns: u64) anyerror!?*Message {
         return sr.vtable.waitReceive(sr.ptr, timeout_ns);
     }
 
-    /// Interrupts a `waitReceive` call, causing it to return `error.Interrupted`.
+    /// Interrupts a `waitReceive` call, causing it to return Status Signal with 'wait_interrupted' status.
     /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
     /// No accumulation; only the last interrupt is saved.
     ///

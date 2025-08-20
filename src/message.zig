@@ -6,8 +6,8 @@ pub const MessageType = enum(u3) {
     welcome = 1,
     hello = 2,
     bye = 3,
-    control = 4,
-    shutdown = 5,
+    status = 4,
+    _reserved5,
     _reserved6,
     _reserved7,
 };
@@ -237,7 +237,7 @@ pub const TextHeaders = struct {
     }
 };
 
-pub const ValidCombination = enum(u4) {
+pub const ValidCombination = enum(u4) { // Messages allowed for send by application
     WelcomeRequest,
     WelcomeResponse,
     HelloRequest,
@@ -245,15 +245,14 @@ pub const ValidCombination = enum(u4) {
     ByeRequest,
     ByeResponse,
     ByeSignal,
-    ControlRequest,
-    ControlResponse,
-    ControlSignal,
     AppRequest,
     AppResponse,
     AppSignal,
     _reserved1,
     _reserved2,
     _reserved3,
+    _reserved4,
+    _reserved5,
 };
 
 pub const Message = struct {
@@ -408,17 +407,9 @@ pub const Message = struct {
                     return AmpeError.InvalidMessageMode;
                 },
             },
-            .control => switch (mode) {
-                .request => .ControlRequest,
-                .signal => .ControlSignal,
-                .response => {
-                    msg.bhdr.status = status_to_raw(.not_allowed);
-                    return AmpeError.NotAllowed;
-                },
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AmpeError.InvalidMessageMode;
-                },
+            .status => {
+                msg.bhdr.status = status_to_raw(.not_allowed);
+                return AmpeError.NotAllowed;
             },
             else => {
                 msg.bhdr.status = status_to_raw(.invalid_message_type);

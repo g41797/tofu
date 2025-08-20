@@ -45,8 +45,8 @@ Messages are categorized into:
     - `welcome`: Used during initial handshake (typically `request`/`response` pair).
     - `hello`: Initiates client-server contact (typically `request`/`response` pair).
     - `bye`: Signals disconnection (can be `request`/`response` or `signal`).
-    - `control`: For future extensions (can be `request`, `response`, or `signal`).
-    - `shutdown`: Close all connections, release memory ((typically `request`/`response` pair)). 
+    - `status`: Contains status of processing (`signal`).
+  
 
 - **Application Messages**:
   - Created and consumed solely by the application.
@@ -74,7 +74,7 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
     - `1`: `welcome`.
     - `2`: `hello`.
     - `3`: `bye`.
-    - `4`: `control`.
+    - `4`: `status`.
     - `5-7`: Reserved.
 - **Mode**:
   - **Size**: 2 bits.
@@ -178,10 +178,7 @@ Typical client-server connection establishment:
 
 ## Extensibility
 
-YAAAMP supports future extensions via:
-
-- **`control` Messages**: For new features.
-- **Text Headers**: Flexible key-value pairs for metadata or parameters.
+YAAAMP supports future extensions via **Text Headers**: Flexible key-value pairs for metadata or parameters.
 
 ## Implementation Considerations
 
