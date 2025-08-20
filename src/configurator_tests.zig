@@ -48,7 +48,7 @@ pub const MoreMessagesFlag = engine.MoreMessagesFlag;
 pub const ProtoFields = engine.ProtoFields;
 pub const BinaryHeader = engine.BinaryHeader;
 pub const TextHeader = engine.TextHeader;
-pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
+pub const TextHeaderIterator = @import("message.zig").TextHeaderIterator;
 pub const TextHeaders = engine.TextHeaders;
 pub const Message = engine.Message;
 

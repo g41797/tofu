@@ -39,23 +39,12 @@ pub const Iterator = struct {
     }
 };
 
-// pub const WaitTriggers = *const fn (context: ?*anyopaque, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers;
-//
-// pub const Poller = struct {
-//     ptr: ?*anyopaque,
-//     func: WaitTriggers = undefined,
-//
-//     pub fn waitTriggers(plr: *Poller, it: Distributor.Iterator, timeout: i32) anyerror!sockets.Triggers {
-//         return plr.func(plr.ptr, it, timeout);
-//     }
-// };
-
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
 options: engine.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
-pool: engine.Pool = undefined,
+pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
@@ -108,7 +97,7 @@ pub fn init(gpa: Allocator, options: Options) !Distributor {
     dtr.ntfr = try Notifier.init(dtr.allocator);
     errdefer dtr.ntfr.deinit();
 
-    dtr.pool = try engine.Pool.init(dtr.allocator, dtr.alerter());
+    dtr.pool = try Pool.init(dtr.allocator, dtr.alerter());
     errdefer dtr.pool.close();
 
     try dtr.prepareForThreadRunning();
@@ -267,7 +256,7 @@ pub const MoreMessagesFlag = message.MoreMessagesFlag;
 pub const ProtoFields = message.ProtoFields;
 pub const BinaryHeader = message.BinaryHeader;
 pub const TextHeader = message.TextHeader;
-pub const TextHeaderIterator = @import("../TextHeaderIterator.zig");
+pub const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 pub const MessageID = message.MessageID;
@@ -286,6 +275,8 @@ pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
 
 const Notifier = @import("Notifier.zig");
+
+const Pool = @import("Pool.zig");
 
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;

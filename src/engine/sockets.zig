@@ -164,6 +164,12 @@ pub const Triggers = packed struct(u8) {
         const z: u8 = @bitCast(self);
         return (z == 0);
     }
+
+    pub inline fn lor(self: Triggers, other: Triggers) Triggers {
+        const a: u8 = @bitCast(self);
+        const b: u8 = @bitCast(other);
+        return @bitCast(a | b);
+    }
 };
 
 const NotificationTriggers: Triggers = .{
@@ -347,6 +353,10 @@ pub const IoSkt = struct {
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
         ioskt.sendQ.enqueue(sndmsg);
         return;
+    }
+
+    pub fn addForRecv(ioskt: *IoSkt, rcvmsg: *Message) AmpeError!void {
+        return ioskt.currRecv.attach(rcvmsg);
     }
 
     // tryConnect is called by Distributor for succ. connection.
@@ -610,6 +620,17 @@ pub const MsgReceiver = struct {
         return (mr.msg != null);
     }
 
+    pub fn attach(mr: *MsgReceiver, msg: *Message) !void {
+        if ((!mr.ready) or (mr.msg != null)) {
+            return AmpeError.NotAllowed;
+        }
+
+        mr.msg = msg;
+        mr.ptrg = .off;
+
+        return;
+    }
+
     pub fn recv(mr: *MsgReceiver) !?*Message {
         if (!mr.ready) {
             return AmpeError.NotAllowed;
@@ -750,6 +771,13 @@ pub const TriggeredSkt = union(enum) {
         };
     }
 
+    pub fn addForRecv(tsk: *TriggeredSkt, rcvmsg: *Message) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.addForRecv(rcvmsg),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
     pub fn detach(tsk: *TriggeredSkt) ?*Message { // consider MessageQueue
         return switch (tsk.*) {
             .io => |sk| sk.detach(),
@@ -772,7 +800,7 @@ const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
 const BinaryHeader = message.BinaryHeader;
 const TextHeader = message.TextHeader;
-const TextHeaderIterator = @import("../TextHeaderIterator.zig");
+const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;

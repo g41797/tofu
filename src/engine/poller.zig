@@ -4,7 +4,8 @@
 pub const Poller = union(enum) {
     poll: Poll,
 
-    pub fn waitTriggers(self: *Poller, it: Distributor.Iterator, timeout: i32) AmpeError!Triggers {
+    // it == null means iterator was not changed since previous call, use saved
+    pub fn waitTriggers(self: *Poller, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
         return switch (self.*) {
             inline else => |plr| try plr.waitTriggers(it, timeout),
         };
@@ -41,10 +42,18 @@ pub const Poll = struct {
         return;
     }
 
-    pub fn waitTriggers(ptr: ?*anyopaque, it: Distributor.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(ptr: ?*anyopaque, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
         const pl: *Poll = @alignCast(@ptrCast(ptr));
 
-        pl.it = it;
+        if ((pl.it == null) and (it == null)) {
+            return AmpeError.NotAllowed;
+        }
+
+        if (it != null) {
+            pl.it = it;
+        }
+
+        pl.it.?.reset();
 
         const polln = try pl.buildFds();
         if (polln == 0) {
@@ -63,19 +72,94 @@ pub const Poll = struct {
     }
 
     fn buildFds(pl: *Poll) !usize {
-        _ = pl;
-        return AmpeError.NotImplementedYet;
+        pl.pollfdVtor.items.len = 0;
+
+        var tcptr = pl.it.?.next();
+
+        while (tcptr != null) {
+            const tc = tcptr.?;
+            tcptr = pl.it.?.next();
+
+            tc.exp = tc.tskt.triggers();
+            tc.act = .{};
+
+            var events: i16 = 0;
+
+            if (!tc.exp.off()) {
+                if ((tc.exp.send == .on) or (tc.exp.connect == .on)) {
+                    events |= std.posix.POLL.OUT;
+                }
+                if ((tc.exp.recv == .on) or (tc.exp.notify == .on) or (tc.exp.accept == .on)) {
+                    events |= std.posix.POLL.IN;
+                }
+            }
+
+            pl.pollfdVtor.append(.{ .fd = tc.tskt.getSocket(), .events = events, .revents = 0 }) catch {
+                return AmpeError.AllocationFailed;
+            };
+        }
+
+        return pl.pollfdVtor.items.len;
     }
 
     fn poll(pl: *Poll, timeout: i32) !bool {
-        _ = pl;
-        _ = timeout;
-        return AmpeError.NotImplementedYet;
+        const triggered = std.posix.poll(pl.pollfdVtor.items, timeout) catch {
+            return AmpeError.CommunicatioinFailure;
+        };
+
+        return triggered == 0;
     }
 
     fn storeTriggers(pl: *Poll) !Triggers {
-        _ = pl;
-        return AmpeError.NotImplementedYet;
+        pl.it.?.reset();
+
+        var ret: Triggers = .{};
+
+        var tcptr = pl.it.?.next();
+        var indx: usize = 0;
+
+        while (tcptr != null) : (indx += 1) {
+            const tc = tcptr.?;
+            tcptr = pl.it.?.next();
+
+            tc.act = .{};
+
+            while (true) {
+                const revents = pl.pollfdVtor.items[indx].revents;
+
+                if (revents == 0) {
+                    break;
+                }
+
+                if ((revents & std.posix.POLL.ERR != 0) or (revents & std.posix.POLL.HUP != 0)) {
+                    tc.act.err = .on;
+                    break;
+                }
+
+                if ((revents & std.posix.POLL.IN != 0) or (revents & std.posix.POLL.RDNORM != 0)) {
+                    if (tc.exp.recv == .on) {
+                        tc.act.recv = .on;
+                    } else if (tc.exp.notify == .on) {
+                        tc.act.notify = .on;
+                    } else if (tc.exp.accept == .on) {
+                        tc.act.accept = .on;
+                    }
+                }
+
+                if (revents & std.posix.POLL.OUT != 0) {
+                    if (tc.exp.send == .on) {
+                        tc.act.send = .on;
+                    } else if (tc.exp.connect == .on) {
+                        tc.act.connect = .on;
+                    }
+                }
+                break;
+            }
+
+            ret = ret.lor(tc.act);
+        }
+
+        return ret;
     }
 };
 

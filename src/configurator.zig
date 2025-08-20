@@ -346,7 +346,7 @@ pub const MoreMessagesFlag = message.MoreMessagesFlag;
 pub const ProtoFields = message.ProtoFields;
 pub const BinaryHeader = message.BinaryHeader;
 pub const TextHeader = message.TextHeader;
-pub const TextHeaderIterator = @import("TextHeaderIterator.zig");
+pub const TextHeaderIterator = message.TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
