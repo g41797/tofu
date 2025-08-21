@@ -109,11 +109,15 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 
     try testing.expect(trgrs != null);
 
-    var utrg = sockets.UnpackedTriggers.fromTriggers(trgrs.?);
+    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs.?);
 
-    utrg = .{};
+    const onTrigger: u8 = switch (cnfr.*) {
+        .tcp_client => utrg.connect,
+        .uds_client => utrg.send,
+        else => unreachable,
+    };
 
-    try testing.expect((trgrs.?.connect == .on) or (trgrs.?.send == .on));
+    try testing.expect(onTrigger == 1);
 
     return tskt;
 }
