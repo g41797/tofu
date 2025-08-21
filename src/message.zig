@@ -517,7 +517,7 @@ pub const MessageQueue = struct {
         }
     }
 
-    pub fn move(src: *Self, dest: *Self) void {
+    pub fn move(src: *MessageQueue, dest: *MessageQueue) void {
         var next = src.dequeue();
         while (next != null) {
             dest.enqueue(next.?);

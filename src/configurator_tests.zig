@@ -40,17 +40,17 @@ fn allocMsg() *Message {
     return msg;
 }
 
-pub const engine = @import("engine.zig");
-pub const MessageType = engine.MessageType;
-pub const MessageMode = engine.MessageMode;
-pub const OriginFlag = engine.OriginFlag;
-pub const MoreMessagesFlag = engine.MoreMessagesFlag;
-pub const ProtoFields = engine.ProtoFields;
-pub const BinaryHeader = engine.BinaryHeader;
-pub const TextHeader = engine.TextHeader;
-pub const TextHeaderIterator = @import("message.zig").TextHeaderIterator;
-pub const TextHeaders = engine.TextHeaders;
-pub const Message = engine.Message;
+pub const message = @import("message.zig");
+pub const MessageType = message.MessageType;
+pub const MessageMode = message.MessageMode;
+pub const OriginFlag = message.OriginFlag;
+pub const MoreMessagesFlag = message.MoreMessagesFlag;
+pub const ProtoFields = message.ProtoFields;
+pub const BinaryHeader = message.BinaryHeader;
+pub const TextHeader = message.TextHeader;
+pub const TextHeaderIterator = message.TextHeaderIterator;
+pub const TextHeaders = message.TextHeaders;
+pub const Message = message.Message;
 
 const configurator = @import("configurator.zig");
 const Configurator = configurator.Configurator;

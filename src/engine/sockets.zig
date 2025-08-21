@@ -1,6 +1,163 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+pub const Trigger = enum(u1) {
+    on = 1,
+    off = 0,
+};
+
+pub const Triggers = packed struct(u8) {
+    notify: Trigger = .off,
+    accept: Trigger = .off,
+    connect: Trigger = .off,
+    send: Trigger = .off,
+    recv: Trigger = .off,
+    pool: Trigger = .off,
+    err: Trigger = .off,
+    timeout: Trigger = .off,
+
+    pub inline fn eql(self: Triggers, other: Triggers) bool {
+        return self == other;
+    }
+
+    pub inline fn off(self: Triggers) bool {
+        const z: u8 = @bitCast(self);
+        return (z == 0);
+    }
+
+    pub inline fn lor(self: Triggers, other: Triggers) Triggers {
+        const a: u8 = @bitCast(self);
+        const b: u8 = @bitCast(other);
+        return @bitCast(a | b);
+    }
+};
+
+pub const UnpackedTriggers = struct {
+    notify: u8 = 0,
+    accept: u8 = 0,
+    connect: u8 = 0,
+    send: u8 = 0,
+    recv: u8 = 0,
+    pool: u8 = 0,
+    err: u8 = 0,
+    timeout: u8 = 0,
+
+    pub fn fromTriggers(tr: Triggers) UnpackedTriggers {
+        var ret: UnpackedTriggers = .{};
+        if (!tr.off()) {
+            if (tr.notify == .on) {
+                ret.notify = 1;
+            }
+            if (tr.accept == .on) {
+                ret.accept = 1;
+            }
+            if (tr.connect == .on) {
+                ret.connect = 1;
+            }
+            if (tr.send == .on) {
+                ret.send = 1;
+            }
+            if (tr.recv == .on) {
+                ret.recv = 1;
+            }
+            if (tr.pool == .on) {
+                ret.pool = 1;
+            }
+            if (tr.err == .on) {
+                ret.err = 1;
+            }
+            if (tr.timeout == .on) {
+                ret.timeout = 1;
+            }
+        }
+        return ret;
+    }
+};
+
+pub const TriggeredSkt = union(enum) {
+    notification: NotificationSkt,
+    accept: AcceptSkt,
+    io: IoSkt,
+
+    pub fn triggers(tsk: *TriggeredSkt) ?Triggers {
+        return switch (tsk.*) {
+            .notification => tsk.*.notification.triggers(),
+            .accept => tsk.*.accept.triggers(),
+            .io => tsk.*.io.triggers(),
+        };
+    }
+
+    pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
+        return switch (tsk.*) {
+            inline else => |sk| sk.getSocket(),
+        };
+    }
+
+    pub fn tryRecvNotification(tsk: *TriggeredSkt) !Notification {
+        return switch (tsk.*) {
+            .notification => |sk| sk.tryRecvNotification(),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn tryAccept(tsk: *TriggeredSkt) !?Skt {
+        return switch (tsk.*) {
+            .accept => |sk| sk.tryAccept(),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn tryConnect(tsk: *TriggeredSkt) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.tryConnect(),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn tryRecv(tsk: *TriggeredSkt) !MessageQueue {
+        return switch (tsk.*) {
+            .io => |sk| sk.tryRecv(),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn trySend(tsk: *TriggeredSkt) !MessageQueue {
+        return switch (tsk.*) {
+            .io => |sk| sk.trySend(),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.addToSend(sndmsg),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn addForRecv(tsk: *TriggeredSkt, rcvmsg: *Message) !void {
+        return switch (tsk.*) {
+            .io => |sk| sk.addForRecv(rcvmsg),
+            inline else => return AmpeError.NotAllowed,
+        };
+    }
+
+    pub fn detach(tsk: *TriggeredSkt) MessageQueue {
+        return switch (tsk.*) {
+            .io => |sk| sk.detach(),
+            inline else => return null,
+        };
+    }
+
+    pub fn deinit(tsk: *TriggeredSkt) void {
+        return switch (tsk.*) {
+            .notification => tsk.*.notification.deinit(),
+            .accept => tsk.*.accept.deinit(),
+            .io => tsk.*.io.deinit(),
+        };
+    }
+};
+
 pub const Skt = struct {
     socket: std.posix.socket_t = undefined,
     address: std.net.Address = undefined,
@@ -42,7 +199,7 @@ pub const SocketCreator = struct {
     pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
-        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.ip.?) catch {
+        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.port.?) catch {
             return AmpeError.InvalidAddress;
         };
 
@@ -54,9 +211,9 @@ pub const SocketCreator = struct {
     }
 
     pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
-        const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_server;
+        const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_client;
 
-        const list = std.net.getAddressList(sc.allocator, cnf.addr.?, cnf.port.?) catch {
+        var list = std.net.getAddressList(sc.allocator, cnf.addr.?, cnf.port.?) catch {
             return AmpeError.InvalidAddress;
         };
         defer list.deinit();
@@ -75,11 +232,21 @@ pub const SocketCreator = struct {
     }
 
     pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
-        return createUdsListener(sc.cnfgr.uds_server.path);
+        return createUdsListener(sc.allocator, sc.cnfgr.uds_server.path);
     }
 
-    pub fn createUdsListener(path: []const u8) AmpeError!Skt {
-        var address = std.net.Address.initUnix(path) catch {
+    pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
+        var udsPath = path;
+
+        if (udsPath.len == 0) {
+            var tup: Notifier.TempUdsPath = .{};
+
+            udsPath = tup.buildPath(allocator) catch {
+                return AmpeError.UnknownError;
+            };
+        }
+
+        var address = std.net.Address.initUnix(udsPath) catch {
             return AmpeError.InvalidAddress;
         };
 
@@ -107,7 +274,7 @@ pub const SocketCreator = struct {
     }
 
     // from IoUring.zig#L3473 (0.14.1), slightly changed
-    fn createListenerSocket(address: *std.net.Address) !Skt {
+    fn createListenerSocket(address: *const std.net.Address) !Skt {
         var ret: Skt = .{
             .address = address.*,
             .socket = undefined,
@@ -129,7 +296,7 @@ pub const SocketCreator = struct {
     }
 };
 
-pub fn createConnectSocket(address: *std.net.Address) !Skt {
+pub fn createConnectSocket(address: *const std.net.Address) !Skt {
     var ret: Skt = .{
         .address = address.*,
         .socket = undefined,
@@ -140,37 +307,6 @@ pub fn createConnectSocket(address: *std.net.Address) !Skt {
 
     return ret;
 }
-
-pub const Trigger = enum(u1) {
-    on = 1,
-    off = 0,
-};
-
-pub const Triggers = packed struct(u8) {
-    notify: Trigger = .off,
-    accept: Trigger = .off,
-    connect: Trigger = .off,
-    send: Trigger = .off,
-    recv: Trigger = .off,
-    pool: Trigger = .off,
-    err: Trigger = .off,
-    timeout: Trigger = .off,
-
-    pub inline fn eql(self: Triggers, other: Triggers) bool {
-        return self == other;
-    }
-
-    pub inline fn off(self: Triggers) bool {
-        const z: u8 = @bitCast(self);
-        return (z == 0);
-    }
-
-    pub inline fn lor(self: Triggers, other: Triggers) Triggers {
-        const a: u8 = @bitCast(self);
-        const b: u8 = @bitCast(other);
-        return @bitCast(a | b);
-    }
-};
 
 const NotificationTriggers: Triggers = .{
     .notify = .on,
@@ -272,7 +408,6 @@ pub const IoSkt = struct {
     sendQ: MessageQueue = undefined,
     currSend: MsgSender = undefined,
     currRecv: MsgReceiver = undefined,
-    lastSend: ?*Message = undefined,
 
     pub fn initServerSide(pool: *Pool, sskt: Skt) AmpeError!IoSkt {
         var ret: IoSkt = .{
@@ -283,7 +418,6 @@ pub const IoSkt = struct {
             .sendQ = .{},
             .currSend = MsgSender.init(),
             .currRecv = MsgReceiver.init(),
-            .lastSend = null,
         };
 
         ret.currSend.set(sskt.socket) catch unreachable;
@@ -293,25 +427,32 @@ pub const IoSkt = struct {
     }
 
     pub fn initClientSide(pool: *Pool, hello: *Message, sc: *SocketCreator) AmpeError!IoSkt {
-        const ret = .{
+        var ret: IoSkt = .{
             .pool = pool,
             .side = .client,
             .skt = try sc.fromMessage(hello),
             .connected = false,
             .sendQ = .{},
             .currSend = MsgSender.init(),
-            .currRecv = MsgReceiver.init(),
-            .hello = hello,
+            .currRecv = MsgReceiver.init(pool),
         };
+        ret.sendQ.enqueue(hello);
 
         errdefer ret.skt.deinit();
+
+        // https://github.com/ziglang/zig/issues/20310
+        // Unexpected "value stored in comptime field does not match the default value of the field" #20310
+        // src/engine/sockets.zig:393:23:
+        // error: value stored in comptime field does not match the default value of the field
+        // ret.connected = true;
+        // ~~~~~~~~~~~~~~^~~~~~
 
         ret.connected = true;
 
         std.posix.connect(
             ret.skt.socket,
-            &ret.skt.addr.any,
-            ret.skt.addr.getOsSockLen(),
+            &ret.skt.address.any,
+            ret.skt.address.getOsSockLen(),
         ) catch |e| switch (e) {
             std.posix.ConnectError.WouldBlock => {
                 ret.connected = false;
@@ -320,7 +461,7 @@ pub const IoSkt = struct {
         };
 
         if (ret.connected) {
-            ret.postConnect;
+            ret.postConnect();
         }
 
         return ret;
@@ -376,14 +517,21 @@ pub const IoSkt = struct {
         ioskt.currSend.set(ioskt.skt.socket) catch unreachable;
         ioskt.currRecv.set(ioskt.skt.socket) catch unreachable;
 
-        ioskt.currSend.attach(ioskt.hello) catch unreachable;
-        ioskt.hello = null;
+        ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable;
         return;
     }
 
-    pub fn detach(ioskt: *IoSkt) ?*Message {
-        const ret = ioskt.lastSend;
-        ioskt.lastSend = null;
+    pub fn detach(ioskt: *IoSkt) MessageQueue {
+        var ret: MessageQueue = .{};
+
+        const last = ioskt.currSend.detach();
+
+        if (last != null) {
+            ret.enqueue(last.?);
+        }
+
+        ioskt.sendQ.move(&ret);
+
         return ret;
     }
 
@@ -413,55 +561,38 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn trySend(ioskt: *IoSkt) AmpeError!?*Message {
-        var ret: ?*Message = null;
+    pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
+        var ret: MessageQueue = .{};
 
         if (!ioskt.connected) {
             return AmpeError.NotAllowed;
         }
 
-        while (true) {
-            if (!ioskt.currSend.started()) {
-                if (ioskt.sendQ.empty()) {
-                    break;
-                }
-
-                ioskt.lastSend = ioskt.sendQ.dequeue();
-
-                ioskt.currSend.attach(ioskt.lastSend) catch unreachable;
-
-                if (ret != null) {
-                    // We already have message and prepared sender for the next send
-                    // on the next poll loop
-                    break;
-                }
+        while (!ioskt.currSend.started()) {
+            if (ioskt.sendQ.empty()) {
+                break;
             }
 
+            ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable; // Ok for non-empty q
+
             const wasSend = try ioskt.currSend.send();
+
             if (wasSend == null) {
                 break;
             }
-            ioskt.lastSend = null;
-            ret = wasSend.?;
+
+            ret.enqueue(wasSend.?);
         }
         return ret;
     }
 
     pub fn deinit(ioskt: *IoSkt) void {
         ioskt.skt.deinit();
-        ioskt.sendQ.destroy();
-        if (ioskt.currSend != null) {
-            ioskt.currSend.?.destroy();
-            ioskt.currSend = null;
-        }
-        if (ioskt.currRecv != null) {
-            ioskt.currRecv.?.destroy();
-            ioskt.currRecv = null;
-        }
-        if (ioskt.lastSend != null) {
-            ioskt.lastSend.?.destroy();
-            ioskt.lastSend = null;
-        }
+        ioskt.sendQ.clear();
+
+        ioskt.currSend.deinit();
+        ioskt.currRecv.deinit();
+
         return;
     }
 };
@@ -522,17 +653,17 @@ pub const MsgSender = struct {
 
         const hlen = msg.actual_headers_len();
         if (hlen == 0) {
-            ms.iov[1] = .{ .base = null, .len = 0 };
+            ms.iov[1] = .{ .base = @ptrCast(""), .len = 0 };
         } else {
-            ms.iov[1] = .{ .base = msg.thdrs.buffer.body().?, .len = hlen };
+            ms.iov[1] = .{ .base = @ptrCast(msg.thdrs.buffer.body().?.ptr), .len = hlen };
             ms.sndlen += hlen;
         }
 
         const blen = msg.actual_body_len();
         if (blen == 0) {
-            ms.iov[2] = .{ .base = null, .len = 0 };
+            ms.iov[2] = .{ .base = @ptrCast(""), .len = 0 };
         } else {
-            ms.iov[2] = .{ .base = msg.body.body().?, .len = blen };
+            ms.iov[2] = .{ .base = @ptrCast(msg.body.body().?.ptr), .len = blen };
             ms.sndlen += blen;
         }
 
@@ -543,7 +674,7 @@ pub const MsgSender = struct {
         return (ms.msg != null);
     }
 
-    pub fn dettach(ms: *MsgSender) ?*Message {
+    pub fn detach(ms: *MsgSender) ?*Message {
         const ret = ms.msg;
         ms.msg = null;
         ms.sndlen = 0;
@@ -712,86 +843,6 @@ pub const MsgReceiver = struct {
     }
 };
 
-pub const TriggeredSkt = union(enum) {
-    notification: NotificationSkt,
-    accept: AcceptSkt,
-    io: IoSkt,
-
-    pub fn triggers(tsk: *TriggeredSkt) ?Triggers {
-        return switch (tsk.*) {
-            inline else => |sk| sk.triggers(),
-        };
-    }
-
-    pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
-        return switch (tsk.*) {
-            inline else => |sk| sk.getSocket(),
-        };
-    }
-
-    pub fn tryRecvNotification(tsk: *TriggeredSkt) !Notification {
-        return switch (tsk.*) {
-            .notification => |sk| sk.tryRecvNotification(),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn tryAccept(tsk: *TriggeredSkt) !?Skt {
-        return switch (tsk.*) {
-            .accept => |sk| sk.tryAccept(),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn tryConnect(tsk: *TriggeredSkt) !void {
-        return switch (tsk.*) {
-            .io => |sk| sk.tryConnect(),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn tryRecv(tsk: *TriggeredSkt) !MessageQueue {
-        return switch (tsk.*) {
-            .io => |sk| sk.tryRecv(),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn trySend(tsk: *TriggeredSkt) !?*Message {
-        return switch (tsk.*) {
-            .io => |sk| sk.trySend(),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
-        return switch (tsk.*) {
-            .io => |sk| sk.addToSend(sndmsg),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn addForRecv(tsk: *TriggeredSkt, rcvmsg: *Message) !void {
-        return switch (tsk.*) {
-            .io => |sk| sk.addForRecv(rcvmsg),
-            inline else => return AmpeError.NotAllowed,
-        };
-    }
-
-    pub fn detach(tsk: *TriggeredSkt) ?*Message { // consider MessageQueue
-        return switch (tsk.*) {
-            .io => |sk| sk.detach(),
-            inline else => return null,
-        };
-    }
-
-    pub fn deinit(tsk: *TriggeredSkt) void {
-        return switch (tsk.*) {
-            inline else => |sk| sk.deinit(),
-        };
-    }
-};
-
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
 const MessageMode = message.MessageMode;
@@ -800,7 +851,7 @@ const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
 const BinaryHeader = message.BinaryHeader;
 const TextHeader = message.TextHeader;
-const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
+const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;

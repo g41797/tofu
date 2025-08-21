@@ -10,18 +10,18 @@ closed: bool = undefined,
 alerter: ?Notifier.Alerter = undefined,
 emptyWasReturned: bool = undefined,
 
-pub fn create(gpa: Allocator) !*Pool {
-    const pool = try gpa.create(Pool);
-    errdefer gpa.destroy(pool);
-    try pool.init(gpa, null);
-    return pool;
-}
-
-pub fn destroy(pool: *Pool) void {
-    const gpa = pool.allocator;
-    pool.close();
-    gpa.destroy(pool);
-}
+// pub fn create(gpa: Allocator) !*Pool {
+//     const pool = try gpa.create(Pool);
+//     errdefer gpa.destroy(pool);
+//     try pool.*.init(gpa, null);
+//     return pool;
+// }
+//
+// pub fn destroy(pool: *Pool) void {
+//     const gpa = pool.allocator;
+//     pool.close();
+//     gpa.destroy(pool);
+// }
 
 pub fn init(gpa: Allocator, alrtr: ?Notifier.Alerter) !Pool {
     return .{
@@ -144,3 +144,6 @@ const Alert = Notifier.Alert;
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
+
+// 2DO  Add options: initial msgs number/max msgs number
+// 2DO  Support restrictions -  max msgs number

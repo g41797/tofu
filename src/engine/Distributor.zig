@@ -288,3 +288,5 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
+
+// 2DO  Add processing options for Pool as part of init()

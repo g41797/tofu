@@ -8,5 +8,6 @@ test {
     _ = @import("engine/Pool_tests.zig");
     _ = @import("engine/Notifier_tests.zig");
     _ = @import("engine/channels_tests.zig");
+    _ = @import("engine/sockets_tests.zig");
     @import("std").testing.refAllDecls(@This());
 }

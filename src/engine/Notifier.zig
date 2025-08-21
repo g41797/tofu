@@ -10,7 +10,10 @@ pub const TempUdsPath = struct {
         tup.tempFile.retain = false;
         defer tup.tempFile.deinit();
 
-        const socket_file = try tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..104]);
+        const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..104]) catch {
+            return AmpeError.UnknownError;
+        };
+
         // Remove socket file if it exists
         tup.tempFile.parent_dir.deleteFile(tup.tempFile.basename) catch {};
         return socket_file;
@@ -77,7 +80,7 @@ pub fn init(allocator: Allocator) !Notifier {
 
     const socket_file = try tup.buildPath(allocator);
 
-    var listSkt = try SCreator.createUdsListener(socket_file);
+    var listSkt = try SCreator.createUdsListener(allocator, socket_file);
     defer listSkt.deinit();
 
     // Create sender(client) socket
@@ -248,3 +251,5 @@ const Allocator = std.mem.Allocator;
 
 // Get list of connected uds
 // ss -x|grep yaaamp
+
+// 2DO  Add Windows implementation: TCP 127.0.0.1:0 instead of UDS
