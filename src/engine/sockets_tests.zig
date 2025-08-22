@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 const localIP = "127.0.0.1";
+const SEC_TIMEOUT_MS = 1_000;
+const INFINITE_TIMEOUT_MS = -1;
 
 test "create TCP listener" {
     var cnfr: Configurator = .{
@@ -38,8 +40,7 @@ fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
 
     const trgrs = tskt.triggers();
 
-    try testing.expect(trgrs != null);
-    try testing.expect(trgrs.?.accept == .on);
+    try testing.expect(trgrs.accept == .on);
 
     return tskt;
 }
@@ -69,20 +70,23 @@ test "create UDS client" {
     var pool = try Pool.init(gpa, null);
     defer pool.close();
 
+    var tup: Notifier.TempUdsPath = .{};
+    const udsPath = try tup.buildPath(gpa);
+
     var cnfr: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(""),
+        .uds_server = UDSServerConfigurator.init(udsPath),
     };
 
     var listener = try create_listener(&cnfr);
 
     defer listener.deinit();
 
-    const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
-    const length = std.mem.len(c_array_ptr);
-    const zig_slice: []const u8 = c_array_ptr[0..length];
+    // const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
+    // const length = std.mem.len(c_array_ptr);
+    // const zig_slice: []const u8 = c_array_ptr[0..length];
 
     var clcnfr: Configurator = .{
-        .uds_client = UDSClientConfigurator.init(zig_slice),
+        .uds_client = UDSClientConfigurator.init(udsPath),
     };
 
     var client = try create_client(&clcnfr, &pool);
@@ -107,9 +111,7 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 
     const trgrs = tskt.triggers();
 
-    try testing.expect(trgrs != null);
-
-    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs.?);
+    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
 
     const onTrigger: u8 = switch (cnfr.*) {
         .tcp_client => utrg.connect,
@@ -121,6 +123,164 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 
     return tskt;
 }
+
+test "exchanger waitConnectClient" {
+    const srvcnf: Configurator = .{
+        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+    };
+
+    const clcnf: Configurator = .{
+        .tcp_client = TCPClientConfigurator.init(localIP, configurator.DefaultPort),
+    };
+
+    var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf);
+    defer exc.deinit();
+
+    try exc.startListen();
+
+    try exc.startClient();
+
+    const trgrs = try exc.waitConnectClient();
+
+    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
+
+    const onTrigger: u8 = switch (exc.clcnf) {
+        .tcp_client => utrg.connect,
+        .uds_client => utrg.send,
+        else => unreachable,
+    };
+
+    _ = onTrigger;
+
+    return;
+}
+
+pub const Exchanger = struct {
+    allocator: Allocator = undefined,
+    pool: Pool = undefined,
+
+    srvcnf: Configurator = undefined,
+    clcnf: Configurator = undefined,
+
+    lst: ?TC = null,
+    lstCN: CN = 1,
+
+    srv: ?TC = null,
+    srvCN: CN = 2,
+
+    cl: ?TC = null,
+    clCN: CN = 3,
+
+    sendMsg: ?*Message = null,
+    recvMsg: ?*Message = null,
+
+    tcm: ?TCM = null,
+    plr: ?Poller = null,
+
+    pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator) !Exchanger {
+        var ret: Exchanger = .{
+            .allocator = allocator,
+            .pool = try Pool.init(allocator, null),
+            .srvcnf = srvcnf,
+            .clcnf = clcnf,
+        };
+
+        errdefer ret.deinit();
+
+        var tcm = TCM.init(allocator);
+        errdefer tcm.deinit();
+        try tcm.ensureTotalCapacity(256);
+        ret.tcm = tcm;
+
+        const pll: Poller = .{
+            .poll = try Poll.init(allocator),
+        };
+
+        ret.plr = pll;
+
+        return ret;
+    }
+
+    pub fn startListen(exc: *Exchanger) !void {
+        exc.lst = .{
+            .exp = .{},
+            .act = .{},
+            .tskt = try create_listener(&exc.srvcnf),
+            .acn = .{
+                .chn = exc.lstCN,
+                .mid = exc.lstCN,
+                .ctx = null,
+            },
+        };
+        errdefer exc.lst.?.tskt.deinit();
+
+        try exc.tcm.?.put(exc.lstCN, exc.lst.?);
+
+        return;
+    }
+
+    pub fn startClient(exc: *Exchanger) !void {
+        exc.cl = .{
+            .exp = .{},
+            .act = .{},
+            .tskt = try create_client(&exc.clcnf, &exc.pool),
+            .acn = .{
+                .chn = exc.clCN,
+                .mid = exc.clCN,
+                .ctx = null,
+            },
+        };
+        errdefer exc.cl.?.tskt.deinit();
+
+        try exc.tcm.?.put(exc.clCN, exc.cl.?);
+
+        return;
+    }
+
+    pub fn waitConnectClient(exc: *Exchanger) !sockets.Triggers {
+        const it = Distributor.Iterator.init(&exc.tcm.?);
+
+        var trgrs: sockets.Triggers = .{};
+
+        for (0..10) |_| {
+            trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+
+            if ((trgrs.timeout == .off) or (trgrs.err == .on)) {
+                break;
+            }
+        }
+        return trgrs;
+    }
+
+    pub fn deinit(exc: *Exchanger) void {
+        if (exc.lst != null) {
+            exc.lst.?.tskt.deinit();
+            exc.lst = null;
+        }
+        if (exc.srv != null) {
+            exc.srv.?.tskt.deinit();
+            exc.srv = null;
+        }
+        if (exc.cl != null) {
+            exc.cl.?.tskt.deinit();
+            exc.cl = null;
+        }
+        if (exc.recvMsg) |m| {
+            m.destroy();
+            exc.recvMsg = null;
+        }
+        if (exc.tcm != null) {
+            exc.tcm.?.deinit();
+            exc.tcm = null;
+        }
+        if (exc.plr != null) {
+            exc.plr.?.deinit();
+            exc.plr = null;
+        }
+
+        exc.pool.close();
+    }
+};
 
 const sockets = @import("sockets.zig");
 
@@ -139,8 +299,15 @@ const MessageQueue = message.MessageQueue;
 
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
+const CN = message.ChannelNumber;
 
 const Distributor = @import("Distributor.zig");
+const TCM = Distributor.TriggeredChannelsMap;
+const TC = Distributor.TriggeredChannel;
+
+const poller = @import("poller.zig");
+const Poller = poller.Poller;
+const Poll = poller.Poll;
 
 const configurator = @import("../configurator.zig");
 const Configurator = configurator.Configurator;
@@ -162,6 +329,7 @@ const Notifier = @import("Notifier.zig");
 const Notification = Notifier.Notification;
 
 const channels = @import("channels.zig");
+const ActiveChannel = channels.ActiveChannel;
 const ActiveChannels = channels.ActiveChannels;
 
 pub const Appendable = @import("nats").Appendable;

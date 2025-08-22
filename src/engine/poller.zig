@@ -7,13 +7,13 @@ pub const Poller = union(enum) {
     // it == null means iterator was not changed since previous call, use saved
     pub fn waitTriggers(self: *Poller, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
         return switch (self.*) {
-            inline else => |plr| try plr.waitTriggers(it, timeout),
+            .poll => try self.*.poll.waitTriggers(it, timeout),
         };
     }
 
     pub fn deinit(self: *const Poller) void {
         switch (self.*) {
-            inline else => |plr| plr.deinit(),
+            .poll => self.*.poll.deinit(),
         }
         return;
     }
@@ -42,8 +42,8 @@ pub const Poll = struct {
         return;
     }
 
-    pub fn waitTriggers(ptr: ?*anyopaque, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
-        const pl: *Poll = @alignCast(@ptrCast(ptr));
+    pub fn waitTriggers(pl: *Poll, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
+        // const pl: *Poll = @alignCast(@ptrCast(ptr));
 
         if ((pl.it == null) and (it == null)) {
             return AmpeError.NotAllowed;

@@ -22,8 +22,8 @@ pub const Iterator = struct {
     }
 
     pub fn next(itr: *Iterator) ?*TriggeredChannel {
-        if (itr.itrtr) |it| {
-            const entry = it.next();
+        if (itr.itrtr != null)  {
+            const entry = itr.itrtr.?.next();
             if (entry) |entr| {
                 return entr.value_ptr;
             }
@@ -32,8 +32,8 @@ pub const Iterator = struct {
     }
 
     pub fn reset(itr: *Iterator) void {
-        if (itr.itrtr) |it| {
-            it.reset();
+        if (itr.itrtr != null) {
+            itr.itrtr.?.reset();
         }
         return;
     }

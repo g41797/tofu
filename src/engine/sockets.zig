@@ -79,7 +79,7 @@ pub const TriggeredSkt = union(enum) {
     accept: AcceptSkt,
     io: IoSkt,
 
-    pub fn triggers(tsk: *TriggeredSkt) ?Triggers {
+    pub fn triggers(tsk: *TriggeredSkt) Triggers {
         return switch (tsk.*) {
             .notification => tsk.*.notification.triggers(),
             .accept => tsk.*.accept.triggers(),
@@ -89,7 +89,9 @@ pub const TriggeredSkt = union(enum) {
 
     pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
         return switch (tsk.*) {
-            inline else => |sk| sk.getSocket(),
+            .notification => tsk.*.notification.getSocket(),
+            .accept => tsk.*.accept.getSocket(),
+            .io => tsk.*.io.getSocket(),
         };
     }
 
@@ -321,7 +323,7 @@ pub const NotificationSkt = struct {
         };
     }
 
-    pub fn triggers(nskt: *NotificationSkt) ?Triggers {
+    pub fn triggers(nskt: *NotificationSkt) Triggers {
         _ = nskt;
         return NotificationTriggers;
     }
@@ -354,7 +356,7 @@ pub const AcceptSkt = struct {
         };
     }
 
-    pub fn triggers(askt: *AcceptSkt) ?Triggers {
+    pub fn triggers(askt: *AcceptSkt) Triggers {
         _ = askt;
         return AcceptTriggers;
     }
@@ -440,13 +442,6 @@ pub const IoSkt = struct {
 
         errdefer ret.skt.deinit();
 
-        // https://github.com/ziglang/zig/issues/20310
-        // Unexpected "value stored in comptime field does not match the default value of the field" #20310
-        // src/engine/sockets.zig:393:23:
-        // error: value stored in comptime field does not match the default value of the field
-        // ret.connected = true;
-        // ~~~~~~~~~~~~~~^~~~~~
-
         ret.connected = true;
 
         std.posix.connect(
@@ -467,7 +462,7 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn triggers(ioskt: *IoSkt) ?Triggers {
+    pub fn triggers(ioskt: *IoSkt) Triggers {
         if (!ioskt.connected) {
             return .{
                 .connect = .on,
