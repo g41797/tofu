@@ -164,6 +164,7 @@ pub const status_to_raw = status.status_to_raw;
 
 const std = @import("std");
 const builtin = @import("builtin");
+pub const DBG = (builtin.mode == .Debug);
 const Allocator = std.mem.Allocator;
 
 // 2DO  Add options for Pool

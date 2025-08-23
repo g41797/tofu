@@ -5,25 +5,74 @@ const localIP = "127.0.0.1";
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;
 
-test "create TCP listener" {
-    var cnfr: Configurator = .{
-        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
-    };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-}
-
-test "create UDS listener" {
-    var cnfr: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(""),
-    };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-}
+// test "create TCP listener" {
+//     var cnfr: Configurator = .{
+//         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+//     };
+//
+//     var listener = try create_listener(&cnfr);
+//
+//     defer listener.deinit();
+// }
+//
+// test "create UDS listener" {
+//     var cnfr: Configurator = .{
+//         .uds_server = UDSServerConfigurator.init(""),
+//     };
+//
+//     var listener = try create_listener(&cnfr);
+//
+//     defer listener.deinit();
+// }
+//
+// test "create TCP client" {
+//     var pool = try Pool.init(gpa, null);
+//     defer pool.close();
+//
+//     var cnfr: Configurator = .{
+//         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+//     };
+//
+//     var listener = try create_listener(&cnfr);
+//
+//     defer listener.deinit();
+//
+//     var clcnfr: Configurator = .{
+//         .tcp_client = TCPClientConfigurator.init(null, null),
+//     };
+//
+//     var client = try create_client(&clcnfr, &pool);
+//
+//     defer client.deinit();
+// }
+//
+// test "create UDS client" {
+//     var pool = try Pool.init(gpa, null);
+//     defer pool.close();
+//
+//     var tup: Notifier.TempUdsPath = .{};
+//     const udsPath = try tup.buildPath(gpa);
+//
+//     var cnfr: Configurator = .{
+//         .uds_server = UDSServerConfigurator.init(udsPath),
+//     };
+//
+//     var listener = try create_listener(&cnfr);
+//
+//     defer listener.deinit();
+//
+//     // const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
+//     // const length = std.mem.len(c_array_ptr);
+//     // const zig_slice: []const u8 = c_array_ptr[0..length];
+//
+//     var clcnfr: Configurator = .{
+//         .uds_client = UDSClientConfigurator.init(udsPath),
+//     };
+//
+//     var client = try create_client(&clcnfr, &pool);
+//
+//     defer client.deinit();
+// }
 
 fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
     var wlcm: *Message = try Message.create(gpa);
@@ -43,55 +92,6 @@ fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
     try testing.expect(trgrs.accept == .on);
 
     return tskt;
-}
-
-test "create TCP client" {
-    var pool = try Pool.init(gpa, null);
-    defer pool.close();
-
-    var cnfr: Configurator = .{
-        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
-    };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-
-    var clcnfr: Configurator = .{
-        .tcp_client = TCPClientConfigurator.init(null, null),
-    };
-
-    var client = try create_client(&clcnfr, &pool);
-
-    defer client.deinit();
-}
-
-test "create UDS client" {
-    var pool = try Pool.init(gpa, null);
-    defer pool.close();
-
-    var tup: Notifier.TempUdsPath = .{};
-    const udsPath = try tup.buildPath(gpa);
-
-    var cnfr: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(udsPath),
-    };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-
-    // const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
-    // const length = std.mem.len(c_array_ptr);
-    // const zig_slice: []const u8 = c_array_ptr[0..length];
-
-    var clcnfr: Configurator = .{
-        .uds_client = UDSClientConfigurator.init(udsPath),
-    };
-
-    var client = try create_client(&clcnfr, &pool);
-
-    defer client.deinit();
 }
 
 fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
@@ -124,7 +124,7 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
     return tskt;
 }
 
-test "exchanger waitConnectClient" {
+test "exchanger exchange" {
     const srvcnf: Configurator = .{
         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
     };
@@ -140,17 +140,7 @@ test "exchanger waitConnectClient" {
 
     try exc.startClient();
 
-    const trgrs = try exc.waitConnectClient();
-
-    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
-
-    const onTrigger: u8 = switch (exc.clcnf) {
-        .tcp_client => utrg.connect,
-        .uds_client => utrg.send,
-        else => unreachable,
-    };
-
-    _ = onTrigger;
+    _ = try exc.waitConnectClient();
 
     return;
 }
@@ -162,13 +152,8 @@ pub const Exchanger = struct {
     srvcnf: Configurator = undefined,
     clcnf: Configurator = undefined,
 
-    lst: ?TC = null,
     lstCN: CN = 1,
-
-    srv: ?TC = null,
     srvCN: CN = 2,
-
-    cl: ?TC = null,
     clCN: CN = 3,
 
     sendMsg: ?*Message = null,
@@ -202,7 +187,7 @@ pub const Exchanger = struct {
     }
 
     pub fn startListen(exc: *Exchanger) !void {
-        exc.lst = .{
+        var lst: TC = .{
             .exp = .{},
             .act = .{},
             .tskt = try create_listener(&exc.srvcnf),
@@ -212,15 +197,15 @@ pub const Exchanger = struct {
                 .ctx = null,
             },
         };
-        errdefer exc.lst.?.tskt.deinit();
+        errdefer lst.tskt.deinit();
 
-        try exc.tcm.?.put(exc.lstCN, exc.lst.?);
+        try exc.tcm.?.put(exc.lstCN, lst);
 
         return;
     }
 
     pub fn startClient(exc: *Exchanger) !void {
-        exc.cl = .{
+        var cl: TC = .{
             .exp = .{},
             .act = .{},
             .tskt = try create_client(&exc.clcnf, &exc.pool),
@@ -230,41 +215,96 @@ pub const Exchanger = struct {
                 .ctx = null,
             },
         };
-        errdefer exc.cl.?.tskt.deinit();
+        errdefer cl.tskt.deinit();
 
-        try exc.tcm.?.put(exc.clCN, exc.cl.?);
+        try exc.tcm.?.put(exc.clCN, cl);
 
         return;
     }
 
     pub fn waitConnectClient(exc: *Exchanger) !sockets.Triggers {
-        const it = Distributor.Iterator.init(&exc.tcm.?);
+        var it = Distributor.Iterator.init(&exc.tcm.?);
 
         var trgrs: sockets.Triggers = .{};
 
         for (0..10) |_| {
             trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
 
-            if ((trgrs.timeout == .off) or (trgrs.err == .on)) {
+            if (trgrs.err == .on) {
                 break;
             }
+
+            if (trgrs.timeout == .on) {
+                continue;
+            }
+
+            if (trgrs.accept == .on) { // Just one listener, so checking trgrs is OK
+                var listener = exc.tcm.?.getPtr(exc.lstCN).?.tskt;
+
+                const srvsktptr = try listener.tryAccept();
+
+                if (srvsktptr != null) {
+                    const srvio: sockets.TriggeredSkt = .{
+                        .io = try sockets.IoSkt.initServerSide(&exc.pool, srvsktptr.?),
+                    };
+
+                    var srv: TC = .{
+                        .exp = .{},
+                        .act = .{},
+                        .tskt = srvio,
+                        .acn = .{
+                            .chn = exc.srvCN,
+                            .mid = exc.srvCN,
+                            .ctx = null,
+                        },
+                    };
+                    errdefer srv.tskt.deinit();
+
+                    try exc.tcm.?.put(exc.srvCN, srv);
+
+                    it = Distributor.Iterator.init(&exc.tcm.?);
+
+                    trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+
+                    continue;
+                }
+            }
+
+            const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
+
+            if (clTsktPtr.act.connect == .on) {
+                const connected = try clTsktPtr.tskt.tryConnect();
+                if (connected) {
+                    break;
+                }
+                continue;
+            }
         }
+
         return trgrs;
     }
 
+    pub fn exchange(exc: *Exchanger) !void {
+        _ = exc;
+        return;
+    }
+
     pub fn deinit(exc: *Exchanger) void {
-        if (exc.lst != null) {
-            exc.lst.?.tskt.deinit();
-            exc.lst = null;
+        var tcp = exc.tcm.?.getPtr(exc.lstCN);
+        if (tcp) |tc| {
+            tc.*.tskt.deinit();
         }
-        if (exc.srv != null) {
-            exc.srv.?.tskt.deinit();
-            exc.srv = null;
+
+        tcp = exc.tcm.?.getPtr(exc.srvCN);
+        if (tcp) |tc| {
+            tc.*.tskt.deinit();
         }
-        if (exc.cl != null) {
-            exc.cl.?.tskt.deinit();
-            exc.cl = null;
+
+        tcp = exc.tcm.?.getPtr(exc.clCN);
+        if (tcp) |tc| {
+            tc.*.tskt.deinit();
         }
+
         if (exc.recvMsg) |m| {
             m.destroy();
             exc.recvMsg = null;

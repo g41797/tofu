@@ -22,7 +22,7 @@ pub const Iterator = struct {
     }
 
     pub fn next(itr: *Iterator) ?*TriggeredChannel {
-        if (itr.itrtr != null)  {
+        if (itr.itrtr != null) {
             const entry = itr.itrtr.?.next();
             if (entry) |entr| {
                 return entr.value_ptr;

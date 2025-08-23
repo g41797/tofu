@@ -80,11 +80,17 @@ pub const TriggeredSkt = union(enum) {
     io: IoSkt,
 
     pub fn triggers(tsk: *TriggeredSkt) Triggers {
-        return switch (tsk.*) {
+        const ret = switch (tsk.*) {
             .notification => tsk.*.notification.triggers(),
             .accept => tsk.*.accept.triggers(),
             .io => tsk.*.io.triggers(),
         };
+
+        if (engine.DBG) {
+            _ = UnpackedTriggers.fromTriggers(ret);
+        }
+
+        return ret;
     }
 
     pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
@@ -97,56 +103,56 @@ pub const TriggeredSkt = union(enum) {
 
     pub fn tryRecvNotification(tsk: *TriggeredSkt) !Notification {
         return switch (tsk.*) {
-            .notification => |sk| sk.tryRecvNotification(),
+            .notification => tsk.*.notification.tryRecvNotification(),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn tryAccept(tsk: *TriggeredSkt) !?Skt {
         return switch (tsk.*) {
-            .accept => |sk| sk.tryAccept(),
+            .accept => tsk.*.accept.tryAccept(),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
-    pub fn tryConnect(tsk: *TriggeredSkt) !void {
+    pub fn tryConnect(tsk: *TriggeredSkt) !bool {
         return switch (tsk.*) {
-            .io => |sk| sk.tryConnect(),
+            .io => tsk.*.io.tryConnect(),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn tryRecv(tsk: *TriggeredSkt) !MessageQueue {
         return switch (tsk.*) {
-            .io => |sk| sk.tryRecv(),
+            .io => tsk.*.io.tryRecv(),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn trySend(tsk: *TriggeredSkt) !MessageQueue {
         return switch (tsk.*) {
-            .io => |sk| sk.trySend(),
+            .io => tsk.*.io.trySend(),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
         return switch (tsk.*) {
-            .io => |sk| sk.addToSend(sndmsg),
+            .io => tsk.*.io.addToSend(sndmsg),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn addForRecv(tsk: *TriggeredSkt, rcvmsg: *Message) !void {
         return switch (tsk.*) {
-            .io => |sk| sk.addForRecv(rcvmsg),
+            .io => tsk.*.io.addForRecv(rcvmsg),
             inline else => return AmpeError.NotAllowed,
         };
     }
 
     pub fn detach(tsk: *TriggeredSkt) MessageQueue {
         return switch (tsk.*) {
-            .io => |sk| sk.detach(),
+            .io => tsk.*.io.detach(),
             inline else => return null,
         };
     }
@@ -368,12 +374,13 @@ pub const AcceptSkt = struct {
     pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
         var skt: Skt = .{};
 
-        var addr_len = @sizeOf(skt.address);
+        var addr: std.net.Address = undefined;
+        var addr_len = askt.skt.address.getOsSockLen();
 
         skt.socket = std.posix.accept(
             askt.skt.socket,
-            &skt.address.any,
-            @ptrCast(&addr_len),
+            &addr.any,
+            &addr_len,
             std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC,
         ) catch |e| {
             switch (e) {
@@ -387,6 +394,8 @@ pub const AcceptSkt = struct {
             }
         };
         errdefer posix.close(skt.socket);
+
+        skt.address = addr;
 
         return skt;
     }
@@ -419,7 +428,7 @@ pub const IoSkt = struct {
             .connected = true,
             .sendQ = .{},
             .currSend = MsgSender.init(),
-            .currRecv = MsgReceiver.init(),
+            .currRecv = MsgReceiver.init(pool),
         };
 
         ret.currSend.set(sskt.socket) catch unreachable;
@@ -498,7 +507,7 @@ pub const IoSkt = struct {
     // tryConnect is called by Distributor for succ. connection.
     // So actually  tryConnect functionality - to allow further Hello send.
     // For the failed connection Distributor uses detach: get Hello request , convert to filed Hello response...
-    pub fn tryConnect(ioskt: *IoSkt) AmpeError!void {
+    pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
         if (ioskt.connected) {
             return AmpeError.NotAllowed;
         }
@@ -506,6 +515,8 @@ pub const IoSkt = struct {
         ioskt.connected = true;
 
         ioskt.postConnect();
+
+        return ioskt.connected;
     }
 
     fn postConnect(ioskt: *IoSkt) void {
