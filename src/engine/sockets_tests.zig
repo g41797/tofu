@@ -142,6 +142,8 @@ test "exchanger exchange" {
 
     _ = try exc.waitConnectClient();
 
+    try exc.exchange();
+
     return;
 }
 
@@ -285,25 +287,84 @@ pub const Exchanger = struct {
     }
 
     pub fn exchange(exc: *Exchanger) !void {
-        _ = exc;
+        exc.removeTC(exc.lstCN); // poll only io sockets
+
+        try exc.exchangeHeaders(1);
         return;
     }
 
+    pub fn exchangeHeaders(exc: *Exchanger, count: usize) !void {
+        const sender = exc.getTC(exc.srvCN).?; //Opposite direction
+        const receiver = exc.getTC(exc.clCN).?;
+
+        errdefer exc.pool.freeAll();
+
+        for (0..count) |i| {
+            var smsg = try Message.create(exc.allocator);
+            errdefer smsg.destroy();
+            smsg.bhdr.channel_number = exc.srvCN;
+            smsg.bhdr.message_id = i + 1;
+            smsg.bhdr.proto.mode = .signal;
+            smsg.bhdr.proto.more = .last;
+            smsg.bhdr.proto.mtype = .application;
+            smsg.bhdr.proto.origin = .application;
+            try sender.tskt.addToSend(smsg);
+            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver
+        }
+
+        try exc.sendRecv(sender, receiver, count);
+    }
+
+    pub fn sendRecv(exc: *Exchanger, sndr: *TC, rcvr: *TC, count: usize) !void {
+        _ = exc;
+        _ = sndr;
+        _ = rcvr;
+
+        // var it = Distributor.Iterator.init(&exc.tcm.?);
+        // var trgrs: sockets.Triggers = .{};
+
+        const wasSend: usize = 0;
+        const wasRecv: usize = 0;
+
+        for (0..100) |_| {
+            if ((wasSend != count) and (wasRecv != count)) {
+                break;
+            }
+        }
+
+        return;
+    }
+
+    fn closeChannels(exc: *Exchanger) void {
+        var it = Distributor.Iterator.init(&exc.tcm.?);
+
+        var next = it.next();
+
+        while (next != null) {
+            next.?.tskt.deinit();
+            next = it.next();
+        }
+        return;
+    }
+
+    fn getTC(exc: *Exchanger, cn: channels.ChannelNumber) ?*TC {
+        const tcp = exc.tcm.?.getPtr(cn);
+        if (tcp) |tc| {
+            return tc;
+        }
+        return null;
+    }
+
+    fn removeTC(exc: *Exchanger, tcn: channels.ChannelNumber) void {
+        const tcp = exc.tcm.?.getPtr(tcn);
+        if (tcp) |tc| {
+            tc.*.tskt.deinit();
+        }
+        _ = exc.tcm.?.orderedRemove(tcn);
+    }
+
     pub fn deinit(exc: *Exchanger) void {
-        var tcp = exc.tcm.?.getPtr(exc.lstCN);
-        if (tcp) |tc| {
-            tc.*.tskt.deinit();
-        }
-
-        tcp = exc.tcm.?.getPtr(exc.srvCN);
-        if (tcp) |tc| {
-            tc.*.tskt.deinit();
-        }
-
-        tcp = exc.tcm.?.getPtr(exc.clCN);
-        if (tcp) |tc| {
-            tc.*.tskt.deinit();
-        }
+        exc.closeChannels();
 
         if (exc.recvMsg) |m| {
             m.destroy();
