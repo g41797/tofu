@@ -6,9 +6,16 @@ pub const Poller = union(enum) {
 
     // it == null means iterator was not changed since previous call, use saved
     pub fn waitTriggers(self: *Poller, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
-        return switch (self.*) {
+        const ret = switch (self.*) {
             .poll => try self.*.poll.waitTriggers(it, timeout),
         };
+
+        if (DBG) {
+            const utrgrs = sockets.UnpackedTriggers.fromTriggers(ret);
+            _ = utrgrs;
+        }
+
+        return ret;
     }
 
     pub fn deinit(self: *const Poller) void {
@@ -63,9 +70,10 @@ pub const Poll = struct {
         const tmout = try pl.poll(timeout);
 
         if (tmout) {
-            return .{
+            const tmouttrgs: Triggers = .{
                 .timeout = .on,
             };
+            return tmouttrgs;
         }
 
         return try pl.storeTriggers();
@@ -80,17 +88,27 @@ pub const Poll = struct {
             const tc = tcptr.?;
             tcptr = pl.it.?.next();
 
-            tc.exp = tc.tskt.triggers();
+            tc.exp = try tc.tskt.triggers();
             tc.act = .{};
 
             var events: i16 = 0;
 
             if (!tc.exp.off()) {
+                if (DBG) {
+                    const utrgs = sockets.UnpackedTriggers.fromTriggers(tc.exp);
+                    _ = utrgs;
+                }
+
                 if ((tc.exp.send == .on) or (tc.exp.connect == .on)) {
+                    log.debug("chn {d} send/connect expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
                     events |= std.posix.POLL.OUT;
                 }
                 if ((tc.exp.recv == .on) or (tc.exp.notify == .on) or (tc.exp.accept == .on)) {
+                    log.debug("chn {d} recv/accept expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
                     events |= std.posix.POLL.IN;
+                }
+                if (tc.exp.pool == .off) {
+                    assert(events != 0);
                 }
             }
 
@@ -138,21 +156,28 @@ pub const Poll = struct {
 
                 if ((revents & std.posix.POLL.IN != 0) or (revents & std.posix.POLL.RDNORM != 0)) {
                     if (tc.exp.recv == .on) {
+                        log.debug("chn {d} recv allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.recv = .on;
                     } else if (tc.exp.notify == .on) {
                         tc.act.notify = .on;
                     } else if (tc.exp.accept == .on) {
+                        log.debug("chn {d} accept allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.accept = .on;
                     }
                 }
 
                 if (revents & std.posix.POLL.OUT != 0) {
                     if (tc.exp.send == .on) {
+                        log.debug("chn {d} send allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.send = .on;
                     } else if (tc.exp.connect == .on) {
+                        log.debug("chn {d} connect allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.connect = .on;
                     }
                 }
+
+                assert(!tc.act.off());
+
                 break;
             }
 
@@ -162,6 +187,8 @@ pub const Poll = struct {
         return ret;
     }
 };
+
+const DBG = @import("../engine.zig").DBG;
 
 pub const AmpeError = @import("../status.zig").AmpeError;
 
@@ -183,5 +210,8 @@ const TriggeredChannelsMap = Distributor.TriggeredChannelsMap;
 const WaitTriggers = Distributor.WaitTriggers;
 
 const std = @import("std");
+const assert = std.debug.assert;
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
+
+const log = std.log;

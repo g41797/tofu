@@ -257,3 +257,6 @@ Io.zig -  current development
     https://github.com/ziglang/zig/blob/Io.net/lib/std/Io/ThreadPool.zig#L88
 
     https://github.com/ziglang/zig/tree/async-await-demo/lib/std
+
+Get a list of handles (file descriptors) for connected sockets per process
+    sudo lsof -i -a -p <PID>

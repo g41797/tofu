@@ -79,14 +79,14 @@ pub const TriggeredSkt = union(enum) {
     accept: AcceptSkt,
     io: IoSkt,
 
-    pub fn triggers(tsk: *TriggeredSkt) Triggers {
+    pub fn triggers(tsk: *TriggeredSkt) !Triggers {
         const ret = switch (tsk.*) {
-            .notification => tsk.*.notification.triggers(),
-            .accept => tsk.*.accept.triggers(),
-            .io => tsk.*.io.triggers(),
+            .notification => try tsk.*.notification.triggers(),
+            .accept => try tsk.*.accept.triggers(),
+            .io => try tsk.*.io.triggers(),
         };
 
-        if (engine.DBG) {
+        if (DBG) {
             _ = UnpackedTriggers.fromTriggers(ret);
         }
 
@@ -166,12 +166,88 @@ pub const TriggeredSkt = union(enum) {
     }
 };
 
-pub const Skt = struct {
+pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     socket: std.posix.socket_t = undefined,
     address: std.net.Address = undefined,
 
-    pub fn deinit(skr: *Skt) void {
-        posix.close(skr.socket);
+    pub fn listen(skt: *Skt) !void {
+        const kernel_backlog = 64;
+        try posix.setsockopt(skt.socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
+        try posix.bind(skt.socket, &skt.address.any, skt.address.getOsSockLen());
+        try posix.listen(skt.socket, kernel_backlog);
+
+        // set address to the OS-chosen information - check for UDS!!!.
+        var slen: posix.socklen_t = skt.address.getOsSockLen();
+        try posix.getsockname(skt.socket, &skt.address.any, &slen);
+
+        return;
+    }
+
+    pub fn accept(askt: *Skt) AmpeError!?Skt {
+        var skt: Skt = .{};
+
+        var addr: std.net.Address = undefined;
+        var addr_len = askt.address.getOsSockLen();
+
+        skt.socket = std.posix.accept(
+            askt.socket,
+            &addr.any,
+            &addr_len,
+            std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC,
+        ) catch |e| {
+            switch (e) {
+                std.posix.AcceptError.WouldBlock => {
+                    return null;
+                },
+                std.posix.AcceptError.ConnectionAborted,
+                std.posix.AcceptError.ConnectionResetByPeer,
+                => return AmpeError.PeerDisconnected,
+                else => return AmpeError.CommunicatioinFailure,
+            }
+        };
+        errdefer posix.close(skt.socket);
+
+        nats.Client.setSockNONBLOCK(skt.socket) catch {
+            return AmpeError.NotAllowed;
+        };
+
+        skt.address = addr;
+
+        log.debug("ACCEPTED SERVER SOCKET FD {x}", .{skt.socket});
+
+        return skt;
+    }
+
+    pub fn connect(skt: *Skt) AmpeError!bool {
+        var connected = true;
+
+        std.posix.connect(
+            skt.socket,
+            &skt.address.any,
+            skt.address.getOsSockLen(),
+        ) catch |e| switch (e) {
+            std.posix.ConnectError.WouldBlock => {
+                connected = false;
+            },
+            else => return AmpeError.PeerDisconnected,
+        };
+        return connected;
+    }
+
+    pub fn disableNagle(skt: *Skt) !void {
+        switch (skt.address.any.family) {
+            std.posix.AF.INET, std.posix.AF.INET6 => {
+                // try disable Nagle
+                // const tcp_nodelay: c_int = 0;
+                // try os.setsockopt(skt.socket, os.IPPROTO.TCP, os.TCP.NODELAY, mem.asBytes(&tcp_nodelay));
+                try disable_nagle(skt.socket);
+            },
+            else => return,
+        }
+    }
+
+    pub fn deinit(skt: *Skt) void {
+        posix.close(skt.socket);
     }
 };
 
@@ -288,17 +364,10 @@ pub const SocketCreator = struct {
             .socket = undefined,
         };
 
-        const kernel_backlog = 64;
         ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
         errdefer posix.close(ret.socket);
 
-        try posix.setsockopt(ret.socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
-        try posix.bind(ret.socket, &ret.address.any, address.getOsSockLen());
-        try posix.listen(ret.socket, kernel_backlog);
-
-        // set address to the OS-chosen information - check for UDS!!!.
-        var slen: posix.socklen_t = address.getOsSockLen();
-        try posix.getsockname(ret.socket, &ret.address.any, &slen);
+        try ret.listen();
 
         return ret;
     }
@@ -324,12 +393,13 @@ pub const NotificationSkt = struct {
     socket: Socket = undefined,
 
     pub fn init(socket: Socket) NotificationSkt { // prnt.ntfr.receiver
+        log.debug("NotificationSkt init", .{});
         return .{
             .socket = socket,
         };
     }
 
-    pub fn triggers(nskt: *NotificationSkt) Triggers {
+    pub fn triggers(nskt: *NotificationSkt) !Triggers {
         _ = nskt;
         return NotificationTriggers;
     }
@@ -357,12 +427,13 @@ pub const AcceptSkt = struct {
     skt: Skt = undefined,
 
     pub fn init(wlcm: *Message, sc: *SocketCreator) AmpeError!AcceptSkt {
+        log.debug("AcceptSkt init", .{});
         return .{
             .skt = try sc.fromMessage(wlcm),
         };
     }
 
-    pub fn triggers(askt: *AcceptSkt) Triggers {
+    pub fn triggers(askt: *AcceptSkt) !Triggers {
         _ = askt;
         return AcceptTriggers;
     }
@@ -372,32 +443,7 @@ pub const AcceptSkt = struct {
     }
 
     pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
-        var skt: Skt = .{};
-
-        var addr: std.net.Address = undefined;
-        var addr_len = askt.skt.address.getOsSockLen();
-
-        skt.socket = std.posix.accept(
-            askt.skt.socket,
-            &addr.any,
-            &addr_len,
-            std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC,
-        ) catch |e| {
-            switch (e) {
-                std.posix.AcceptError.WouldBlock => {
-                    return null;
-                },
-                std.posix.AcceptError.ConnectionAborted,
-                std.posix.AcceptError.ConnectionResetByPeer,
-                => return AmpeError.PeerDisconnected,
-                else => return AmpeError.CommunicatioinFailure,
-            }
-        };
-        errdefer posix.close(skt.socket);
-
-        skt.address = addr;
-
-        return skt;
+        return askt.skt.accept();
     }
 
     pub fn deinit(askt: *AcceptSkt) void {
@@ -414,64 +460,64 @@ pub const Side = enum(u1) {
 pub const IoSkt = struct {
     pool: *Pool = undefined,
     side: Side = undefined,
+    cn: message.ChannelNumber = undefined,
     skt: Skt = undefined,
     connected: bool = undefined,
     sendQ: MessageQueue = undefined,
     currSend: MsgSender = undefined,
     currRecv: MsgReceiver = undefined,
+    alreadySend: ?*Message = null,
 
-    pub fn initServerSide(pool: *Pool, sskt: Skt) AmpeError!IoSkt {
+    pub fn initServerSide(pool: *Pool, cn: message.ChannelNumber, sskt: Skt) AmpeError!IoSkt {
+        log.debug("Server IoSkt init", .{});
+
         var ret: IoSkt = .{
             .pool = pool,
             .side = .server,
+            .cn = cn,
             .skt = sskt,
             .connected = true,
             .sendQ = .{},
             .currSend = MsgSender.init(),
             .currRecv = MsgReceiver.init(pool),
+            .alreadySend = null,
         };
 
-        ret.currSend.set(sskt.socket) catch unreachable;
-        ret.currRecv.set(sskt.socket) catch unreachable;
+        ret.currSend.set(cn, sskt.socket) catch unreachable;
+        ret.currRecv.set(cn, sskt.socket) catch unreachable;
 
         return ret;
     }
 
-    pub fn initClientSide(pool: *Pool, hello: *Message, sc: *SocketCreator) AmpeError!IoSkt {
-        var ret: IoSkt = .{
-            .pool = pool,
-            .side = .client,
-            .skt = try sc.fromMessage(hello),
-            .connected = false,
-            .sendQ = .{},
-            .currSend = MsgSender.init(),
-            .currRecv = MsgReceiver.init(pool),
-        };
-        ret.sendQ.enqueue(hello);
+    pub fn initClientSide(ios: *IoSkt, pool: *Pool, hello: *Message, sc: *SocketCreator) AmpeError!void {
+        log.debug("Client IoSkt init", .{});
 
-        errdefer ret.skt.deinit();
+        ios.pool = pool;
+        ios.side = .client;
+        ios.cn = hello.bhdr.channel_number;
+        ios.skt = try sc.fromMessage(hello);
+        ios.connected = false;
+        ios.sendQ = .{};
+        ios.currSend = MsgSender.init();
+        ios.currRecv = MsgReceiver.init(pool);
+        ios.alreadySend = null;
 
-        ret.connected = true;
+        errdefer ios.skt.deinit();
 
-        std.posix.connect(
-            ret.skt.socket,
-            &ret.skt.address.any,
-            ret.skt.address.getOsSockLen(),
-        ) catch |e| switch (e) {
-            std.posix.ConnectError.WouldBlock => {
-                ret.connected = false;
-            },
-            else => return AmpeError.PeerDisconnected,
-        };
+        ios.addToSend(hello) catch unreachable;
 
-        if (ret.connected) {
-            ret.postConnect();
+        ios.connected = try ios.skt.connect();
+
+        if (ios.connected) {
+            ios.postConnect();
+            var sq = try ios.trySend();
+            ios.alreadySend = sq.dequeue();
         }
 
-        return ret;
+        return;
     }
 
-    pub fn triggers(ioskt: *IoSkt) Triggers {
+    pub fn triggers(ioskt: *IoSkt) !Triggers {
         if (!ioskt.connected) {
             return .{
                 .connect = .on,
@@ -482,10 +528,18 @@ pub const IoSkt = struct {
             ret.send = .on;
         }
 
-        if (ioskt.currRecv.started()) {
+        const recvPossible = try ioskt.currRecv.recvIsPossible();
+
+        if (recvPossible) {
             ret.recv = .on;
         } else {
+            assert(ioskt.currRecv.ptrg == .on);
             ret.pool = .on;
+        }
+
+        if (DBG) {
+            const utrgs = UnpackedTriggers.fromTriggers(ret);
+            _ = utrgs;
         }
 
         return ret;
@@ -505,25 +559,27 @@ pub const IoSkt = struct {
     }
 
     // tryConnect is called by Distributor for succ. connection.
-    // So actually  tryConnect functionality - to allow further Hello send.
     // For the failed connection Distributor uses detach: get Hello request , convert to filed Hello response...
     pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
         if (ioskt.connected) {
             return AmpeError.NotAllowed;
         }
 
-        ioskt.connected = true;
+        ioskt.connected = try ioskt.skt.connect();
 
-        ioskt.postConnect();
+        if (ioskt.connected) {
+            ioskt.postConnect();
+        }
 
         return ioskt.connected;
     }
 
     fn postConnect(ioskt: *IoSkt) void {
-        ioskt.currSend.set(ioskt.skt.socket) catch unreachable;
-        ioskt.currRecv.set(ioskt.skt.socket) catch unreachable;
+        ioskt.currSend.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
+        ioskt.currRecv.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
 
         ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable;
+        ioskt.alreadySend = null;
         return;
     }
 
@@ -552,7 +608,7 @@ pub const IoSkt = struct {
             const received = ioskt.currRecv.recv() catch |e| {
                 switch (e) {
                     AmpeError.PoolEmpty => {
-                        return null;
+                        return ret;
                     },
                     else => return e,
                 }
@@ -574,12 +630,13 @@ pub const IoSkt = struct {
             return AmpeError.NotAllowed;
         }
 
-        while (!ioskt.currSend.started()) {
-            if (ioskt.sendQ.empty()) {
-                break;
+        while (true) {
+            if (!ioskt.currSend.started()) {
+                if (ioskt.sendQ.empty()) {
+                    break;
+                }
+                ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable; // Ok for non-empty q
             }
-
-            ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable; // Ok for non-empty q
 
             const wasSend = try ioskt.currSend.send();
 
@@ -589,6 +646,7 @@ pub const IoSkt = struct {
 
             ret.enqueue(wasSend.?);
         }
+
         return ret;
     }
 
@@ -599,18 +657,25 @@ pub const IoSkt = struct {
         ioskt.currSend.deinit();
         ioskt.currRecv.deinit();
 
+        if (ioskt.alreadySend != null) {
+            ioskt.alreadySend.?.destroy();
+            ioskt.alreadySend = null;
+        }
+
         return;
     }
 };
 
 pub const MsgSender = struct {
     ready: bool = undefined,
+    cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
     msg: ?*Message = undefined,
-    bh: [BinaryHeader.BHSIZE]u8 = undefined,
+    bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'+'} ** BinaryHeader.BHSIZE,
     iov: [3]std.posix.iovec_const = undefined,
     vind: usize = undefined,
     sndlen: usize = undefined,
+    iovPrepared: bool = undefined,
 
     pub fn init() MsgSender {
         return .{
@@ -618,22 +683,30 @@ pub const MsgSender = struct {
             .msg = null,
             .sndlen = 0,
             .vind = 3,
+            .iovPrepared = false,
         };
     }
 
-    pub fn set(ms: *MsgSender, socket: Socket) !void {
+    pub fn set(ms: *MsgSender, cn: message.ChannelNumber, socket: Socket) !void {
+        ms.lmh("set");
+
         if (ms.ready) {
             return AmpeError.NotAllowed;
         }
+        ms.cn = cn;
         ms.socket = socket;
         ms.ready = true;
     }
 
     pub inline fn isReady(ms: *MsgSender) bool {
+        ms.lmh("isReady");
+
         return ms.ready;
     }
 
     pub fn deinit(ms: *MsgSender) void {
+        ms.lmh("deinit");
+
         if (ms.msg) |m| {
             m.destroy();
         }
@@ -643,44 +716,73 @@ pub const MsgSender = struct {
     }
 
     pub fn attach(ms: *MsgSender, msg: *Message) !void {
+        ms.lmh("attach");
+
         if (!ms.ready) {
             return AmpeError.NotAllowed;
         }
+
         if (ms.msg) |m| {
             m.destroy();
         }
 
         ms.msg = msg;
-        msg.bhdr.toBytes(&ms.bh);
-        ms.vind = 0;
-
-        ms.iov[0] = .{ .base = &ms.bh, .len = ms.bh.len };
-        ms.sndlen = ms.bh.len;
-
-        const hlen = msg.actual_headers_len();
-        if (hlen == 0) {
-            ms.iov[1] = .{ .base = @ptrCast(""), .len = 0 };
-        } else {
-            ms.iov[1] = .{ .base = @ptrCast(msg.thdrs.buffer.body().?.ptr), .len = hlen };
-            ms.sndlen += hlen;
-        }
-
-        const blen = msg.actual_body_len();
-        if (blen == 0) {
-            ms.iov[2] = .{ .base = @ptrCast(""), .len = 0 };
-        } else {
-            ms.iov[2] = .{ .base = @ptrCast(msg.body.body().?.ptr), .len = blen };
-            ms.sndlen += blen;
-        }
+        ms.iovPrepared = false;
 
         return;
     }
 
+    inline fn prepare(ms: *MsgSender) void {
+        ms.lmh("prepare");
+
+        const hlen = ms.msg.?.actual_headers_len();
+        const blen = ms.msg.?.actual_body_len();
+
+        ms.msg.?.bhdr.body_len = @intCast(blen);
+        ms.msg.?.bhdr.text_headers_len = @intCast(hlen);
+
+        @memset(&ms.bh, ' ');
+
+        ms.msg.?.bhdr.toBytes(&ms.bh);
+        ms.vind = 0;
+
+        assert(ms.bh.len == message.BinaryHeader.BHSIZE);
+
+        ms.iov[0] = .{ .base = &ms.bh, .len = ms.bh.len };
+        ms.sndlen = ms.bh.len;
+
+        if (DBG) {
+            log.debug("before send addr {*} {x}", .{ &ms.bh, ms.bh });
+        }
+
+        if (hlen == 0) {
+            ms.iov[1] = .{ .base = @ptrCast(""), .len = 0 };
+        } else {
+            ms.iov[1] = .{ .base = @ptrCast(ms.msg.?.thdrs.buffer.body().?.ptr), .len = hlen };
+            ms.sndlen += hlen;
+        }
+
+        if (blen == 0) {
+            ms.iov[2] = .{ .base = @ptrCast(""), .len = 0 };
+        } else {
+            ms.iov[2] = .{ .base = @ptrCast(ms.msg.?.body.body().?.ptr), .len = blen };
+            ms.sndlen += blen;
+        }
+
+        ms.lmh("prepare ret");
+        ms.iovPrepared = true;
+        return;
+    }
+
     pub inline fn started(ms: *MsgSender) bool {
+        ms.lmh("started");
+
         return (ms.msg != null);
     }
 
     pub fn detach(ms: *MsgSender) ?*Message {
+        ms.lmh("detach");
+
         const ret = ms.msg;
         ms.msg = null;
         ms.sndlen = 0;
@@ -689,28 +791,33 @@ pub const MsgSender = struct {
     }
 
     pub fn send(ms: *MsgSender) AmpeError!?*Message {
+        ms.lmh("send");
+
         if (!ms.ready) {
             return AmpeError.NotAllowed;
         }
         if (ms.msg == null) {
-            return error.NothingToSend; // to  prevent bug
+            return AmpeError.NotAllowed; // to  prevent bug
+        }
+
+        if (!ms.iovPrepared) {
+            ms.prepare();
         }
 
         while (ms.vind < 3) : (ms.vind += 1) {
+            ms.lmh("send 1");
             while (ms.iov[ms.vind].len > 0) {
-                const wasSend = std.posix.send(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len], 0) catch |e| {
-                    switch (e) {
-                        std.posix.SendError.WouldBlock => return null,
-                        std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
-                        else => return AmpeError.CommunicatioinFailed,
-                    }
-                };
-
-                ms.iov[ms.vind].base += wasSend;
-                ms.iov[ms.vind].len -= wasSend;
-                ms.sndlen -= wasSend;
+                ms.lmh("send 2");
+                const wasSend = try sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]);
+                if (wasSend == null) {
+                    return null;
+                }
+                ms.iov[ms.vind].base += wasSend.?;
+                ms.iov[ms.vind].len -= wasSend.?;
+                ms.sndlen -= wasSend.?;
 
                 if (ms.sndlen > 0) {
+                    ms.lmh("send 3");
                     continue;
                 }
 
@@ -719,16 +826,24 @@ pub const MsgSender = struct {
                 return ret;
             }
         }
-        return error.NothingToSend; // to  prevent bug
+        return AmpeError.NotAllowed; // to  prevent bug
+    }
+
+    pub inline fn lmh(ms: *MsgSender, txt: []const u8) void {
+        if (DBG) {
+            log.debug("<{*}>  [{s}] addr {*} values {x}", .{ ms, txt, &ms.bh, ms.bh });
+        }
+        return;
     }
 };
 
 pub const MsgReceiver = struct {
     ready: bool = undefined,
+    cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
     pool: *Pool = undefined,
     ptrg: Trigger = undefined,
-    bh: [BinaryHeader.BHSIZE]u8 = undefined,
+    bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'-'} ** BinaryHeader.BHSIZE,
     iov: [3]std.posix.iovec = undefined,
     vind: usize = undefined,
     rcvlen: usize = undefined,
@@ -745,16 +860,29 @@ pub const MsgReceiver = struct {
         };
     }
 
-    pub fn set(mr: *MsgReceiver, socket: Socket) !void {
+    pub fn set(mr: *MsgReceiver, cn: message.ChannelNumber, socket: Socket) !void {
         if (mr.ready) {
             return AmpeError.NotAllowed;
         }
+        mr.cn = cn;
         mr.socket = socket;
         mr.ready = true;
     }
 
-    pub inline fn started(mr: *MsgReceiver) bool {
-        return (mr.msg != null);
+    pub fn recvIsPossible(mr: *MsgReceiver) !bool {
+        if (mr.msg != null) {
+            return true;
+        }
+
+        const msg = mr.getFromPool() catch |err| {
+            if (err != AmpeError.PoolEmpty) {
+                return err;
+            }
+            return false;
+        };
+        mr.msg = msg;
+        mr.prepareMsg();
+        return true;
     }
 
     pub fn attach(mr: *MsgReceiver, msg: *Message) !void {
@@ -765,50 +893,69 @@ pub const MsgReceiver = struct {
         mr.msg = msg;
         mr.ptrg = .off;
 
+        mr.prepareMsg();
+
         return;
+    }
+
+    inline fn prepareMsg(mr: *MsgReceiver) void {
+        mr.msg.?.reset();
+        @memset(&mr.bh, ' ');
+        assert(mr.bh.len == message.BinaryHeader.BHSIZE);
+
+        mr.iov[0] = .{ .base = &mr.bh, .len = mr.bh.len };
+        mr.iov[1] = .{ .base = mr.msg.?.thdrs.buffer.buffer.?.ptr, .len = 0 };
+        mr.iov[2] = .{ .base = mr.msg.?.body.buffer.?.ptr, .len = 0 };
+
+        mr.vind = 0;
+        mr.rcvlen = 0;
+        return;
+    }
+
+    fn getFromPool(mr: *MsgReceiver) !*Message {
+        const ret = mr.pool.get(.poolOnly) catch |e| {
+            switch (e) {
+                error.ClosedPool => {
+                    return AmpeError.NotAllowed;
+                },
+                error.EmptyPool => {
+                    mr.ptrg = .on;
+                    return AmpeError.PoolEmpty;
+                },
+                else => return AmpeError.AllocationFailed,
+            }
+        };
+        mr.ptrg = .off;
+        return ret;
     }
 
     pub fn recv(mr: *MsgReceiver) !?*Message {
         if (!mr.ready) {
             return AmpeError.NotAllowed;
         }
+
         if (mr.msg == null) {
-            mr.msg = mr.pool.get(.poolOnly) catch |e| {
-                mr.ptrg = .on;
-                switch (e) {
-                    error.ClosedPool => return AmpeError.NotAllowed,
-                    error.EmptyPool => return AmpeError.PoolEmpty,
-                    else => return AmpeError.AllocationFailed,
-                }
-            };
-
-            mr.msg.?.reset();
-
-            mr.iov[0] = .{ .base = &mr.bh, .len = mr.bh.len };
-            mr.iov[1] = .{ .base = mr.msg.?.thdrs.buffer.buffer.?, .len = 0 };
-            mr.iov[2] = .{ .base = mr.msg.?.body.buffer.?, .len = 0 };
-
-            mr.vind = 0;
-            mr.rcvlen = 0;
+            mr.msg = try mr.getFromPool();
+            mr.prepareMsg();
         }
 
         while (mr.vind < 3) : (mr.vind += 1) {
             while (mr.iov[mr.vind].len > 0) {
-                const wasRecv = std.posix.recv(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len], 0) catch |e| {
-                    switch (e) {
-                        std.posix.RecvFromError.WouldBlock => return null,
-                        std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
-                        else => return AmpeError.CommunicatioinFailed,
-                    }
-                };
+                const wasRecv = try recvToBuf(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
+                if (wasRecv == null) {
+                    return null;
+                }
 
-                mr.iov[mr.vind].base += wasRecv;
-                mr.iov[mr.vind].len -= wasRecv;
-                mr.rcvlen += wasRecv;
+                if (wasRecv.? == 0) {
+                    return null;
+                }
+                mr.iov[mr.vind].base += wasRecv.?;
+                mr.iov[mr.vind].len -= wasRecv.?;
+                mr.rcvlen += wasRecv.?;
             }
 
             if (mr.vind == 0) {
-                mr.msg.?.bhdr.fromBytes(mr.bh);
+                mr.msg.?.bhdr.fromBytes(&mr.bh);
                 if (mr.msg.?.bhdr.text_headers_len > 0) {
                     mr.iov[1].len = mr.msg.?.bhdr.text_headers_len;
 
@@ -822,10 +969,10 @@ pub const MsgReceiver = struct {
                     mr.iov[2].len = mr.msg.?.bhdr.body_len;
 
                     // Allow direct receive to the buffer of appendable without copy
-                    mr.msg.?.body.buffer.alloc(mr.iov[2].len) catch {
+                    mr.msg.?.body.alloc(mr.iov[2].len) catch {
                         return AmpeError.AllocationFailed;
                     };
-                    mr.msg.?.body.buffer.change(mr.iov[2].len) catch unreachable;
+                    mr.msg.?.body.change(mr.iov[2].len) catch unreachable;
                 }
             }
         }
@@ -848,6 +995,72 @@ pub const MsgReceiver = struct {
         return;
     }
 };
+
+pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
+    var wasRecv: usize = 0;
+    wasRecv = std.posix.recv(socket, buf, 0) catch |e| {
+        switch (e) {
+            std.posix.RecvFromError.WouldBlock => {
+                return null;
+            },
+            std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
+            else => return AmpeError.CommunicatioinFailure,
+        }
+    };
+
+    if (DBG) {
+        if ((buf.len == message.BinaryHeader.BHSIZE) and (wasRecv == message.BinaryHeader.BHSIZE)) {
+            log.debug("recv header from fd {x} {x}", .{ socket, buf });
+        }
+    }
+    return wasRecv;
+}
+
+pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
+    var wasSend: usize = 0;
+    wasSend = std.posix.send(socket, buf, 0) catch |e| {
+        switch (e) {
+            std.posix.SendError.WouldBlock => {
+                return null;
+            },
+            std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
+            else => return AmpeError.CommunicatioinFailure,
+        }
+    };
+
+    if (wasSend == 0) {
+        return null;
+    }
+
+    if (DBG) {
+        if ((buf.len == message.BinaryHeader.BHSIZE) and (wasSend == message.BinaryHeader.BHSIZE)) {
+            log.debug("send header to fd {x} addr {*} {x}", .{ socket, buf, buf });
+        }
+    }
+    return wasSend;
+}
+
+//
+// https://github.com/tardy-org/tardy/blob/main/src/cross/socket.zig#L39
+//
+fn disable_nagle(socket: std.posix.socket_t) !void {
+    if (comptime os.isBSD()) {
+        // system.TCP is weird on MacOS.
+        try std.posix.setsockopt(
+            socket,
+            std.posix.IPPROTO.TCP,
+            1,
+            &std.mem.toBytes(@as(c_int, 1)),
+        );
+    } else {
+        try std.posix.setsockopt(
+            socket,
+            std.posix.IPPROTO.TCP,
+            std.posix.TCP.NODELAY,
+            &std.mem.toBytes(@as(c_int, 1)),
+        );
+    }
+}
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
@@ -876,6 +1089,7 @@ const UDSClientConfigurator = configurator.UDSClientConfigurator;
 const WrongConfigurator = configurator.WrongConfigurator;
 
 const engine = @import("../engine.zig");
+const DBG = engine.DBG;
 const Options = engine.Options;
 const Sr = engine.Sr;
 const AllocationStrategy = engine.AllocationStrategy;
@@ -902,9 +1116,13 @@ pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 const nats = @import("nats");
 
 const std = @import("std");
+const assert = std.debug.assert;
 const posix = std.posix;
 const mem = std.mem;
 const builtin = @import("builtin");
+const os = builtin.os.tag;
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;
+
+const log = std.log;

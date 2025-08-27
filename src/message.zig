@@ -57,10 +57,12 @@ pub const BinaryHeader = packed struct {
     pub const BHSIZE = @sizeOf(BinaryHeader); // Should be 16 bytes
 
     pub fn clean(bh: *BinaryHeader) void {
-        bh = .{};
+        bh.* = .{};
     }
 
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
+        self.dump();
+
         if (is_be) {
             // On BE platform, copy directly from self to buf
             const src_be: *[BHSIZE]u8 = @ptrCast(self);
@@ -78,9 +80,17 @@ pub const BinaryHeader = packed struct {
             const src_le: *[BHSIZE]u8 = @ptrCast(&be_header);
             @memcpy(buf, src_le);
         }
+        if (DBG) {
+            log.debug("send addr {*} {x}", .{ buf, buf });
+        }
+        return;
     }
 
     pub fn fromBytes(self: *BinaryHeader, bytes: *const [BHSIZE]u8) void {
+        if (DBG) {
+            log.debug("recv {x}", .{bytes});
+        }
+
         const dest: *[BHSIZE]u8 = @ptrCast(self);
         @memcpy(dest, bytes);
 
@@ -91,6 +101,22 @@ pub const BinaryHeader = packed struct {
             self.text_headers_len = std.mem.bigToNative(u16, self.text_headers_len);
             self.body_len = std.mem.bigToNative(u16, self.body_len);
         }
+
+        self.dump();
+
+        return;
+    }
+
+    pub inline fn dump(self: *BinaryHeader) void {
+        if (!DBG) {
+            return;
+        }
+
+        const tn = std.enums.tagName(MessageType, self.*.proto.mtype).?;
+
+        log.debug("{s} chn {d} mid {d} thl {d} bl  {d}", .{ tn, self.channel_number, self.message_id, self.text_headers_len, self.body_len });
+
+        return;
     }
 };
 
@@ -270,8 +296,31 @@ pub const Message = struct {
         var msg = try allocator.create(Message);
         msg.* = .{};
         msg.bhdr = .{};
-        try msg.thdrs.init(allocator, tlen);
+
         try msg.body.init(allocator, blen, null);
+        try msg.thdrs.init(allocator, tlen);
+
+        return msg;
+    }
+
+    pub fn clone(self: *Message) !*Message {
+        const alc = self.body.allocator;
+        var msg = try alc.create(Message);
+        errdefer msg.destroy(); //???
+
+        msg.* = .{};
+        msg.bhdr = self.bhdr;
+
+        try msg.body.init(alc, @max(self.body.buffer.?.len, blen), null);
+        if (self.body.body()) |src| {
+            try msg.body.copy(src);
+        }
+
+        try msg.thdrs.init(alc, @intCast(@max(self.thdrs.buffer.buffer.?.len, tlen)));
+        if (self.thdrs.buffer.body()) |src| {
+            try msg.thdrs.buffer.copy(src);
+        }
+
         return msg;
     }
 
@@ -517,6 +566,15 @@ pub const MessageQueue = struct {
         }
     }
 
+    pub fn count(fifo: *Self) usize {
+        var ret: usize = 0;
+        var next = fifo.first;
+        while (next != null) : (ret += 1) {
+            next = next.?.next;
+        }
+        return ret;
+    }
+
     pub fn move(src: *MessageQueue, dest: *MessageQueue) void {
         var next = src.dequeue();
         while (next != null) {
@@ -544,3 +602,6 @@ const is_be = builtin.target.cpu.arch.endian() == .big;
 const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;
 const AtomicRmwOp = std.builtin.AtomicRmwOp;
+
+const log = std.log;
+const DBG = @import("engine.zig").DBG;

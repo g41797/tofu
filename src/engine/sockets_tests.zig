@@ -87,7 +87,7 @@ fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
     };
     errdefer tskt.deinit();
 
-    const trgrs = tskt.triggers();
+    const trgrs = try tskt.triggers();
 
     try testing.expect(trgrs.accept == .on);
 
@@ -104,12 +104,14 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 
     var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
 
+    var clSkt: sockets.IoSkt = .{};
+    try clSkt.initClientSide(pool, hello, &sc);
     var tskt: sockets.TriggeredSkt = .{
-        .io = try sockets.IoSkt.initClientSide(pool, hello, &sc),
+        .io = clSkt,
     };
     errdefer tskt.deinit();
 
-    const trgrs = tskt.triggers();
+    const trgrs = try tskt.triggers();
 
     const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
 
@@ -125,6 +127,8 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 }
 
 test "exchanger exchange" {
+    std.testing.log_level = .debug;
+
     const srvcnf: Configurator = .{
         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
     };
@@ -154,15 +158,19 @@ pub const Exchanger = struct {
     srvcnf: Configurator = undefined,
     clcnf: Configurator = undefined,
 
-    lstCN: CN = 1,
-    srvCN: CN = 2,
-    clCN: CN = 3,
-
-    sendMsg: ?*Message = null,
-    recvMsg: ?*Message = null,
+    lstCN: CN = 10,
+    srvCN: CN = 20,
+    clCN: CN = 30,
 
     tcm: ?TCM = null,
     plr: ?Poller = null,
+
+    sender: ?*TC = null,
+    receiver: ?*TC = null,
+
+    forSend: MessageQueue = .{},
+    forRecv: MessageQueue = .{},
+    forCmpr: MessageQueue = .{},
 
     pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator) !Exchanger {
         var ret: Exchanger = .{
@@ -217,6 +225,8 @@ pub const Exchanger = struct {
                 .ctx = null,
             },
         };
+        // Workaround, in production hello contains chn
+        cl.tskt.io.cn = cl.acn.chn;
         errdefer cl.tskt.deinit();
 
         try exc.tcm.?.put(exc.clCN, cl);
@@ -247,7 +257,7 @@ pub const Exchanger = struct {
 
                 if (srvsktptr != null) {
                     const srvio: sockets.TriggeredSkt = .{
-                        .io = try sockets.IoSkt.initServerSide(&exc.pool, srvsktptr.?),
+                        .io = try sockets.IoSkt.initServerSide(&exc.pool, exc.srvCN, srvsktptr.?),
                     };
 
                     var srv: TC = .{
@@ -289,47 +299,179 @@ pub const Exchanger = struct {
     pub fn exchange(exc: *Exchanger) !void {
         exc.removeTC(exc.lstCN); // poll only io sockets
 
-        try exc.exchangeHeaders(1);
+        exc.sender = exc.getTC(exc.clCN).?;
+        exc.receiver = exc.getTC(exc.srvCN).?;
+
+        // exc.sender = exc.getTC(exc.srvCN).?; //Opposite direction
+        // exc.receiver = exc.getTC(exc.clCN).?;
+
+        const sdf: Socket = exc.sender.?.tskt.getSocket();
+        const rdf: Socket = exc.receiver.?.tskt.getSocket();
+
+        log.debug("sender fd {x} receiver fd {x} ", .{ sdf, rdf });
+
+        assert(sdf != rdf);
+
+        // try exc.sender.?.tskt.io.skt.disableNagle();
+        // try exc.receiver.?.tskt.io.skt.disableNagle();
+
+        try exc.exchangeMsgs(11);
         return;
     }
 
-    pub fn exchangeHeaders(exc: *Exchanger, count: usize) !void {
-        const sender = exc.getTC(exc.srvCN).?; //Opposite direction
-        const receiver = exc.getTC(exc.clCN).?;
+    pub fn exchangeMsgs(exc: *Exchanger, count: usize) !void {
+        exc.clearPool();
+        exc.clearQs();
 
-        errdefer exc.pool.freeAll();
+        const body: []u8 = try exc.allocator.alloc(u8, 10000);
+        defer exc.allocator.free(body);
 
         for (0..count) |i| {
             var smsg = try Message.create(exc.allocator);
-            errdefer smsg.destroy();
+
             smsg.bhdr.channel_number = exc.srvCN;
             smsg.bhdr.message_id = i + 1;
             smsg.bhdr.proto.mode = .signal;
             smsg.bhdr.proto.more = .last;
             smsg.bhdr.proto.mtype = .application;
             smsg.bhdr.proto.origin = .application;
-            try sender.tskt.addToSend(smsg);
+            try smsg.body.copy(body);
+
+            exc.forSend.enqueue(smsg);
+            exc.forCmpr.enqueue(try smsg.clone());
             exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver
+            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver
+            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver                                                             //
         }
 
-        try exc.sendRecv(sender, receiver, count);
+        const scount = exc.forSend.count();
+
+        assert(scount == count);
+
+        if (scount == 0) {
+            return;
+        }
+
+        for (0..scount) |_| {
+            try exc.sender.?.tskt.addToSend(exc.forSend.dequeue().?);
+        }
+        assert(exc.sender.?.tskt.io.sendQ.count() == scount);
+
+        try exc.sendRecvNonPoll(count);
+
+        // try exc.sendRecvPoll(count, true);
     }
 
-    pub fn sendRecv(exc: *Exchanger, sndr: *TC, rcvr: *TC, count: usize) !void {
-        _ = exc;
-        _ = sndr;
-        _ = rcvr;
+    pub fn sendRecvNonPoll(
+        exc: *Exchanger,
+        count: usize,
+    ) !void {
+        if (count == 0) {
+            return;
+        }
 
-        // var it = Distributor.Iterator.init(&exc.tcm.?);
-        // var trgrs: sockets.Triggers = .{};
+        var loop: usize = 0;
 
-        const wasSend: usize = 0;
-        const wasRecv: usize = 0;
+        while (loop < 40) : (loop += 1) { //
+            var wasSend = try exc.sender.?.tskt.trySend();
+            log.debug("[{d}] was send  {d}", .{ loop, wasSend.count() });
+            for (0..wasSend.count()) |_| {
+                exc.pool.put(wasSend.dequeue().?);
+            }
 
-        for (0..100) |_| {
-            if ((wasSend != count) and (wasRecv != count)) {
+            var wasRecv = try exc.receiver.?.tskt.tryRecv();
+
+            wasRecv.move(&exc.forRecv);
+            log.debug("[{d}] was recv {d}", .{ loop, exc.forRecv.count() });
+
+            const rc = exc.forRecv.count();
+            if (rc == (count + 1)) {
                 break;
             }
+        }
+
+        try testing.expect(exc.forRecv.count() == (count + 1));
+
+        return;
+    }
+
+    pub fn sendRecvPoll(exc: *Exchanger, count: usize, forceIO: bool) !void {
+        if (count == 0) {
+            return;
+        }
+
+        var it = Distributor.Iterator.init(&exc.tcm.?);
+
+        var waits: usize = 0;
+
+        while (exc.forRecv.count() != count) : (waits += 1) {
+            var trgrs: sockets.Triggers = .{
+                // .send = .on,
+                // .recv = .on,
+            };
+
+            if (!forceIO) {
+                trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+
+                if (DBG) {
+                    const utrgrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
+                    _ = utrgrs;
+                }
+            }
+
+            try testing.expect(trgrs.err != .on);
+            try testing.expect(waits < 10);
+
+            if (trgrs.timeout == .on) {
+                continue;
+            }
+
+            it.reset();
+
+            var tcopt = it.next();
+
+            while (tcopt != null) {
+                const tc = tcopt.?;
+                if (forceIO) {
+                    if (exc.sender.?.acn.chn == tc.acn.chn) {
+                        tc.act = .{
+                            .send = .on,
+                        };
+                    } else {
+                        tc.act = .{
+                            .recv = .on,
+                        };
+                    }
+                }
+                try exc.processPolledIO(tc);
+                tcopt = it.next();
+            }
+        }
+
+        return;
+    }
+
+    fn processPolledIO(exc: *Exchanger, tc: *TC) !void {
+        if (tc.act.off()) {
+            return;
+        }
+
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // In the production code check also .pool
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        if (tc.act.send == .on) {
+            log.debug("tst {d} fd {x} send allowed", .{ tc.acn.chn, tc.tskt.getSocket() });
+            var wasSend = try exc.sender.?.tskt.trySend();
+            for (0..wasSend.count()) |_| {
+                exc.pool.put(wasSend.dequeue().?);
+            }
+        }
+
+        if (tc.act.recv == .on) {
+            log.debug("tst {d} fd {x} recv allowed", .{ tc.acn.chn, tc.tskt.getSocket() });
+            var wasRecv = try exc.sender.?.tskt.tryRecv();
+            wasRecv.move(&exc.forRecv);
         }
 
         return;
@@ -363,13 +505,21 @@ pub const Exchanger = struct {
         _ = exc.tcm.?.orderedRemove(tcn);
     }
 
+    pub fn clearQs(exc: *Exchanger) void {
+        exc.forCmpr.clear();
+        exc.forRecv.clear();
+        exc.forSend.clear();
+    }
+
+    pub fn clearPool(exc: *Exchanger) void {
+        exc.pool.freeAll();
+    }
+
     pub fn deinit(exc: *Exchanger) void {
         exc.closeChannels();
 
-        if (exc.recvMsg) |m| {
-            m.destroy();
-            exc.recvMsg = null;
-        }
+        exc.clearQs();
+
         if (exc.tcm != null) {
             exc.tcm.?.deinit();
             exc.tcm = null;
@@ -435,12 +585,20 @@ const ActiveChannels = channels.ActiveChannels;
 
 pub const Appendable = @import("nats").Appendable;
 
+const DBG = @import("../engine.zig").DBG;
+
 const std = @import("std");
 const testing = std.testing;
+const assert = std.debug.assert;
 const posix = std.posix;
 const mem = std.mem;
 const builtin = @import("builtin");
+const os = builtin.os.tag;
 const Allocator = std.mem.Allocator;
 const gpa = std.testing.allocator;
 const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;
+
+const log = std.log;
+
+// 2DO - clean obsolete log.debug
