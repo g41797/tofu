@@ -213,7 +213,7 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
 
         skt.address = addr;
 
-        log.debug("ACCEPTED SERVER SOCKET FD {x}", .{skt.socket});
+        log.debug("LISTEN FD {x} CLIENT FD {x}", .{ askt.socket, skt.socket });
 
         return skt;
     }
@@ -231,6 +231,10 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
             },
             else => return AmpeError.PeerDisconnected,
         };
+
+        if (connected) {
+            log.debug("CONNECTED FD {x}", .{skt.socket});
+        }
         return connected;
     }
 
@@ -427,7 +431,6 @@ pub const AcceptSkt = struct {
     skt: Skt = undefined,
 
     pub fn init(wlcm: *Message, sc: *SocketCreator) AmpeError!AcceptSkt {
-        log.debug("AcceptSkt init", .{});
         return .{
             .skt = try sc.fromMessage(wlcm),
         };
@@ -688,8 +691,6 @@ pub const MsgSender = struct {
     }
 
     pub fn set(ms: *MsgSender, cn: message.ChannelNumber, socket: Socket) !void {
-        ms.lmh("set");
-
         if (ms.ready) {
             return AmpeError.NotAllowed;
         }
@@ -699,14 +700,10 @@ pub const MsgSender = struct {
     }
 
     pub inline fn isReady(ms: *MsgSender) bool {
-        ms.lmh("isReady");
-
         return ms.ready;
     }
 
     pub fn deinit(ms: *MsgSender) void {
-        ms.lmh("deinit");
-
         if (ms.msg) |m| {
             m.destroy();
         }
@@ -716,8 +713,6 @@ pub const MsgSender = struct {
     }
 
     pub fn attach(ms: *MsgSender, msg: *Message) !void {
-        ms.lmh("attach");
-
         if (!ms.ready) {
             return AmpeError.NotAllowed;
         }
@@ -733,8 +728,6 @@ pub const MsgSender = struct {
     }
 
     inline fn prepare(ms: *MsgSender) void {
-        ms.lmh("prepare");
-
         const hlen = ms.msg.?.actual_headers_len();
         const blen = ms.msg.?.actual_body_len();
 
@@ -751,10 +744,6 @@ pub const MsgSender = struct {
         ms.iov[0] = .{ .base = &ms.bh, .len = ms.bh.len };
         ms.sndlen = ms.bh.len;
 
-        if (DBG) {
-            log.debug("before send addr {*} {x}", .{ &ms.bh, ms.bh });
-        }
-
         if (hlen == 0) {
             ms.iov[1] = .{ .base = @ptrCast(""), .len = 0 };
         } else {
@@ -769,20 +758,15 @@ pub const MsgSender = struct {
             ms.sndlen += blen;
         }
 
-        ms.lmh("prepare ret");
         ms.iovPrepared = true;
         return;
     }
 
     pub inline fn started(ms: *MsgSender) bool {
-        ms.lmh("started");
-
         return (ms.msg != null);
     }
 
     pub fn detach(ms: *MsgSender) ?*Message {
-        ms.lmh("detach");
-
         const ret = ms.msg;
         ms.msg = null;
         ms.sndlen = 0;
@@ -791,8 +775,6 @@ pub const MsgSender = struct {
     }
 
     pub fn send(ms: *MsgSender) AmpeError!?*Message {
-        ms.lmh("send");
-
         if (!ms.ready) {
             return AmpeError.NotAllowed;
         }
@@ -805,9 +787,7 @@ pub const MsgSender = struct {
         }
 
         while (ms.vind < 3) : (ms.vind += 1) {
-            ms.lmh("send 1");
             while (ms.iov[ms.vind].len > 0) {
-                ms.lmh("send 2");
                 const wasSend = try sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]);
                 if (wasSend == null) {
                     return null;
@@ -817,7 +797,6 @@ pub const MsgSender = struct {
                 ms.sndlen -= wasSend.?;
 
                 if (ms.sndlen > 0) {
-                    ms.lmh("send 3");
                     continue;
                 }
 
@@ -827,13 +806,6 @@ pub const MsgSender = struct {
             }
         }
         return AmpeError.NotAllowed; // to  prevent bug
-    }
-
-    pub inline fn lmh(ms: *MsgSender, txt: []const u8) void {
-        if (DBG) {
-            log.debug("<{*}>  [{s}] addr {*} values {x}", .{ ms, txt, &ms.bh, ms.bh });
-        }
-        return;
     }
 };
 
@@ -1008,11 +980,6 @@ pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
         }
     };
 
-    if (DBG) {
-        if ((buf.len == message.BinaryHeader.BHSIZE) and (wasRecv == message.BinaryHeader.BHSIZE)) {
-            log.debug("recv header from fd {x} {x}", .{ socket, buf });
-        }
-    }
     return wasRecv;
 }
 
@@ -1032,11 +999,6 @@ pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
         return null;
     }
 
-    if (DBG) {
-        if ((buf.len == message.BinaryHeader.BHSIZE) and (wasSend == message.BinaryHeader.BHSIZE)) {
-            log.debug("send header to fd {x} addr {*} {x}", .{ socket, buf, buf });
-        }
-    }
     return wasSend;
 }
 

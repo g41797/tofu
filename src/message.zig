@@ -61,7 +61,7 @@ pub const BinaryHeader = packed struct {
     }
 
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
-        self.dump();
+        self.dump("send");
 
         if (is_be) {
             // On BE platform, copy directly from self to buf
@@ -80,17 +80,10 @@ pub const BinaryHeader = packed struct {
             const src_le: *[BHSIZE]u8 = @ptrCast(&be_header);
             @memcpy(buf, src_le);
         }
-        if (DBG) {
-            log.debug("send addr {*} {x}", .{ buf, buf });
-        }
         return;
     }
 
     pub fn fromBytes(self: *BinaryHeader, bytes: *const [BHSIZE]u8) void {
-        if (DBG) {
-            log.debug("recv {x}", .{bytes});
-        }
-
         const dest: *[BHSIZE]u8 = @ptrCast(self);
         @memcpy(dest, bytes);
 
@@ -102,19 +95,19 @@ pub const BinaryHeader = packed struct {
             self.body_len = std.mem.bigToNative(u16, self.body_len);
         }
 
-        self.dump();
+        self.dump("recv");
 
         return;
     }
 
-    pub inline fn dump(self: *BinaryHeader) void {
+    pub inline fn dump(self: *BinaryHeader, txt: []const u8) void {
         if (!DBG) {
             return;
         }
 
         const tn = std.enums.tagName(MessageType, self.*.proto.mtype).?;
 
-        log.debug("{s} chn {d} mid {d} thl {d} bl  {d}", .{ tn, self.channel_number, self.message_id, self.text_headers_len, self.body_len });
+        log.debug("{s} {s} chn {d} mid {d} thl {d} bl  {d}", .{ txt, tn, self.channel_number, self.message_id, self.text_headers_len, self.body_len });
 
         return;
     }

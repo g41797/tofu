@@ -374,7 +374,6 @@ pub const Exchanger = struct {
 
         while (loop < 40) : (loop += 1) { //
             var wasSend = try exc.sender.?.tskt.trySend();
-            log.debug("[{d}] was send  {d}", .{ loop, wasSend.count() });
             for (0..wasSend.count()) |_| {
                 exc.pool.put(wasSend.dequeue().?);
             }
@@ -382,7 +381,6 @@ pub const Exchanger = struct {
             var wasRecv = try exc.receiver.?.tskt.tryRecv();
 
             wasRecv.move(&exc.forRecv);
-            log.debug("[{d}] was recv {d}", .{ loop, exc.forRecv.count() });
 
             const rc = exc.forRecv.count();
             if (rc == (count + 1)) {
@@ -405,10 +403,7 @@ pub const Exchanger = struct {
         var waits: usize = 0;
 
         while (exc.forRecv.count() != count) : (waits += 1) {
-            var trgrs: sockets.Triggers = .{
-                // .send = .on,
-                // .recv = .on,
-            };
+            var trgrs: sockets.Triggers = .{};
 
             if (!forceIO) {
                 trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
