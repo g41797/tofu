@@ -221,6 +221,10 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     }
 
     pub fn connect(skt: *Skt) AmpeError!bool {
+        if (isAlreadyConnected(skt.socket)) {
+            return true;
+        }
+
         var connected = true;
 
         log.debug("TRY CONNECT FD {x}", .{skt.socket});
@@ -1020,6 +1024,52 @@ pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
     }
 
     return wasSend;
+}
+
+fn isAlreadyConnected(socket: std.posix.socket_t) bool {
+    _getsockoptError(socket) catch |err| {
+        if (err == error.AlreadyConnected) {
+            log.debug("ALREADY CONNECTED FD {x}", .{socket});
+            return true;
+        }
+    };
+    return false;
+}
+
+fn _getsockoptError(sockfd: std.posix.socket_t) posix.ConnectError!void {
+    var err_code: i32 = undefined;
+    var size: u32 = @sizeOf(u32);
+    const rc = std.posix.system.getsockopt(sockfd, posix.SOL.SOCKET, posix.SO.ERROR, @ptrCast(&err_code), &size);
+    assert(size == 4);
+    switch (posix.errno(rc)) {
+        .SUCCESS => switch (@as(posix.system.E, @enumFromInt(err_code))) {
+            .SUCCESS => return,
+            .ACCES => return error.PermissionDenied,
+            .PERM => return error.PermissionDenied,
+            .ADDRINUSE => return error.AddressInUse,
+            .ADDRNOTAVAIL => return error.AddressNotAvailable,
+            .AFNOSUPPORT => return error.AddressFamilyNotSupported,
+            .AGAIN => return error.SystemResources,
+            .ALREADY => return error.ConnectionPending,
+            .BADF => unreachable, // sockfd is not a valid open file descriptor.
+            .CONNREFUSED => return error.ConnectionRefused,
+            .FAULT => unreachable, // The socket structure address is outside the user's address space.
+            .ISCONN => unreachable, // The socket is already connected.
+            .HOSTUNREACH => return error.NetworkUnreachable,
+            .NETUNREACH => return error.NetworkUnreachable,
+            .NOTSOCK => unreachable, // The file descriptor sockfd does not refer to a socket.
+            .PROTOTYPE => unreachable, // The socket type does not support the requested communications protocol.
+            .TIMEDOUT => return error.ConnectionTimedOut,
+            .CONNRESET => return error.ConnectionResetByPeer,
+            else => |err| return posix.unexpectedErrno(err),
+        },
+        .BADF => unreachable, // The argument sockfd is not a valid file descriptor.
+        .FAULT => unreachable, // The address pointed to by optval or optlen is not in a valid part of the process address space.
+        .INVAL => unreachable,
+        .NOPROTOOPT => unreachable, // The option is unknown at the level indicated.
+        .NOTSOCK => unreachable, // The file descriptor sockfd does not refer to a socket.
+        else => |err| return posix.unexpectedErrno(err),
+    }
 }
 
 //
