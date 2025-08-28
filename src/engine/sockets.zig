@@ -184,6 +184,8 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     }
 
     pub fn accept(askt: *Skt) AmpeError!?Skt {
+        log.debug("TRY LISTEN FD {x}", .{askt.socket});
+
         var skt: Skt = .{};
 
         var addr: std.net.Address = undefined;
@@ -220,6 +222,8 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
 
     pub fn connect(skt: *Skt) AmpeError!bool {
         var connected = true;
+
+        log.debug("TRY CONNECT FD {x}", .{skt.socket});
 
         std.posix.connect(
             skt.socket,
@@ -466,6 +470,7 @@ pub const IoSkt = struct {
     cn: message.ChannelNumber = undefined,
     skt: Skt = undefined,
     connected: bool = undefined,
+    connectInitiated: bool = undefined,
     sendQ: MessageQueue = undefined,
     currSend: MsgSender = undefined,
     currRecv: MsgReceiver = undefined,
@@ -480,6 +485,7 @@ pub const IoSkt = struct {
             .cn = cn,
             .skt = sskt,
             .connected = true,
+            .connectInitiated = true,
             .sendQ = .{},
             .currSend = MsgSender.init(),
             .currRecv = MsgReceiver.init(pool),
@@ -500,6 +506,7 @@ pub const IoSkt = struct {
         ios.cn = hello.bhdr.channel_number;
         ios.skt = try sc.fromMessage(hello);
         ios.connected = false;
+        ios.connectInitiated = false;
         ios.sendQ = .{};
         ios.currSend = MsgSender.init();
         ios.currRecv = MsgReceiver.init(pool);
@@ -509,23 +516,36 @@ pub const IoSkt = struct {
 
         ios.addToSend(hello) catch unreachable;
 
-        ios.connected = try ios.skt.connect();
-
-        if (ios.connected) {
-            ios.postConnect();
-            var sq = try ios.trySend();
-            ios.alreadySend = sq.dequeue();
-        }
+        // ios.connected = try ios.skt.connect();
+        //
+        // if (ios.connected) {
+        //     ios.postConnect();
+        //     var sq = try ios.trySend();
+        //     ios.alreadySend = sq.dequeue();
+        // }
 
         return;
     }
 
     pub fn triggers(ioskt: *IoSkt) !Triggers {
-        if (!ioskt.connected) {
-            return .{
-                .connect = .on,
-            };
+        if (ioskt.side == .client) { // Initial state of client ioskt - not-connected
+
+            if (!ioskt.connectInitiated) {
+                ioskt.connected = try ioskt.skt.connect();
+                ioskt.connectInitiated = true;
+            }
+
+            if (!ioskt.connected) {
+                return .{
+                    .connect = .on,
+                };
+            }
+
+            ioskt.postConnect();
+            var sq = try ioskt.trySend();
+            ioskt.alreadySend = sq.dequeue();
         }
+
         var ret: Triggers = .{};
         if (!ioskt.sendQ.empty() or ioskt.currSend.started()) {
             ret.send = .on;
