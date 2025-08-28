@@ -21,6 +21,7 @@ jobs:
           version:   0.14.1
           use-cache: false
 
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+
       - run: zig build test -freference-trace --summary all
 
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
