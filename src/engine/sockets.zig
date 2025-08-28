@@ -1123,11 +1123,11 @@ const Socket = std.posix.socket_t;
 
 const log = std.log;
 
+////////////////// FROM std.posix /////////////////////////////
 const native_os = builtin.os.tag;
 const linux = std.os.linux;
 const windows = std.os.windows;
 
-////////////////// FROM std.posix /////////////////////////////
 /// Initiate a connection on a socket.
 /// If `sockfd` is opened in non blocking mode, the function will
 /// return error.WouldBlock when EAGAIN or EINPROGRESS is received.
