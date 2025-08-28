@@ -1026,14 +1026,29 @@ pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
     return wasSend;
 }
 
-fn isAlreadyConnected(socket: std.posix.socket_t) bool {
-    _getsockoptError(socket) catch |err| {
-        if (err == error.AlreadyConnected) {
-            log.debug("ALREADY CONNECTED FD {x}", .{socket});
-            return true;
-        }
+pub fn knock(socket: std.posix.socket_t) bool {
+    log.debug("knock-knock", .{});
+
+    const slice: [1]u8 = .{0};
+
+    _ = sendBuf(socket, slice[0..0]) catch |err| {
+        log.debug("knock error {s}", .{@errorName(err)});
+        return false;
     };
-    return false;
+
+    return true;
+}
+
+fn isAlreadyConnected(socket: std.posix.socket_t) bool {
+    return knock(socket);
+    //
+    // _getsockoptError(socket) catch |err| {
+    //     if (err == error.AlreadyConnected) {
+    //         log.debug("ALREADY CONNECTED FD {x}", .{socket});
+    //         return true;
+    //     }
+    // };
+    // return false;
 }
 
 //
