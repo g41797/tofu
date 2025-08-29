@@ -193,7 +193,7 @@ pub const WrongConfigurator = struct {
     }
 };
 
-/// Union representing different types of configurators (TCP/UDS, client/server, or invalid).
+/// Tagged union representing different types of configurators.
 pub const Configurator = union(enum) {
     tcp_server: TCPServerConfigurator,
     tcp_client: TCPClientConfigurator,
