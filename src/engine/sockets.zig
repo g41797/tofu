@@ -1112,7 +1112,7 @@ const WrongConfigurator = configurator.WrongConfigurator;
 const engine = @import("../engine.zig");
 const DBG = engine.DBG;
 const Options = engine.Options;
-const Sr = engine.Sr;
+const Fdmp = engine.Fdmp;
 const AllocationStrategy = engine.AllocationStrategy;
 
 const status = @import("../status.zig");
@@ -1147,104 +1147,3 @@ const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;
 
 const log = std.log;
-
-////////////////// FROM std.posix /////////////////////////////
-const native_os = builtin.os.tag;
-const linux = std.os.linux;
-const windows = std.os.windows;
-
-/// Initiate a connection on a socket.
-/// If `sockfd` is opened in non blocking mode, the function will
-/// return error.WouldBlock when EAGAIN or EINPROGRESS is received.
-fn _connect(sock: std.posix.socket_t, sock_addr: *const std.net.Address, len: std.posix.system.socklen_t) posix.ConnectError!void {
-    if (native_os == .windows) {
-        const rc = windows.ws2_32.connect(sock, sock_addr, @intCast(len));
-        if (rc == 0) return;
-        switch (windows.ws2_32.WSAGetLastError()) {
-            .WSAEADDRINUSE => return error.AddressInUse,
-            .WSAEADDRNOTAVAIL => return error.AddressNotAvailable,
-            .WSAECONNREFUSED => return error.ConnectionRefused,
-            .WSAECONNRESET => return error.ConnectionResetByPeer,
-            .WSAETIMEDOUT => return error.ConnectionTimedOut,
-            .WSAEHOSTUNREACH, // 2DO: should we return NetworkUnreachable in this case as well?
-            .WSAENETUNREACH,
-            => return error.NetworkUnreachable,
-            .WSAEFAULT => unreachable,
-            .WSAEINVAL => unreachable,
-            .WSAEISCONN => unreachable,
-            .WSAENOTSOCK => unreachable,
-            .WSAEWOULDBLOCK => return error.WouldBlock,
-            .WSAEACCES => unreachable,
-            .WSAENOBUFS => return error.SystemResources,
-            .WSAEAFNOSUPPORT => return error.AddressFamilyNotSupported,
-            else => |err| return windows.unexpectedWSAError(err),
-        }
-        return;
-    }
-
-    while (true) {
-        switch (posix.errno(std.posix.system.connect(sock, sock_addr, len))) {
-            .SUCCESS => return,
-            .ACCES => return error.PermissionDenied,
-            .PERM => return error.PermissionDenied,
-            .ADDRINUSE => return error.AddressInUse,
-            .ADDRNOTAVAIL => return error.AddressNotAvailable,
-            .AFNOSUPPORT => return error.AddressFamilyNotSupported,
-            .AGAIN, .INPROGRESS => return error.WouldBlock,
-            .ALREADY => return error.ConnectionPending,
-            .BADF => unreachable, // sockfd is not a valid open file descriptor.
-            .CONNREFUSED => return error.ConnectionRefused,
-            .CONNRESET => return error.ConnectionResetByPeer,
-            .FAULT => unreachable, // The socket structure address is outside the user's address space.
-            .INTR => continue,
-            .ISCONN => return, // The socket is already connected.
-            .HOSTUNREACH => return error.NetworkUnreachable,
-            .NETUNREACH => return error.NetworkUnreachable,
-            .NOTSOCK => unreachable, // The file descriptor sockfd does not refer to a socket.
-            .PROTOTYPE => unreachable, // The socket type does not support the requested communications protocol.
-            .TIMEDOUT => return error.ConnectionTimedOut,
-            .NOENT => return error.FileNotFound, // Returned when socket is AF.UNIX and the given path does not exist.
-            .CONNABORTED => unreachable, // Tried to reuse socket that previously received error.ConnectionRefused.
-            else => |err| return posix.unexpectedErrno(err),
-        }
-    }
-}
-
-fn _getsockoptError(sockfd: std.posix.socket_t) !void {
-    var err_code: i32 = undefined;
-    var size: u32 = @sizeOf(u32);
-    const rc = std.posix.system.getsockopt(sockfd, posix.SOL.SOCKET, posix.SO.ERROR, @ptrCast(&err_code), &size);
-    assert(size == 4);
-    switch (posix.errno(rc)) {
-        .SUCCESS => switch (@as(posix.system.E, @enumFromInt(err_code))) {
-            .SUCCESS => return,
-            .ACCES => return error.PermissionDenied,
-            .PERM => return error.PermissionDenied,
-            .ADDRINUSE => return error.AddressInUse,
-            .ADDRNOTAVAIL => return error.AddressNotAvailable,
-            .AFNOSUPPORT => return error.AddressFamilyNotSupported,
-            .AGAIN => return error.SystemResources,
-            .ALREADY => return error.ConnectionPending,
-            .BADF => unreachable, // sockfd is not a valid open file descriptor.
-            .CONNREFUSED => return error.ConnectionRefused,
-            .FAULT => unreachable, // The socket structure address is outside the user's address space.
-            .ISCONN => {
-                log.debug("ALREADY CONNECTED FD {x}", .{sockfd});
-                return error.AlreadyConnected; // The socket is already connected.
-            },
-            .HOSTUNREACH => return error.NetworkUnreachable,
-            .NETUNREACH => return error.NetworkUnreachable,
-            .NOTSOCK => unreachable, // The file descriptor sockfd does not refer to a socket.
-            .PROTOTYPE => unreachable, // The socket type does not support the requested communications protocol.
-            .TIMEDOUT => return error.ConnectionTimedOut,
-            .CONNRESET => return error.ConnectionResetByPeer,
-            else => |err| return posix.unexpectedErrno(err),
-        },
-        .BADF => unreachable, // The argument sockfd is not a valid file descriptor.
-        .FAULT => unreachable, // The address pointed to by optval or optlen is not in a valid part of the process address space.
-        .INVAL => unreachable,
-        .NOPROTOOPT => unreachable, // The option is unknown at the level indicated.
-        .NOTSOCK => unreachable, // The file descriptor sockfd does not refer to a socket.
-        else => |err| return posix.unexpectedErrno(err),
-    }
-}

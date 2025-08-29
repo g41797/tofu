@@ -170,7 +170,7 @@ pub const ActiveChannels = struct {
             if (mID) |mval| {
                 mid = mval;
             } else {
-                mid = engine.next_mid();
+                mid = message.Message.next_mid();
             }
 
             const ach: ActiveChannel = .{
@@ -305,9 +305,9 @@ pub const ActiveChannels = struct {
     }
 };
 
-pub const engine = @import("../engine.zig");
-pub const ChannelNumber = engine.ChannelNumber;
-pub const MessageID = engine.MessageID;
+pub const message = @import("../message.zig");
+pub const ChannelNumber = message.ChannelNumber;
+pub const MessageID = message.MessageID;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 test "Ampe create/destroy" {
-    var dtr = Distributor.init(std.testing.allocator, .{}) catch unreachable;
-    defer dtr.deinit();
+    var dtr = Distributor.Create(std.testing.allocator, .{}) catch unreachable;
+    defer dtr.Destroy();
 
     const ampe = try dtr.ampe();
 
-    const sr = try ampe.create();
+    const fdmp = try ampe.create();
 
-    try ampe.destroy(sr);
+    try ampe.destroy(fdmp);
 }
 
 const std = @import("std");
@@ -17,7 +17,7 @@ const testing = std.testing;
 
 const engine = @import("engine.zig");
 const Ampe = engine.Ampe;
-const Sr = engine.Sr;
+const Fdmp = engine.Fdmp;
 
 pub const message = @import("message.zig");
 pub const MessageType = message.MessageType;

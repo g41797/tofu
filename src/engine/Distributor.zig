@@ -76,13 +76,20 @@ pub fn alerter(dtr: *Distributor) Notifier.Alerter {
     return result;
 }
 
-pub fn init(gpa: Allocator, options: Options) !Distributor {
+pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
+    const dtr: *Distributor = gpa.create(Distributor) catch {
+        return AmpeError.AllocationFailed;
+    };
+    errdefer gpa.destroy(dtr);
+
     // add here comptime creation based on os
     const plru: poller.Poller = .{
-        .poll = try poller.Poll.init(gpa),
+        .poll = poller.Poll.init(gpa) catch {
+            return AmpeError.AllocationFailed;
+        },
     };
 
-    var dtr: Distributor = .{
+    dtr.* = .{
         .mutex = .{},
         .allocator = gpa,
         .options = options,
@@ -91,26 +98,34 @@ pub fn init(gpa: Allocator, options: Options) !Distributor {
         .plr = plru,
     };
 
-    dtr.acns = try ActiveChannels.init(dtr.allocator, 255);
+    dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
+        return AmpeError.AllocationFailed;
+    };
     errdefer dtr.acns.deinit();
 
-    dtr.ntfr = try Notifier.init(dtr.allocator);
+    dtr.ntfr = Notifier.init(dtr.allocator) catch {
+        return AmpeError.AllocationFailed;
+    };
     errdefer dtr.ntfr.deinit();
 
-    dtr.pool = try Pool.init(dtr.allocator, dtr.alerter());
+    dtr.pool = Pool.init(dtr.allocator, dtr.alerter()) catch {
+        return AmpeError.AllocationFailed;
+    };
     errdefer dtr.pool.close();
 
     var trgrd_map = TriggeredChannelsMap.init(dtr.allocator);
     errdefer trgrd_map.deinit();
-    try trgrd_map.ensureTotalCapacity(256);
+    trgrd_map.ensureTotalCapacity(256) catch {
+        return AmpeError.AllocationFailed;
+    };
 
     dtr.trgrd_map = trgrd_map;
     return dtr;
 }
 
-pub fn deinit(dtr: *Distributor) void {
+pub fn Destroy(dtr: *Distributor) void {
     const gpa = dtr.allocator;
-    _ = gpa;
+    defer gpa.destroy(dtr);
     {
         dtr.mutex.lock();
         defer dtr.mutex.unlock();
@@ -139,33 +154,33 @@ pub fn deinit(dtr: *Distributor) void {
     dtr.* = undefined;
 }
 
-pub fn create(ptr: ?*anyopaque) !*Sr {
+pub fn create(ptr: ?*anyopaque) !*Fdmp {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr._create();
+    return dtr.*._create();
 }
 
-pub fn destroy(ptr: ?*anyopaque, sr: *Sr) !void {
+pub fn destroy(ptr: ?*anyopaque, fdmp: *Fdmp) !void {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr._destroy(sr);
+    return dtr._destroy(fdmp);
 }
 
-inline fn _create(dtr: *Distributor) !*Sr {
+inline fn _create(dtr: *Distributor) !*Fdmp {
     dtr.maxid += 1;
 
-    const srptr = try dtr.allocator.create(Sr);
+    const srptr = try dtr.allocator.create(Fdmp);
     errdefer dtr.allocator.destroy(srptr);
 
-    var srs = try SenderReceiver.create(dtr, dtr.maxid);
+    var srs = try SenderReceiver.Create(dtr, dtr.maxid);
 
-    srptr.* = srs.sr();
+    srptr.* = srs.fdmp();
 
     return srptr;
 }
 
-inline fn _destroy(dtr: *Distributor, sr: *Sr) !void {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(sr.ptr));
-    srs.destroy();
-    dtr.allocator.destroy(sr);
+inline fn _destroy(dtr: *Distributor, fdmp: *Fdmp) !void {
+    const srs: *SenderReceiver = @alignCast(@ptrCast(fdmp.ptr));
+    srs.Destroy();
+    dtr.allocator.destroy(fdmp);
     return;
 }
 
@@ -255,7 +270,7 @@ pub const VC = message.ValidCombination;
 pub const engine = @import("../engine.zig");
 pub const Options = engine.Options;
 pub const Ampe = engine.Ampe;
-pub const Sr = engine.Sr;
+pub const Fdmp = engine.Fdmp;
 
 pub const status = @import("../status.zig");
 pub const AmpeStatus = status.AmpeStatus;

@@ -9,8 +9,9 @@ pub const AllocationStrategy = enum {
     always,
 };
 
-/// Represents a sender-receiver interface for asynchronous message passing.
-pub const Sr = struct {
+/// Represents a full duplex message pipe interface for asynchronous message passing.
+/// Supports asynchronous bi-directional exchange of the messages.
+pub const Fdmp = struct {
     ptr: ?*anyopaque,
     vtable: *const VTable,
 
@@ -39,7 +40,7 @@ pub const Sr = struct {
         /// Also may be received following Signals from engine itself:
         /// - Bye - peer disconnected
         /// - Status 'wait_interrupted' - see interruptWait call
-        /// - Status 'pool_empty' - there are not free messages for receive
+        /// - Status 'pool_empty' - there are not free messages for receive.
         ///   Allocate and 'put' messages to the pool, at least received status.
         ///
         /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
@@ -57,15 +58,15 @@ pub const Sr = struct {
     /// The only error when the pool can still be used is `error.EmptyPool`.
     ///
     /// Thread-safe.
-    pub fn get(sr: Sr, strategy: AllocationStrategy) anyerror!*Message {
-        return sr.vtable.get(sr.ptr, strategy);
+    pub fn get(fdmp: Fdmp, strategy: AllocationStrategy) anyerror!*Message {
+        return fdmp.vtable.get(fdmp.ptr, strategy);
     }
 
     /// Returns a message to the internal pool. If the pool is closed, destroys the message.
     ///
     /// Thread-safe.
-    pub fn put(sr: Sr, msg: *Message) void {
-        sr.vtable.put(sr.ptr, msg);
+    pub fn put(fdmp: Fdmp, msg: *Message) void {
+        fdmp.vtable.put(fdmp.ptr, msg);
     }
 
     /// Initiates an asynchronous send of a message to a peer.
@@ -73,8 +74,8 @@ pub const Sr = struct {
     /// Returns an error if the message is invalid.
     ///
     /// Thread-safe.
-    pub fn asyncSend(sr: Sr, msg: *Message) anyerror!BinaryHeader {
-        return sr.vtable.asyncSend(sr.ptr, msg);
+    pub fn asyncSend(fdmp: Fdmp, msg: *Message) anyerror!BinaryHeader {
+        return fdmp.vtable.asyncSend(fdmp.ptr, msg);
     }
 
     /// Waits for a message on the internal queue.
@@ -83,12 +84,12 @@ pub const Sr = struct {
     /// Also may be received following Signals from engine itself:
     /// - Bye - peer disconnected
     /// - Status 'wait_interrupted' - see interruptWait call
-    /// - Status 'pool_empty' - there are not free messages for receive
+    /// - Status 'pool_empty' - there are not free messages for receive.
     ///  Allocate and 'put' messages to the pool, at least received status.
     ///
     /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
-    pub fn waitReceive(sr: Sr, timeout_ns: u64) anyerror!?*Message {
-        return sr.vtable.waitReceive(sr.ptr, timeout_ns);
+    pub fn waitReceive(fdmp: Fdmp, timeout_ns: u64) anyerror!?*Message {
+        return fdmp.vtable.waitReceive(fdmp.ptr, timeout_ns);
     }
 
     /// Interrupts a `waitReceive` call, causing it to return Status Signal with 'wait_interrupted' status.
@@ -96,8 +97,8 @@ pub const Sr = struct {
     /// No accumulation; only the last interrupt is saved.
     ///
     /// Thread-safe. The idiomatic way is to call this from a thread other than the one calling `waitReceive` to signal attention.
-    pub fn interruptWait(sr: Sr) void {
-        sr.vtable.interruptWait(sr.ptr);
+    pub fn interruptWait(fdmp: Fdmp) void {
+        fdmp.vtable.interruptWait(fdmp.ptr);
     }
 };
 
@@ -107,52 +108,54 @@ pub const Ampe = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        /// Creates a new sender-receiver.
+        /// Creates a new full duplex message pipe.
         /// Call `destroy` on the result to stop communication and free associated memory.
         ///
         /// Thread-safe.
-        create: *const fn (ptr: ?*anyopaque) anyerror!*Sr,
+        create: *const fn (ptr: ?*anyopaque) anyerror!*Fdmp,
 
-        /// Destroys a sender-receiver, stopping communication and freeing associated memory.
+        /// Destroys a full duplex message pipe, stopping communication and freeing associated memory.
         ///
         /// Thread-safe.
-        destroy: *const fn (ptr: ?*anyopaque, sr: *Sr) anyerror!void,
+        destroy: *const fn (ptr: ?*anyopaque, fdmp: *Fdmp) anyerror!void,
     };
 
-    /// Creates a new sender-receiver.
+    /// Creates a new full duplex message pipe.
     /// Call `destroy` on the result to stop communication and free associated memory.
     ///
     /// Thread-safe.
-    pub fn create(ampe: Ampe) anyerror!*Sr {
+    pub fn create(ampe: Ampe) anyerror!*Fdmp {
         return ampe.vtable.create(ampe.ptr);
     }
 
-    /// Destroys a sender-receiver, stopping communication and freeing associated memory.
+    /// Destroys a full duplex message pipe, stopping communication and freeing associated memory.
     ///
     /// Thread-safe.
-    pub fn destroy(ampe: Ampe, sr: *Sr) anyerror!void {
-        return ampe.vtable.destroy(ampe.ptr, sr);
+    pub fn destroy(ampe: Ampe, fdmp: *Fdmp) anyerror!void {
+        return ampe.vtable.destroy(ampe.ptr, fdmp);
     }
 };
 
 pub const Options = struct {
-    // Placeholder
+    // 2DO - add pool options
 };
 
 pub const message = @import("message.zig");
+pub const Message = message.Message;
+
+pub const BinaryHeader = message.BinaryHeader;
+pub const ProtoFields = message.ProtoFields;
 pub const MessageType = message.MessageType;
 pub const MessageMode = message.MessageMode;
 pub const OriginFlag = message.OriginFlag;
 pub const MoreMessagesFlag = message.MoreMessagesFlag;
-pub const ProtoFields = message.ProtoFields;
-pub const BinaryHeader = message.BinaryHeader;
+pub const MessageID = message.MessageID;
+pub const ChannelNumber = message.ChannelNumber;
+
 pub const TextHeader = message.TextHeader;
 pub const TextHeaderIterator = message.TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
-pub const Message = message.Message;
-pub const MessageID = message.MessageID;
-pub const ChannelNumber = message.ChannelNumber;
-pub const next_mid = Message.next_mid;
+
 pub const Appendable = @import("nats").Appendable;
 
 pub const status = @import("status.zig");
@@ -162,9 +165,9 @@ pub const raw_to_status = status.raw_to_status;
 pub const raw_to_error = status.raw_to_error;
 pub const status_to_raw = status.status_to_raw;
 
+pub const Distributor = @import("engine/Distributor.zig");
+
 const std = @import("std");
-const builtin = @import("builtin");
-pub const DBG = (builtin.mode == .Debug);
 const Allocator = std.mem.Allocator;
 
-// 2DO  Add options for Pool
+pub const DBG = (@import("builtin").mode == .Debug);

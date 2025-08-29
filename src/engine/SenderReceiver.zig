@@ -8,8 +8,8 @@ id: u32 = undefined,
 allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
 
-pub fn sr(srs: *SenderReceiver) Sr {
-    const result: Sr = .{
+pub fn fdmp(srs: *SenderReceiver) Fdmp {
+    const result: Fdmp = .{
         .ptr = srs,
         .vtable = &.{
             .get = get,
@@ -22,20 +22,20 @@ pub fn sr(srs: *SenderReceiver) Sr {
     return result;
 }
 
-pub fn create(prnt: *Distributor, id: u32) !*SenderReceiver {
+pub fn Create(prnt: *Distributor, id: u32) !*SenderReceiver {
     const srs = try prnt.allocator.create(SenderReceiver);
     errdefer prnt.allocator.destroy(srs);
     srs.* = SenderReceiver.init(prnt, id);
     return srs;
 }
 
-pub fn destroy(srs: *SenderReceiver) void {
+pub fn Destroy(srs: *SenderReceiver) void {
     const gpa = srs.prnt.allocator;
     srs.deinit();
     gpa.destroy(srs);
 }
 
-pub fn init(prnt: *Distributor, id: u32) SenderReceiver {
+fn init(prnt: *Distributor, id: u32) SenderReceiver {
     const srs: SenderReceiver = .{
         .prnt = prnt,
         .id = id,
@@ -46,7 +46,7 @@ pub fn init(prnt: *Distributor, id: u32) SenderReceiver {
     return srs;
 }
 
-pub fn deinit(srs: *SenderReceiver) void {
+fn deinit(srs: *SenderReceiver) void {
     _ = srs.prnt.acns.removeChannels(srs) catch unreachable;
 
     var allocated = srs.msgs.close();
@@ -131,7 +131,7 @@ pub const Distributor = @import("Distributor.zig");
 
 pub const engine = @import("../engine.zig");
 pub const Options = engine.Options;
-pub const Sr = engine.Sr;
+pub const Fdmp = engine.Fdmp;
 pub const AllocationStrategy = engine.AllocationStrategy;
 
 pub const status = @import("../status.zig");
