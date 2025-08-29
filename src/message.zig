@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+/// Enum representing the type of a message, used to categorize messages for processing.
 pub const MessageType = enum(u3) {
     application = 0,
     welcome = 1,
@@ -12,6 +13,7 @@ pub const MessageType = enum(u3) {
     _reserved7,
 };
 
+/// Enum representing the mode of a message, indicating whether it is a request, response, or signal.
 pub const MessageMode = enum(u2) {
     invalid = 0,
     request = 1,
@@ -19,21 +21,25 @@ pub const MessageMode = enum(u2) {
     signal = 3,
 };
 
+/// Enum indicating the origin of a message, either from the application or the engine.
 pub const OriginFlag = enum(u1) {
     application = 0,
     engine = 1,
 };
 
+/// Enum indicating whether more messages are expected in a sequence.
 pub const MoreMessagesFlag = enum(u1) {
     last = 0,
     more = 1,
 };
 
+/// Enum representing a control bit used by the engine for internal housekeeping.
+/// Opaque to the application and must not be modified.
 pub const ControlBitFlag = enum(u1) {
-    zero = 0, // Used and filled exclusively by the engine for housekeeping. Opaque to the application and must not be modified.
+    zero = 0,
 };
 
-// Nested struct for engine fields, now public
+/// Packed struct containing protocol fields for message metadata.
 pub const ProtoFields = packed struct(u8) {
     mtype: MessageType = .application,
     mode: MessageMode = .invalid,
@@ -42,10 +48,13 @@ pub const ProtoFields = packed struct(u8) {
     cb: ControlBitFlag = .zero,
 };
 
+/// Type alias for channel number, represented as a 16-bit unsigned integer.
 pub const ChannelNumber = u16;
 
+/// Type alias for message ID, represented as a 64-bit unsigned integer.
 pub const MessageID = u64;
 
+/// Packed struct representing the binary header of a message, containing metadata.
 pub const BinaryHeader = packed struct {
     channel_number: ChannelNumber = 0,
     proto: ProtoFields = .{},
@@ -54,12 +63,15 @@ pub const BinaryHeader = packed struct {
     text_headers_len: u16 = 0,
     body_len: u16 = 0,
 
-    pub const BHSIZE = @sizeOf(BinaryHeader); // Should be 16 bytes
+    /// Constant representing the size of the BinaryHeader in bytes (16 bytes).
+    pub const BHSIZE = @sizeOf(BinaryHeader);
 
+    /// Resets the binary header to its default state.
     pub fn clean(bh: *BinaryHeader) void {
         bh.* = .{};
     }
 
+    /// Serializes the binary header to a byte array, handling endianness conversion if needed.
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
         self.dump("send");
 
@@ -83,6 +95,7 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
+    /// Deserializes a byte array into the binary header, handling endianness conversion if needed.
     pub fn fromBytes(self: *BinaryHeader, bytes: *const [BHSIZE]u8) void {
         const dest: *[BHSIZE]u8 = @ptrCast(self);
         @memcpy(dest, bytes);
@@ -100,6 +113,7 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
+    /// Logs debug information about the binary header if debugging is enabled.
     pub inline fn dump(self: *BinaryHeader, txt: []const u8) void {
         if (!DBG) {
             return;
@@ -113,18 +127,18 @@ pub const BinaryHeader = packed struct {
     }
 };
 
-// TextHeader is name-value pair
+/// Structure representing a single text header as a name-value pair.
 pub const TextHeader = struct {
     name: []const u8 = undefined,
     value: []const u8 = undefined,
 };
 
-// Simplified version of Zig' HeaderIterator
-
+/// Iterator for parsing text headers from a byte slice.
 pub const TextHeaderIterator = struct {
     bytes: ?[]const u8 = null,
     index: usize = 0,
 
+    /// Initializes a new TextHeaderIterator with the provided byte slice.
     pub fn init(bytes: ?[]const u8) TextHeaderIterator {
         return .{
             .bytes = bytes,
@@ -132,10 +146,12 @@ pub const TextHeaderIterator = struct {
         };
     }
 
+    /// Resets the iterator to the beginning of the byte slice.
     pub fn rewind(it: *TextHeaderIterator) void {
         it.index = 0;
     }
 
+    /// Returns the next text header from the byte slice, or null if no more headers exist.
     pub fn next(it: *TextHeaderIterator) ?TextHeader {
         if (it.bytes == null) {
             return null;
@@ -194,21 +210,23 @@ pub const TextHeaderIterator = struct {
     }
 };
 
-// Each of TextHeader are saved within TextHeaders buffer as 'name: value\r\n'.
-// Length of Textheader is part of the message header( means it's know to receipient),
-// so additional CRLF at the end of headers are not used.
+/// Structure for managing a collection of text headers, stored in an Appendable buffer.
+/// Headers are stored as "name: value\r\n" without a trailing CRLF.
 pub const TextHeaders = struct {
     buffer: Appendable = .{},
 
+    /// Initializes the TextHeaders structure with an allocator and initial buffer length.
     pub fn init(hdrs: *TextHeaders, allocator: Allocator, len: u16) !void {
         try hdrs.buffer.init(allocator, len, null);
         return;
     }
 
+    /// Deallocates the TextHeaders buffer.
     pub fn deinit(hdrs: *TextHeaders) void {
         hdrs.buffer.deinit();
     }
 
+    /// Safely appends text headers from an iterator, ensuring proper formatting.
     pub fn appendSafe(hdrs: *TextHeaders, it: *TextHeaderIterator) !void {
         var next = it.next();
 
@@ -219,15 +237,18 @@ pub const TextHeaders = struct {
         return;
     }
 
+    /// Appends raw text headers without validation, assuming correct formatting.
     pub fn appendNotSafe(hdrs: *TextHeaders, textheaders: []const u8) !void {
         try hdrs.buffer.append(textheaders);
         return;
     }
 
+    /// Appends a single text header from a TextHeader structure.
     pub fn appendTextHeader(hdrs: *TextHeaders, th: *TextHeader) !void {
         return hdrs.append(th.name, th.value);
     }
 
+    /// Appends a name-value pair as a text header, ensuring proper formatting.
     pub fn append(hdrs: *TextHeaders, name: []const u8, value: []const u8) !void {
         const nam = std.mem.trim(u8, name, " \t\r\n");
         if (nam.len == 0) {
@@ -245,18 +266,21 @@ pub const TextHeaders = struct {
         return;
     }
 
+    /// Resets the TextHeaders buffer to an empty state.
     pub fn reset(hdrs: *TextHeaders) void {
         hdrs.buffer.reset();
         return;
     }
 
+    /// Returns an iterator for the text headers in the buffer.
     pub fn hiter(hdrs: *TextHeaders) TextHeaderIterator {
         const raw = hdrs.buffer.body();
         return TextHeaderIterator.init(raw);
     }
 };
 
-pub const ValidCombination = enum(u4) { // Messages allowed for send by application
+/// Enum representing valid message type and mode combinations allowed for sending by the application.
+pub const ValidCombination = enum(u4) {
     WelcomeRequest,
     WelcomeResponse,
     HelloRequest,
@@ -274,10 +298,10 @@ pub const ValidCombination = enum(u4) { // Messages allowed for send by applicat
     _reserved5,
 };
 
+/// Structure representing a complete message, including binary header, text headers, and body.
 pub const Message = struct {
     prev: ?*Message = null,
     next: ?*Message = null,
-
     bhdr: BinaryHeader = .{},
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
@@ -285,6 +309,7 @@ pub const Message = struct {
     const blen: u16 = 256;
     const tlen: u16 = 64;
 
+    /// Creates a new Message instance with initialized body and text headers.
     pub fn create(allocator: Allocator) !*Message {
         var msg = try allocator.create(Message);
         msg.* = .{};
@@ -296,6 +321,7 @@ pub const Message = struct {
         return msg;
     }
 
+    /// Creates a deep copy of the Message, including its headers and body.
     pub fn clone(self: *Message) !*Message {
         const alc = self.body.allocator;
         var msg = try alc.create(Message);
@@ -317,6 +343,7 @@ pub const Message = struct {
         return msg;
     }
 
+    /// Resets the message to its initial state, clearing headers and body.
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.reset();
@@ -324,6 +351,7 @@ pub const Message = struct {
         return;
     }
 
+    /// Sets the message's binary header, text headers, and body, with validation.
     pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?*TextHeaders, body: ?[]const u8) !void {
         msg.bhdr = bhdr.*;
         msg._reset();
@@ -339,6 +367,7 @@ pub const Message = struct {
         return msg.validate();
     }
 
+    /// Sets the message's binary header, text headers, and body without validation.
     pub fn setNotSafe(msg: *Message, bhdr: *BinaryHeader, thdrs: ?[]const u8, body: ?[]const u8) !void {
         msg.bhdr = bhdr.*;
         msg._reset();
@@ -353,17 +382,20 @@ pub const Message = struct {
         return;
     }
 
+    /// Validates the message, ensuring it conforms to allowed type and mode combinations.
     inline fn validate(msg: *Message) !void {
         _ = try check_and_prepare(msg);
         return;
     }
 
+    /// Internal function to reset text headers and body without touching the binary header.
     fn _reset(msg: *Message) void {
         msg.thdrs.reset();
         msg.body.reset();
         return;
     }
 
+    /// Deallocates the message's text headers and body.
     inline fn deinit(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.deinit();
@@ -371,26 +403,28 @@ pub const Message = struct {
         return;
     }
 
+    /// Destroys the message, deallocating all resources including the message itself.
     pub fn destroy(msg: *Message) void {
-        // The same allocator is used for creation of Message and it's fields
         const allocator = msg.thdrs.buffer.allocator;
         msg.deinit();
         allocator.destroy(msg);
     }
 
+    /// Returns the actual length of the message body.
     pub fn actual_body_len(msg: *Message) usize {
         return actuaLen(&msg.body);
     }
 
+    /// Returns the actual length of the text headers.
     pub fn actual_headers_len(msg: *Message) usize {
         return actuaLen(&msg.thdrs.buffer);
     }
 
-    pub fn check_and_prepare(msg: *Message) !ValidCombination { // For applicatopm messages
-
+    /// Validates the message and updates its binary header fields based on content lengths.
+    pub fn check_and_prepare(msg: *Message) !ValidCombination {
         msg.bhdr.status = status_to_raw(.success);
 
-        const bhdr: BinaryHeader = msg.bhdr; // For debugging
+        const bhdr: BinaryHeader = msg.bhdr;
         const mtype = bhdr.proto.mtype;
         const mode = bhdr.proto.mode;
         const origin = bhdr.proto.origin;
@@ -491,13 +525,16 @@ pub const Message = struct {
         return vc;
     }
 
+    /// Generates the next unique message ID using an atomic counter.
     pub fn next_mid() MessageID {
         return uid.fetchAdd(1, .monotonic);
     }
 };
 
+/// Atomic counter for generating unique message IDs.
 var uid: Atomic(MessageID) = .init(1);
 
+/// Returns the actual length of an Appendable buffer's content.
 pub inline fn actuaLen(apnd: *Appendable) usize {
     if (apnd.body()) |b| {
         return b.len;
@@ -505,12 +542,14 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
+/// Structure for managing a queue of messages in a FIFO order.
 pub const MessageQueue = struct {
     const Self = @This();
 
     first: ?*Message = null,
     last: ?*Message = null,
 
+    /// Adds a message to the end of the queue.
     pub fn enqueue(fifo: *Self, msg: *Message) void {
         msg.prev = null;
         msg.next = null;
@@ -527,6 +566,7 @@ pub const MessageQueue = struct {
         return;
     }
 
+    /// Removes and returns the message at the front of the queue, or null if empty.
     pub fn dequeue(fifo: *Self) ?*Message {
         if (fifo.first == null) {
             return null;
@@ -547,10 +587,12 @@ pub const MessageQueue = struct {
         return result;
     }
 
+    /// Checks if the queue is empty.
     pub fn empty(fifo: *Self) bool {
         return (fifo.first == null);
     }
 
+    /// Clears the queue, destroying all messages.
     pub fn clear(fifo: *Self) void {
         var next = fifo.dequeue();
         while (next != null) {
@@ -559,6 +601,7 @@ pub const MessageQueue = struct {
         }
     }
 
+    /// Returns the number of messages in the queue.
     pub fn count(fifo: *Self) usize {
         var ret: usize = 0;
         var next = fifo.first;
@@ -568,6 +611,7 @@ pub const MessageQueue = struct {
         return ret;
     }
 
+    /// Moves all messages from one queue to another.
     pub fn move(src: *MessageQueue, dest: *MessageQueue) void {
         var next = src.dequeue();
         while (next != null) {

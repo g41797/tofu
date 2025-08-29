@@ -1,38 +1,55 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+/// Enum representing supported communication protocols.
 pub const Proto = enum {
     tcp,
     uds,
 };
 
+/// Constant string for TCP protocol identifier.
 pub const TCPProto = "tcp";
+
+/// Constant string for UDS (Unix Domain Socket) protocol identifier.
 pub const UDSProto = "uds";
 
+/// Default protocol for communication (TCP).
 pub const DefaultProto = TCPProto;
+
+/// Default IP address for TCP communication (localhost).
 pub const DefaultAddr = "127.0.0.1";
+
+/// Default port number for communication.
 pub const DefaultPort = LazyPTOP;
 
+/// Format string for TCP configuration headers.
 const ConfigPrintFormatTCP = "{s}|{s}|{d}";
+
+/// Format string for UDS configuration headers.
 const ConfigPrintFormatUDS = "{s}|{s}";
 
-// For the client - Part of Hello headers
-// "~connect_to: proto|addr or empty|port
-// "~connect_to: tcp|127.0.0.1|7099
-// "~connect_to: uds|/tmp/7099.port
+/// Header key for client connection configuration in Hello messages.
+/// For the client - Part of Hello headers
+/// "~connect_to: proto|addr or empty|port
+/// "~connect_to: tcp|127.0.0.1|7099
+/// "~connect_to: uds|/tmp/7099.port
 pub const ConnectToHeader = "~connect_to";
 
-// For the server - Part of Welcome headers, actually only this one is required
-// "~listen_on: proto|addr or empty|port
-// "~listen_on: tcp|127.0.0.1|7099  - on loopback only
-// "~listen_on: tcp||7099           - on every host IP address
-// "~listen_on: uds|/tmp/7099.port
+/// Header key for server listening configuration in Welcome messages.
+/// For the server - Part of Welcome headers, actually only this one is required
+/// "~listen_on: proto|addr or empty|port
+/// "~listen_on: tcp|127.0.0.1|7099  - on loopback only
+/// "~listen_on: tcp||7099           - on every host IP address
+/// "~listen_on: uds|/tmp/7099.port
 pub const ListenOnHeader = "~listen_on";
 
+/// Structure for configuring a TCP client connection.
 pub const TCPClientConfigurator = struct {
     addr: ?[]const u8 = null,
     port: ?u16 = null,
 
+    /// Initializes a TCP client configurator with an optional host/IP address and port.
+    /// Defaults to DefaultAddr and DefaultPort if not provided.
     pub fn init(host_or_ip: ?[]const u8, port: ?u16) TCPClientConfigurator {
         var cnf: TCPClientConfigurator = .{};
 
@@ -50,12 +67,13 @@ pub const TCPClientConfigurator = struct {
         return cnf;
     }
 
+    /// Prepares a message with TCP client configuration for a Hello request.
     pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) !void {
         prepareForClient(msg);
-
         try self.toConfiguration(&msg.*.thdrs);
     }
 
+    /// Converts the TCP client configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) !void {
         if ((self.addr == null) or (self.port == null)) {
             return error.WrongInitialConfiguration;
@@ -68,10 +86,13 @@ pub const TCPClientConfigurator = struct {
     }
 };
 
+/// Structure for configuring a TCP server listener.
 pub const TCPServerConfigurator = struct {
     ip: ?[]const u8 = null,
     port: ?u16 = null,
 
+    /// Initializes a TCP server configurator with an optional IP address and port.
+    /// Defaults to an empty IP (listen on all interfaces) and DefaultPort if not provided.
     pub fn init(ip: ?[]const u8, port: ?u16) TCPServerConfigurator {
         var cnf: TCPServerConfigurator = .{};
 
@@ -88,12 +109,13 @@ pub const TCPServerConfigurator = struct {
         return cnf;
     }
 
+    /// Prepares a message with TCP server configuration for a Welcome request.
     pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) !void {
         prepareForServer(msg);
-
         try self.toConfiguration(&msg.*.thdrs);
     }
 
+    /// Converts the TCP server configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) !void {
         if ((self.ip == null) or (self.port == null)) {
             return error.WrongInitialConfiguration;
@@ -106,21 +128,24 @@ pub const TCPServerConfigurator = struct {
     }
 };
 
+/// Structure for configuring a UDS client connection.
 pub const UDSClientConfigurator = struct {
     path: []const u8 = undefined,
 
+    /// Initializes a UDS client configurator with a file path for the Unix Domain Socket.
     pub fn init(path: []const u8) UDSClientConfigurator {
         return .{
             .path = path,
         };
     }
 
+    /// Prepares a message with UDS client configuration for a Hello request.
     pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) !void {
         prepareForClient(msg);
-
         try self.toConfiguration(&msg.*.thdrs);
     }
 
+    /// Converts the UDS client configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const UDSClientConfigurator, config: *TextHeaders) !void {
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{
@@ -132,21 +157,24 @@ pub const UDSClientConfigurator = struct {
     }
 };
 
+/// Structure for configuring a UDS server listener.
 pub const UDSServerConfigurator = struct {
     path: []const u8 = undefined,
 
+    /// Initializes a UDS server configurator with a file path for the Unix Domain Socket.
     pub fn init(path: []const u8) UDSServerConfigurator {
         return .{
             .path = path,
         };
     }
 
+    /// Prepares a message with UDS server configuration for a Welcome request.
     pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) !void {
         prepareForServer(msg);
-
         try self.toConfiguration(&msg.*.thdrs);
     }
 
+    /// Converts the UDS server configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) !void {
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.path }) catch unreachable;
@@ -155,7 +183,9 @@ pub const UDSServerConfigurator = struct {
     }
 };
 
+/// Structure representing an invalid configurator that always returns an error.
 pub const WrongConfigurator = struct {
+    /// Returns an error when attempting to prepare a request, indicating an invalid configurator.
     pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) !void {
         _ = self;
         _ = msg;
@@ -163,6 +193,7 @@ pub const WrongConfigurator = struct {
     }
 };
 
+/// Union representing different types of configurators (TCP/UDS, client/server, or invalid).
 pub const Configurator = union(enum) {
     tcp_server: TCPServerConfigurator,
     tcp_client: TCPClientConfigurator,
@@ -170,16 +201,19 @@ pub const Configurator = union(enum) {
     uds_client: UDSClientConfigurator,
     wrong: WrongConfigurator,
 
+    /// Prepares a message with the appropriate configuration based on the active configurator type.
     pub fn prepareRequest(self: *const Configurator, msg: *Message) !void {
         return switch (self.*) {
             inline else => |conf| try conf.prepareRequest(msg),
         };
     }
 
+    /// Checks if two configurators are of the same type.
     pub fn eql(self: Configurator, other: Configurator) bool {
         return activeTag(self) == activeTag(other);
     }
 
+    /// Creates a configurator from a message's text headers, parsing ConnectToHeader or ListenOnHeader.
     pub fn fromMessage(msg: *Message) Configurator {
         const cftr: Configurator = .{
             .wrong = .{},
@@ -203,6 +237,7 @@ pub const Configurator = union(enum) {
         return cftr;
     }
 
+    /// Parses a client configuration string into a Configurator (TCP or UDS client).
     fn clientFromString(string: []const u8) Configurator {
         var cftr: Configurator = .{
             .wrong = .{},
@@ -243,6 +278,7 @@ pub const Configurator = union(enum) {
         return cftr;
     }
 
+    /// Parses a server configuration string into a Configurator (TCP or UDS server).
     fn serverFromString(string: []const u8) Configurator {
         var cftr: Configurator = .{
             .wrong = .{},
@@ -284,6 +320,7 @@ pub const Configurator = union(enum) {
     }
 };
 
+/// Prepares a message for a server Welcome request by setting the appropriate binary header fields.
 inline fn prepareForServer(msg: *Message) void {
     msg.bhdr = .{};
 
@@ -293,6 +330,7 @@ inline fn prepareForServer(msg: *Message) void {
     };
 }
 
+/// Prepares a message for a client Hello request by setting the appropriate binary header fields.
 inline fn prepareForClient(msg: *Message) void {
     msg.bhdr = .{};
 
@@ -302,6 +340,7 @@ inline fn prepareForClient(msg: *Message) void {
     };
 }
 
+/// Checks if a message represents the first server Welcome request.
 inline fn isFirstServerRequest(msg: *Message) bool {
     if (msg.bhdr.proto.mtype != .welcome) {
         return false;
@@ -319,6 +358,7 @@ inline fn isFirstServerRequest(msg: *Message) bool {
     return true;
 }
 
+/// Checks if a message represents the first client Hello request.
 inline fn isFirstClientRequest(msg: *Message) bool {
     if (msg.bhdr.proto.mtype != .hello) {
         return false;
