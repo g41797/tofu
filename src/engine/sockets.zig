@@ -171,6 +171,8 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     address: std.net.Address = undefined,
 
     pub fn listen(skt: *Skt) !void {
+        log.debug("TRY LISTEN ON FD {x}", .{skt.socket});
+
         const kernel_backlog = 64;
         try skt.setREUSE();
         try posix.bind(skt.socket, &skt.address.any, skt.address.getOsSockLen());
@@ -180,11 +182,13 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         var slen: posix.socklen_t = skt.address.getOsSockLen();
         try posix.getsockname(skt.socket, &skt.address.any, &slen);
 
+        log.debug("LISTEN ON FD {x}", .{skt.socket});
+
         return;
     }
 
     pub fn accept(askt: *Skt) AmpeError!?Skt {
-        log.debug("TRY LISTEN FD {x}", .{askt.socket});
+        log.debug("TRY ACCEPT FD {x}", .{askt.socket});
 
         var skt: Skt = .{};
 
@@ -215,7 +219,7 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
 
         skt.address = addr;
 
-        log.debug("LISTEN FD {x} CLIENT FD {x}", .{ askt.socket, skt.socket });
+        log.debug("ACCEPT FD {x} CLIENT FD {x}", .{ askt.socket, skt.socket });
 
         return skt;
     }
@@ -326,10 +330,12 @@ pub const SocketCreator = struct {
         const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
         const address = std.net.Address.resolveIp(cnf.ip.?, cnf.port.?) catch {
+            log.err("createTcpServer resolveIp failed", .{});
             return AmpeError.InvalidAddress;
         };
 
         const skt = createListenerSocket(&address) catch {
+            log.err("createListenerSocket failed", .{});
             return AmpeError.InvalidAddress;
         };
 
@@ -377,6 +383,7 @@ pub const SocketCreator = struct {
         };
 
         const skt = createListenerSocket(&address) catch {
+            log.err("createUDSListenerSocket failed", .{});
             return AmpeError.InvalidAddress;
         };
 

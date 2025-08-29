@@ -137,6 +137,13 @@ test "exchanger exchange" {
         .tcp_client = TCPClientConfigurator.init(localIP, configurator.DefaultPort),
     };
 
+    for (1..3) |_| {
+        try run(srvcnf, clcnf);
+    }
+    return;
+}
+
+fn run(srvcnf: Configurator, clcnf: Configurator) !void {
     var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf);
     defer exc.deinit();
 
