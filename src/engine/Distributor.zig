@@ -60,15 +60,15 @@ pub fn ampe(dtr: *Distributor) !Ampe {
     const result: Ampe = .{
         .ptr = dtr,
         .vtable = &.{
-            .create = create,
-            .destroy = destroy,
+            .acquire = create,
+            .release = destroy,
         },
     };
 
     return result;
 }
 
-pub fn alerter(dtr: *Distributor) Notifier.Alerter {
+fn alerter(dtr: *Distributor) Notifier.Alerter {
     const result: Notifier.Alerter = .{
         .ptr = dtr,
         .func = send_alert,
@@ -154,33 +154,28 @@ pub fn Destroy(dtr: *Distributor) void {
     dtr.* = undefined;
 }
 
-pub fn create(ptr: ?*anyopaque) !*Fdmp {
+fn create(ptr: ?*anyopaque) !Fdmp {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
     return dtr.*._create();
 }
 
-pub fn destroy(ptr: ?*anyopaque, fdmp: *Fdmp) !void {
+fn destroy(ptr: ?*anyopaque, fdmpimpl: ?*anyopaque) !void {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr._destroy(fdmp);
+    return dtr._destroy(fdmpimpl);
 }
 
-inline fn _create(dtr: *Distributor) !*Fdmp {
+inline fn _create(dtr: *Distributor) !Fdmp {
     dtr.maxid += 1;
 
-    const srptr = try dtr.allocator.create(Fdmp);
-    errdefer dtr.allocator.destroy(srptr);
+    const sr = try SenderReceiver.Create(dtr, dtr.maxid);
 
-    var srs = try SenderReceiver.Create(dtr, dtr.maxid);
-
-    srptr.* = srs.fdmp();
-
-    return srptr;
+    return sr.fdmp();
 }
 
-inline fn _destroy(dtr: *Distributor, fdmp: *Fdmp) !void {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(fdmp.ptr));
+inline fn _destroy(dtr: *Distributor, fdmpimpl: ?*anyopaque) !void {
+    _ = dtr;
+    const srs: *SenderReceiver = @alignCast(@ptrCast(fdmpimpl));
     srs.Destroy();
-    dtr.allocator.destroy(fdmp);
     return;
 }
 

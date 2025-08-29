@@ -1,6 +1,30 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+/// Represents an asynchronous message passing engine interface.
+/// All asynchronous IO processing is done by Ampe itself.
+/// It provides access to functionality via Fdmp (full duplex message pipe) interface.
+/// Think about Ampe as allocator and Fdmp as created "objects"
+pub const Ampe = struct {
+    ptr: ?*anyopaque,
+    vtable: *const AmpeVTable,
+
+    /// Acquires a new full duplex message pipe.
+    /// Call `release` on the result to stop communication and free associated memory.
+    ///
+    /// Thread-safe.
+    pub fn acquire(ampe: Ampe) anyerror!Fdmp {
+        return ampe.vtable.acquire(ampe.ptr);
+    }
+
+    /// Releases a full duplex message pipe, stopping communication and freeing associated memory.
+    ///
+    /// Thread-safe.
+    pub fn release(ampe: Ampe, fdmp: Fdmp) anyerror!void {
+        return ampe.vtable.release(ampe.ptr, fdmp.ptr);
+    }
+};
+
 /// Defines the strategy for allocating messages from a pool.
 pub const AllocationStrategy = enum {
     /// Attempts to allocate a message from the pool, returning null if the pool is empty.
@@ -11,48 +35,10 @@ pub const AllocationStrategy = enum {
 
 /// Represents a full duplex message pipe interface for asynchronous message passing.
 /// Supports asynchronous bi-directional exchange of the messages.
+/// Actual work done by  Ampe, Fdmp acts as the Ampe client.
 pub const Fdmp = struct {
     ptr: ?*anyopaque,
-    vtable: *const VTable,
-
-    pub const VTable = struct {
-        /// Retrieves a message from the internal pool based on the specified allocation strategy.
-        /// The only error when the pool can still be used is `error.EmptyPool`.
-        ///
-        /// Thread-safe.
-        get: *const fn (ptr: ?*anyopaque, strategy: AllocationStrategy) anyerror!*Message,
-
-        /// Returns a message to the internal pool. If the pool is closed, destroys the message.
-        ///
-        /// Thread-safe.
-        put: *const fn (ptr: ?*anyopaque, msg: *Message) void,
-
-        /// Initiates an asynchronous send of a message to a peer.
-        /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
-        /// Returns an error if the message is invalid.
-        ///
-        /// Thread-safe.
-        asyncSend: *const fn (ptr: ?*anyopaque, msg: *Message) anyerror!BinaryHeader,
-
-        /// Waits for a message on the internal queue.
-        /// Returns null if no message is received within the specified timeout (in nanoseconds).
-        ///
-        /// Also may be received following Signals from engine itself:
-        /// - Bye - peer disconnected
-        /// - Status 'wait_interrupted' - see interruptWait call
-        /// - Status 'pool_empty' - there are not free messages for receive.
-        ///   Allocate and 'put' messages to the pool, at least received status.
-        ///
-        /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
-        waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) anyerror!?*Message,
-
-        /// Interrupts a `waitReceive` call, causing it to return Status Signal with 'wait_interrupted' status.
-        /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
-        /// No accumulation; only the last interrupt is saved.
-        ///
-        /// Thread-safe. The idiomatic way is to call this from a thread other than the one calling `waitReceive` to signal attention.
-        interruptWait: *const fn (ptr: ?*anyopaque) void,
-    };
+    vtable: *const FdmpVTable,
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
     /// The only error when the pool can still be used is `error.EmptyPool`.
@@ -102,42 +88,60 @@ pub const Fdmp = struct {
     }
 };
 
-/// Represents an asynchronous message passing engine interface.
-pub const Ampe = struct {
-    ptr: ?*anyopaque,
-    vtable: *const VTable,
-
-    pub const VTable = struct {
-        /// Creates a new full duplex message pipe.
-        /// Call `destroy` on the result to stop communication and free associated memory.
-        ///
-        /// Thread-safe.
-        create: *const fn (ptr: ?*anyopaque) anyerror!*Fdmp,
-
-        /// Destroys a full duplex message pipe, stopping communication and freeing associated memory.
-        ///
-        /// Thread-safe.
-        destroy: *const fn (ptr: ?*anyopaque, fdmp: *Fdmp) anyerror!void,
-    };
-
-    /// Creates a new full duplex message pipe.
-    /// Call `destroy` on the result to stop communication and free associated memory.
-    ///
-    /// Thread-safe.
-    pub fn create(ampe: Ampe) anyerror!*Fdmp {
-        return ampe.vtable.create(ampe.ptr);
-    }
-
-    /// Destroys a full duplex message pipe, stopping communication and freeing associated memory.
-    ///
-    /// Thread-safe.
-    pub fn destroy(ampe: Ampe, fdmp: *Fdmp) anyerror!void {
-        return ampe.vtable.destroy(ampe.ptr, fdmp);
-    }
-};
-
 pub const Options = struct {
     // 2DO - add pool options
+};
+
+const AmpeVTable = struct {
+    /// Acquires a new full duplex message pipe.
+    /// Call `release` on the result to stop communication and free associated memory.
+    ///
+    /// Thread-safe.
+    acquire: *const fn (ptr: ?*anyopaque) anyerror!Fdmp,
+
+    /// Releases a full duplex message pipe, stopping communication and freeing associated memory.
+    ///
+    /// Thread-safe.
+    release: *const fn (ptr: ?*anyopaque, fdmpimpl: ?*anyopaque) anyerror!void,
+};
+
+const FdmpVTable = struct {
+    /// Retrieves a message from the internal pool based on the specified allocation strategy.
+    /// The only error when the pool can still be used is `error.EmptyPool`.
+    ///
+    /// Thread-safe.
+    get: *const fn (ptr: ?*anyopaque, strategy: AllocationStrategy) anyerror!*Message,
+
+    /// Returns a message to the internal pool. If the pool is closed, destroys the message.
+    ///
+    /// Thread-safe.
+    put: *const fn (ptr: ?*anyopaque, msg: *Message) void,
+
+    /// Initiates an asynchronous send of a message to a peer.
+    /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
+    /// Returns an error if the message is invalid.
+    ///
+    /// Thread-safe.
+    asyncSend: *const fn (ptr: ?*anyopaque, msg: *Message) anyerror!BinaryHeader,
+
+    /// Waits for a message on the internal queue.
+    /// Returns null if no message is received within the specified timeout (in nanoseconds).
+    ///
+    /// Also may be received following Signals from engine itself:
+    /// - Bye - peer disconnected
+    /// - Status 'wait_interrupted' - see interruptWait call
+    /// - Status 'pool_empty' - there are not free messages for receive.
+    ///   Allocate and 'put' messages to the pool, at least received status.
+    ///
+    /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
+    waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) anyerror!?*Message,
+
+    /// Interrupts a `waitReceive` call, causing it to return Status Signal with 'wait_interrupted' status.
+    /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
+    /// No accumulation; only the last interrupt is saved.
+    ///
+    /// Thread-safe. The idiomatic way is to call this from a thread other than the one calling `waitReceive` to signal attention.
+    interruptWait: *const fn (ptr: ?*anyopaque) void,
 };
 
 pub const message = @import("message.zig");

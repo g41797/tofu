@@ -7,9 +7,9 @@ test "Ampe create/destroy" {
 
     const ampe = try dtr.ampe();
 
-    const fdmp = try ampe.create();
+    const fdmp = try ampe.acquire();
 
-    try ampe.destroy(fdmp);
+    try ampe.release(fdmp);
 }
 
 const std = @import("std");
