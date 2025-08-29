@@ -172,7 +172,7 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
 
     pub fn listen(skt: *Skt) !void {
         const kernel_backlog = 64;
-        try posix.setsockopt(skt.socket, posix.SOL.SOCKET, posix.SO.REUSEADDR, &mem.toBytes(@as(c_int, 1)));
+        try skt.setREUSE();
         try posix.bind(skt.socket, &skt.address.any, skt.address.getOsSockLen());
         try posix.listen(skt.socket, kernel_backlog);
 
@@ -244,6 +244,36 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
             log.debug("CONNECTED FD {x}", .{skt.socket});
         }
         return connected;
+    }
+
+    pub fn setREUSE(skt: *Skt) !void {
+        switch (skt.address.any.family) {
+            std.posix.AF.INET, std.posix.AF.INET6 => {
+                if (@hasDecl(std.posix.SO, "REUSEPORT_LB")) {
+                    try std.posix.setsockopt(
+                        skt.socket,
+                        std.posix.SOL.SOCKET,
+                        std.posix.SO.REUSEPORT_LB,
+                        &std.mem.toBytes(@as(c_int, 1)),
+                    );
+                } else if (@hasDecl(std.posix.SO, "REUSEPORT")) {
+                    try std.posix.setsockopt(
+                        skt.socket,
+                        std.posix.SOL.SOCKET,
+                        std.posix.SO.REUSEPORT,
+                        &std.mem.toBytes(@as(c_int, 1)),
+                    );
+                } else {
+                    try std.posix.setsockopt(
+                        skt.socket,
+                        std.posix.SOL.SOCKET,
+                        std.posix.SO.REUSEADDR,
+                        &std.mem.toBytes(@as(c_int, 1)),
+                    );
+                }
+            },
+            else => return,
+        }
     }
 
     pub fn disableNagle(skt: *Skt) !void {
@@ -1112,7 +1142,7 @@ const WrongConfigurator = configurator.WrongConfigurator;
 const engine = @import("../engine.zig");
 const DBG = engine.DBG;
 const Options = engine.Options;
-const Fdmp = engine.Fdmp;
+const MessageChannelGroup = engine.MessageChannelGroup;
 const AllocationStrategy = engine.AllocationStrategy;
 
 const status = @import("../status.zig");

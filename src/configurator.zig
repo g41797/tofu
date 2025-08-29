@@ -339,16 +339,9 @@ inline fn isFirstClientRequest(msg: *Message) bool {
 const LazyPTOP = 7099;
 
 pub const message = @import("message.zig");
-pub const MessageType = message.MessageType;
-pub const MessageMode = message.MessageMode;
-pub const OriginFlag = message.OriginFlag;
-pub const MoreMessagesFlag = message.MoreMessagesFlag;
-pub const ProtoFields = message.ProtoFields;
-pub const BinaryHeader = message.BinaryHeader;
-pub const TextHeader = message.TextHeader;
-pub const TextHeaderIterator = message.TextHeaderIterator;
-pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
+pub const BinaryHeader = message.BinaryHeader;
+pub const TextHeaders = message.TextHeaders;
 
 const std = @import("std");
 const activeTag = std.meta.activeTag;

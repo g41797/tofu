@@ -7,9 +7,9 @@ test "Ampe create/destroy" {
 
     const ampe = try dtr.ampe();
 
-    const fdmp = try ampe.acquire();
+    const mcg = try ampe.acquire();
 
-    try ampe.release(fdmp);
+    try ampe.release(mcg);
 }
 
 const std = @import("std");
@@ -17,7 +17,7 @@ const testing = std.testing;
 
 const engine = @import("engine.zig");
 const Ampe = engine.Ampe;
-const Fdmp = engine.Fdmp;
+const MessageChannelGroup = engine.MessageChannelGroup;
 
 pub const message = @import("message.zig");
 pub const MessageType = message.MessageType;

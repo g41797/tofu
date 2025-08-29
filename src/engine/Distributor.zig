@@ -154,28 +154,28 @@ pub fn Destroy(dtr: *Distributor) void {
     dtr.* = undefined;
 }
 
-fn create(ptr: ?*anyopaque) !Fdmp {
+fn create(ptr: ?*anyopaque) !MessageChannelGroup {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
     return dtr.*._create();
 }
 
-fn destroy(ptr: ?*anyopaque, fdmpimpl: ?*anyopaque) !void {
+fn destroy(ptr: ?*anyopaque, mcgimpl: ?*anyopaque) !void {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr._destroy(fdmpimpl);
+    return dtr._destroy(mcgimpl);
 }
 
-inline fn _create(dtr: *Distributor) !Fdmp {
+inline fn _create(dtr: *Distributor) !MessageChannelGroup {
     dtr.maxid += 1;
 
-    const sr = try SenderReceiver.Create(dtr, dtr.maxid);
+    const gt = try Gate.Create(dtr, dtr.maxid);
 
-    return sr.fdmp();
+    return gt.mcg();
 }
 
-inline fn _destroy(dtr: *Distributor, fdmpimpl: ?*anyopaque) !void {
+inline fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) !void {
     _ = dtr;
-    const srs: *SenderReceiver = @alignCast(@ptrCast(fdmpimpl));
-    srs.Destroy();
+    const gt: *Gate = @alignCast(@ptrCast(mcgimpl));
+    gt.Destroy();
     return;
 }
 
@@ -265,7 +265,7 @@ pub const VC = message.ValidCombination;
 pub const engine = @import("../engine.zig");
 pub const Options = engine.Options;
 pub const Ampe = engine.Ampe;
-pub const Fdmp = engine.Fdmp;
+pub const MessageChannelGroup = engine.MessageChannelGroup;
 
 pub const status = @import("../status.zig");
 pub const AmpeStatus = status.AmpeStatus;
@@ -284,7 +284,7 @@ const ActiveChannels = channels.ActiveChannels;
 const sockets = @import("sockets.zig");
 const TriggeredSkt = sockets.TriggeredSkt;
 
-const SenderReceiver = @import("SenderReceiver.zig");
+const Gate = @import("Gate.zig");
 
 const poller = @import("poller.zig");
 

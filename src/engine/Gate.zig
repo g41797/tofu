@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const SenderReceiver = @This();
+pub const Gate = @This();
 
 prnt: *Distributor = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
 
-pub fn fdmp(srs: *SenderReceiver) Fdmp {
-    const result: Fdmp = .{
-        .ptr = srs,
+pub fn mcg(gt: *Gate) MessageChannelGroup {
+    const result: MessageChannelGroup = .{
+        .ptr = gt,
         .vtable = &.{
             .get = get,
             .put = put,
@@ -22,34 +22,34 @@ pub fn fdmp(srs: *SenderReceiver) Fdmp {
     return result;
 }
 
-pub fn Create(prnt: *Distributor, id: u32) !*SenderReceiver {
-    const srs = try prnt.allocator.create(SenderReceiver);
-    errdefer prnt.allocator.destroy(srs);
-    srs.* = SenderReceiver.init(prnt, id);
-    return srs;
+pub fn Create(prnt: *Distributor, id: u32) !*Gate {
+    const gt = try prnt.allocator.create(Gate);
+    errdefer prnt.allocator.destroy(gt);
+    gt.* = Gate.init(prnt, id);
+    return gt;
 }
 
-pub fn Destroy(srs: *SenderReceiver) void {
-    const gpa = srs.prnt.allocator;
-    srs.deinit();
-    gpa.destroy(srs);
+pub fn Destroy(gt: *Gate) void {
+    const gpa = gt.prnt.allocator;
+    gt.deinit();
+    gpa.destroy(gt);
 }
 
-fn init(prnt: *Distributor, id: u32) SenderReceiver {
-    const srs: SenderReceiver = .{
+fn init(prnt: *Distributor, id: u32) Gate {
+    const gt: Gate = .{
         .prnt = prnt,
         .id = id,
         .allocator = prnt.allocator,
         .msgs = .{},
     };
 
-    return srs;
+    return gt;
 }
 
-fn deinit(srs: *SenderReceiver) void {
-    _ = srs.prnt.acns.removeChannels(srs) catch unreachable;
+fn deinit(gt: *Gate) void {
+    _ = gt.prnt.acns.removeChannels(gt) catch unreachable;
 
-    var allocated = srs.msgs.close();
+    var allocated = gt.msgs.close();
     while (allocated != null) {
         const next = allocated.?.next;
         allocated.?.destroy();
@@ -60,23 +60,23 @@ fn deinit(srs: *SenderReceiver) void {
 }
 
 pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) !*Message {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    const msg = try srs.prnt.pool.get(strategy);
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    const msg = try gt.prnt.pool.get(strategy);
     return msg;
 }
 
 pub fn put(ptr: ?*anyopaque, msg: *Message) void {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    srs.prnt.pool.put(msg);
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    gt.prnt.pool.put(msg);
     return;
 }
 
 pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
     const vc = try msg.check_and_prepare();
 
-    const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
 
-    if ((msg.bhdr.channel_number != 0) and (!srs.prnt.acns.exists(msg.bhdr.channel_number))) {
+    if ((msg.bhdr.channel_number != 0) and (!gt.prnt.acns.exists(msg.bhdr.channel_number))) {
         return AmpeError.InvalidChannelNumber;
     }
 
@@ -85,7 +85,7 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
         mID = msg.bhdr.message_id;
     }
 
-    const ach = srs.prnt.acns.createChannel(mID, srs);
+    const ach = gt.prnt.acns.createChannel(mID, gt);
 
     msg.bhdr.channel_number = ach.chn;
     msg.bhdr.message_id = ach.mid;
@@ -95,21 +95,21 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
         else => .regularMsg,
     };
 
-    try srs.prnt.submitMsg(msg, vc, priority);
+    try gt.prnt.submitMsg(msg, vc, priority);
 
     return msg.bhdr;
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) !?*Message {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    _ = srs;
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    _ = gt;
     _ = timeout_ns;
     return error.NotImplementedYet;
 }
 
 pub fn interruptWait(ptr: ?*anyopaque) void {
-    const srs: *SenderReceiver = @alignCast(@ptrCast(ptr));
-    _ = srs;
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    _ = gt;
     return;
 }
 
@@ -131,7 +131,7 @@ pub const Distributor = @import("Distributor.zig");
 
 pub const engine = @import("../engine.zig");
 pub const Options = engine.Options;
-pub const Fdmp = engine.Fdmp;
+pub const MessageChannelGroup = engine.MessageChannelGroup;
 pub const AllocationStrategy = engine.AllocationStrategy;
 
 pub const status = @import("../status.zig");
