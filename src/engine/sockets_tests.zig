@@ -381,7 +381,7 @@ pub const Exchanger = struct {
 
         var loop: usize = 0;
 
-        while (loop < 40) : (loop += 1) { //
+        while (loop < 100) : (loop += 1) { //
             var wasSend = try exc.sender.?.tskt.trySend();
             for (0..wasSend.count()) |_| {
                 exc.pool.put(wasSend.dequeue().?);
