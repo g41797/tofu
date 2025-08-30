@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const std_options: @import("std").Options = .{ .log_level = .debug };
+// pub const std_options: @import("std").Options = .{ .log_level = .debug };
 
 test {
     _ = @import("message_tests.zig");
@@ -14,4 +14,4 @@ test {
     @import("std").testing.refAllDecls(@This());
 }
 
-// const tr = @import("test_runner.zig");
+// const tr = @import("testRunner.zig");

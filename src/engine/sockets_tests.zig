@@ -5,6 +5,8 @@ const localIP = "127.0.0.1";
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;
 
+pub const std_options: @import("std").Options = .{ .log_level = .debug };
+
 // test "create TCP listener" {
 //     var cnfr: Configurator = .{
 //         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
@@ -146,7 +148,7 @@ test "exchanger exchange" {
 }
 
 fn run(srvcnf: Configurator, clcnf: Configurator) !void {
-    var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf);
+    var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf, false);
     defer exc.deinit();
 
     try exc.startListen();
@@ -155,10 +157,14 @@ fn run(srvcnf: Configurator, clcnf: Configurator) !void {
 
     _ = try exc.waitConnectClient();
 
+    exc.setRun(Exchanger.sendRecvPoll);
+
     try exc.exchange();
 
     return;
 }
+
+pub const SendRecv = *const fn (exc: *Exchanger, count: usize) anyerror!void;
 
 pub const Exchanger = struct {
     allocator: Allocator = undefined,
@@ -181,13 +187,21 @@ pub const Exchanger = struct {
     forRecv: MessageQueue = .{},
     forCmpr: MessageQueue = .{},
 
-    pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator) !Exchanger {
+    srf: SendRecv = undefined,
+
+    pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator, usePoller: bool) !Exchanger {
         var ret: Exchanger = .{
             .allocator = allocator,
             .pool = try Pool.init(allocator, null),
             .srvcnf = srvcnf,
             .clcnf = clcnf,
         };
+
+        if (usePoller) {
+            ret.srf = sendRecvPoll;
+        } else {
+            ret.srf = sendRecvNonPoll;
+        }
 
         errdefer ret.deinit();
 
@@ -203,6 +217,18 @@ pub const Exchanger = struct {
         ret.plr = pll;
 
         return ret;
+    }
+
+    pub fn setRun(exc: *Exchanger, sr: SendRecv) void {
+        exc.srf = sr;
+    }
+
+    pub fn setRunner(exc: *Exchanger, usePoller: bool) void {
+        if (usePoller) {
+            exc.srf = sendRecvPoll;
+        } else {
+            exc.srf = sendRecvNonPoll;
+        }
     }
 
     pub fn startListen(exc: *Exchanger) !void {
@@ -375,9 +401,14 @@ pub const Exchanger = struct {
         }
         assert(exc.sender.?.tskt.io.sendQ.count() == scount);
 
-        try exc.sendRecvNonPoll(count);
+        try exc.srf(exc, count);
+    }
 
-        // try exc.sendRecvPoll(count, true);
+    pub fn sendRecvPoll(
+        exc: *Exchanger,
+        count: usize,
+    ) !void {
+        return exc.sendRecvNonPoll(count);
     }
 
     pub fn sendRecvNonPoll(
@@ -411,7 +442,7 @@ pub const Exchanger = struct {
         return;
     }
 
-    pub fn sendRecvPoll(exc: *Exchanger, count: usize, forceIO: bool) !void {
+    pub fn sendRecvPoll_(exc: *Exchanger, count: usize) !void {
         if (count == 0) {
             return;
         }
@@ -423,13 +454,11 @@ pub const Exchanger = struct {
         while (exc.forRecv.count() != count) : (waits += 1) {
             var trgrs: sockets.Triggers = .{};
 
-            if (!forceIO) {
-                trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+            trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
 
-                if (DBG) {
-                    const utrgrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
-                    _ = utrgrs;
-                }
+            if (DBG) {
+                const utrgrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
+                _ = utrgrs;
             }
 
             try testing.expect(trgrs.err != .on);
@@ -445,17 +474,17 @@ pub const Exchanger = struct {
 
             while (tcopt != null) {
                 const tc = tcopt.?;
-                if (forceIO) {
-                    if (exc.sender.?.acn.chn == tc.acn.chn) {
-                        tc.act = .{
-                            .send = .on,
-                        };
-                    } else {
-                        tc.act = .{
-                            .recv = .on,
-                        };
-                    }
+                // if (forceIO) {
+                if (exc.sender.?.acn.chn == tc.acn.chn) {
+                    tc.act = .{
+                        .send = .on,
+                    };
+                } else {
+                    tc.act = .{
+                        .recv = .on,
+                    };
                 }
+                // }
                 try exc.processPolledIO(tc);
                 tcopt = it.next();
             }

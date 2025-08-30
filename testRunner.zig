@@ -246,15 +246,15 @@ fn mainTerminal() void {
     }
     root_node.end();
     if (ok_count == test_fn_list.len) {
-        std.debug.print("All {d} tests passed.\n", .{ok_count});
+        std.debug.print("All {d} tests PASSED.\n", .{ok_count});
     } else {
-        std.debug.print("{d} passed; {d} skipped; {d} failed.\n", .{ ok_count, skip_count, fail_count });
+        std.debug.print("{d} PASSED; {d} SKIPPED; {d} FAILED.\n", .{ ok_count, skip_count, fail_count });
     }
     if (log_err_count != 0) {
-        std.debug.print("{d} errors were logged.\n", .{log_err_count});
+        std.debug.print("{d} ERRORS were logged.\n", .{log_err_count});
     }
     if (leaks != 0) {
-        std.debug.print("{d} tests leaked memory.\n", .{leaks});
+        std.debug.print("{d} tests LEAKED memory.\n", .{leaks});
     }
     if (fuzz_count != 0) {
         std.debug.print("{d} fuzz tests found.\n", .{fuzz_count});
@@ -328,7 +328,7 @@ pub fn mainSimple() anyerror!void {
         passed += 1;
     }
     if (enable_print and print_summary) {
-        stderr.writer().print("{} passed, {} skipped, {} failed\n", .{ passed, skipped, failed }) catch {};
+        stderr.writer().print("{} PASSED, {} SKIPED, {} FAILED\n", .{ passed, skipped, failed }) catch {};
     }
     if (failed != 0) std.process.exit(1);
 }
@@ -395,13 +395,13 @@ pub fn fuzz(
                 else => {
                     std.debug.lockStdErr();
                     if (@errorReturnTrace()) |trace| std.debug.dumpStackTrace(trace.*);
-                    std.debug.print("failed with error.{s}\n", .{@errorName(err)});
+                    std.debug.print("failed with ERROR.{s}\n", .{@errorName(err)});
                     std.process.exit(1);
                 },
             };
             if (log_err_count != 0) {
                 std.debug.lockStdErr();
-                std.debug.print("error logs detected\n", .{});
+                std.debug.print("ERROR logs detected\n", .{});
                 std.process.exit(1);
             }
         }
