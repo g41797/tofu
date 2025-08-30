@@ -129,6 +129,8 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
 test "exchanger exchange" {
     std.testing.log_level = .debug;
 
+    std.log.debug("Exchanger log (mode={s})\r\n", .{@tagName(builtin.mode)});
+
     const srvcnf: Configurator = .{
         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
     };

@@ -329,13 +329,13 @@ pub const SocketCreator = struct {
     pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
-        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.port.?) catch {
-            log.err("createTcpServer resolveIp failed", .{});
+        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.port.?) catch |er| {
+            log.err("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
             return AmpeError.InvalidAddress;
         };
 
-        const skt = createListenerSocket(&address) catch {
-            log.err("createListenerSocket failed", .{});
+        const skt = createListenerSocket(&address) catch |er| {
+            log.err("createListenerSocket failed with error {s}", .{@errorName(er)});
             return AmpeError.InvalidAddress;
         };
 

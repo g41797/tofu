@@ -87,6 +87,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/all_tests.zig"),
         .target = target,
         .optimize = optimize,
+        .error_tracing = true,
     });
 
     // need libc for windows sockets
