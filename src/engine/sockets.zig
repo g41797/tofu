@@ -254,27 +254,11 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         switch (skt.address.any.family) {
             std.posix.AF.INET, std.posix.AF.INET6 => {
                 if (@hasDecl(std.posix.SO, "REUSEPORT_LB")) {
-                    try std.posix.setsockopt(
-                        skt.socket,
-                        std.posix.SOL.SOCKET,
-                        std.posix.SO.REUSEPORT_LB,
-                        &std.mem.toBytes(@as(c_int, 1)),
-                    );
+                    try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT_LB, &std.mem.toBytes(@as(c_int, 1)));
                 } else if (@hasDecl(std.posix.SO, "REUSEPORT")) {
-                    try std.posix.setsockopt(
-                        skt.socket,
-                        std.posix.SOL.SOCKET,
-                        std.posix.SO.REUSEPORT,
-                        &std.mem.toBytes(@as(c_int, 1)),
-                    );
-                } else {
-                    try std.posix.setsockopt(
-                        skt.socket,
-                        std.posix.SOL.SOCKET,
-                        std.posix.SO.REUSEADDR,
-                        &std.mem.toBytes(@as(c_int, 1)),
-                    );
+                    try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
                 }
+                try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
             },
             else => return,
         }
