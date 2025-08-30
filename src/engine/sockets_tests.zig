@@ -248,7 +248,14 @@ pub const Exchanger = struct {
 
         var trgrs: sockets.Triggers = .{};
 
-        for (0..10) |_| {
+        var serverReady: bool = false;
+        var clientReady: bool = false;
+
+        for (0..100) |_| {
+            if (serverReady and clientReady) {
+                break;
+            }
+
             trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
 
             if (trgrs.err == .on) {
@@ -287,18 +294,20 @@ pub const Exchanger = struct {
 
                     trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
 
-                    continue;
+                    serverReady = true;
+                    trgrs.accept = .off;
                 }
             }
 
-            const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
+            if (trgrs.connect == .on) {
+                const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
 
-            if (clTsktPtr.act.connect == .on) {
-                const connected = try clTsktPtr.tskt.tryConnect();
-                if (connected) {
-                    break;
+                if (clTsktPtr.act.connect == .on) {
+                    clientReady = try clTsktPtr.tskt.tryConnect();
+                    if (clientReady) {
+                        trgrs.connect = .off;
+                    }
                 }
-                continue;
             }
         }
 
