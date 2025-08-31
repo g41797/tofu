@@ -495,7 +495,6 @@ pub const IoSkt = struct {
     cn: message.ChannelNumber = undefined,
     skt: Skt = undefined,
     connected: bool = undefined,
-    connectInitiated: bool = undefined,
     sendQ: MessageQueue = undefined,
     currSend: MsgSender = undefined,
     currRecv: MsgReceiver = undefined,
@@ -510,7 +509,6 @@ pub const IoSkt = struct {
             .cn = cn,
             .skt = sskt,
             .connected = true,
-            .connectInitiated = true,
             .sendQ = .{},
             .currSend = MsgSender.init(),
             .currRecv = MsgReceiver.init(pool),
@@ -531,7 +529,6 @@ pub const IoSkt = struct {
         ios.cn = hello.bhdr.channel_number;
         ios.skt = try sc.fromMessage(hello);
         ios.connected = false;
-        ios.connectInitiated = false;
         ios.sendQ = .{};
         ios.currSend = MsgSender.init();
         ios.currRecv = MsgReceiver.init(pool);
@@ -555,20 +552,15 @@ pub const IoSkt = struct {
     pub fn triggers(ioskt: *IoSkt) !Triggers {
         if (ioskt.side == .client) { // Initial state of client ioskt - not-connected
 
-            if (!ioskt.connectInitiated) {
-                ioskt.connected = try ioskt.skt.connect();
-                ioskt.connectInitiated = true;
-            }
-
             if (!ioskt.connected) {
-                return .{
-                    .connect = .on,
-                };
-            }
+                ioskt.connected = try ioskt.tryConnect();
 
-            ioskt.postConnect();
-            var sq = try ioskt.trySend();
-            ioskt.alreadySend = sq.dequeue();
+                if (!ioskt.connected) {
+                    return .{
+                        .connect = .on,
+                    };
+                }
+            }
         }
 
         var ret: Triggers = .{};
