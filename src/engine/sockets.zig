@@ -241,6 +241,9 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
             std.posix.ConnectError.WouldBlock => {
                 connected = false;
             },
+            std.posix.ConnectError.ConnectionPending => {
+                connected = true; // for macOs
+            },
             else => return AmpeError.PeerDisconnected,
         };
 
