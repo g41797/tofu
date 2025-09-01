@@ -78,7 +78,7 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 pub fn init(allocator: Allocator) !Notifier {
 
     // tardy: poll.zig - slightly changed
-    if (comptime builtin.os.tag == .macos) {
+    if (comptime false) { // was builtin.os.tag == .macos
         const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
         defer std.posix.close(server_socket);
 
@@ -188,31 +188,31 @@ pub fn _isReadyToSend(sender: socket_t) bool {
     return true;
 }
 
-pub fn waitConnect(client: socket_t) !bool {
-    var spoll: [1]pollfd = undefined;
-
-    while (true) {
-        spoll = .{
-            .{
-                .fd = client,
-                .events = POLL.OUT,
-                .revents = 0,
-            },
-        };
-
-        const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
-
-        if (pollstatus == 1) {
-            break;
-        }
-    }
-
-    if (spoll[0].revents & std.posix.POLL.HUP != 0) {
-        return false;
-    }
-
-    return true;
-}
+// pub fn waitConnect(client: socket_t) !bool {
+//     var spoll: [1]pollfd = undefined;
+//
+//     while (true) {
+//         spoll = .{
+//             .{
+//                 .fd = client,
+//                 .events = POLL.OUT,
+//                 .revents = 0,
+//             },
+//         };
+//
+//         const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
+//
+//         if (pollstatus == 1) {
+//             break;
+//         }
+//     }
+//
+//     if (spoll[0].revents & std.posix.POLL.HUP != 0) {
+//         return false;
+//     }
+//
+//     return true;
+// }
 
 pub fn recvNotification(ntfr: *Notifier) !Notification {
     const byte = try recvByte(ntfr.receiver);
@@ -308,3 +308,161 @@ const Allocator = std.mem.Allocator;
 // ss -x|grep yaaamp
 
 // 2DO  Add Windows implementation: TCP 127.0.0.1:0 instead of UDS
+
+// Grok generated from former waitConnect
+// Define kqueue constants for macOS
+pub fn waitConnect(client: posix.socket_t) !bool {
+    log.debug("TRY WAITCONNECT ON FD {x}", .{client});
+    defer log.debug("FINISH WAITCONNECT ON FD {x}", .{client});
+    if (comptime false) { // grok version below
+        // Compile-time OS detection
+        switch (builtin.os.tag) {
+            .linux => {
+                // Linux implementation using poll
+                var spoll: [1]posix.pollfd = .{
+                    .{
+                        .fd = client,
+                        .events = posix.POLL.OUT,
+                        .revents = 0,
+                    },
+                };
+
+                const timeout_ms = 3000; // Assuming SEC_TIMEOUT_MS is 1000
+                const pollstatus = try posix.poll(&spoll, timeout_ms);
+
+                if (pollstatus == 0) {
+                    return false;
+                }
+
+                if (spoll[0].revents & posix.POLL.HUP != 0) {
+                    return false;
+                }
+
+                return true;
+            },
+            .macos => {
+                // macOS implementation using kqueue
+                const kq = try posix.kqueue();
+                defer posix.close(kq);
+
+                var changelist: [1]posix.Kevent = .{
+                    .{
+                        .ident = @intCast(client),
+                        .filter = KqueueConstants.EVFILT_WRITE,
+                        .flags = KqueueConstants.EV_ADD | KqueueConstants.EV_ONESHOT,
+                        .fflags = 0,
+                        .data = 0,
+                        .udata = 0,
+                    },
+                };
+
+                const timeout_ms = 3000; // Assuming SEC_TIMEOUT_MS is 1000
+                var timeout = posix.timespec{
+                    .sec = timeout_ms / 1000,
+                    .nsec = (timeout_ms % 1000) * 1_000_000,
+                };
+
+                var eventlist: [1]posix.Kevent = undefined;
+                const nevents = try posix.kevent(kq, &changelist, &eventlist, &timeout);
+
+                if (nevents == 0) {
+                    return false;
+                }
+
+                if (eventlist[0].flags & KqueueConstants.EV_ERROR != 0 or
+                    eventlist[0].flags & KqueueConstants.EV_EOF != 0)
+                {
+                    return false;
+                }
+
+                return true;
+            },
+            else => @compileError("Unsupported OS: waitConnect is only implemented for Linux (poll) and macOS (kqueue)."),
+        }
+    } else { //chatgpt version
+        if (builtin.os.tag == .linux) {
+            return waitConnectLinux(client);
+        } else if (builtin.os.tag == .macos) {
+            return waitConnectMacos(client);
+        } else {
+            @compileError("waitConnect is only implemented for Linux and macOS.");
+        }
+    }
+}
+
+fn waitConnectLinux(client: posix.socket_t) !bool {
+    var spoll: [1]posix.pollfd = undefined;
+
+    while (true) {
+        spoll = .{
+            .{
+                .fd = client,
+                .events = posix.POLL.OUT,
+                .revents = 0,
+            },
+        };
+
+        const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
+
+        if (pollstatus == 1) {
+            break;
+        }
+    }
+
+    if (spoll[0].revents & posix.POLL.HUP != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+fn waitConnectMacos(client: posix.socket_t) !bool {
+    const kq = try posix.kqueue();
+    defer posix.close(kq);
+
+    const change: posix.Kevent = .{
+        .ident = @intCast(client),
+        .filter = KqueueConstants.EVFILT_WRITE,
+        .flags = KqueueConstants.EV_ADD,
+        .fflags = 0,
+        .data = 0,
+        .udata = 0,
+    };
+
+    _ = try posix.kevent(kq, &.{change}, &.{}, null);
+
+    var ts: posix.timespec = .{
+        .sec = SEC_TIMEOUT_MS * 3 / 1000,
+        .nsec = (SEC_TIMEOUT_MS * 3 % 1000) * 1_000_000,
+    };
+
+    var ev: [1]posix.Kevent = undefined;
+
+    while (true) {
+        const n = try posix.kevent(kq, &.{}, &ev, &ts);
+        if (n == 0) {
+            continue;
+        }
+        if (n == 1) {
+            break;
+        }
+    }
+
+    if ((ev[0].flags & KqueueConstants.EV_ERROR) != 0 or
+        (ev[0].flags & KqueueConstants.EV_EOF) != 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+const KqueueConstants = if (builtin.os.tag == .macos) struct {
+    const EVFILT_WRITE: i16 = -2; // From sys/event.h
+    const EV_ADD: u16 = 0x0001;
+    const EV_ONESHOT: u16 = 0x0010;
+    const EV_ERROR: u16 = 0x4000;
+    const EV_EOF: u16 = 0x8000;
+} else struct {};
+
+const log = std.log;

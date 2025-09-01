@@ -10,6 +10,8 @@ test "create file for address of uds socket" {
 }
 
 test "base Notifier" {
+    std.testing.log_level = .debug;
+
     var ntfr = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
 
