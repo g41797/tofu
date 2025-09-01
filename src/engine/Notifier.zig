@@ -76,36 +76,36 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 }
 
 pub fn init(allocator: Allocator) !Notifier {
-
-    // tardy: poll.zig - slightly changed
-    if (comptime builtin.os.tag == .windows) {
-        const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
-        defer std.posix.close(server_socket);
-
-        const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 0);
-        try std.posix.bind(server_socket, &addr.any, addr.getOsSockLen());
-
-        var binded_addr: std.posix.sockaddr = undefined;
-        var binded_size: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-        try std.posix.getsockname(server_socket, &binded_addr, &binded_size);
-
-        try std.posix.listen(server_socket, 1);
-
-        const write_end = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM | posix.SOCK.NONBLOCK, 0);
-        errdefer std.posix.close(write_end);
-
-        _ = try waitConnect(write_end);
-
-        try std.posix.connect(write_end, &binded_addr, binded_size);
-
-        const read_end = try std.posix.accept(server_socket, null, null, std.posix.SOCK.NONBLOCK);
-        errdefer std.posix.close(read_end);
-
-        return .{
-            .sender = write_end,
-            .receiver = read_end,
-        };
-    }
+    //
+    // // tardy: poll.zig - slightly changed
+    // if (comptime builtin.os.tag == .windows) {
+    //     const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
+    //     defer std.posix.close(server_socket);
+    //
+    //     const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 0);
+    //     try std.posix.bind(server_socket, &addr.any, addr.getOsSockLen());
+    //
+    //     var binded_addr: std.posix.sockaddr = undefined;
+    //     var binded_size: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
+    //     try std.posix.getsockname(server_socket, &binded_addr, &binded_size);
+    //
+    //     try std.posix.listen(server_socket, 1);
+    //
+    //     const write_end = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM | posix.SOCK.NONBLOCK, 0);
+    //     errdefer std.posix.close(write_end);
+    //
+    //     _ = try waitConnect(write_end);
+    //
+    //     try std.posix.connect(write_end, &binded_addr, binded_size);
+    //
+    //     const read_end = try std.posix.accept(server_socket, null, null, std.posix.SOCK.NONBLOCK);
+    //     errdefer std.posix.close(read_end);
+    //
+    //     return .{
+    //         .sender = write_end,
+    //         .receiver = read_end,
+    //     };
+    // }
 
     var tup: TempUdsPath = .{};
 
