@@ -93,6 +93,9 @@ pub fn init(allocator: Allocator) !Notifier {
 
         const write_end = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM | posix.SOCK.NONBLOCK, 0);
         errdefer std.posix.close(write_end);
+
+        _ = try waitConnect(write_end);
+
         try std.posix.connect(write_end, &binded_addr, binded_size);
 
         const read_end = try std.posix.accept(server_socket, null, null, std.posix.SOCK.NONBLOCK);
@@ -114,6 +117,8 @@ pub fn init(allocator: Allocator) !Notifier {
     // Create sender(client) socket
     var senderSkt = try SCreator.createUdsSocket(socket_file);
     errdefer senderSkt.deinit();
+
+    _ = try waitConnect(senderSkt.socket);
 
     try posix.connect(senderSkt.socket, &listSkt.address.any, listSkt.address.getOsSockLen());
 
@@ -174,6 +179,32 @@ pub fn _isReadyToSend(sender: socket_t) bool {
 
     if (pollstatus == 0) {
         return false;
+    }
+
+    if (spoll[0].revents & std.posix.POLL.HUP != 0) {
+        return false;
+    }
+
+    return true;
+}
+
+pub fn waitConnect(client: socket_t) !bool {
+    var spoll: [1]pollfd = undefined;
+
+    while (true) {
+        spoll = .{
+            .{
+                .fd = client,
+                .events = POLL.OUT,
+                .revents = 0,
+            },
+        };
+
+        const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
+
+        if (pollstatus == 1) {
+            break;
+        }
     }
 
     if (spoll[0].revents & std.posix.POLL.HUP != 0) {
