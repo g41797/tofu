@@ -78,7 +78,7 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 pub fn init(allocator: Allocator) !Notifier {
 
     // tardy: poll.zig - slightly changed
-    if (comptime false) { // was builtin.os.tag == .macos
+    if (comptime builtin.os.tag == .macos) { // was false
         const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
         defer std.posix.close(server_socket);
 
