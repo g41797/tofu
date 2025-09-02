@@ -1,0 +1,19 @@
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  high_level_summary: true
+
+auto_review:
+  enabled: true
+  drafts: false
+
+path_filters:
+  - "src/**/*.zig"
+  - "build.zig"
+  - "!zig-cache/**"
+  - "!zig-out/**"
+
+tools:
+  gitleaks:
+    enabled: true
