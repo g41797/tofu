@@ -264,6 +264,7 @@ Get a list of handles (file descriptors) for connected sockets per process
 Using a custom test runner in Zig
     https://www.openmymind.net/Using-A-Custom-Test-Runner-In-Zig/
     https://gist.github.com/karlseguin/c6bea5b35e4e8d26af6f81c22cb5d76b
+    https://github.com/lalinsky/nats.zig/blob/main/build.zig#L77
 
 How to enable debug log level in ReleaseFast Mode
     https://ziggit.dev/t/how-to-enable-log-debug-for-tests-in-release-mode/11770/4?u=g41797

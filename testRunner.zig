@@ -15,9 +15,6 @@ var log_err_count: usize = 0;
 var fba_buffer: [8192]u8 = undefined;
 var fba = std.heap.FixedBufferAllocator.init(&fba_buffer);
 const crippled = switch (builtin.zig_backend) {
-    .stage2_powerpc,
-    .stage2_riscv64,
-    => true,
     else => false,
 };
 
@@ -206,7 +203,7 @@ fn mainTerminal() void {
                 leaks += 1;
             }
         }
-        testing.log_level = .debug; //std.Options.log_level; //.warn;
+        testing.log_level = .warn;
 
         const test_node = root_node.start(test_fn.name, 0);
         if (!have_tty) {

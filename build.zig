@@ -67,6 +67,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
+        .error_tracing = true,
+        .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
     });
 
     lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
@@ -88,7 +90,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .error_tracing = true,
-        // .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
+        .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
     });
 
     // need libc for windows sockets
