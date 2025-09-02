@@ -260,3 +260,26 @@ const KqueueConstants = if (builtin.os.tag == .macos) struct {
     const EV_ERROR: u16 = 0x4000;
     const EV_EOF: u16 = 0x8000;
 } else struct {};
+
+
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  high_level_summary: true
+
+auto_review:
+  enabled: true
+  drafts: false
+
+path_filters:
+  - "src/**/*.zig"
+  - "build.zig"
+  - "!zig-cache/**"
+  - "!zig-out/**"
+
+tools:
+  gitleaks:
+    enabled: true
+
+
