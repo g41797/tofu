@@ -201,8 +201,7 @@ const Trigger = sockets.Trigger;
 const Triggers = sockets.Triggers;
 const TriggeredSkt = sockets.TriggeredSkt;
 
-const channels = @import("channels.zig");
-const ActiveChannel = channels.ActiveChannel;
+const ActiveChannel = @import("channels.zig").ActiveChannel;
 
 const Distributor = @import("Distributor.zig");
 const TriggeredChannel = Distributor.TriggeredChannel;

@@ -213,10 +213,6 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         };
         errdefer posix.close(skt.socket);
 
-        nats.Client.setSockNONBLOCK(skt.socket) catch {
-            return AmpeError.NotAllowed;
-        };
-
         skt.address = addr;
 
         log.debug("ACCEPT FD {x} CLIENT FD {x}", .{ askt.socket, skt.socket });
@@ -1100,15 +1096,7 @@ fn disable_nagle(socket: std.posix.socket_t) !void {
 }
 
 const message = @import("../message.zig");
-const MessageType = message.MessageType;
-const MessageMode = message.MessageMode;
-const OriginFlag = message.OriginFlag;
-const MoreMessagesFlag = message.MoreMessagesFlag;
-const ProtoFields = message.ProtoFields;
 const BinaryHeader = message.BinaryHeader;
-const TextHeader = message.TextHeader;
-const TextHeaderIterator = message.TextHeaderIterator;
-const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
 
@@ -1125,32 +1113,15 @@ const UDSServerConfigurator = configurator.UDSServerConfigurator;
 const UDSClientConfigurator = configurator.UDSClientConfigurator;
 const WrongConfigurator = configurator.WrongConfigurator;
 
-const engine = @import("../engine.zig");
-const DBG = engine.DBG;
-const Options = engine.Options;
-const MessageChannelGroup = engine.MessageChannelGroup;
-const AllocationStrategy = engine.AllocationStrategy;
+const DBG = @import("../engine.zig").DBG;
 
-const status = @import("../status.zig");
-const AmpeStatus = status.AmpeStatus;
-const AmpeError = status.AmpeError;
-const raw_to_status = status.raw_to_status;
-const raw_to_error = status.raw_to_error;
-const status_to_raw = status.status_to_raw;
+const AmpeError = @import("../status.zig").AmpeError;
 
 const Pool = @import("Pool.zig");
 const Notifier = @import("Notifier.zig");
 const Notification = Notifier.Notification;
 
-const channels = @import("channels.zig");
-const ActiveChannels = channels.ActiveChannels;
-
-pub const Appendable = @import("nats").Appendable;
-
-const mailbox = @import("mailbox");
-pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
-
-const nats = @import("nats");
+const Appendable = @import("nats").Appendable;
 
 const std = @import("std");
 const assert = std.debug.assert;

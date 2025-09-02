@@ -7,131 +7,10 @@ const INFINITE_TIMEOUT_MS = -1;
 
 pub const std_options: @import("std").Options = .{ .log_level = .debug };
 
-// test "create TCP listener" {
-//     var cnfr: Configurator = .{
-//         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
-//     };
-//
-//     var listener = try create_listener(&cnfr);
-//
-//     defer listener.deinit();
-// }
-//
-// test "create UDS listener" {
-//     var cnfr: Configurator = .{
-//         .uds_server = UDSServerConfigurator.init(""),
-//     };
-//
-//     var listener = try create_listener(&cnfr);
-//
-//     defer listener.deinit();
-// }
-//
-// test "create TCP client" {
-//     var pool = try Pool.init(gpa, null);
-//     defer pool.close();
-//
-//     var cnfr: Configurator = .{
-//         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
-//     };
-//
-//     var listener = try create_listener(&cnfr);
-//
-//     defer listener.deinit();
-//
-//     var clcnfr: Configurator = .{
-//         .tcp_client = TCPClientConfigurator.init(null, null),
-//     };
-//
-//     var client = try create_client(&clcnfr, &pool);
-//
-//     defer client.deinit();
-// }
-//
-// test "create UDS client" {
-//     var pool = try Pool.init(gpa, null);
-//     defer pool.close();
-//
-//     var tup: Notifier.TempUdsPath = .{};
-//     const udsPath = try tup.buildPath(gpa);
-//
-//     var cnfr: Configurator = .{
-//         .uds_server = UDSServerConfigurator.init(udsPath),
-//     };
-//
-//     var listener = try create_listener(&cnfr);
-//
-//     defer listener.deinit();
-//
-//     // const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
-//     // const length = std.mem.len(c_array_ptr);
-//     // const zig_slice: []const u8 = c_array_ptr[0..length];
-//
-//     var clcnfr: Configurator = .{
-//         .uds_client = UDSClientConfigurator.init(udsPath),
-//     };
-//
-//     var client = try create_client(&clcnfr, &pool);
-//
-//     defer client.deinit();
-// }
-
-fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
-    var wlcm: *Message = try Message.create(gpa);
-    defer wlcm.destroy();
-
-    try cnfr.prepareRequest(wlcm);
-
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
-
-    var tskt: sockets.TriggeredSkt = .{
-        .accept = try sockets.AcceptSkt.init(wlcm, &sc),
-    };
-    errdefer tskt.deinit();
-
-    const trgrs = try tskt.triggers();
-
-    try testing.expect(trgrs.accept == .on);
-
-    return tskt;
-}
-
-fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
-    var hello: *Message = try Message.create(gpa);
-
-    cnfr.prepareRequest(hello) catch |err| {
-        hello.destroy();
-        return err;
-    };
-
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
-
-    var clSkt: sockets.IoSkt = .{};
-    try clSkt.initClientSide(pool, hello, &sc);
-    var tskt: sockets.TriggeredSkt = .{
-        .io = clSkt,
-    };
-    errdefer tskt.deinit();
-
-    const trgrs = try tskt.triggers();
-
-    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
-
-    const onTrigger: u8 = switch (cnfr.*) {
-        .tcp_client => utrg.connect,
-        .uds_client => utrg.send,
-        else => unreachable,
-    };
-
-    try testing.expect(onTrigger == 1);
-
-    return tskt;
-}
-
 test "exchanger exchange" {
     std.testing.log_level = .debug;
 
-    std.log.debug("Exchanger log (mode={s})\r\n", .{@tagName(builtin.mode)});
+    log.debug("Exchanger log (mode={s})\r\n", .{@tagName(builtin.mode)});
 
     const srvcnf: Configurator = .{
         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
@@ -155,7 +34,7 @@ fn run(srvcnf: Configurator, clcnf: Configurator) !void {
 
     try exc.startClient();
 
-    _ = try exc.waitConnectClient();
+    try exc.waitConnectClient();
 
     exc.setRun(Exchanger.sendRecvPoll);
 
@@ -269,7 +148,7 @@ pub const Exchanger = struct {
         return;
     }
 
-    pub fn waitConnectClient(exc: *Exchanger) !sockets.Triggers {
+    pub fn waitConnectClient(exc: *Exchanger) !void {
         var it = Distributor.Iterator.init(&exc.tcm.?);
 
         var trgrs: sockets.Triggers = .{};
@@ -277,7 +156,9 @@ pub const Exchanger = struct {
         var serverReady: bool = false;
         var clientReady: bool = false;
 
-        for (0..100) |_| {
+        for (0..100) |i| {
+            log.debug("wait connected client {d}", .{i + 1});
+
             if (serverReady and clientReady) {
                 break;
             }
@@ -292,9 +173,14 @@ pub const Exchanger = struct {
                 continue;
             }
 
+            if (serverReady) { // disable further accepts - test flow only
+                trgrs.accept = .off;
+            }
+
             if (trgrs.accept == .on) { // Just one listener, so checking trgrs is OK
                 var listener = exc.tcm.?.getPtr(exc.lstCN).?.tskt;
 
+                log.debug("wait connected client - try accept", .{});
                 const srvsktptr = try listener.tryAccept();
 
                 if (srvsktptr != null) {
@@ -318,26 +204,29 @@ pub const Exchanger = struct {
 
                     it = Distributor.Iterator.init(&exc.tcm.?);
 
-                    trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
-
                     serverReady = true;
-                    trgrs.accept = .off;
+                    log.debug("wait connected client - server ready", .{});
                 }
             }
 
+            if (clientReady) {
+                trgrs.connect = .off;
+            }
+
             if (trgrs.connect == .on) {
+                log.debug("wait connected client - try connect", .{});
                 const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
 
                 if (clTsktPtr.act.connect == .on) {
                     clientReady = try clTsktPtr.tskt.tryConnect();
                     if (clientReady) {
-                        trgrs.connect = .off;
+                        log.debug("wait connected client - client ready", .{});
                     }
                 }
             }
         }
 
-        return trgrs;
+        return;
     }
 
     pub fn exchange(exc: *Exchanger) !void {
@@ -346,18 +235,12 @@ pub const Exchanger = struct {
         exc.sender = exc.getTC(exc.clCN).?;
         exc.receiver = exc.getTC(exc.srvCN).?;
 
-        // exc.sender = exc.getTC(exc.srvCN).?; //Opposite direction
-        // exc.receiver = exc.getTC(exc.clCN).?;
-
         const sdf: Socket = exc.sender.?.tskt.getSocket();
         const rdf: Socket = exc.receiver.?.tskt.getSocket();
 
         log.debug("sender fd {x} receiver fd {x} ", .{ sdf, rdf });
 
         assert(sdf != rdf);
-
-        // try exc.sender.?.tskt.io.skt.disableNagle();
-        // try exc.receiver.?.tskt.io.skt.disableNagle();
 
         try exc.exchangeMsgs(11);
         return;
@@ -408,7 +291,44 @@ pub const Exchanger = struct {
         exc: *Exchanger,
         count: usize,
     ) !void {
-        return exc.sendRecvNonPoll(count);
+        if (count == 0) {
+            return;
+        }
+
+        const it = Distributor.Iterator.init(&exc.tcm.?);
+
+        var loop: usize = 0;
+
+        while ((loop < 3 * count) or (exc.forRecv.count() < (count + 1))) : (loop += 1) {
+            log.debug("loop {d} received {d}", .{
+                loop,
+                exc.forRecv.count(),
+            });
+
+            var trgrs: sockets.Triggers = .{};
+
+            trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+
+            try testing.expect(trgrs.err != .on);
+
+            // In production code we need in loop check act triggers per every channels
+            // For the test - checking of 'trgrs' is good enough
+
+            if (trgrs.send == .on) {
+                var wasSend = try exc.sender.?.tskt.trySend();
+                for (0..wasSend.count()) |_| {
+                    exc.pool.put(wasSend.dequeue().?);
+                }
+            }
+            if (trgrs.recv == .on) {
+                var wasRecv = try exc.receiver.?.tskt.tryRecv();
+                wasRecv.move(&exc.forRecv);
+            }
+        }
+
+        try testing.expect(exc.forRecv.count() == (count + 1));
+
+        return;
     }
 
     pub fn sendRecvNonPoll(
@@ -574,6 +494,58 @@ pub const Exchanger = struct {
         exc.pool.close();
     }
 };
+
+fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
+    var wlcm: *Message = try Message.create(gpa);
+    defer wlcm.destroy();
+
+    try cnfr.prepareRequest(wlcm);
+
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
+
+    var tskt: sockets.TriggeredSkt = .{
+        .accept = try sockets.AcceptSkt.init(wlcm, &sc),
+    };
+    errdefer tskt.deinit();
+
+    const trgrs = try tskt.triggers();
+
+    try testing.expect(trgrs.accept == .on);
+
+    return tskt;
+}
+
+fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
+    var hello: *Message = try Message.create(gpa);
+
+    cnfr.prepareRequest(hello) catch |err| {
+        hello.destroy();
+        return err;
+    };
+
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
+
+    var clSkt: sockets.IoSkt = .{};
+    try clSkt.initClientSide(pool, hello, &sc);
+    var tskt: sockets.TriggeredSkt = .{
+        .io = clSkt,
+    };
+    errdefer tskt.deinit();
+
+    const trgrs = try tskt.triggers();
+
+    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
+
+    const onTrigger: u8 = switch (cnfr.*) {
+        .tcp_client => utrg.connect,
+        .uds_client => utrg.send,
+        else => unreachable,
+    };
+
+    try testing.expect(onTrigger == 1);
+
+    return tskt;
+}
 
 const sockets = @import("sockets.zig");
 

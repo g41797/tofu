@@ -130,14 +130,10 @@ fn _freeAll(pool: *Pool) void {
     return;
 }
 
-pub const Appendable = @import("nats").Appendable;
-
-pub const message = @import("../message.zig");
+const Appendable = @import("nats").Appendable;
+const message = @import("../message.zig");
 const Message = message.Message;
-
-pub const engine = @import("../engine.zig");
-pub const AllocationStrategy = engine.AllocationStrategy;
-
+const AllocationStrategy = @import("../engine.zig").AllocationStrategy;
 const Notifier = @import("Notifier.zig");
 const Alert = Notifier.Alert;
 

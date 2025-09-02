@@ -129,28 +129,15 @@ pub const VC = message.ValidCombination;
 
 pub const Distributor = @import("Distributor.zig");
 
-pub const engine = @import("../engine.zig");
-pub const Options = engine.Options;
-pub const MessageChannelGroup = engine.MessageChannelGroup;
-pub const AllocationStrategy = engine.AllocationStrategy;
+const engine = @import("../engine.zig");
+const MessageChannelGroup = engine.MessageChannelGroup;
+const AllocationStrategy = engine.AllocationStrategy;
 
-pub const status = @import("../status.zig");
-pub const AmpeStatus = status.AmpeStatus;
-pub const AmpeError = status.AmpeError;
-pub const raw_to_status = status.raw_to_status;
-pub const raw_to_error = status.raw_to_error;
-pub const status_to_raw = status.status_to_raw;
-
-const Pool = @import("Pool.zig");
+const AmpeError = @import("../status.zig").AmpeError;
 const Notifier = @import("Notifier.zig");
-
-const channels = @import("channels.zig");
-const ActiveChannels = channels.ActiveChannels;
-
-pub const Appendable = @import("nats").Appendable;
-
-const mailbox = @import("mailbox");
-pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+const ActiveChannels = @import("channels.zig").ActiveChannels;
+const Appendable = @import("nats").Appendable;
+const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 
 const std = @import("std");
 const builtin = @import("builtin");

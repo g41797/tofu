@@ -305,9 +305,9 @@ pub const ActiveChannels = struct {
     }
 };
 
-pub const message = @import("../message.zig");
+const message = @import("../message.zig");
 pub const ChannelNumber = message.ChannelNumber;
-pub const MessageID = message.MessageID;
+const MessageID = message.MessageID;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

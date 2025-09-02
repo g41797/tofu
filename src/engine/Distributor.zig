@@ -248,31 +248,31 @@ inline fn waitFinish(dtr: *Distributor) void {
     }
 }
 
-pub const message = @import("../message.zig");
-pub const MessageType = message.MessageType;
-pub const MessageMode = message.MessageMode;
-pub const OriginFlag = message.OriginFlag;
-pub const MoreMessagesFlag = message.MoreMessagesFlag;
-pub const ProtoFields = message.ProtoFields;
-pub const BinaryHeader = message.BinaryHeader;
-pub const TextHeader = message.TextHeader;
-pub const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
-pub const TextHeaders = message.TextHeaders;
-pub const Message = message.Message;
-pub const MessageID = message.MessageID;
-pub const VC = message.ValidCombination;
+const message = @import("../message.zig");
+const MessageType = message.MessageType;
+const MessageMode = message.MessageMode;
+const OriginFlag = message.OriginFlag;
+const MoreMessagesFlag = message.MoreMessagesFlag;
+const ProtoFields = message.ProtoFields;
+const BinaryHeader = message.BinaryHeader;
+const TextHeader = message.TextHeader;
+const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
+const TextHeaders = message.TextHeaders;
+const Message = message.Message;
+const MessageID = message.MessageID;
+const VC = message.ValidCombination;
 
-pub const engine = @import("../engine.zig");
-pub const Options = engine.Options;
-pub const Ampe = engine.Ampe;
-pub const MessageChannelGroup = engine.MessageChannelGroup;
+const engine = @import("../engine.zig");
+const Options = engine.Options;
+const Ampe = engine.Ampe;
+const MessageChannelGroup = engine.MessageChannelGroup;
 
-pub const status = @import("../status.zig");
-pub const AmpeStatus = status.AmpeStatus;
-pub const AmpeError = status.AmpeError;
-pub const raw_to_status = status.raw_to_status;
-pub const raw_to_error = status.raw_to_error;
-pub const status_to_raw = status.status_to_raw;
+const status = @import("../status.zig");
+const AmpeStatus = status.AmpeStatus;
+const AmpeError = status.AmpeError;
+const raw_to_status = status.raw_to_status;
+const raw_to_error = status.raw_to_error;
+const status_to_raw = status.status_to_raw;
 
 const Notifier = @import("Notifier.zig");
 
@@ -288,10 +288,10 @@ const Gate = @import("Gate.zig");
 
 const poller = @import("poller.zig");
 
-pub const Appendable = @import("nats").Appendable;
+const Appendable = @import("nats").Appendable;
 
 const mailbox = @import("mailbox");
-pub const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 const std = @import("std");
 const builtin = @import("builtin");
