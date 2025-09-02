@@ -68,20 +68,22 @@ pub const TCPClientConfigurator = struct {
     }
 
     /// Prepares a message with TCP client configuration for a Hello request.
-    pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
         prepareForClient(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
     /// Converts the TCP client configuration to a text header and appends it to the provided TextHeaders.
-    pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) AmpeError!void {
         if ((self.addr == null) or (self.port == null)) {
-            return error.WrongInitialConfiguration;
+            return AmpeError.WrongConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addr.?, self.port.? }) catch unreachable;
-        try config.append(ConnectToHeader, confHeader);
+        config.append(ConnectToHeader, confHeader) catch {
+            return AmpeError.WrongConfiguration;
+        };
         return;
     }
 };
@@ -110,20 +112,22 @@ pub const TCPServerConfigurator = struct {
     }
 
     /// Prepares a message with TCP server configuration for a Welcome request.
-    pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
         prepareForServer(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
     /// Converts the TCP server configuration to a text header and appends it to the provided TextHeaders.
-    pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) AmpeError!void {
         if ((self.ip == null) or (self.port == null)) {
-            return error.WrongInitialConfiguration;
+            return AmpeError.WrongConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.ip.?, self.port.? }) catch unreachable;
-        try config.append(ListenOnHeader, confHeader);
+        config.append(ListenOnHeader, confHeader) catch {
+            return AmpeError.WrongConfiguration;
+        };
         return;
     }
 };
@@ -140,19 +144,21 @@ pub const UDSClientConfigurator = struct {
     }
 
     /// Prepares a message with UDS client configuration for a Hello request.
-    pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
         prepareForClient(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
     /// Converts the UDS client configuration to a text header and appends it to the provided TextHeaders.
-    pub fn toConfiguration(self: *const UDSClientConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const UDSClientConfigurator, config: *TextHeaders) AmpeError!void {
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{
             UDSProto,
             self.path,
         }) catch unreachable;
-        try config.append(ConnectToHeader, confHeader);
+        config.append(ConnectToHeader, confHeader) catch {
+            return AmpeError.WrongConfiguration;
+        };
         return;
     }
 };
@@ -169,16 +175,18 @@ pub const UDSServerConfigurator = struct {
     }
 
     /// Prepares a message with UDS server configuration for a Welcome request.
-    pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
         prepareForServer(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
     /// Converts the UDS server configuration to a text header and appends it to the provided TextHeaders.
-    pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) !void {
+    pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) AmpeError!void {
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.path }) catch unreachable;
-        try config.append(ListenOnHeader, confHeader);
+        config.append(ListenOnHeader, confHeader) catch {
+            return AmpeError.WrongConfiguration;
+        };
         return;
     }
 };
@@ -186,10 +194,10 @@ pub const UDSServerConfigurator = struct {
 /// Structure representing an invalid configurator that always returns an error.
 pub const WrongConfigurator = struct {
     /// Returns an error when attempting to prepare a request, indicating an invalid configurator.
-    pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
         _ = self;
         _ = msg;
-        return error.WrongConfigurator;
+        return AmpeError.WrongConfiguration;
     }
 };
 
@@ -202,7 +210,7 @@ pub const Configurator = union(enum) {
     wrong: WrongConfigurator,
 
     /// Prepares a message with the appropriate configuration based on the active configurator type.
-    pub fn prepareRequest(self: *const Configurator, msg: *Message) !void {
+    pub fn prepareRequest(self: *const Configurator, msg: *Message) AmpeError!void {
         return switch (self.*) {
             inline else => |conf| try conf.prepareRequest(msg),
         };
@@ -382,6 +390,7 @@ pub const message = @import("message.zig");
 pub const Message = message.Message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const TextHeaders = message.TextHeaders;
+pub const AmpeError = @import("status.zig").AmpeError;
 
 const std = @import("std");
 const activeTag = std.meta.activeTag;

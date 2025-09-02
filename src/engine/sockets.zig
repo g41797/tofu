@@ -169,9 +169,13 @@ pub const TriggeredSkt = union(enum) {
 pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     socket: std.posix.socket_t = undefined,
     address: std.net.Address = undefined,
+    server: bool = false,
 
     pub fn listen(skt: *Skt) !void {
         log.debug("TRY LISTEN ON FD {x}", .{skt.socket});
+
+        skt.server = true;
+        skt.deleteUDSPath();
 
         const kernel_backlog = 64;
         try skt.setREUSE();
@@ -275,7 +279,25 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         }
     }
 
+    // const path_len = std.mem.indexOf(u8, path_slice, &[_]u8{0}) orelse path_slice.len;
+    fn deleteUDSPath(skt: *Skt) void {
+        if (skt.server) {
+            switch (skt.address.any.family) {
+                std.posix.AF.UNIX => { // REUSEADDR and REUSEPORT are not supported for UDS
+                    const udsPath = skt.address.un.path[0..104];
+                    const path_len = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.len;
+                    if (path_len > 0) {
+                        std.fs.deleteFileAbsolute(skt.address.un.path[0..path_len]) catch {};
+                    }
+                },
+                else => {},
+            }
+        }
+        return;
+    }
+
     pub fn deinit(skt: *Skt) void {
+        skt.deleteUDSPath();
         posix.close(skt.socket);
     }
 };

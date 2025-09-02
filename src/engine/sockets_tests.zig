@@ -7,10 +7,35 @@ const INFINITE_TIMEOUT_MS = -1;
 
 pub const std_options: @import("std").Options = .{ .log_level = .debug };
 
-test "exchanger exchange" {
+test "UDS exchanger " {
     std.testing.log_level = .debug;
 
-    log.debug("Exchanger log (mode={s})\r\n", .{@tagName(builtin.mode)});
+    log.debug("Exchanger UDS\r\n", .{});
+
+    var tup: Notifier.TempUdsPath = .{};
+
+    const path = try tup.buildPath(gpa);
+
+    log.debug("\r\nUDS path {s}\r\n", .{path});
+
+    const srvcnf: Configurator = .{
+        .uds_server = UDSServerConfigurator.init(path),
+    };
+
+    const clcnf: Configurator = .{
+        .uds_client = UDSClientConfigurator.init(path),
+    };
+
+    for (1..3) |_| {
+        try run(srvcnf, clcnf);
+    }
+    return;
+}
+
+test "TCP/IP exchanger " {
+    std.testing.log_level = .debug;
+
+    log.debug("Exchanger TCP/IP)\r\n", .{});
 
     const srvcnf: Configurator = .{
         .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
@@ -209,20 +234,18 @@ pub const Exchanger = struct {
                 }
             }
 
-            if (clientReady) {
-                trgrs.connect = .off;
-            }
-
             if (trgrs.connect == .on) {
                 log.debug("wait connected client - try connect", .{});
                 const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
 
                 if (clTsktPtr.act.connect == .on) {
-                    clientReady = try clTsktPtr.tskt.tryConnect();
-                    if (clientReady) {
-                        log.debug("wait connected client - client ready", .{});
-                    }
+                    _ = try clTsktPtr.tskt.tryConnect();
                 }
+            }
+
+            if ((trgrs.send == .on) or (trgrs.recv == .on) or (trgrs.pool == .on)) {
+                clientReady = true;
+                log.debug("wait connected client - client ready", .{});
             }
         }
 
@@ -297,14 +320,9 @@ pub const Exchanger = struct {
 
         const it = Distributor.Iterator.init(&exc.tcm.?);
 
-        var loop: usize = 0;
+        var loop: usize = 1;
 
-        while ((loop < 3 * count) or (exc.forRecv.count() < (count + 1))) : (loop += 1) {
-            log.debug("loop {d} received {d}", .{
-                loop,
-                exc.forRecv.count(),
-            });
-
+        while ((loop < 3 * count) and (exc.forRecv.count() < (count + 1))) : (loop += 1) {
             var trgrs: sockets.Triggers = .{};
 
             trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
@@ -324,6 +342,11 @@ pub const Exchanger = struct {
                 var wasRecv = try exc.receiver.?.tskt.tryRecv();
                 wasRecv.move(&exc.forRecv);
             }
+
+            log.debug("loop {d} received {d}", .{
+                loop,
+                exc.forRecv.count(),
+            });
         }
 
         try testing.expect(exc.forRecv.count() == (count + 1));
