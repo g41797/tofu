@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const std_options: @import("std").Options = .{ .log_level = .debug };
-
 test {
     std.testing.log_level = .debug;
+    std.log.debug("\r\n   ****  ROOT TESTS  ****\r\n", .{});
 
     std.log.debug("message_tests\r\n", .{});
     _ = @import("message_tests.zig");

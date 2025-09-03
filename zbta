@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Usage ./zbta &> /tmp/....log
+
+date
+
+zig build test -freference-trace --summary all -Doptimize=Debug
+
+zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
+
+zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
+
+zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+
+date
