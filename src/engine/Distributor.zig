@@ -179,7 +179,7 @@ inline fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) !void {
     return;
 }
 
-pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, priority: Notifier.MessagePriority) !void {
+pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) !void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 
@@ -187,12 +187,12 @@ pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, priority: Notifier.
         return AmpeError.NotificationDisabled;
     }
 
-    try dtr.msgs[@intFromEnum(priority)].send(msg);
+    try dtr.msgs[@intFromEnum(oob)].send(msg);
 
     try dtr.ntfr.sendNotification(.{
         .kind = .message,
         .hint = hint,
-        .priority = priority,
+        .oob = oob,
     });
 
     return;

@@ -15,7 +15,7 @@ test "BinaryHeader marshalling and demarshalling" {
             .mode = .request,
             .origin = .application,
             .more = .last,
-            .cb = .zero, // Protocol sets this; application must not modify
+            .oob = .off,
         },
         .status = 0xFF,
         .message_id = 0xAABBCCDDEEFF0011,

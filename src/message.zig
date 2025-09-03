@@ -33,11 +33,9 @@ pub const MoreMessagesFlag = enum(u1) {
     more = 1,
 };
 
-/// Enum representing a control bit used by the engine for internal housekeeping.
-/// Opaque to the application and must not be modified.
-pub const ControlBitFlag = enum(u1) {
-    zero = 0,
-};
+/// If '.on' , indicates high priority message.
+/// Oob message will be placed in the head of the queue of messages for send.
+pub const Oob = Trigger;
 
 /// Packed struct containing protocol fields for message metadata.
 pub const ProtoFields = packed struct(u8) {
@@ -45,7 +43,7 @@ pub const ProtoFields = packed struct(u8) {
     mode: MessageMode = .invalid,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
-    cb: ControlBitFlag = .zero,
+    oob: Oob = .off,
 };
 
 /// Type alias for channel number, represented as a 16-bit unsigned integer.
@@ -619,6 +617,11 @@ pub const MessageQueue = struct {
             next = src.dequeue();
         }
     }
+};
+
+pub const Trigger = enum(u1) {
+    on = 1,
+    off = 0,
 };
 
 const Appendable = @import("nats").Appendable;

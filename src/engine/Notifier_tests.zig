@@ -21,7 +21,7 @@ test "base Notifier" {
     const notif: Notification = .{
         .kind = .message,
         .hint = .ByeSignal,
-        .priority = .oobMsg,
+        .oob = .on,
     };
 
     try ntfr.sendNotification(notif);

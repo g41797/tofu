@@ -90,12 +90,7 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
     msg.bhdr.channel_number = ach.chn;
     msg.bhdr.message_id = ach.mid;
 
-    const priority: Notifier.MessagePriority = switch (vc) {
-        .ByeSignal => .oobMsg,
-        else => .regularMsg,
-    };
-
-    try gt.prnt.submitMsg(msg, vc, priority);
+    try gt.prnt.submitMsg(msg, vc, msg.bhdr.proto.oob);
 
     return msg.bhdr;
 }

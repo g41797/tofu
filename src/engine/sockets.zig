@@ -1,11 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const Trigger = enum(u1) {
-    on = 1,
-    off = 0,
-};
-
 pub const Triggers = packed struct(u8) {
     notify: Trigger = .off,
     accept: Trigger = .off,
@@ -1118,6 +1113,8 @@ fn disable_nagle(socket: std.posix.socket_t) !void {
 }
 
 const message = @import("../message.zig");
+pub const Trigger = message.Trigger;
+
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;

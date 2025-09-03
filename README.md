@@ -93,9 +93,9 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
   - **Description**: For sequence of **APPLICATION** messages with the same **Message ID**:
     - `0`: Last or only message in the sequence.
     - `1`: More messages with the same **Message ID** expected.
-- **Protocol Control Bit (PCB)**:
+- **Out-of-Band message (Oob)**:
   - **Size**: 1 bit.
-  - **Description**: Used and filled exclusively by the protocol for housekeeping purposes. Completely opaque to the application and must not be modified by it.
+  - **Description**: Indicates priority of the message. For '1' - message will be placed in the head of the queue of messages for send.
 - **Status**:
   - **Size**: 1 byte.
   - **Description**: Indicates the status of a `response`, but may be placed within `signal`:

@@ -28,11 +28,6 @@ pub const NotificationKind = enum(u1) {
     alert = 1,
 };
 
-pub const MessagePriority = enum(u1) {
-    regularMsg = 0,
-    oobMsg = 1,
-};
-
 pub const Alert = enum(u2) {
     freedMemory = 0,
     srRemoved = 1,
@@ -53,7 +48,7 @@ pub const Alerter = struct {
 
 pub const Notification = packed struct(u8) {
     kind: NotificationKind = undefined,
-    priority: MessagePriority = undefined,
+    oob: Oob = undefined,
     hint: ValidCombination = undefined,
     alert: Alert = undefined,
 };
@@ -252,7 +247,9 @@ pub fn deinit(ntfr: *Notifier) void {
     posix.close(ntfr.receiver);
 }
 
-const ValidCombination = @import("../message.zig").ValidCombination;
+const message = @import("../message.zig");
+const Oob = message.Oob;
+const ValidCombination = message.ValidCombination;
 
 const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
