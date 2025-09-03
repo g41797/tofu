@@ -279,7 +279,7 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         if (skt.server) {
             switch (skt.address.any.family) {
                 std.posix.AF.UNIX => { // REUSEADDR and REUSEPORT are not supported for UDS
-                    const udsPath = skt.address.un.path[0..104];
+                    const udsPath = skt.address.un.path[0..108];
                     const path_len = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.len;
                     if (path_len > 0) {
                         std.fs.deleteFileAbsolute(skt.address.un.path[0..path_len]) catch {};
@@ -329,7 +329,7 @@ pub const SocketCreator = struct {
     pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
-        const address = std.net.Address.resolveIp(cnf.ip.?, cnf.port.?) catch |er| {
+        const address = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
             log.err("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
             return AmpeError.InvalidAddress;
         };
@@ -345,7 +345,7 @@ pub const SocketCreator = struct {
     pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
         const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_client;
 
-        var list = std.net.getAddressList(sc.allocator, cnf.addr.?, cnf.port.?) catch {
+        var list = std.net.getAddressList(sc.allocator, cnf.addrToSlice(), cnf.port.?) catch {
             return AmpeError.InvalidAddress;
         };
         defer list.deinit();
@@ -364,7 +364,7 @@ pub const SocketCreator = struct {
     }
 
     pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
-        return createUdsListener(sc.allocator, sc.cnfgr.uds_server.path);
+        return createUdsListener(sc.allocator, sc.cnfgr.uds_server.addrToSlice());
     }
 
     pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
@@ -391,7 +391,7 @@ pub const SocketCreator = struct {
     }
 
     pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
-        return createUdsSocket(sc.cnfgr.uds_client.path);
+        return createUdsSocket(sc.cnfgr.uds_client.addrToSlice());
     }
 
     pub fn createUdsSocket(path: []const u8) AmpeError!Skt {

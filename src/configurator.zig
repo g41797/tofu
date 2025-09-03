@@ -45,7 +45,7 @@ pub const ListenOnHeader = "~listen_on";
 
 /// Structure for configuring a TCP client connection.
 pub const TCPClientConfigurator = struct {
-    addr: ?[]const u8 = null,
+    addrbuf: [256]u8 = undefined,
     port: ?u16 = null,
 
     /// Initializes a TCP client configurator with an optional host/IP address and port.
@@ -53,11 +53,7 @@ pub const TCPClientConfigurator = struct {
     pub fn init(host_or_ip: ?[]const u8, port: ?u16) TCPClientConfigurator {
         var cnf: TCPClientConfigurator = .{};
 
-        if (host_or_ip) |ad| {
-            cnf.addr = ad;
-        } else {
-            cnf.addr = DefaultAddr;
-        }
+        cnf.toAddrBuf(host_or_ip);
 
         if (port) |pr| {
             cnf.port = pr;
@@ -75,22 +71,53 @@ pub const TCPClientConfigurator = struct {
 
     /// Converts the TCP client configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) AmpeError!void {
-        if ((self.addr == null) or (self.port == null)) {
+        const addrlen = self.addrLen();
+
+        if ((addrlen == 0) or (self.port == null)) {
             return AmpeError.WrongConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addr.?, self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
         config.append(ConnectToHeader, confHeader) catch {
             return AmpeError.WrongConfiguration;
         };
         return;
     }
+
+    fn addrLen(self: *const TCPClientConfigurator) usize {
+        const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
+        return ret;
+    }
+
+    fn toAddrBuf(self: *TCPClientConfigurator, host_or_ip: ?[]const u8) void {
+        @memset(&self.addrbuf, 0);
+        @memcpy(self.addrbuf[0..DefaultAddr.len], DefaultAddr);
+
+        if (host_or_ip == null) {
+            return;
+        }
+
+        const addr = host_or_ip.?;
+
+        @memset(&self.addrbuf, 0);
+
+        const dest = self.addrbuf[0..@min(addr.len, self.addrbuf.len)];
+
+        @memcpy(dest, addr);
+
+        return;
+    }
+
+    pub fn addrToSlice(self: *const TCPClientConfigurator) []const u8 {
+        const ret = self.addrbuf[0..self.addrLen()];
+        return ret;
+    }
 };
 
 /// Structure for configuring a TCP server listener.
 pub const TCPServerConfigurator = struct {
-    ip: ?[]const u8 = null,
+    addrbuf: [256]u8 = undefined,
     port: ?u16 = null,
 
     /// Initializes a TCP server configurator with an optional IP address and port.
@@ -98,11 +125,8 @@ pub const TCPServerConfigurator = struct {
     pub fn init(ip: ?[]const u8, port: ?u16) TCPServerConfigurator {
         var cnf: TCPServerConfigurator = .{};
 
-        if (ip) |ipval| {
-            cnf.ip = ipval;
-        } else {
-            cnf.ip = "";
-        }
+        cnf.toAddrBuf(ip);
+
         if (port) |pr| {
             cnf.port = pr;
         } else {
@@ -119,28 +143,58 @@ pub const TCPServerConfigurator = struct {
 
     /// Converts the TCP server configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) AmpeError!void {
-        if ((self.ip == null) or (self.port == null)) {
+        const addrlen = self.addrLen();
+
+        if ((addrlen == 0) or (self.port == null)) {
             return AmpeError.WrongConfiguration;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.ip.?, self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
         config.append(ListenOnHeader, confHeader) catch {
             return AmpeError.WrongConfiguration;
         };
         return;
     }
+
+    fn addrLen(self: *const TCPServerConfigurator) usize {
+        const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
+        return ret;
+    }
+
+    fn toAddrBuf(self: *TCPServerConfigurator, host_or_ip: ?[]const u8) void {
+        @memset(&self.addrbuf, 0);
+
+        if (host_or_ip == null) {
+            return;
+        }
+
+        const addr = host_or_ip.?;
+
+        @memset(&self.addrbuf, 0);
+
+        const dest = self.addrbuf[0..@min(addr.len, self.addrbuf.len)];
+
+        @memcpy(dest, addr);
+
+        return;
+    }
+
+    pub fn addrToSlice(self: *const TCPServerConfigurator) []const u8 {
+        const ret = self.addrbuf[0..self.addrLen()];
+        return ret;
+    }
 };
 
 /// Structure for configuring a UDS client connection.
 pub const UDSClientConfigurator = struct {
-    path: []const u8 = undefined,
+    addrbuf: [108]u8 = undefined,
 
     /// Initializes a UDS client configurator with a file path for the Unix Domain Socket.
     pub fn init(path: []const u8) UDSClientConfigurator {
-        return .{
-            .path = path,
-        };
+        var ret: UDSClientConfigurator = .{};
+        ret.toAddrBuf(path);
+        return ret;
     }
 
     /// Prepares a message with UDS client configuration for a Hello request.
@@ -154,24 +208,44 @@ pub const UDSClientConfigurator = struct {
         var buffer: [256]u8 = undefined;
         const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{
             UDSProto,
-            self.path,
+            self.addrToSlice(),
         }) catch unreachable;
         config.append(ConnectToHeader, confHeader) catch {
             return AmpeError.WrongConfiguration;
         };
         return;
     }
+
+    fn addrLen(self: *const UDSClientConfigurator) usize {
+        const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
+        return ret;
+    }
+
+    fn toAddrBuf(self: *UDSClientConfigurator, path: []const u8) void {
+        @memset(&self.addrbuf, 0);
+
+        const dest = self.addrbuf[0..@min(path.len, self.addrbuf.len)];
+
+        @memcpy(dest, path);
+
+        return;
+    }
+
+    pub fn addrToSlice(self: *const UDSClientConfigurator) []const u8 {
+        const ret = self.addrbuf[0..self.addrLen()];
+        return ret;
+    }
 };
 
 /// Structure for configuring a UDS server listener.
 pub const UDSServerConfigurator = struct {
-    path: []const u8 = undefined,
+    addrbuf: [108]u8 = undefined,
 
     /// Initializes a UDS server configurator with a file path for the Unix Domain Socket.
     pub fn init(path: []const u8) UDSServerConfigurator {
-        return .{
-            .path = path,
-        };
+        var ret: UDSServerConfigurator = .{};
+        ret.toAddrBuf(path);
+        return ret;
     }
 
     /// Prepares a message with UDS server configuration for a Welcome request.
@@ -183,11 +257,31 @@ pub const UDSServerConfigurator = struct {
     /// Converts the UDS server configuration to a text header and appends it to the provided TextHeaders.
     pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) AmpeError!void {
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.path }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.addrToSlice() }) catch unreachable;
         config.append(ListenOnHeader, confHeader) catch {
             return AmpeError.WrongConfiguration;
         };
         return;
+    }
+
+    fn addrLen(self: *const UDSServerConfigurator) usize {
+        const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
+        return ret;
+    }
+
+    fn toAddrBuf(self: *UDSServerConfigurator, path: []const u8) void {
+        @memset(&self.addrbuf, 0);
+
+        const dest = self.addrbuf[0..@min(path.len, self.addrbuf.len)];
+
+        @memcpy(dest, path);
+
+        return;
+    }
+
+    pub fn addrToSlice(self: *const UDSServerConfigurator) []const u8 {
+        const ret = self.addrbuf[0..self.addrLen()];
+        return ret;
     }
 };
 

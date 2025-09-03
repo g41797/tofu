@@ -3,14 +3,14 @@
 
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
-    socket_path: [104:0]u8 = undefined,
+    socket_path: [108:0]u8 = undefined,
 
     pub fn buildPath(tup: *TempUdsPath, allocator: Allocator) ![]u8 {
         tup.tempFile = try temp.create_file(allocator, "yaaamp*.port");
         tup.tempFile.retain = false;
         defer tup.tempFile.deinit();
 
-        const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..104]) catch {
+        const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..108]) catch {
             return AmpeError.UnknownError;
         };
 
