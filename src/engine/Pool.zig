@@ -3,35 +3,55 @@
 
 pub const Pool = @This();
 
+pub const InitialMsgs: u16 = 16;
+pub const MaxMsgs: u16 = 128;
+
 first: ?*Message = undefined,
 allocator: Allocator = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
 alerter: ?Notifier.Alerter = undefined,
 emptyWasReturned: bool = undefined,
+initialMsgs: u16 = undefined,
+maxMsgs: u16 = undefined,
+currMsgs: u16 = undefined,
 
-// pub fn create(gpa: Allocator) !*Pool {
-//     const pool = try gpa.create(Pool);
-//     errdefer gpa.destroy(pool);
-//     try pool.*.init(gpa, null);
-//     return pool;
-// }
-//
-// pub fn destroy(pool: *Pool) void {
-//     const gpa = pool.allocator;
-//     pool.close();
-//     gpa.destroy(pool);
-// }
-
-pub fn init(gpa: Allocator, alrtr: ?Notifier.Alerter) !Pool {
-    return .{
+pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.Alerter) AmpeError!Pool {
+    var ret: Pool = .{
         .allocator = gpa,
         .first = null,
         .mutex = .{},
         .closed = false,
         .alerter = alrtr,
         .emptyWasReturned = false,
+        .currMsgs = 0,
+        .initialMsgs = InitialMsgs,
+        .maxMsgs = MaxMsgs,
     };
+
+    if (initialMsgs) |im| {
+        if (im != 0) {
+            ret.initialMsgs = im;
+        }
+    }
+
+    if (maxMsgs) |mm| {
+        if (mm != 0) {
+            ret.maxMsgs = mm;
+        }
+    }
+
+    if (ret.maxMsgs < ret.initialMsgs) {
+        ret.maxMsgs = ret.initialMsgs;
+    }
+
+    errdefer ret.close();
+
+    for (0..ret.initialMsgs) |_| {
+        ret.put(Message.create(ret.allocator) catch {return AmpeError.AllocationFailed;});
+    }
+
+    return ret;
 }
 
 pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
@@ -66,7 +86,8 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
 pub fn put(pool: *Pool, msg: *Message) void {
     pool.mutex.lock();
     defer pool.mutex.unlock();
-    if (pool.closed) {
+
+    if ((pool.closed) or (pool.currMsgs == pool.maxMsgs)) {
         pool.free(msg);
         return;
     }
@@ -82,11 +103,12 @@ pub fn put(pool: *Pool, msg: *Message) void {
             pool.alerter.?.send_alert(.freedMemory) catch {};
         }
         pool.emptyWasReturned = false;
-        return;
+    } else {
+        msg.next = pool.first;
+        pool.first = msg;
     }
 
-    msg.next = pool.first;
-    pool.first = msg;
+    pool.currMsgs += 1;
 
     return;
 }
@@ -124,6 +146,7 @@ fn _freeAll(pool: *Pool) void {
     while (chain != null) {
         const next = chain.?.next;
         pool.free(chain.?);
+        pool.currMsgs -= 1;
         chain = next;
     }
     pool.first = null;
@@ -136,6 +159,8 @@ const Message = message.Message;
 const AllocationStrategy = @import("../engine.zig").AllocationStrategy;
 const Notifier = @import("Notifier.zig");
 const Alert = Notifier.Alert;
+
+const AmpeError = @import("../status.zig").AmpeError;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

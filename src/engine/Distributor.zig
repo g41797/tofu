@@ -108,7 +108,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     };
     errdefer dtr.ntfr.deinit();
 
-    dtr.pool = Pool.init(dtr.allocator, dtr.alerter()) catch {
+    dtr.pool = Pool.init(dtr.allocator, null, null, dtr.alerter()) catch {
         return AmpeError.AllocationFailed;
     };
     errdefer dtr.pool.close();

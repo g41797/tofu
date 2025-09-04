@@ -96,7 +96,7 @@ pub const Exchanger = struct {
     pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator, usePoller: bool) !Exchanger {
         var ret: Exchanger = .{
             .allocator = allocator,
-            .pool = try Pool.init(allocator, null),
+            .pool = try Pool.init(allocator, null, null, null),
             .srvcnf = srvcnf,
             .clcnf = clcnf,
         };
