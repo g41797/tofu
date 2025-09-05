@@ -48,7 +48,9 @@ pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.A
     errdefer ret.close();
 
     for (0..ret.initialMsgs) |_| {
-        ret.put(Message.create(ret.allocator) catch {return AmpeError.AllocationFailed;});
+        ret.put(Message.create(ret.allocator) catch {
+            return AmpeError.AllocationFailed;
+        });
     }
 
     return ret;
