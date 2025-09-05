@@ -937,15 +937,12 @@ pub const MsgReceiver = struct {
         return;
     }
 
-    fn getFromPool(mr: *MsgReceiver) !*Message {
+    fn getFromPool(mr: *MsgReceiver) AmpeError!*Message {
         const ret = mr.pool.get(.poolOnly) catch |e| {
             switch (e) {
-                error.ClosedPool => {
-                    return AmpeError.NotAllowed;
-                },
-                error.EmptyPool => {
+                AmpeError.PoolEmpty => {
                     mr.ptrg = .on;
-                    return AmpeError.PoolEmpty;
+                    return e;
                 },
                 else => return AmpeError.AllocationFailed,
             }

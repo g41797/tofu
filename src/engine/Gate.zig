@@ -22,8 +22,10 @@ pub fn mcg(gt: *Gate) MessageChannelGroup {
     return result;
 }
 
-pub fn Create(prnt: *Distributor, id: u32) !*Gate {
-    const gt = try prnt.allocator.create(Gate);
+pub fn Create(prnt: *Distributor, id: u32) AmpeError!*Gate {
+    const gt = prnt.allocator.create(Gate) catch {
+        return AmpeError.AllocationFailed;
+    };
     errdefer prnt.allocator.destroy(gt);
     gt.* = Gate.init(prnt, id);
     return gt;
@@ -59,7 +61,7 @@ fn deinit(gt: *Gate) void {
     return;
 }
 
-pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) !*Message {
+pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!*Message {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
     const msg = try gt.prnt.pool.get(strategy);
     return msg;
@@ -71,7 +73,7 @@ pub fn put(ptr: ?*anyopaque, msg: *Message) void {
     return;
 }
 
-pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
+pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) AmpeError!BinaryHeader {
     const vc = try msg.check_and_prepare();
 
     const gt: *Gate = @alignCast(@ptrCast(ptr));
@@ -95,7 +97,7 @@ pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) !BinaryHeader {
     return msg.bhdr;
 }
 
-pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) !?*Message {
+pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
     _ = gt;
     _ = timeout_ns;

@@ -9,7 +9,7 @@ test "Pool init" {
 test "Pool base finctionality" {
     var pool = try Pool.init(std.testing.allocator, null, null, null);
     pool.freeAll();
-    try testing.expectError(error.EmptyPool, pool.get(.poolOnly));
+    try testing.expectError(AmpeError.PoolEmpty, pool.get(.poolOnly));
 
     var msg1 = try pool.get(.always);
 
@@ -32,12 +32,14 @@ test "Pool base finctionality" {
     pool.free(msg1);
     pool.free(msg2);
 
-    try testing.expectError(error.EmptyPool, pool.get(.poolOnly));
+    try testing.expectError(AmpeError.PoolEmpty, pool.get(.poolOnly));
 
     pool.close();
 }
 
 const Pool = @import("Pool.zig");
+
+const AmpeError = @import("../status.zig").AmpeError;
 
 pub const engine = @import("../engine.zig");
 pub const AllocationStrategy = engine.AllocationStrategy;

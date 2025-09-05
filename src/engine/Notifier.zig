@@ -198,7 +198,7 @@ pub inline fn recvByte(receiver: socket_t) !u8 {
     return byte_array[0];
 }
 
-pub fn sendNotification(ntfr: *Notifier, notif: Notification) !void {
+pub fn sendNotification(ntfr: *Notifier, notif: Notification) AmpeError!void {
     const byteptr: *const u8 = @ptrCast(&notif);
 
     for (0..10) |_| {
@@ -215,7 +215,7 @@ pub fn send_notification(sender: socket_t, notif: Notification) !void {
     return sendByte(sender, byteptr.*);
 }
 
-pub inline fn sendByte(sender: socket_t, notif: u8) !void {
+pub inline fn sendByte(sender: socket_t, notif: u8) AmpeError!void {
     var byte_array = [_]u8{notif};
     _ = std.posix.send(sender, &byte_array, 0) catch {
         return AmpeError.NotificationFailed;

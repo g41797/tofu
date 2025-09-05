@@ -10,13 +10,13 @@ pub const Ampe = struct {
     /// Acquires a new message channel group.
     /// Call `release` on the result to stop communication and free associated memory.
     /// Thread-safe.
-    pub fn acquire(ampe: Ampe) anyerror!MessageChannelGroup {
+    pub fn acquire(ampe: Ampe) AmpeError!MessageChannelGroup {
         return ampe.vtable.acquire(ampe.ptr);
     }
 
     /// Releases a message channel group, stopping communication and freeing associated memory.
     /// Thread-safe.
-    pub fn release(ampe: Ampe, mcg: MessageChannelGroup) anyerror!void {
+    pub fn release(ampe: Ampe, mcg: MessageChannelGroup) AmpeError!void {
         return ampe.vtable.release(ampe.ptr, mcg.ptr);
     }
 };
@@ -37,9 +37,9 @@ pub const MessageChannelGroup = struct {
     vtable: *const vtables.MCGVTable,
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// Returns an error if the pool is empty and the strategy is poolOnly (`error.EmptyPool`).
+    /// Returns an error if the pool is empty and the strategy is poolOnly (`AmpeError.PoolEmpty`).
     /// Thread-safe.
-    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) anyerror!*message.Message {
+    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) AmpeError!*message.Message {
         return mcg.vtable.get(mcg.ptr, strategy);
     }
 
@@ -53,7 +53,7 @@ pub const MessageChannelGroup = struct {
     /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
     /// Returns an error if the message is invalid.
     /// Thread-safe.
-    pub fn asyncSend(mcg: MessageChannelGroup, msg: *message.Message) anyerror!message.BinaryHeader {
+    pub fn asyncSend(mcg: MessageChannelGroup, msg: *message.Message) AmpeError!message.BinaryHeader {
         return mcg.vtable.asyncSend(mcg.ptr, msg);
     }
 
@@ -63,7 +63,7 @@ pub const MessageChannelGroup = struct {
     /// or Status 'pool_empty' (indicating no free messages for receive).
     /// Idiomatic usage involves calling `waitReceive` in a loop within the same thread.
     /// Thread-safe.
-    pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) anyerror!?*message.Message {
+    pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) AmpeError!?*message.Message {
         return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
     }
 

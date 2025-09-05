@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test "Channels basic tests" {
+    var acns = try ActiveChannels.init(std.testing.allocator, 3);
+    acns.deinit();
+}
+
 test "ChannelNodeQueue tests" {
     var cq: ChannelNodeQueue = .{};
 
@@ -44,11 +49,6 @@ test "ChannelNodeQueue tests" {
 
     try testing.expectEqual(null, cq.remove(2));
     try testing.expectEqual(null, cq.dequeue());
-}
-
-test "Channels basic tests" {
-    var acns = try ActiveChannels.init(std.testing.allocator, 3);
-    acns.deinit();
 }
 
 const channels = @import("channels.zig");

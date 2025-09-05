@@ -53,11 +53,11 @@ pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.A
     return ret;
 }
 
-pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
+pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
     pool.mutex.lock();
     defer pool.mutex.unlock();
     if (pool.closed) {
-        return error.ClosedPool;
+        return AmpeError.NotAllowed;
     }
 
     var result: ?*Message = null;
@@ -72,11 +72,11 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) !*Message {
 
     if (ac == .poolOnly) {
         pool.emptyWasReturned = true;
-        return error.EmptyPool;
+        return AmpeError.PoolEmpty;
     }
 
-    const msg = Message.create(pool.allocator) catch |err| {
-        return err;
+    const msg = Message.create(pool.allocator) catch {
+        return AmpeError.AllocationFailed;
     };
 
     return msg;

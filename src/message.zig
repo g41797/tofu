@@ -308,13 +308,23 @@ pub const Message = struct {
     const tlen: u16 = 64;
 
     /// Creates a new Message instance with initialized body and text headers.
-    pub fn create(allocator: Allocator) !*Message {
-        var msg = try allocator.create(Message);
+    pub fn create(allocator: Allocator) AmpeError!*Message {
+        var msg = allocator.create(Message) catch {
+            return AmpeError.AllocationFailed;
+        };
+
         msg.* = .{};
         msg.bhdr = .{};
 
-        try msg.body.init(allocator, blen, null);
-        try msg.thdrs.init(allocator, tlen);
+        errdefer msg.destroy();
+
+        msg.body.init(allocator, blen, null) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        msg.thdrs.init(allocator, tlen) catch {
+            return AmpeError.AllocationFailed;
+        };
 
         return msg;
     }
@@ -419,7 +429,7 @@ pub const Message = struct {
     }
 
     /// Validates the message and updates its binary header fields based on content lengths.
-    pub fn check_and_prepare(msg: *Message) !ValidCombination {
+    pub fn check_and_prepare(msg: *Message) AmpeError!ValidCombination {
         msg.bhdr.status = status_to_raw(.success);
 
         const bhdr: BinaryHeader = msg.bhdr;

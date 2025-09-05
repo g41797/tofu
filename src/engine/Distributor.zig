@@ -154,17 +154,17 @@ pub fn Destroy(dtr: *Distributor) void {
     dtr.* = undefined;
 }
 
-fn create(ptr: ?*anyopaque) !MessageChannelGroup {
+fn create(ptr: ?*anyopaque) AmpeError!MessageChannelGroup {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
     return dtr.*._create();
 }
 
-fn destroy(ptr: ?*anyopaque, mcgimpl: ?*anyopaque) !void {
+fn destroy(ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
     return dtr._destroy(mcgimpl);
 }
 
-inline fn _create(dtr: *Distributor) !MessageChannelGroup {
+inline fn _create(dtr: *Distributor) AmpeError!MessageChannelGroup {
     dtr.maxid += 1;
 
     const gt = try Gate.Create(dtr, dtr.maxid);
@@ -172,14 +172,14 @@ inline fn _create(dtr: *Distributor) !MessageChannelGroup {
     return gt.mcg();
 }
 
-inline fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) !void {
+inline fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
     _ = dtr;
     const gt: *Gate = @alignCast(@ptrCast(mcgimpl));
     gt.Destroy();
     return;
 }
 
-pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) !void {
+pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) AmpeError!void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 
@@ -187,7 +187,9 @@ pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) !
         return AmpeError.NotificationDisabled;
     }
 
-    try dtr.msgs[@intFromEnum(oob)].send(msg);
+    dtr.msgs[@intFromEnum(oob)].send(msg) catch {
+        return AmpeError.NotAllowed;
+    };
 
     try dtr.ntfr.sendNotification(.{
         .kind = .message,
