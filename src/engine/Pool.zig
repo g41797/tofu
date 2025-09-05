@@ -3,9 +3,6 @@
 
 pub const Pool = @This();
 
-pub const InitialMsgs: u16 = 16;
-pub const MaxMsgs: u16 = 128;
-
 first: ?*Message = undefined,
 allocator: Allocator = undefined,
 mutex: Mutex = undefined,
@@ -25,8 +22,8 @@ pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.A
         .alerter = alrtr,
         .emptyWasReturned = false,
         .currMsgs = 0,
-        .initialMsgs = InitialMsgs,
-        .maxMsgs = MaxMsgs,
+        .initialMsgs = DefaultOptions.initialPoolMsgs.?,
+        .maxMsgs = DefaultOptions.maxPoolMsgs.?,
     };
 
     if (initialMsgs) |im| {
@@ -159,6 +156,7 @@ const Appendable = @import("nats").Appendable;
 const message = @import("../message.zig");
 const Message = message.Message;
 const AllocationStrategy = @import("../engine.zig").AllocationStrategy;
+const DefaultOptions = @import("../engine.zig").DefaultOptions;
 const Notifier = @import("Notifier.zig");
 const Alert = Notifier.Alert;
 

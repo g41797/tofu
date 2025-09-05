@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 test "Ampe create/destroy" {
-    var dtr = Distributor.Create(std.testing.allocator, .{}) catch unreachable;
+    var dtr = Distributor.Create(std.testing.allocator, engine.DefaultOptions) catch unreachable;
     defer dtr.Destroy();
 
     const ampe = try dtr.ampe();

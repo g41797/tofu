@@ -31,7 +31,7 @@ pub const AllocationStrategy = enum {
 
 /// Represents a message channel group interface for asynchronous message passing.
 /// Supports asynchronous bi-directional exchange of messages.
-/// Acts as a client to the Ampe engine, which performs the actual work.
+/// Acts as a client to the Ampe engine.
 pub const MessageChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.MCGVTable,
@@ -79,7 +79,13 @@ pub const MessageChannelGroup = struct {
 
 /// Structure for holding configuration options for the message passing engine.
 pub const Options = struct {
-    // 2DO - add pool options
+    initialPoolMsgs: ?u16 = null,
+    maxPoolMsgs: ?u16 = null,
+};
+
+pub const DefaultOptions: Options = .{
+    .initialPoolMsgs = 16,
+    .maxPoolMsgs = 64,
 };
 
 pub const message = @import("message.zig");
