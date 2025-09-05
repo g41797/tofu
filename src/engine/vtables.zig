@@ -31,7 +31,7 @@ pub const MCGVTable = struct {
     /// Returns an error if the message is invalid.
     ///
     /// Thread-safe.
-    asyncSend: *const fn (ptr: ?*anyopaque, msg: *message.Message) AmpeError!message.BinaryHeader,
+    asyncSend: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).

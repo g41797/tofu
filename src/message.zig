@@ -418,6 +418,15 @@ pub const Message = struct {
         allocator.destroy(msg);
     }
 
+    /// If message was not successfully send, destroy it
+    pub fn DestroySendMsg(msgoptptr: *?*Message) void {
+        const msgopt = msgoptptr.*;
+        if (msgopt) |msg| {
+            msg.destroy();
+            msgoptptr.* = null;
+        }
+    }
+
     /// Returns the actual length of the message body.
     pub fn actual_body_len(msg: *Message) usize {
         return actuaLen(&msg.body);

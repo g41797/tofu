@@ -17,23 +17,19 @@ test "ampe illegal messages" {
     defer dtr.Destroy();
 
     const ampe = try dtr.ampe();
+
     const mcg = try ampe.acquire();
+    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
 
-    var smsg: *Message = try Message.create(gpa);
-
-    // 2DO - Discuss in the documentation usage of errdefer for the messages
-    // Be careful - at least for messages returned to the pool
-    // errdefer smsg.destroy();
+    var smsg: ?*Message = try Message.create(gpa);
+    defer Message.DestroySendMsg(&smsg);
 
     // Send app. signal to channel 0
-    smsg.bhdr.proto.mode = .signal;
+    smsg.?.bhdr.proto.mode = .signal;
 
-    _ = mcg.asyncSend(smsg) catch |err| {
-        defer smsg.destroy();
+    _ = mcg.asyncSend(&smsg) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
-
-    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
 }
 
 const engine = @import("engine.zig");

@@ -73,28 +73,37 @@ pub fn put(ptr: ?*anyopaque, msg: *Message) void {
     return;
 }
 
-pub fn asyncSend(ptr: ?*anyopaque, msg: *Message) AmpeError!BinaryHeader {
-    const vc = try msg.check_and_prepare();
+pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
+    const msgopt = amsg.*;
+    if (msgopt == null) {
+        return AmpeError.NullMessage;
+    }
+
+    const sendMsg = msgopt.?;
+
+    const vc = try sendMsg.check_and_prepare();
 
     const gt: *Gate = @alignCast(@ptrCast(ptr));
 
-    if ((msg.bhdr.channel_number != 0) and (!gt.prnt.acns.exists(msg.bhdr.channel_number))) {
+    if ((sendMsg.bhdr.channel_number != 0) and (!gt.prnt.acns.exists(sendMsg.bhdr.channel_number))) {
         return AmpeError.InvalidChannelNumber;
     }
 
     var mID: ?MessageID = null;
-    if (msg.bhdr.message_id != 0) {
-        mID = msg.bhdr.message_id;
+    if (sendMsg.bhdr.message_id != 0) {
+        mID = sendMsg.bhdr.message_id;
     }
 
     const ach = gt.prnt.acns.createChannel(mID, gt);
 
-    msg.bhdr.channel_number = ach.chn;
-    msg.bhdr.message_id = ach.mid;
+    sendMsg.bhdr.channel_number = ach.chn;
+    sendMsg.bhdr.message_id = ach.mid;
 
-    try gt.prnt.submitMsg(msg, vc, msg.bhdr.proto.oob);
+    try gt.prnt.submitMsg(sendMsg, vc, sendMsg.bhdr.proto.oob);
 
-    return msg.bhdr;
+    amsg.* = null;
+
+    return sendMsg.bhdr;
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {

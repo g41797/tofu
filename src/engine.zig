@@ -50,10 +50,23 @@ pub const MessageChannelGroup = struct {
     }
 
     /// Initiates an asynchronous send of a message to a peer.
-    /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.
-    /// Returns an error if the message is invalid.
+    /// If the send is initiated successfully:
+    ///     - set msg.* to null in order to prevent obsolete message destroy.
+    ///     - returns a filled BinaryHeader as correlation information .
+    /// If the message is invalid:
+    ///     - returns an error
+    ///
+    /// Idiomatic way of handling send messages:
+    ///
+    ///     var smsg: ?*Message = try Message.create(gpa);
+    ///     -------------> USE DestroySendMsg !!!
+    ///     defer Message.DestroySendMsg(&smsg); // If was send - nothing, if was not - message will be destoed
+    ///     ..................
+    ///     ..................
+    ///     const bh  = mcg.asyncSend(&smsg);
+    ///
     /// Thread-safe.
-    pub fn asyncSend(mcg: MessageChannelGroup, msg: *message.Message) AmpeError!message.BinaryHeader {
+    pub fn asyncSend(mcg: MessageChannelGroup, msg: *?*message.Message) AmpeError!message.BinaryHeader {
         return mcg.vtable.asyncSend(mcg.ptr, msg);
     }
 
