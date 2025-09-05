@@ -35,13 +35,13 @@ pub const Alert = enum(u2) {
     _reserved = 3,
 };
 
-pub const SendAlert = *const fn (context: ?*anyopaque, alrt: Alert) anyerror!void;
+pub const SendAlert = *const fn (context: ?*anyopaque, alrt: Alert) AmpeError!void;
 
 pub const Alerter = struct {
     ptr: ?*anyopaque,
     func: SendAlert = undefined,
 
-    pub fn send_alert(ar: *Alerter, alert: Alert) anyerror!void {
+    pub fn send_alert(ar: *Alerter, alert: Alert) AmpeError!void {
         return ar.func(ar.ptr, alert);
     }
 };

@@ -198,12 +198,12 @@ pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) !
     return;
 }
 
-pub fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) !void {
+pub fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
     const dtr: *Distributor = @alignCast(@ptrCast(ptr));
     return dtr.sendAlert(alert);
 }
 
-pub fn sendAlert(dtr: *Distributor, alrt: Notifier.Alert) !void {
+pub fn sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 

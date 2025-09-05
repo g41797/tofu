@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-test "Ampe create/destroy" {
+test "ampe just create/destroy" {
     var dtr = Distributor.Create(std.testing.allocator, engine.DefaultOptions) catch unreachable;
     defer dtr.Destroy();
 
@@ -9,11 +9,32 @@ test "Ampe create/destroy" {
 
     const mcg = try ampe.acquire();
 
-    try ampe.release(mcg);
+    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
 }
 
-const std = @import("std");
-const testing = std.testing;
+test "ampe illegal messages" {
+    var dtr = Distributor.Create(std.testing.allocator, engine.DefaultOptions) catch unreachable;
+    defer dtr.Destroy();
+
+    const ampe = try dtr.ampe();
+    const mcg = try ampe.acquire();
+
+    var smsg: *Message = try Message.create(gpa);
+
+    // 2DO - Discuss in the documentation usage of errdefer for the messages
+    // Be careful - at least for messages returned to the pool
+    // errdefer smsg.destroy();
+
+    // Send app. signal to channel 0
+    smsg.bhdr.proto.mode = .signal;
+
+    _ = mcg.asyncSend(smsg) catch |err| {
+        defer smsg.destroy();
+        try testing.expect(err == AmpeError.InvalidChannelNumber);
+    };
+
+    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
+}
 
 const engine = @import("engine.zig");
 const Ampe = engine.Ampe;
@@ -38,3 +59,7 @@ pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
 
 pub const Distributor = @import("engine/Distributor.zig");
+
+const std = @import("std");
+const testing = std.testing;
+const gpa = std.testing.allocator;
