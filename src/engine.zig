@@ -44,8 +44,11 @@ pub const MessageChannelGroup = struct {
     }
 
     /// Returns a message to the internal pool. If the pool is closed, destroys the message.
+    /// Sets msg to null for preventing further usage.
+    /// For safe destroying - use message.DestroySendMsg(msg),
+    /// where msg: *?*message.Message (see  asyncSend comment).
     /// Thread-safe.
-    pub fn put(mcg: MessageChannelGroup, msg: *message.Message) void {
+    pub fn put(mcg: MessageChannelGroup, msg: *?*message.Message) void {
         mcg.vtable.put(mcg.ptr, msg);
     }
 
@@ -58,12 +61,12 @@ pub const MessageChannelGroup = struct {
     ///
     /// Idiomatic way of handling send messages:
     ///
-    ///     var smsg: ?*Message = try Message.create(gpa);
+    ///     var msg: ?*Message = try Message.create(gpa);
     ///     -------------> USE DestroySendMsg !!!
-    ///     defer Message.DestroySendMsg(&smsg); // If was send - nothing, if was not - message will be destoed
+    ///     defer Message.DestroySendMsg(&msg); // If was send - nothing, if was not - message will be destroyed
     ///     ..................
     ///     ..................
-    ///     const bh  = mcg.asyncSend(&smsg);
+    ///     const bh  = mcg.asyncSend(&msg);
     ///
     /// Thread-safe.
     pub fn asyncSend(mcg: MessageChannelGroup, msg: *?*message.Message) AmpeError!message.BinaryHeader {

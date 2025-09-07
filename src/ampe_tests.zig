@@ -30,3 +30,47 @@ test {
 }
 
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const gpa = std.testing.allocator;
+
+// pub const Msg = struct {
+//     body: [16]u8 = undefined,
+//
+//     pub fn create(allocator: Allocator) !*Msg {
+//         return try allocator.create(Msg);
+//     }
+//     pub fn destroy(msg: *Msg, allocator: Allocator) void {
+//         allocator.destroy(msg);
+//     }
+//     pub fn DestroySendMsg(msgoptptr: *?*Msg) void {
+//         const msgopt = msgoptptr.*;
+//         if (msgopt) |msg| {
+//             msg.destroy();
+//             msgoptptr.* = null;
+//         }
+//     }
+// };
+//
+//
+// // Sends msg to another thread for the transfer
+// // If msg is not valid - returns error
+// pub fn asyncMsgSend(msg: *?*Msg) !void {
+//     msg.* = null;
+// }
+//
+// pub fn alwaysError() !void {
+//     return error.Timeout;
+// }
+
+// test "something" {
+//     var msg = try Msg.create(gpa);
+//     errdefer msg.destroy(gpa);
+//     try asyncMsgSend(msg);
+// }
+
+// test "anything" {
+//     var msg: ?*Msg = try Msg.create(gpa);
+//     defer msg.DestroySendMsg(&msg);
+//     try asyncMsgSend(&msg);
+//
+// }

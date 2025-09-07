@@ -21,13 +21,13 @@ test "ampe illegal messages" {
     const mcg = try ampe.acquire();
     defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
 
-    var smsg: ?*Message = try Message.create(gpa);
-    defer Message.DestroySendMsg(&smsg);
+    var msg: ?*Message = try Message.create(gpa);
+    defer Message.DestroySendMsg(&msg);
 
     // Send app. signal to channel 0
-    smsg.?.bhdr.proto.mode = .signal;
+    msg.?.bhdr.proto.mode = .signal;
 
-    _ = mcg.asyncSend(&smsg) catch |err| {
+    _ = mcg.asyncSend(&msg) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
 }

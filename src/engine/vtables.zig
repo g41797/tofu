@@ -24,7 +24,7 @@ pub const MCGVTable = struct {
     /// Returns a message to the internal pool. If the pool is closed, destroys the message.
     ///
     /// Thread-safe.
-    put: *const fn (ptr: ?*anyopaque, msg: *message.Message) void,
+    put: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) void,
 
     /// Initiates an asynchronous send of a message to a peer.
     /// Returns a filled BinaryHeader as correlation information if the send is initiated successfully.

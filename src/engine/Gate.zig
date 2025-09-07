@@ -67,9 +67,15 @@ pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!*Message {
     return msg;
 }
 
-pub fn put(ptr: ?*anyopaque, msg: *Message) void {
+pub fn put(ptr: ?*anyopaque, msg: *?*Message) void {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
-    gt.prnt.pool.put(msg);
+
+    const msgopt = msg.*;
+    if (msgopt) |m| {
+        gt.prnt.pool.put(m);
+    }
+    msg.* = null;
+
     return;
 }
 
