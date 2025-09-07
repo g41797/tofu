@@ -1,5 +1,5 @@
 Based on
     https://github.com/ziglang/logo/blob/e906a62f837283ffd0c4bde7e2bccc8b45977cbb/ziggy.svg
     https://github.com/ziglang/logo/blob/e906a62f837283ffd0c4bde7e2bccc8b45977cbb/ziguana.svg
-Original licence:
+Original license:
     https://github.com/ziglang/logo/blob/e906a62f837283ffd0c4bde7e2bccc8b45977cbb/LICENSE
