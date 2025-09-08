@@ -281,3 +281,5 @@ Wiki Tofu
 tofu is as good as you are a cook
     https://www.reddit.com/r/vegan/comments/hguwpc/tofu_is_as_good_as_you_are_a_cook/
 
+Remove background
+    https://www.pixelcut.ai/ai-image-editor?tool=removeBackground

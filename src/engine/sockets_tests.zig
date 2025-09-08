@@ -493,9 +493,9 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
     return tskt;
 }
 
-const sockets = @import("sockets.zig");
+const tofu = @import("tofu");
 
-const message = @import("../message.zig");
+const message = tofu.message;
 const MessageType = message.MessageType;
 const MessageMode = message.MessageMode;
 const OriginFlag = message.OriginFlag;
@@ -507,20 +507,19 @@ const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
-
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 const CN = message.ChannelNumber;
 
-const Distributor = @import("Distributor.zig");
+const Distributor = tofu.Distributor;
 const TCM = Distributor.TriggeredChannelsMap;
 const TC = Distributor.TriggeredChannel;
 
-const poller = @import("poller.zig");
+const poller = tofu.poller;
 const Poller = poller.Poller;
 const Poll = poller.Poll;
 
-const configurator = @import("../configurator.zig");
+const configurator = tofu.configurator;
 const Configurator = configurator.Configurator;
 const TCPServerConfigurator = configurator.TCPServerConfigurator;
 const TCPClientConfigurator = configurator.TCPClientConfigurator;
@@ -528,24 +527,26 @@ const UDSServerConfigurator = configurator.UDSServerConfigurator;
 const UDSClientConfigurator = configurator.UDSClientConfigurator;
 const WrongConfigurator = configurator.WrongConfigurator;
 
-const status = @import("../status.zig");
+const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const Pool = @import("Pool.zig");
-const Notifier = @import("Notifier.zig");
+const Pool = tofu.Pool;
+const Notifier = tofu.Notifier;
 const Notification = Notifier.Notification;
 
-const channels = @import("channels.zig");
+const channels = tofu.channels;
 const ActiveChannel = channels.ActiveChannel;
 const ActiveChannels = channels.ActiveChannels;
 
-pub const Appendable = @import("nats").Appendable;
+const sockets = tofu.sockets;
 
-const DBG = @import("../engine.zig").DBG;
+const Appendable = @import("nats").Appendable;
+
+const DBG = tofu.DBG;
 
 const std = @import("std");
 const testing = std.testing;

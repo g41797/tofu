@@ -32,29 +32,31 @@ test "ampe illegal messages" {
     };
 }
 
-const engine = @import("engine.zig");
+const tofu = @import("tofu");
+
+const engine = tofu.engine;
 const Ampe = engine.Ampe;
 const MessageChannelGroup = engine.MessageChannelGroup;
 
-pub const message = @import("message.zig");
-pub const MessageType = message.MessageType;
-pub const MessageMode = message.MessageMode;
-pub const OriginFlag = message.OriginFlag;
-pub const MoreMessagesFlag = message.MoreMessagesFlag;
-pub const ProtoFields = message.ProtoFields;
-pub const BinaryHeader = message.BinaryHeader;
-pub const TextHeader = message.TextHeader;
-pub const TextHeaderIterator = message.TextHeaderIterator;
-pub const TextHeaders = message.TextHeaders;
-pub const Message = message.Message;
-pub const MessageID = message.MessageID;
-pub const VC = message.ValidCombination;
+const message = tofu.message;
+const MessageType = message.MessageType;
+const MessageMode = message.MessageMode;
+const OriginFlag = message.OriginFlag;
+const MoreMessagesFlag = message.MoreMessagesFlag;
+const ProtoFields = message.ProtoFields;
+const BinaryHeader = message.BinaryHeader;
+const TextHeader = message.TextHeader;
+const TextHeaderIterator = message.TextHeaderIterator;
+const TextHeaders = message.TextHeaders;
+const Message = message.Message;
+const MessageID = message.MessageID;
+const VC = message.ValidCombination;
 
-pub const status = @import("status.zig");
-pub const AmpeStatus = status.AmpeStatus;
-pub const AmpeError = status.AmpeError;
+const status = tofu.status;
+const AmpeStatus = status.AmpeStatus;
+const AmpeError = status.AmpeError;
 
-pub const Distributor = @import("engine/Distributor.zig");
+const Distributor = tofu.Distributor;
 
 const std = @import("std");
 const testing = std.testing;

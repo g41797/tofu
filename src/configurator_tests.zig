@@ -39,8 +39,7 @@ fn allocMsg() *Message {
     const msg: *Message = Message.create(std.testing.allocator) catch unreachable;
     return msg;
 }
-
-pub const message = @import("message.zig");
+pub const message = @import("tofu").message;
 pub const MessageType = message.MessageType;
 pub const MessageMode = message.MessageMode;
 pub const OriginFlag = message.OriginFlag;
@@ -52,7 +51,7 @@ pub const TextHeaderIterator = message.TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
-const configurator = @import("configurator.zig");
+const configurator = @import("tofu").configurator;
 const Configurator = configurator.Configurator;
 const TCPClientConfigurator = configurator.TCPClientConfigurator;
 const TCPServerConfigurator = configurator.TCPServerConfigurator;

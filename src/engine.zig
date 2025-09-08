@@ -10,13 +10,13 @@ pub const Ampe = struct {
     /// Acquires a new message channel group.
     /// Call `release` on the result to stop communication and free associated memory.
     /// Thread-safe.
-    pub fn acquire(ampe: Ampe) AmpeError!MessageChannelGroup {
+    pub fn acquire(ampe: Ampe) status.AmpeError!MessageChannelGroup {
         return ampe.vtable.acquire(ampe.ptr);
     }
 
     /// Releases a message channel group, stopping communication and freeing associated memory.
     /// Thread-safe.
-    pub fn release(ampe: Ampe, mcg: MessageChannelGroup) AmpeError!void {
+    pub fn release(ampe: Ampe, mcg: MessageChannelGroup) status.AmpeError!void {
         return ampe.vtable.release(ampe.ptr, mcg.ptr);
     }
 };
@@ -37,9 +37,9 @@ pub const MessageChannelGroup = struct {
     vtable: *const vtables.MCGVTable,
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// Returns an error if the pool is empty and the strategy is poolOnly (`AmpeError.PoolEmpty`).
+    /// Returns an error if the pool is empty and the strategy is poolOnly (`status.AmpeError.PoolEmpty`).
     /// Thread-safe.
-    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) AmpeError!*message.Message {
+    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!*message.Message {
         return mcg.vtable.get(mcg.ptr, strategy);
     }
 
@@ -69,7 +69,7 @@ pub const MessageChannelGroup = struct {
     ///     const bh  = mcg.asyncSend(&msg);
     ///
     /// Thread-safe.
-    pub fn asyncSend(mcg: MessageChannelGroup, msg: *?*message.Message) AmpeError!message.BinaryHeader {
+    pub fn asyncSend(mcg: MessageChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
         return mcg.vtable.asyncSend(mcg.ptr, msg);
     }
 
@@ -79,7 +79,7 @@ pub const MessageChannelGroup = struct {
     /// or Status 'pool_empty' (indicating no free messages for receive).
     /// Idiomatic usage involves calling `waitReceive` in a loop within the same thread.
     /// Thread-safe.
-    pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) AmpeError!?*message.Message {
+    pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
         return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
     }
 
@@ -104,12 +104,22 @@ pub const DefaultOptions: Options = .{
     .maxPoolMsgs = 64,
 };
 
+pub const DBG = (@import("builtin").mode == .Debug);
+
+pub const engine = @This();
+
+pub const configurator = @import("configurator.zig");
 pub const message = @import("message.zig");
-pub const AmpeError = @import("status.zig").AmpeError;
+pub const status = @import("status.zig");
+
+pub const channels = @import("engine/channels.zig");
 pub const Distributor = @import("engine/Distributor.zig");
+pub const Notifier = @import("engine/Notifier.zig");
+pub const Pool = @import("engine/Pool.zig");
+pub const poller = @import("engine/poller.zig");
+pub const sockets = @import("engine/sockets.zig");
+
 const vtables = @import("engine/vtables.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-
-pub const DBG = (@import("builtin").mode == .Debug);

@@ -37,12 +37,10 @@ test "Pool base finctionality" {
     pool.close();
 }
 
-const Pool = @import("Pool.zig");
-
-const AmpeError = @import("../status.zig").AmpeError;
-
-pub const engine = @import("../engine.zig");
-pub const AllocationStrategy = engine.AllocationStrategy;
+const Pool = @import("tofu").Pool;
+const AmpeError = @import("tofu").status.AmpeError;
+const engine = @import("tofu").engine;
+const AllocationStrategy = engine.AllocationStrategy;
 
 const std = @import("std");
 const testing = std.testing;

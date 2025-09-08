@@ -89,8 +89,8 @@ test "TextHeaderIterator empty" {
     try std.testing.expectEqual(null, it.next());
 }
 
-pub const message = @import("message.zig");
-pub const TextHeaderIterator = message.TextHeaderIterator;
+const message = @import("tofu").message;
+const TextHeaderIterator = message.TextHeaderIterator;
 
 const std = @import("std");
 const testing = std.testing;

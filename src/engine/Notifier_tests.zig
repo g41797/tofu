@@ -37,7 +37,7 @@ test "base Notifier" {
     try testing.expectEqual(0xFF, ack);
 }
 
-const Notifier = @import("Notifier.zig");
+const Notifier = @import("tofu").Notifier;
 const NotificationKind = Notifier.NotificationKind;
 const Notification = Notifier.Notification;
 
