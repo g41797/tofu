@@ -283,3 +283,6 @@ tofu is as good as you are a cook
 
 Remove background
     https://www.pixelcut.ai/ai-image-editor?tool=removeBackground
+
+What is a test in zig?
+    https://ziggit.dev/t/what-is-a-test-in-zig/8885
