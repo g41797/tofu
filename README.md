@@ -15,13 +15,13 @@ I spent a long time racking my brain trying to explain the _point_ of this proje
 
 There are already tons of networking libraries out there. 
 
-Well, let’s say at least “half a kilo” for Zig. 
+Well, let’s say at least several kilograms for Zig. 
 
 And then it hit me — **tofu**!
 
 Tofu is a simple product with almost no flavor. You can
-- eat it plain with no fuss
-- add a little spice and make something simple
+- eat it plain 
+- add a little spice and make something slightly better
 - or go all the way and create culinary masterpieces.
 
 And what I especially like:
@@ -44,9 +44,10 @@ That system powered all data transfer in a serious distributed environment
 
 We parted ways a few years ago, but I haven't heard any complaints yet.
 
-Corporate lawyers can relax — from that old system I only took the _scent_. 
+Corporate lawyers can relax — from that system I only took the _smell_
+([precedent case about paying for smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html))
 
-By that I mean the idea itself: 
+By '_smell_' I mean the idea itself: 
 - messaging as the foundation
 - the philosophy of gradual evolution 
   - starting from something simple 
