@@ -1,14 +1,12 @@
 ![](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
-# tofu - To Feel Unstoppable
-_Async messaging for Zig._
+# tofu - _Async messaging for Zig._
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Linux](https://github.com/g41797/yaaamp/actions/workflows/linux.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/linux.yml)
 <!-- [![MacOS](https://github.com/g41797/yaaamp/actions/workflows/mac.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/mac.yml) -->
 ##
-A “cool” slogan. 
 
-But what does **tofu** have to do with a library for 
+What does **tofu** have to do with a library for 
 _asynchronous message communication_?
 
 I spent a long time racking my brain trying to explain the _point_ of this project.
