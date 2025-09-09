@@ -38,7 +38,7 @@ _tofu_ wasn’t “pulled out of thin air.”
 
 I started developing a similar system back in 2008, maintained it, and kept it running for years.
 
-That system powered all data exchange in a serious distributed environment 
+That system powered all data transfer in a serious distributed environment 
 - from basic IPC 
 - to communication in a proprietary distributed file system.
 
@@ -74,7 +74,7 @@ Why not? — Go ahead and use it.
   - [Zig on Discourse](https://ziggit.dev/)
 
 ## Last but not least
-⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797!)
+⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797)!
 
 
 
