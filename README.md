@@ -24,17 +24,17 @@ Tofu is a simple product with almost no flavor. You can
 - add a little spice and make something simple
 - or go all the way and create culinary masterpieces.
 
-And what I like specially:
+And what I especially like:
 >[tofu is as good as you are a cook](https://www.reddit.com/r/vegan/comments/hguwpc/tofu_is_as_good_as_you_are_a_cook/)
 
-Similar you will use the tofu library: 
+You'll use the tofu library in a similar way: 
 - from minimal setups 
 - to more complex flows
 - and eventually distributed applications.
 
 ## A bit of history
 
-_tofu_ wasn’t “pulled out of thin air.”
+**tofu** wasn’t just "pulled out of thin air."
 
 I started developing a similar system back in 2008, maintained it, and kept it running for years.
 
@@ -42,7 +42,7 @@ That system powered all data transfer in a serious distributed environment
 - from basic IPC 
 - to communication in a proprietary distributed file system.
 
-We’ve “parted ways” for a few years now, but I haven’t heard any complaints yet.
+We parted ways a few years ago, but I haven't heard any complaints yet.
 
 Corporate lawyers can relax — from that old system I only took the _scent_. 
 
@@ -53,11 +53,11 @@ By that I mean the idea itself:
   - and steadily growing into more advanced and powerful systems.
 
 ## API
-You won’t find the tofu API here yet.
+You won’t find the tofu API here.
 
 As development moves forward, I’ll be preparing proper documentation.
 
-A link will be added at the time of project “publication.”
+A link will be added when the project is ready for release.
 
 ## Why not use another library?
 Why not? — Go ahead and use it.
