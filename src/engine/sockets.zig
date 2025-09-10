@@ -167,8 +167,6 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
     server: bool = false,
 
     pub fn listen(skt: *Skt) !void {
-        log.debug("TRY LISTEN ON FD {x}", .{skt.socket});
-
         skt.server = true;
         skt.deleteUDSPath();
 
@@ -181,14 +179,10 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         var slen: posix.socklen_t = skt.address.getOsSockLen();
         try posix.getsockname(skt.socket, &skt.address.any, &slen);
 
-        log.debug("LISTEN ON FD {x}", .{skt.socket});
-
         return;
     }
 
     pub fn accept(askt: *Skt) AmpeError!?Skt {
-        log.debug("TRY ACCEPT FD {x}", .{askt.socket});
-
         var skt: Skt = .{};
 
         var addr: std.net.Address = undefined;
@@ -214,8 +208,6 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
 
         skt.address = addr;
 
-        log.debug("ACCEPT FD {x} CLIENT FD {x}", .{ askt.socket, skt.socket });
-
         return skt;
     }
 
@@ -225,8 +217,6 @@ pub const Skt = struct { //2DO - Add here all socket functions e.g. listen etc.
         }
 
         var connected = true;
-
-        log.debug("TRY CONNECT FD {x}", .{skt.socket});
 
         std.posix.connect(
             skt.socket,

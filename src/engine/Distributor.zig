@@ -149,8 +149,11 @@ pub fn Destroy(dtr: *Distributor) void {
 
     dtr.waitFinish();
 
+    //
+    // All releases should be done here, not on the thread!!!
+    //
     dtr.plr.deinit();
-
+    dtr.trgrd_map.deinit();
     dtr.* = undefined;
 }
 
@@ -238,10 +241,7 @@ fn createThread(dtr: *Distributor) !void {
 
 fn onThread(dtr: *Distributor) void {
     dtr.ntfr.sendAck(0) catch unreachable;
-
-    dtr.trgrd_map.deinit();
-
-    return;
+   return;
 }
 
 inline fn waitFinish(dtr: *Distributor) void {

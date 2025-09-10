@@ -2,14 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 test "ampe just create/destroy" {
-    var dtr = Distributor.Create(std.testing.allocator, engine.DefaultOptions) catch unreachable;
-    defer dtr.Destroy();
-
-    const ampe = try dtr.ampe();
-
-    const mcg = try ampe.acquire();
-
-    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
+    try recipes.createDestroyMainStruct(gpa);
+    try recipes.createDestroyMsgEngine(gpa);
+    try recipes.createDestroyMessageChannelGroup(gpa);
 }
 
 test "ampe illegal messages" {
@@ -33,6 +28,8 @@ test "ampe illegal messages" {
 }
 
 const tofu = @import("tofu");
+
+const recipes = @import("recipes");
 
 const engine = tofu.engine;
 const Ampe = engine.Ampe;

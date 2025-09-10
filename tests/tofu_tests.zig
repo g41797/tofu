@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 test {
-    recipes.nop();
-
     std.testing.log_level = .debug;
+
     std.log.debug("\r\n   ****  ROOT TESTS  ****\r\n", .{});
 
     std.log.debug("message_tests\r\n", .{});

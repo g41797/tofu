@@ -8,7 +8,7 @@ const INFINITE_TIMEOUT_MS = -1;
 pub const std_options: @import("std").Options = .{ .log_level = .debug };
 
 test "UDS exchanger " {
-    std.testing.log_level = .debug;
+    std.testing.log_level = .info;
 
     log.debug("Exchanger UDS\r\n", .{});
 
@@ -33,7 +33,7 @@ test "UDS exchanger " {
 }
 
 test "TCP/IP exchanger " {
-    std.testing.log_level = .debug;
+    std.testing.log_level = .info;
 
     log.debug("Exchanger TCP/IP)\r\n", .{});
 
