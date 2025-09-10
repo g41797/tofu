@@ -304,3 +304,17 @@ Learn Hugo theme
 
     Why: While a demo, this site illustrates the Learn theme’s s
     implicity and Markdown-driven structure, suitable for straightforward software docs.
+
+Add ananke
+     hugo new site docs
+     cd docs
+     ls -la
+     git submodule add https://github.com/theNewDynamic/gohugo-theme-ananke.git themes/ananke
+
+
+
+Relearn
+    https://mcshelby.github.io/hugo-theme-relearn/introduction/quickstart/
+    cd docs
+    git submodule add --depth 1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
+
