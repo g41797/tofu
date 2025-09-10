@@ -9,7 +9,7 @@
 What does **tofu** have to do with a library for 
 _asynchronous message communication_?
 
-I spent a long time racking my brain trying to explain the _point_ of this project.
+I spent a long time breaking my head trying to explain the _point_ of this project.
 
 There are already tons of networking libraries out there. 
 

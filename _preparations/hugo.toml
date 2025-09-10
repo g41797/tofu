@@ -1,0 +1,11 @@
+baseURL = "https://g41797.github.io/tofu/"
+languageCode = "en-us"
+title = "tofu - Async messaging for Zig"
+#theme = "learn"
+
+[params]
+description = "Documentation for tofu progect"
+author = "g41797"
+themeVariant = "green"  # Options: green, blue, red
+#editURL = "https://github.com/g41797.github.io/tofu/edit/main/docs/content"
+showVisitedLinks = true  # Highlights visited links

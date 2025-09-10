@@ -286,3 +286,21 @@ Remove background
 
 What is a test in zig?
     https://ziggit.dev/t/what-is-a-test-in-zig/8885
+
+tofu GitHub pages
+    https://g41797.github.io/tofu/
+
+
+Learn Hugo theme
+    https://learn.netlify.app/
+
+    Grav Documentation: https://learn.getgrav.org/
+    Why: Grav’s documentation uses the Learn theme,
+    showcasing its tutorial-driven layout, clean design, a
+    nd hierarchical navigation, perfect for explaining async messaging in Zig.
+
+
+    Hugo Learn Theme Demo: https://learn.netlify.app/en/
+
+    Why: While a demo, this site illustrates the Learn theme’s s
+    implicity and Markdown-driven structure, suitable for straightforward software docs.
