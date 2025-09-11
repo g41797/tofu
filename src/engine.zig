@@ -37,9 +37,10 @@ pub const MessageChannelGroup = struct {
     vtable: *const vtables.MCGVTable,
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// Returns an error if the pool is empty and the strategy is poolOnly (`status.AmpeError.PoolEmpty`).
+    /// Returns מוךך if the pool is empty and the strategy is poolOnly.
+    /// Returns an error during mcg release or if allocation failed.
     /// Thread-safe.
-    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!*message.Message {
+    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
         return mcg.vtable.get(mcg.ptr, strategy);
     }
 
@@ -54,16 +55,18 @@ pub const MessageChannelGroup = struct {
 
     /// Initiates an asynchronous send of a message to a peer.
     /// If the send is initiated successfully:
-    ///     - set msg.* to null in order to prevent obsolete message destroy.
+    ///     - set msg.* to null in order to prevent wrong message destroy/put.
     ///     - returns a filled BinaryHeader as correlation information .
     /// If the message is invalid:
     ///     - returns an error
     ///
     /// Idiomatic way of handling send messages:
     ///
-    ///     var msg: ?*Message = try Message.create(gpa);
-    ///     -------------> USE DestroySendMsg !!!
-    ///     defer Message.DestroySendMsg(&msg); // If was send - nothing, if was not - message will be destroyed
+    ///     var msg: ?*Message = try mcg.get(tofu.AllocationStrategy.poolOnly);
+    ///
+    ///     If was send - nothing,
+    ///     if was not - message will be returned to the pool
+    ///     defer mcg.put(&msg);
     ///     ..................
     ///     ..................
     ///     const bh  = mcg.asyncSend(&msg);

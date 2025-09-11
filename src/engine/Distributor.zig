@@ -108,7 +108,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     };
     errdefer dtr.ntfr.deinit();
 
-    dtr.pool = Pool.init(dtr.allocator, null, null, dtr.alerter()) catch {
+    dtr.pool = Pool.init(dtr.allocator, dtr.options.initialPoolMsgs, dtr.options.maxPoolMsgs, dtr.alerter()) catch {
         return AmpeError.AllocationFailed;
     };
     errdefer dtr.pool.close();
@@ -241,7 +241,7 @@ fn createThread(dtr: *Distributor) !void {
 
 fn onThread(dtr: *Distributor) void {
     dtr.ntfr.sendAck(0) catch unreachable;
-   return;
+    return;
 }
 
 inline fn waitFinish(dtr: *Distributor) void {

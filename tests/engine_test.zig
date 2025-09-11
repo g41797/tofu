@@ -2,29 +2,28 @@
 // SPDX-License-Identifier: MIT
 
 test "ampe just create/destroy" {
-    try recipes.createDestroyMainStruct(gpa);
-    try recipes.createDestroyMsgEngine(gpa);
+    try recipes.createDestroyMain(gpa);
+    try recipes.createDestroyEngine(gpa);
     try recipes.createDestroyMessageChannelGroup(gpa);
 }
 
-test "ampe illegal messages" {
-    var dtr = Distributor.Create(std.testing.allocator, engine.DefaultOptions) catch unreachable;
-    defer dtr.Destroy();
+test "dealing with pool" {
+    try recipes.getMsgsFromSmallestPool(gpa);
+}
 
-    const ampe = try dtr.ampe();
-
-    const mcg = try ampe.acquire();
-    defer ampe.release(mcg) catch @panic("ampe.release(mcg) failed");
-
-    var msg: ?*Message = try Message.create(gpa);
-    defer Message.DestroySendMsg(&msg);
-
-    // Send app. signal to channel 0
-    msg.?.bhdr.proto.mode = .signal;
-
-    _ = mcg.asyncSend(&msg) catch |err| {
+test "send illegal messages" {
+    recipes.trySendMessageFromThePool(gpa) catch |err| {
+        try testing.expect(err == AmpeError.InvalidMessageMode);
+    };
+    recipes.trySendMessageWithWrongChannelNumber(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
+    recipes.trySendHelloWithoutConfiguration(gpa) catch |err| {
+        try testing.expect(err == AmpeError.WrongConfiguration);
+    };
+    // recipes.trySendHelloWithWrongConfiguration(gpa) catch |err| {
+    //     try testing.expect(err == AmpeError.WrongConfiguration);
+    // };
 }
 
 const tofu = @import("tofu");

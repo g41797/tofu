@@ -16,10 +16,9 @@ pub const AmpeVTable = struct {
 
 pub const MCGVTable = struct {
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// The only error when the pool can still be used is `AmpeError.PoolEmpty`.
     ///
     /// Thread-safe.
-    get: *const fn (ptr: ?*anyopaque, strategy: engine.AllocationStrategy) AmpeError!*message.Message,
+    get: *const fn (ptr: ?*anyopaque, strategy: engine.AllocationStrategy) AmpeError!?*message.Message,
 
     /// Returns a message to the internal pool. If the pool is closed, destroys the message.
     ///

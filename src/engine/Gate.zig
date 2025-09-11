@@ -61,9 +61,18 @@ fn deinit(gt: *Gate) void {
     return;
 }
 
-pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!*Message {
+pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!?*Message {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
-    const msg = try gt.prnt.pool.get(strategy);
+    const msg = gt.prnt.pool.get(strategy) catch |err| {
+        switch (err) {
+            AmpeError.PoolEmpty => {
+                return null;
+            },
+            else => {
+                return err;
+            },
+        }
+    };
     return msg;
 }
 

@@ -73,7 +73,7 @@ Why not? — Go ahead and use it.
   - [Zig on Discourse](https://ziggit.dev/)
 
 ## Last but not least
-⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797)!
+⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu)!
 
 
 
