@@ -46,7 +46,7 @@ Corporate lawyers can relax — from that system I only took the _smell_
 ([precedent case about paying for smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html))
 
 By '_smell_' I mean the idea itself: 
-- messaging as the foundation
+- message as the data and API
 - the philosophy of gradual evolution 
   - starting from something simple 
   - and steadily growing into more advanced and powerful systems.

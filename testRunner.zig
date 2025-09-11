@@ -9,6 +9,7 @@ const assert = std.debug.assert;
 pub const std_options: std.Options = .{
     .logFn = log,
     .log_level = .debug,
+    .keep_sigpipe = false,
 };
 
 var log_err_count: usize = 0;

@@ -53,6 +53,7 @@ plr: poller.Poller = undefined,
 
 // Accessible from the thread - don't lock/unlock
 trgrd_map: TriggeredChannelsMap = undefined,
+cnmapChanged: bool = undefined,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
     try dtr.*.createThread();
@@ -104,7 +105,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     errdefer dtr.acns.deinit();
 
     dtr.ntfr = Notifier.init(dtr.allocator) catch {
-        return AmpeError.AllocationFailed;
+        return AmpeError.NotificationDisabled;
     };
     errdefer dtr.ntfr.deinit();
 
@@ -120,7 +121,35 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     };
 
     dtr.trgrd_map = trgrd_map;
+
+    try dtr.addNotificationChannel();
+
     return dtr;
+}
+
+fn addNotificationChannel(dtr: *Distributor) !void {
+    const nSkt = dtr.ntfr.receiver;
+
+    const ntcn: TriggeredChannel = .{
+        .acn = .{
+            .chn = 0,
+            .mid = 0,
+            .ctx = null,
+        },
+        .tskt = .{
+            .notification = sockets.NotificationSkt.init(nSkt),
+        },
+        .exp = sockets.TriggersOff,
+        .act = sockets.TriggersOff,
+    };
+
+    dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
+        return AmpeError.AllocationFailed;
+    };
+
+    dtr.ntfsEnabled = true;
+    dtr.cnmapChanged = false;
+    return;
 }
 
 pub fn Destroy(dtr: *Distributor) void {
@@ -241,6 +270,74 @@ fn createThread(dtr: *Distributor) !void {
 
 fn onThread(dtr: *Distributor) void {
     dtr.ntfr.sendAck(0) catch unreachable;
+    loop(dtr);
+    return;
+}
+
+fn loop(dtr: *Distributor) void {
+    dtr.cnmapChanged = false;
+    var it = Iterator.init(&dtr.trgrd_map);
+    var withItrtr: bool = true;
+
+    while (true) {
+        if (dtr.cnmapChanged) {
+            it = Iterator.init(&dtr.trgrd_map);
+            dtr.cnmapChanged = false;
+            withItrtr = true;
+        }
+
+        var itropt: ?Iterator = null;
+        if (withItrtr) {
+            itropt = it;
+        }
+
+        const trgrs = dtr.plr.waitTriggers(itropt, Notifier.SEC_TIMEOUT_MS * 20) catch |err| {
+            log.err("waitTriggers error {any}", .{
+                err,
+            });
+            dtr.processWaitTriggersFailure();
+            return;
+        };
+
+        const utrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
+        _ = utrs; // For now values in packed struct is not visible
+
+        if (trgrs.timeout == .on) {
+            dtr.processTimeOut();
+            continue;
+        }
+
+        if (trgrs.notify == .on) {
+            dtr.processNotify();
+        }
+
+        // 2DO - Add processing of TriggeredChannels according to 'act'
+
+        return;
+    }
+
+    return;
+}
+
+fn processNotify(dtr: *Distributor) void {
+    // 2DO - Should be part of the TriggeredChannels processing according to 'act'
+    const ntfc = dtr.ntfr.recvNotification() catch unreachable;
+
+    const unpnt = Notifier.UnpackedNotification.fromNotification(ntfc);
+    _ = unpnt;
+
+    return;
+}
+
+fn processTimeOut(dtr: *Distributor) void {
+    // 2DO - Add processing
+    _ = dtr;
+    return;
+}
+
+fn processWaitTriggersFailure(dtr: *Distributor) void {
+    // 2DO - Add failure processing
+    _ = dtr;
     return;
 }
 
@@ -300,5 +397,6 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
+const log = std.log;
 
 // 2DO  Add processing options for Pool as part of init()

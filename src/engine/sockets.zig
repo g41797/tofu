@@ -27,6 +27,17 @@ pub const Triggers = packed struct(u8) {
     }
 };
 
+pub const TriggersOff: Triggers = .{
+    .accept = .off,
+    .err = .off,
+    .connect = .off,
+    .notify = .off,
+    .pool = .off,
+    .recv = .off,
+    .send = .off,
+    .timeout = .off,
+};
+
 pub const UnpackedTriggers = struct {
     notify: u8 = 0,
     accept: u8 = 0,

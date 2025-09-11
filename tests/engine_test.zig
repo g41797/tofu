@@ -21,9 +21,16 @@ test "send illegal messages" {
     recipes.trySendHelloWithoutConfiguration(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongConfiguration);
     };
-    // recipes.trySendHelloWithWrongConfiguration(gpa) catch |err| {
-    //     try testing.expect(err == AmpeError.WrongConfiguration);
-    // };
+    var res: bool = false;
+
+    if (recipes.trySendHelloWithWrongConfiguration(gpa)) |val| {
+        res = val;
+    } else |err| {
+        if (err == AmpeError.WrongConfiguration) {
+            res = true;
+        }
+    }
+    // 2DO remove cmnts try testing.expect(!res);
 }
 
 const tofu = @import("tofu");

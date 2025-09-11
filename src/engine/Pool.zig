@@ -166,5 +166,4 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 
-// 2DO  Add options: initial msgs number/max msgs number
-// 2DO  Support restrictions -  max msgs number
+// 2DO  Timeout for Alerts - restrict number of alerts per sec

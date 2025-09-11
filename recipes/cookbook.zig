@@ -170,7 +170,7 @@ pub fn trySendHelloWithoutConfiguration(gpa: Allocator) !void {
     return;
 }
 
-pub fn trySendHelloWithWrongConfiguration(gpa: Allocator) !void {
+pub fn trySendHelloWithWrongConfiguration(gpa: Allocator) !bool {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example
@@ -208,7 +208,7 @@ pub fn trySendHelloWithWrongConfiguration(gpa: Allocator) !void {
 
     _ = try mchgr.asyncSend(&msg);
 
-    return;
+    return true;
 }
 
 pub fn hi() void {

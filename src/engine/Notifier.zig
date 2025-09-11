@@ -20,8 +20,8 @@ pub const TempUdsPath = struct {
     }
 };
 
-const SEC_TIMEOUT_MS = 1_000;
-const INFINITE_TIMEOUT_MS = -1;
+pub const SEC_TIMEOUT_MS = 1_000;
+pub const INFINITE_TIMEOUT_MS = -1;
 
 pub const NotificationKind = enum(u1) {
     message = 0,
@@ -51,6 +51,22 @@ pub const Notification = packed struct(u8) {
     oob: Oob = undefined,
     hint: ValidCombination = undefined,
     alert: Alert = undefined,
+};
+
+pub const UnpackedNotification = struct {
+    kind: u8 = 0,
+    oob: u8 = 0,
+    hint: u8 = 0,
+    alert: u8 = 0,
+
+    pub fn fromNotification(nt: Notification) UnpackedNotification {
+        return .{
+            .kind = @intFromEnum(nt.kind),
+            .oob = @intFromEnum(nt.oob),
+            .hint = @intFromEnum(nt.hint),
+            .alert = @intFromEnum(nt.alert),
+        };
+    }
 };
 
 pub const Notifier = @This();

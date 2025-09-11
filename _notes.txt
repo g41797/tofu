@@ -318,3 +318,5 @@ Relearn
     cd docs
     git submodule add --depth 1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 
+SIGPIPE when trying to serve file in an HTTP server with sendFile
+    https://discord.com/channels/605571803288698900/1412812874178363519/1412812874178363519

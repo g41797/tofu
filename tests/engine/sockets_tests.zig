@@ -325,7 +325,7 @@ pub const Exchanger = struct {
         while ((loop < 3 * count) and (exc.forRecv.count() < (count + 1))) : (loop += 1) {
             var trgrs: sockets.Triggers = .{};
 
-            trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
+            trgrs = try exc.plr.?.waitTriggers(it, Notifier.SEC_TIMEOUT_MS);
 
             try testing.expect(trgrs.err != .on);
 

@@ -99,11 +99,16 @@ pub const Poll = struct {
                     _ = utrgs;
                 }
 
+                if (tc.exp.notify == .on) {
+                    const nSkt = tc.tskt.getSocket();
+                    log.debug("chn {d} notify expected fd {x}", .{ tc.acn.chn, nSkt });
+                    events |= std.posix.POLL.IN;
+                }
                 if ((tc.exp.send == .on) or (tc.exp.connect == .on)) {
                     log.debug("chn {d} send/connect expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
                     events |= std.posix.POLL.OUT;
                 }
-                if ((tc.exp.recv == .on) or (tc.exp.notify == .on) or (tc.exp.accept == .on)) {
+                if ((tc.exp.recv == .on) or (tc.exp.accept == .on)) {
                     log.debug("chn {d} recv/accept expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
                     events |= std.posix.POLL.IN;
                 }
@@ -149,7 +154,7 @@ pub const Poll = struct {
                     break;
                 }
 
-                if ((revents & std.posix.POLL.ERR != 0) or (revents & std.posix.POLL.HUP != 0)) {
+                if ((revents & err_mask) != 0) {
                     tc.act.err = .on;
                     break;
                 }
@@ -187,6 +192,8 @@ pub const Poll = struct {
         return ret;
     }
 };
+
+const err_mask = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
 
 const DBG = @import("../engine.zig").DBG;
 
