@@ -56,7 +56,8 @@ trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
 ntfc: Notifier.Notification = undefined,
 unpnt: Notifier.UnpackedNotification,
-fromMcg: ?*message.Message = undefined,
+fromMcg: ?*Message = undefined,
+bhdr: BinaryHeader = undefined,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
     try dtr.*.createThread();
@@ -103,6 +104,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .unpnt = .{},
         .ntfc = .{},
         .fromMcg = null,
+        .bhdr = .{},
     };
 
     dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
@@ -308,11 +310,6 @@ fn loop(dtr: *Distributor) void {
     return;
 }
 
-fn processMarkedForDelete(dtr: *Distributor) !bool {
-    _ = dtr;
-    return false;
-}
-
 fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
     it.reset();
 
@@ -388,20 +385,28 @@ fn processMcgMessage(dtr: *Distributor) !void {
     }
 
     dtr.fromMcg = fromMcg;
+    dtr.bhdr = fromMcg.bhdr;
     defer Message.DestroySendMsg(&dtr.fromMcg);
 
-    return;
-}
+    if (dtr.bhdr.proto.mtype == MessageType.alarm) {
+        return dtr.processAlarm();
+    }
 
-fn processTimeOut(dtr: *Distributor) void {
-    // 2DO - Add processing
-    _ = dtr;
-    return;
-}
+    const hint = dtr.ntfc.hint;
 
-fn processWaitTriggersFailure(dtr: *Distributor) void {
-    // 2DO - Add failure processing
-    _ = dtr;
+    switch (hint) {
+        .HelloResponse => return dtr.processHelloResponse(),
+        .AppRequest => return dtr.processAppRequest(),
+        .AppResponse => return dtr.processAppResponse(),
+        .AppSignal => return dtr.processAppSignal(),
+        .ByeRequest => return dtr.processByeRequest(),
+        .ByeResponse => return dtr.processByeResponse(),
+        .ByeSignal => return dtr.processByeSignal(),
+        .WelcomeRequest => return dtr.processWelcomeRequest(),
+        .HelloRequest => return dtr.processHelloRequest(),
+        else => return AmpeError.InvalidMessage,
+    }
+
     return;
 }
 
@@ -411,30 +416,23 @@ inline fn waitFinish(dtr: *Distributor) void {
     }
 }
 
-fn addNotificationChannel(dtr: *Distributor) !void {
-    const nSkt = dtr.ntfr.receiver;
+const partial = @import("prtlDistributor.zig");
+const processTimeOut = partial.processTimeOut;
+const processWaitTriggersFailure = partial.processWaitTriggersFailure;
+const processMarkedForDelete = partial.processMarkedForDelete;
+const processAlarm = partial.processAlarm;
 
-    const ntcn: TriggeredChannel = .{
-        .acn = .{
-            .chn = 0,
-            .mid = 0,
-            .ctx = null,
-        },
-        .tskt = .{
-            .notification = sockets.NotificationSkt.init(nSkt),
-        },
-        .exp = sockets.TriggersOff,
-        .act = sockets.TriggersOff,
-    };
+const processHelloResponse = partial.processHelloResponse;
+const processAppRequest = partial.processAppRequest;
+const processAppResponse = partial.processAppResponse;
+const processAppSignal = partial.processAppSignal;
+const processByeRequest = partial.processByeRequest;
+const processByeResponse = partial.processByeResponse;
+const processByeSignal = partial.processByeSignal;
+const processWelcomeRequest = partial.processWelcomeRequest;
+const processHelloRequest = partial.processHelloRequest;
 
-    dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    dtr.ntfsEnabled = true;
-    dtr.cnmapChanged = false;
-    return;
-}
+const addNotificationChannel = partial.addNotificationChannel;
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
@@ -470,7 +468,7 @@ const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
 
 const sockets = @import("sockets.zig");
-const TriggeredSkt = sockets.TriggeredSkt;
+const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
 
 const Gate = @import("Gate.zig");
 

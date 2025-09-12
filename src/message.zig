@@ -279,21 +279,25 @@ pub const TextHeaders = struct {
 
 /// Enum representing valid message type and mode combinations allowed for sending by the application.
 pub const ValidCombination = enum(u4) {
-    WelcomeRequest,
-    WelcomeResponse,
-    HelloRequest,
-    HelloResponse,
-    ByeRequest,
-    ByeResponse,
-    ByeSignal,
-    AppRequest,
-    AppResponse,
-    AppSignal,
+    WelcomeRequest = 0,
+
+    HelloRequest = 1,
+    HelloResponse = 2,
+
+    ByeRequest = 3,
+    ByeResponse = 4,
+    ByeSignal = 5,
+
+    AppRequest = 6,
+    AppResponse = 7,
+    AppSignal = 8,
+
     _reserved1,
     _reserved2,
     _reserved3,
     _reserved4,
     _reserved5,
+    _reserved6,
 };
 
 /// Structure representing a complete message, including binary header, text headers, and body.
