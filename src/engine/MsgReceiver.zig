@@ -174,33 +174,15 @@ pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
 
 const message = @import("../message.zig");
 const Trigger = message.Trigger;
-
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
-
-const MessageID = message.MessageID;
-
-const sockets = @import("sockets.zig");
-
 const DBG = @import("../engine.zig").DBG;
-
 const AmpeError = @import("../status.zig").AmpeError;
-
 const Pool = @import("Pool.zig");
-const Notifier = @import("Notifier.zig");
-const Notification = Notifier.Notification;
-
-const Appendable = @import("nats").Appendable;
 
 const std = @import("std");
 const assert = std.debug.assert;
-const posix = std.posix;
-const mem = std.mem;
-const builtin = @import("builtin");
-const os = builtin.os.tag;
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;
-
 const log = std.log;
