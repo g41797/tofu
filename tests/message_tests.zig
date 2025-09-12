@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("message_tests\r\n", .{});
+}
+
 test "sequential message id" {
     const mid = message.Message.next_mid();
     const nextmid = message.Message.next_mid();

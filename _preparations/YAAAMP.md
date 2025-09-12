@@ -71,7 +71,7 @@ The binary header is 16 bytes, encoded in the sender’s native byte order, with
         - `1`: `welcome`.
         - `2`: `hello`.
         - `3`: `bye`.
-        - `4`: `status`.
+        - `4`: `alarm`.
         - `5-7`: Reserved.
 - **Mode**:
     - **Size**: 2 bits.

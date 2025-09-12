@@ -30,9 +30,7 @@ pub const NotificationKind = enum(u1) {
 
 pub const Alert = enum(u2) {
     freedMemory = 0,
-    srRemoved = 1,
     shutdownStarted = 2,
-    _reserved = 3,
 };
 
 pub const SendAlert = *const fn (context: ?*anyopaque, alrt: Alert) AmpeError!void;

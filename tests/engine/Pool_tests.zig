@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("Pool_tests\r\n", .{});
+}
+
 test "Pool init" {
     var pool = try Pool.init(std.testing.allocator, null, null, null);
     pool.close();

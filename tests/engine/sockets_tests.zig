@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("sockets_tests\r\n", .{});
+}
+
 const localIP = "127.0.0.1";
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = -1;

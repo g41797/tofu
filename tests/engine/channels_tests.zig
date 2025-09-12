@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("channels_tests\r\n", .{});
+}
+
 test "Channels basic tests" {
     var acns = try ActiveChannels.init(std.testing.allocator, 3);
     acns.deinit();

@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("engine_tests\r\n", .{});
+}
+
 test "ampe just create/destroy" {
     try recipes.createDestroyMain(gpa);
     try recipes.createDestroyEngine(gpa);
@@ -12,25 +17,27 @@ test "dealing with pool" {
 }
 
 test "send illegal messages" {
-    recipes.trySendMessageFromThePool(gpa) catch |err| {
+    recipes.sendMessageFromThePool(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidMessageMode);
     };
-    recipes.trySendMessageWithWrongChannelNumber(gpa) catch |err| {
+    recipes.sendMessageWithWrongChannelNumber(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
-    recipes.trySendHelloWithoutConfiguration(gpa) catch |err| {
+    recipes.sendHelloWithoutConfiguration(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongConfiguration);
     };
     var res: bool = false;
 
-    if (recipes.trySendHelloWithWrongConfiguration(gpa)) |val| {
+    if (recipes.sendHelloWithWrongConfiguration(gpa)) |val| {
         res = val;
     } else |err| {
         if (err == AmpeError.WrongConfiguration) {
             res = true;
         }
     }
-    // 2DO remove cmnts try testing.expect(!res);
+
+    // 2DO remove cmnts
+    // try testing.expect(!res);
 }
 
 const tofu = @import("tofu");

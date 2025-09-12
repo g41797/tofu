@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("configurator_tests\r\n", .{});
+}
+
 const Map = std.StringHashMap([]const u8);
 
 test "base configurator test" {

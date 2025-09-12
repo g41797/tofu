@@ -7,7 +7,7 @@ pub const MessageType = enum(u3) {
     welcome = 1,
     hello = 2,
     bye = 3,
-    status = 4,
+    alarm = 4,
     _reserved5,
     _reserved6,
     _reserved7,
@@ -500,7 +500,7 @@ pub const Message = struct {
                     return AmpeError.InvalidMessageMode;
                 },
             },
-            .status => {
+            .alarm => {
                 msg.bhdr.status = status_to_raw(.not_allowed);
                 return AmpeError.NotAllowed;
             },

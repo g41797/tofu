@@ -37,9 +37,9 @@ pub const MCGVTable = struct {
     ///
     /// Also may be received following Signals from engine itself:
     /// - Bye - peer disconnected
-    /// - Status 'wait_interrupted' - see interruptWait call
-    /// - Status 'pool_empty' - there are not free messages for receive.
-    ///   Allocate and 'put' messages to the pool, at least received status.
+    /// - Alarm 'wait_interrupted' - see interruptWait call
+    /// - Alarm 'pool_empty' - there are not free messages for receive.
+    ///   Allocate and 'put' messages to the pool, at least received alarm.
     ///
     /// Thread-safe. The idiomatic way is to call `waitReceive` in a loop within the same thread.
     waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*message.Message,

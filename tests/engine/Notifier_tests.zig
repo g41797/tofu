@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("Notifier_tests\r\n", .{});
+}
+
 test "create file for address of uds socket" {
     var buffer: [100]u8 = undefined;
     var tempFile = try temp.create_file(std.testing.allocator, "*.yaaamp");

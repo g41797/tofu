@@ -78,15 +78,15 @@ pub const MessageChannelGroup = struct {
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
-    /// May receive signals from the engine, such as Bye (peer disconnected), Status 'wait_interrupted',
-    /// or Status 'pool_empty' (indicating no free messages for receive).
+    /// May receive signals from the engine, such as Bye (peer disconnected), Alarm 'wait_interrupted',
+    /// or Alarm 'pool_empty' (indicating no free messages for receive).
     /// Idiomatic usage involves calling `waitReceive` in a loop within the same thread.
     /// Thread-safe.
     pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
         return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
     }
 
-    /// Interrupts a `waitReceive` call, causing it to return a Status Signal with 'wait_interrupted' status.
+    /// Interrupts a `waitReceive` call, causing it to return a Alarm Signal with 'wait_interrupted' status.
     /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
     /// Only the last interrupt is saved; no accumulation.
     /// Idiomatic usage involves calling from a different thread to signal attention.

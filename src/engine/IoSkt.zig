@@ -1,0 +1,262 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 g41797
+// SPDX-License-Identifier: MIT
+
+pub const IoSkt = @This();
+
+const Side = enum(u1) {
+    client = 0,
+    server = 1,
+};
+
+pool: *Pool = undefined,
+side: Side = undefined,
+cn: message.ChannelNumber = undefined,
+skt: Skt = undefined,
+connected: bool = undefined,
+sendQ: MessageQueue = undefined,
+currSend: MsgSender = undefined,
+currRecv: MsgReceiver = undefined,
+alreadySend: ?*Message = null,
+
+pub fn initServerSide(pool: *Pool, cn: message.ChannelNumber, sskt: Skt) AmpeError!IoSkt {
+    log.debug("Server IoSkt init", .{});
+
+    var ret: IoSkt = .{
+        .pool = pool,
+        .side = .server,
+        .cn = cn,
+        .skt = sskt,
+        .connected = true,
+        .sendQ = .{},
+        .currSend = MsgSender.init(),
+        .currRecv = MsgReceiver.init(pool),
+        .alreadySend = null,
+    };
+
+    ret.currSend.set(cn, sskt.socket) catch unreachable;
+    ret.currRecv.set(cn, sskt.socket) catch unreachable;
+
+    return ret;
+}
+
+pub fn initClientSide(ios: *IoSkt, pool: *Pool, hello: *Message, sc: *SocketCreator) AmpeError!void {
+    log.debug("Client IoSkt init", .{});
+
+    ios.pool = pool;
+    ios.side = .client;
+    ios.cn = hello.bhdr.channel_number;
+    ios.skt = try sc.fromMessage(hello);
+    ios.connected = false;
+    ios.sendQ = .{};
+    ios.currSend = MsgSender.init();
+    ios.currRecv = MsgReceiver.init(pool);
+    ios.alreadySend = null;
+
+    errdefer ios.skt.deinit();
+
+    ios.addToSend(hello) catch unreachable;
+
+    // ios.connected = try ios.skt.connect();
+    //
+    // if (ios.connected) {
+    //     ios.postConnect();
+    //     var sq = try ios.trySend();
+    //     ios.alreadySend = sq.dequeue();
+    // }
+
+    return;
+}
+
+pub fn triggers(ioskt: *IoSkt) !Triggers {
+    if (ioskt.side == .client) { // Initial state of client ioskt - not-connected
+
+        if (!ioskt.connected) {
+            ioskt.connected = try ioskt.tryConnect();
+
+            if (!ioskt.connected) {
+                return .{
+                    .connect = .on,
+                };
+            }
+        }
+    }
+
+    var ret: Triggers = .{};
+    if (!ioskt.sendQ.empty() or ioskt.currSend.started()) {
+        ret.send = .on;
+    }
+
+    const recvPossible = try ioskt.currRecv.recvIsPossible();
+
+    if (recvPossible) {
+        ret.recv = .on;
+    } else {
+        assert(ioskt.currRecv.ptrg == .on);
+        ret.pool = .on;
+    }
+
+    if (DBG) {
+        const utrgs = sockets.UnpackedTriggers.fromTriggers(ret);
+        _ = utrgs;
+    }
+
+    return ret;
+}
+
+pub inline fn getSocket(self: *IoSkt) Socket {
+    return self.skt.socket;
+}
+
+pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
+    ioskt.sendQ.enqueue(sndmsg);
+    return;
+}
+
+pub fn addForRecv(ioskt: *IoSkt, rcvmsg: *Message) AmpeError!void {
+    return ioskt.currRecv.attach(rcvmsg);
+}
+
+// tryConnect is called by Distributor for succ. connection.
+// For the failed connection Distributor uses detach: get Hello request , convert to filed Hello response...
+pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
+    if (ioskt.connected) {
+        return AmpeError.NotAllowed;
+    }
+
+    ioskt.connected = try ioskt.skt.connect();
+
+    if (ioskt.connected) {
+        ioskt.postConnect();
+    }
+
+    return ioskt.connected;
+}
+
+fn postConnect(ioskt: *IoSkt) void {
+    ioskt.currSend.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
+    ioskt.currRecv.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
+
+    ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable;
+    ioskt.alreadySend = null;
+    return;
+}
+
+pub fn detach(ioskt: *IoSkt) MessageQueue {
+    var ret: MessageQueue = .{};
+
+    const last = ioskt.currSend.detach();
+
+    if (last != null) {
+        ret.enqueue(last.?);
+    }
+
+    ioskt.sendQ.move(&ret);
+
+    return ret;
+}
+
+pub fn tryRecv(ioskt: *IoSkt) AmpeError!MessageQueue {
+    if (!ioskt.connected) {
+        return AmpeError.NotAllowed;
+    }
+
+    var ret: MessageQueue = .{};
+
+    while (true) {
+        const received = ioskt.currRecv.recv() catch |e| {
+            switch (e) {
+                AmpeError.PoolEmpty => {
+                    return ret;
+                },
+                else => return e,
+            }
+        };
+
+        if (received == null) {
+            break;
+        }
+        ret.enqueue(received.?);
+    }
+
+    return ret;
+}
+
+pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
+    var ret: MessageQueue = .{};
+
+    if (!ioskt.connected) {
+        return AmpeError.NotAllowed;
+    }
+
+    while (true) {
+        if (!ioskt.currSend.started()) {
+            if (ioskt.sendQ.empty()) {
+                break;
+            }
+            ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable; // Ok for non-empty q
+        }
+
+        const wasSend = try ioskt.currSend.send();
+
+        if (wasSend == null) {
+            break;
+        }
+
+        ret.enqueue(wasSend.?);
+    }
+
+    return ret;
+}
+
+pub fn deinit(ioskt: *IoSkt) void {
+    ioskt.skt.deinit();
+    ioskt.sendQ.clear();
+
+    ioskt.currSend.deinit();
+    ioskt.currRecv.deinit();
+
+    if (ioskt.alreadySend != null) {
+        ioskt.alreadySend.?.destroy();
+        ioskt.alreadySend = null;
+    }
+
+    return;
+}
+
+const SocketCreator = @import("SocketCreator.zig");
+const Skt = @import("Skt.zig");
+const MsgReceiver = @import("MsgReceiver.zig");
+const MsgSender = @import("MsgSender.zig");
+const message = @import("../message.zig");
+const Trigger = message.Trigger;
+
+const BinaryHeader = message.BinaryHeader;
+const Message = message.Message;
+const MessageQueue = message.MessageQueue;
+
+const MessageID = message.MessageID;
+
+const sockets = @import("sockets.zig");
+const Triggers = sockets.Triggers;
+
+const DBG = @import("../engine.zig").DBG;
+
+const AmpeError = @import("../status.zig").AmpeError;
+
+const Pool = @import("Pool.zig");
+const Notifier = @import("Notifier.zig");
+const Notification = Notifier.Notification;
+
+const Appendable = @import("nats").Appendable;
+
+const std = @import("std");
+const assert = std.debug.assert;
+const posix = std.posix;
+const mem = std.mem;
+const builtin = @import("builtin");
+const os = builtin.os.tag;
+const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
+const Socket = std.posix.socket_t;
+
+const log = std.log;

@@ -54,6 +54,9 @@ plr: poller.Poller = undefined,
 // Accessible from the thread - don't lock/unlock
 trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
+ntfc: Notifier.Notification = undefined,
+unpnt: Notifier.UnpackedNotification,
+fromMcg: ?*message.Message = undefined,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
     try dtr.*.createThread();
@@ -97,6 +100,9 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .msgs = .{ .{}, .{} },
         .maxid = 0,
         .plr = plru,
+        .unpnt = .{},
+        .ntfc = .{},
+        .fromMcg = null,
     };
 
     dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
@@ -125,31 +131,6 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     try dtr.addNotificationChannel();
 
     return dtr;
-}
-
-fn addNotificationChannel(dtr: *Distributor) !void {
-    const nSkt = dtr.ntfr.receiver;
-
-    const ntcn: TriggeredChannel = .{
-        .acn = .{
-            .chn = 0,
-            .mid = 0,
-            .ctx = null,
-        },
-        .tskt = .{
-            .notification = sockets.NotificationSkt.init(nSkt),
-        },
-        .exp = sockets.TriggersOff,
-        .act = sockets.TriggersOff,
-    };
-
-    dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    dtr.ntfsEnabled = true;
-    dtr.cnmapChanged = false;
-    return;
 }
 
 pub fn Destroy(dtr: *Distributor) void {
@@ -300,31 +281,114 @@ fn loop(dtr: *Distributor) void {
         };
 
         const utrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
-        _ = utrs; // For now values in packed struct is not visible
+        _ = utrs;
 
         if (trgrs.timeout == .on) {
             dtr.processTimeOut();
             continue;
         }
 
-        if (trgrs.notify == .on) {
-            dtr.processNotify();
-        }
+        dtr.processTriggeredChannels(&it) catch |err|
+            switch (err) {
+                AmpeError.ShutdownStarted => {
+                    return;
+                },
+                else => {
+                    log.err("processTriggeredChannels failed with error {any}", .{err});
+                    return;
+                },
+            };
 
-        // 2DO - Add processing of TriggeredChannels according to 'act'
-
-        return;
+        dtr.cnmapChanged = dtr.processMarkedForDelete() catch |err| {
+            log.err("processMarkedForDelete failed with error {any}", .{err});
+            return;
+        };
     }
 
     return;
 }
 
-fn processNotify(dtr: *Distributor) void {
-    // 2DO - Should be part of the TriggeredChannels processing according to 'act'
-    const ntfc = dtr.ntfr.recvNotification() catch unreachable;
+fn processMarkedForDelete(dtr: *Distributor) !bool {
+    _ = dtr;
+    return false;
+}
 
-    const unpnt = Notifier.UnpackedNotification.fromNotification(ntfc);
-    _ = unpnt;
+fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
+    it.reset();
+
+    var tcptr = it.next();
+    var indx: usize = 0;
+
+    while (tcptr != null) : (indx += 1) {
+        const tc = tcptr.?;
+        tcptr = it.next();
+
+        const trgrs = tc.act;
+
+        if (trgrs.off()) {
+            continue;
+        }
+
+        if (trgrs.notify == .on) {
+            assert(indx == 0);
+            try dtr.processNotify(tc);
+            continue;
+        }
+    }
+
+    return AmpeError.ShutdownStarted;
+}
+
+fn processNotify(dtr: *Distributor, tc: *TriggeredChannel) !void {
+    dtr.ntfc = try tc.tskt.tryRecvNotification();
+    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.ntfc);
+
+    if (dtr.ntfc.kind == .alert) {
+        switch (dtr.ntfc.alert) {
+            .shutdownStarted => {
+                return AmpeError.ShutdownStarted;
+            },
+            else => {
+                // Alert from the pool just interrupts poller.
+                // During loop engine checks channels waiting for free messages
+                return;
+            },
+        }
+    }
+
+    assert(dtr.ntfc.kind == .message);
+
+    return dtr.processMcgMessage();
+}
+
+fn processMcgMessage(dtr: *Distributor) !void {
+    dtr.fromMcg = null;
+
+    var fromMcg: *message.Message = undefined;
+    var received: bool = false;
+
+    for (0..2) |n| {
+        fromMcg = dtr.msgs[n].receive(0) catch |err| {
+            switch (err) {
+                error.Timeout, error.Interrupted => {
+                    continue;
+                },
+                else => {
+                    return AmpeError.ShutdownStarted;
+                },
+            }
+        };
+
+        received = true;
+        break;
+    }
+
+    if (!received) {
+        return;
+    }
+
+    dtr.fromMcg = fromMcg;
+    defer Message.DestroySendMsg(&dtr.fromMcg);
 
     return;
 }
@@ -345,6 +409,31 @@ inline fn waitFinish(dtr: *Distributor) void {
     if (dtr.thread) |t| {
         t.join();
     }
+}
+
+fn addNotificationChannel(dtr: *Distributor) !void {
+    const nSkt = dtr.ntfr.receiver;
+
+    const ntcn: TriggeredChannel = .{
+        .acn = .{
+            .chn = 0,
+            .mid = 0,
+            .ctx = null,
+        },
+        .tskt = .{
+            .notification = sockets.NotificationSkt.init(nSkt),
+        },
+        .exp = sockets.TriggersOff,
+        .act = sockets.TriggersOff,
+    };
+
+    dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
+        return AmpeError.AllocationFailed;
+    };
+
+    dtr.ntfsEnabled = true;
+    dtr.cnmapChanged = false;
+    return;
 }
 
 const message = @import("../message.zig");
@@ -398,5 +487,6 @@ const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
 const log = std.log;
+const assert = std.debug.assert;
 
 // 2DO  Add processing options for Pool as part of init()
