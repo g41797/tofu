@@ -51,6 +51,8 @@ fn init(prnt: *Distributor, id: u32) Gate {
 fn deinit(gt: *Gate) void {
     _ = gt.prnt.acns.removeChannels(gt) catch unreachable;
 
+    // gt.prnt.sendAlert(.mcgRemoved) catch {};
+
     var allocated = gt.msgs.close();
     while (allocated != null) {
         const next = allocated.?.next;

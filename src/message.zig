@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+/// Enum representing the on-off states
+pub const Trigger = enum(u1) {
+    on = 1,
+    off = 0,
+};
+
 /// Enum representing the type of a message, used to categorize messages for processing.
-pub const MessageType = enum(u3) {
+pub const MessageType = enum(u2) {
     application = 0,
     welcome = 1,
     hello = 2,
     bye = 3,
-    alarm = 4,
-    _reserved5,
-    _reserved6,
-    _reserved7,
 };
 
 /// Enum representing the mode of a message, indicating whether it is a request, response, or signal.
@@ -44,6 +46,7 @@ pub const ProtoFields = packed struct(u8) {
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
     oob: Oob = .off,
+    _: u1 = 0,
 };
 
 /// Type alias for channel number, represented as a 16-bit unsigned integer.
@@ -394,6 +397,37 @@ pub const Message = struct {
         return;
     }
 
+    /// Stores a struct pointer's address into body.
+    pub fn ptrToBody(msg: *Message, comptime T: type, ptr: *T) []u8 {
+        msg.body.change(@sizeOf(usize)) catch unreachable;
+
+        var destination: []u8 = msg.body.buffer.?[0..@sizeOf(usize)];
+
+        const addr = @intFromPtr(ptr); // Corrected function
+        const addr_bytes = std.mem.asBytes(&addr);
+
+        // Copy the raw address bytes into the destination slice.
+        std.mem.copyForwards(u8, destination[0..@sizeOf(usize)], addr_bytes);
+
+        // Return a slice of the filled portion.
+        return destination[0..@sizeOf(usize)];
+    }
+
+    /// Converts a body content back to a struct pointer.
+    /// Returns an optional pointer which is null if the is empty.
+    pub fn bodyToPtr(msg: *Message, comptime T: type) ?*T {
+        const slice = msg.body.buffer.?[0..msg.body.actual_len];
+
+        if (slice.len < @sizeOf(usize)) {
+            return null;
+        }
+
+        var addr: usize = undefined;
+        std.mem.copyForwards(u8, std.mem.asBytes(&addr), slice[0..@sizeOf(usize)]);
+
+        return @ptrFromInt(addr);
+    }
+
     /// Validates the message, ensuring it conforms to allowed type and mode combinations.
     inline fn validate(msg: *Message) !void {
         _ = try check_and_prepare(msg);
@@ -503,14 +537,6 @@ pub const Message = struct {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AmpeError.InvalidMessageMode;
                 },
-            },
-            .alarm => {
-                msg.bhdr.status = status_to_raw(.not_allowed);
-                return AmpeError.NotAllowed;
-            },
-            else => {
-                msg.bhdr.status = status_to_raw(.invalid_message_type);
-                return AmpeError.InvalidMessageType;
             },
         };
         const channel_number = msg.bhdr.channel_number;
@@ -642,10 +668,66 @@ pub const MessageQueue = struct {
     }
 };
 
-pub const Trigger = enum(u1) {
-    on = 1,
-    off = 0,
-};
+// ===================================
+// Gemini generated helpers
+// used as prototypes within own funcs
+// ===================================
+
+/// Converts a struct pointer's address into a provided slice.
+/// Returns a slice of the filled portion of the destination slice.
+/// Returns an empty slice if the destination slice is too small.
+pub fn ptrToSlice(comptime T: type, ptr: *T, destination: []u8) []u8 {
+    // Check if the destination slice is large enough.
+    if (destination.len < @sizeOf(usize)) {
+        return &[_]u8{}; // Return an empty slice to indicate failure.
+    }
+
+    const addr = @intFromPtr(ptr); // Corrected function
+    const addr_bytes = std.mem.asBytes(&addr);
+
+    // Copy the raw address bytes into the destination slice.
+    std.mem.copyForwards(u8, destination[0..@sizeOf(usize)], addr_bytes);
+
+    // Return a slice of the filled portion.
+    return destination[0..@sizeOf(usize)];
+}
+
+/// Converts a slice back to a struct pointer.
+/// Returns an optional pointer which is null if the slice is too small.
+pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
+    if (slice.len < @sizeOf(usize)) {
+        return null;
+    }
+
+    var addr: usize = undefined;
+    std.mem.copyForwards(u8, std.mem.asBytes(&addr), slice[0..@sizeOf(usize)]);
+
+    return @ptrFromInt(addr); // Corrected function
+}
+
+/// Converts a struct's underlying memory into a provided destination slice.
+/// Returns a slice of the filled portion of the destination, or an empty slice
+/// if the destination is too small.
+pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
+    const struct_size = @sizeOf(T);
+    if (destination.len < struct_size) {
+        return &[_]u8{}; // Return an empty slice if destination is too small
+    }
+    std.mem.copyForwards(u8, destination[0..struct_size], std.mem.asBytes(ptr));
+    return destination[0..struct_size];
+}
+
+/// Converts a slice of bytes back into a struct.
+/// Returns true on success, or false if the slice's length does not match the
+/// size of the target struct.
+pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) bool {
+    const struct_size = @sizeOf(T);
+    if (slice.len != struct_size) {
+        return false;
+    }
+    std.mem.copyForwards(u8, std.mem.asBytes(destination), slice);
+    return true;
+}
 
 const Appendable = @import("nats").Appendable;
 

@@ -37,7 +37,7 @@ pub const MessageChannelGroup = struct {
     vtable: *const vtables.MCGVTable,
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// Returns מוךך if the pool is empty and the strategy is poolOnly.
+    /// Returns null if the pool is empty and the strategy is poolOnly.
     /// Returns an error during mcg release or if allocation failed.
     /// Thread-safe.
     pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
@@ -78,15 +78,15 @@ pub const MessageChannelGroup = struct {
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
-    /// May receive signals from the engine, such as Bye (peer disconnected), Alarm 'wait_interrupted',
-    /// or Alarm 'pool_empty' (indicating no free messages for receive).
+    /// May receive messages with error status from the engine, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
+    /// or Signal ('pool_empty') (indicating no free messages for receive).
     /// Idiomatic usage involves calling `waitReceive` in a loop within the same thread.
     /// Thread-safe.
     pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
         return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
     }
 
-    /// Interrupts a `waitReceive` call, causing it to return a Alarm Signal with 'wait_interrupted' status.
+    /// Interrupts a `waitReceive` call, causing it to return a Signal with 'wait_interrupted' status.
     /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
     /// Only the last interrupt is saved; no accumulation.
     /// Idiomatic usage involves calling from a different thread to signal attention.
@@ -111,12 +111,14 @@ pub const DBG = (@import("builtin").mode == .Debug);
 
 pub const engine = @This();
 
+// For caller code
 pub const configurator = @import("configurator.zig");
 pub const message = @import("message.zig");
 pub const status = @import("status.zig");
-
-pub const channels = @import("engine/channels.zig");
 pub const Distributor = @import("engine/Distributor.zig");
+
+// For tests
+pub const channels = @import("engine/channels.zig");
 pub const Notifier = @import("engine/Notifier.zig");
 pub const Pool = @import("engine/Pool.zig");
 pub const poller = @import("engine/poller.zig");

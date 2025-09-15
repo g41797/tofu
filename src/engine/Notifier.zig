@@ -30,6 +30,7 @@ pub const NotificationKind = enum(u1) {
 
 pub const Alert = enum(u2) {
     freedMemory = 0,
+    mcgremoved = 1,
     shutdownStarted = 2,
 };
 

@@ -94,6 +94,125 @@ test "TextHeaderIterator empty" {
     try std.testing.expectEqual(null, it.next());
 }
 
+test "struct pointer to message and back with destination" {
+    var msg = try message.Message.create(std.testing.allocator);
+    defer msg.destroy();
+
+    const MyStruct = struct {
+        x: u32,
+        y: u32,
+    };
+
+    var my_struct_instance = MyStruct{ .x = 100, .y = 200 };
+    const original_ptr = &my_struct_instance;
+
+    _ = msg.ptrToBody(MyStruct, &my_struct_instance);
+
+    const retrieved_ptr = msg.bodyToPtr(MyStruct);
+
+    try testing.expectEqual(original_ptr, retrieved_ptr.?);
+}
+
+test "struct pointer to slice and back with destination" {
+    const MyStruct = struct {
+        x: u32,
+        y: u32,
+    };
+
+    var my_struct_instance = MyStruct{ .x = 100, .y = 200 };
+    const original_ptr = &my_struct_instance;
+
+    // Create a stack-allocated buffer to receive the pointer's address.
+    var buffer: [(@sizeOf(usize))]u8 = undefined;
+
+    // Call ptrToSlice with the destination buffer.
+    const ptr_slice = message.ptrToSlice(MyStruct, original_ptr, &buffer);
+
+    try std.testing.expectEqual(ptr_slice.len, @sizeOf(usize));
+
+    // Convert the returned slice back to a pointer.
+    const restored_ptr = message.sliceToPtr(MyStruct, ptr_slice);
+
+    // Verify the restored pointer is not null and matches the original.
+    try std.testing.expect(restored_ptr != null);
+    try std.testing.expect(restored_ptr.? == original_ptr);
+    try std.testing.expectEqual(restored_ptr.?.x, 100);
+}
+
+test "ptrToSlice with too small destination" {
+    const MyStruct = struct {
+        x: u32,
+    };
+    var my_struct_instance = MyStruct{ .x = 10 };
+
+    // Create a destination slice that is too small.
+    var small_buffer = [_]u8{0};
+
+    // Call the function and expect an empty slice.
+    const ptr_slice = message.ptrToSlice(MyStruct, &my_struct_instance, &small_buffer);
+
+    try std.testing.expectEqual(ptr_slice.len, 0);
+}
+
+test "structToSlice and structFromSlice" {
+    const MyStruct = struct {
+        a: u32,
+        b: u32,
+    };
+    const struct_size = @sizeOf(MyStruct);
+
+    // Initial struct instance
+    var original_struct = MyStruct{ .a = 1, .b = 2 };
+
+    // Create a destination buffer
+    var buffer: [struct_size]u8 = undefined;
+
+    // Convert the struct to the slice (copying data)
+    const filled_slice = message.structToSlice(MyStruct, &original_struct, &buffer);
+    try std.testing.expectEqual(filled_slice.len, struct_size);
+
+    // Create a new struct to restore the data into
+    var restored_struct = MyStruct{ .a = 0, .b = 0 };
+
+    // Convert the slice back to the struct (copying data)
+    const success = message.structFromSlice(MyStruct, filled_slice, &restored_struct);
+    try std.testing.expect(success);
+
+    // Verify the restored data
+    try std.testing.expectEqual(restored_struct.a, 1);
+    try std.testing.expectEqual(restored_struct.b, 2);
+}
+
+test "structToSlice with too small destination" {
+    const MyStruct = struct {
+        a: u32,
+        b: u32,
+    };
+    const struct_size = @sizeOf(MyStruct);
+
+    var original_struct = MyStruct{ .a = 1, .b = 2 };
+
+    // Create a destination buffer that is too small
+    var small_buffer: [struct_size - 1]u8 = undefined;
+
+    const result = message.structToSlice(MyStruct, &original_struct, &small_buffer);
+    try std.testing.expectEqual(result.len, 0);
+}
+
+test "structFromSlice with invalid size" {
+    const MyStruct = struct {
+        a: u32,
+        b: u32,
+    };
+
+    // Create a slice with an incorrect size
+    const invalid_slice = [_]u8{ 1, 2, 3, 4 };
+
+    var restored_struct = MyStruct{ .a = 0, .b = 0 };
+    const success = message.structFromSlice(MyStruct, &invalid_slice, &restored_struct);
+    try std.testing.expect(!success);
+}
+
 const message = @import("tofu").message;
 const TextHeaderIterator = message.TextHeaderIterator;
 

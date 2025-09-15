@@ -56,8 +56,9 @@ trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
 ntfc: Notifier.Notification = undefined,
 unpnt: Notifier.UnpackedNotification,
-fromMcg: ?*Message = undefined,
+currMsg: ?*Message = undefined,
 bhdr: BinaryHeader = undefined,
+tcopt: ?*TriggeredChannel = undefined,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
     try dtr.*.createThread();
@@ -103,8 +104,9 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .plr = plru,
         .unpnt = .{},
         .ntfc = .{},
-        .fromMcg = null,
+        .currMsg = null,
         .bhdr = .{},
+        .tcopt = null,
     };
 
     dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
@@ -313,12 +315,10 @@ fn loop(dtr: *Distributor) void {
 fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
     it.reset();
 
-    var tcptr = it.next();
-    var indx: usize = 0;
+    dtr.tcopt = it.next();
 
-    while (tcptr != null) : (indx += 1) {
-        const tc = tcptr.?;
-        tcptr = it.next();
+    while (dtr.tcopt != null) : (dtr.tcopt = it.next()) {
+        const tc = dtr.tcopt.?;
 
         const trgrs = tc.act;
 
@@ -327,7 +327,6 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
         }
 
         if (trgrs.notify == .on) {
-            assert(indx == 0);
             try dtr.processNotify(tc);
             continue;
         }
@@ -359,13 +358,13 @@ fn processNotify(dtr: *Distributor, tc: *TriggeredChannel) !void {
 }
 
 fn processMcgMessage(dtr: *Distributor) !void {
-    dtr.fromMcg = null;
+    dtr.currMsg = null;
 
-    var fromMcg: *message.Message = undefined;
+    var currMsg: *message.Message = undefined;
     var received: bool = false;
 
     for (0..2) |n| {
-        fromMcg = dtr.msgs[n].receive(0) catch |err| {
+        currMsg = dtr.msgs[n].receive(0) catch |err| {
             switch (err) {
                 error.Timeout, error.Interrupted => {
                     continue;
@@ -384,12 +383,12 @@ fn processMcgMessage(dtr: *Distributor) !void {
         return;
     }
 
-    dtr.fromMcg = fromMcg;
-    dtr.bhdr = fromMcg.bhdr;
-    defer Message.DestroySendMsg(&dtr.fromMcg);
+    dtr.currMsg = currMsg;
+    dtr.bhdr = currMsg.bhdr;
+    defer Message.DestroySendMsg(&dtr.currMsg);
 
-    if (dtr.bhdr.proto.mtype == MessageType.alarm) {
-        return dtr.processAlarm();
+    if (dtr.bhdr.proto.origin == .engine) {
+        return dtr.processInternal();
     }
 
     const hint = dtr.ntfc.hint;
@@ -420,7 +419,7 @@ const partial = @import("prtlDistributor.zig");
 const processTimeOut = partial.processTimeOut;
 const processWaitTriggersFailure = partial.processWaitTriggersFailure;
 const processMarkedForDelete = partial.processMarkedForDelete;
-const processAlarm = partial.processAlarm;
+const processInternal = partial.processInternal;
 
 const processHelloResponse = partial.processHelloResponse;
 const processAppRequest = partial.processAppRequest;
@@ -433,6 +432,8 @@ const processWelcomeRequest = partial.processWelcomeRequest;
 const processHelloRequest = partial.processHelloRequest;
 
 const addNotificationChannel = partial.addNotificationChannel;
+pub const responseFailure = partial.responseFailure;
+pub const markForDelete = partial.markForDelete;
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;

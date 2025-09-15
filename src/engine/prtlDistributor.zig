@@ -9,7 +9,17 @@ pub fn processWelcomeRequest(dtr: *Distributor) !void {
 
 pub fn processHelloRequest(dtr: *Distributor) !void {
     // 2DO - Add processing
-    _ = dtr;
+
+    const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
+    switch (cnfgr) {
+        .wrong => {
+            try dtr.responseFailure(AmpeStatus.wrong_configuration);
+        },
+        else => {
+            return AmpeError.ShutdownStarted;
+        },
+    }
+
     return AmpeError.ShutdownStarted;
 }
 
@@ -72,7 +82,7 @@ pub fn processMarkedForDelete(dtr: *Distributor) !bool {
     return false;
 }
 
-pub fn processAlarm(dtr: *Distributor) !void {
+pub fn processInternal(dtr: *Distributor) !void {
     _ = dtr;
     return;
 }
@@ -100,6 +110,28 @@ pub fn addNotificationChannel(dtr: *Distributor) !void {
     dtr.ntfsEnabled = true;
     dtr.cnmapChanged = false;
     return;
+}
+
+pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
+    dtr.currMsg.?.bhdr.status = status.status_to_raw(failure);
+    const chn = dtr.currMsg.?.bhdr.channel_number;
+    const trchn = dtr.trgrd_map.getPtr(chn);
+    if (trchn == null) {
+        log.info("channel {d} does not exists", .{
+            chn,
+        });
+        return; // or Message.DestroySendMsg(&dtr.currMsg)
+    }
+    trchn.?.act.err = .on;
+    return;
+}
+
+pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
+    _ = dtr;
+    _ = chn;
+    // var trchn = dtr.trgrd_map.getPtr(chn);
+
+    return AmpeError.NotImplementedYet;
 }
 
 const Distributor = @import("Distributor.zig");
