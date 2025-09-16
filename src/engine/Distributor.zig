@@ -189,20 +189,46 @@ inline fn _create(dtr: *Distributor) AmpeError!MessageChannelGroup {
     return gt.mcg();
 }
 
-inline fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
-    _ = dtr;
+fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
+    if (mcgimpl == null) {
+        return AmpeError.InvalidAddress;
+    }
+
+    var dstr = try Gate.get(mcgimpl, .always);
+    errdefer Gate.put(mcgimpl, &dstr);
+
+    // Create Signal for release of
+    // resources of mcg
+    var dmsg = dstr.?;
+    dmsg.bhdr.proto.mtype = .application;
+    dmsg.bhdr.proto.mode = .signal;
+    dmsg.bhdr.proto.origin = .engine;
+    dmsg.bhdr.proto.oob = .on;
+    dmsg.bhdr.proto.more = .last;
+
+    dmsg.bhdr.channel_number = 0;
+    dmsg.bhdr.status = status.status_to_raw(.shutdown_started);
+
     const gt: *Gate = @alignCast(@ptrCast(mcgimpl));
+    _ = dmsg.ptrToBody(Gate, gt);
+
+    try dtr.submitMsg(dmsg, .AppSignal);
+
+    gt.waitReleaseCompleted();
     gt.Destroy();
+
     return;
 }
 
-pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC, oob: message.Oob) AmpeError!void {
+pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC) AmpeError!void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 
     if (!dtr.ntfsEnabled) {
         return AmpeError.NotificationDisabled;
     }
+
+    const oob = msg.bhdr.proto.oob;
 
     dtr.msgs[@intFromEnum(oob)].send(msg) catch {
         return AmpeError.NotAllowed;

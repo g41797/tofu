@@ -94,7 +94,7 @@ test "TextHeaderIterator empty" {
     try std.testing.expectEqual(null, it.next());
 }
 
-test "struct pointer to message and back with destination" {
+test "struct pointer to message and back" {
     var msg = try message.Message.create(std.testing.allocator);
     defer msg.destroy();
 

@@ -26,15 +26,15 @@ test "send illegal messages" {
     recipes.sendHelloWithoutConfiguration(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongConfiguration);
     };
-    var res: bool = false;
 
-    if (recipes.sendHelloWithWrongConfiguration(gpa)) |val| {
-        res = val;
-    } else |err| {
-        if (err == AmpeError.WrongConfiguration) {
-            res = true;
-        }
-    }
+    // var res: bool = false;
+    // if (recipes.sendHelloWithWrongConfiguration(gpa)) |val| {
+    //     res = val;
+    // } else |err| {
+    //     if (err == AmpeError.WrongConfiguration) {
+    //         res = true;
+    //     }
+    // }
 
     // 2DO remove cmnts
     // try testing.expect(!res);

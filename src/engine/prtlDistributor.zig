@@ -83,7 +83,13 @@ pub fn processMarkedForDelete(dtr: *Distributor) !bool {
 }
 
 pub fn processInternal(dtr: *Distributor) !void {
-    _ = dtr;
+    // Temporary - only one internal msg - destroy
+    // mcg(Gate) : Signal with status == shutdown_started
+    // body has *Gate
+    var cmsg = dtr.currMsg.?;
+    const mcgimpl: ?*Gate = cmsg.bodyToPtr(Gate);
+    const gt = mcgimpl.?;
+    gt.setReleaseCompleted();
     return;
 }
 

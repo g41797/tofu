@@ -7,6 +7,7 @@ prnt: *Distributor = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
+cmpl: ResetEvent = undefined,
 
 pub fn mcg(gt: *Gate) MessageChannelGroup {
     const result: MessageChannelGroup = .{
@@ -43,15 +44,14 @@ fn init(prnt: *Distributor, id: u32) Gate {
         .id = id,
         .allocator = prnt.allocator,
         .msgs = .{},
+        .cmpl = ResetEvent{},
     };
 
     return gt;
 }
 
 fn deinit(gt: *Gate) void {
-    _ = gt.prnt.acns.removeChannels(gt) catch unreachable;
-
-    // gt.prnt.sendAlert(.mcgRemoved) catch {};
+    // _ = gt.prnt.acns.removeChannels(gt) catch unreachable;
 
     var allocated = gt.msgs.close();
     while (allocated != null) {
@@ -116,7 +116,7 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     sendMsg.bhdr.channel_number = ach.chn;
     sendMsg.bhdr.message_id = ach.mid;
 
-    try gt.prnt.submitMsg(sendMsg, vc, sendMsg.bhdr.proto.oob);
+    try gt.prnt.submitMsg(sendMsg, vc);
 
     amsg.* = null;
 
@@ -133,6 +133,30 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
 pub fn interruptWait(ptr: ?*anyopaque) void {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
     _ = gt;
+    return;
+}
+
+pub fn setReleaseCompleted(gt: *Gate) void {
+    gt.cmpl.set();
+    return;
+}
+
+pub fn waitReleaseCompleted(gt: *Gate) void {
+    gt.cmpl.wait();
+    return;
+}
+
+pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
+    if (msg.* == null) {
+        return AmpeError.NullMessage;
+    }
+    const gt: *Gate = @alignCast(@ptrCast(ptr));
+
+    gt.msgs.send(msg.*.?) catch {
+        return AmpeError.ShutdownStarted;
+    };
+
+    msg.* = null;
     return;
 }
 
@@ -166,3 +190,4 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
+const ResetEvent = std.Thread.ResetEvent;
