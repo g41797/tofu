@@ -15,8 +15,8 @@ pub const MessageType = enum(u2) {
     bye = 3,
 };
 
-/// Enum representing the mode of a message, indicating whether it is a request, response, or signal.
-pub const MessageMode = enum(u2) {
+/// Enum representing the role of a message, indicating whether it is a request, response, or signal.
+pub const MessageRole = enum(u2) {
     invalid = 0,
     request = 1,
     response = 2,
@@ -42,7 +42,7 @@ pub const Oob = Trigger;
 /// Packed struct containing protocol fields for message metadata.
 pub const ProtoFields = packed struct(u8) {
     mtype: MessageType = .application,
-    mode: MessageMode = .invalid,
+    role: MessageRole = .invalid,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
     oob: Oob = .off,
@@ -283,24 +283,24 @@ pub const TextHeaders = struct {
 /// Enum representing valid message type and mode combinations allowed for sending by the application.
 pub const ValidCombination = enum(u4) {
     WelcomeRequest = 0,
+    WelcomeSignal = 1,
 
-    HelloRequest = 1,
-    HelloResponse = 2,
+    HelloRequest = 2,
+    HelloResponse = 3,
+    HelloSignal = 4,
 
-    ByeRequest = 3,
-    ByeResponse = 4,
-    ByeSignal = 5,
+    ByeRequest = 5,
+    ByeResponse = 6,
+    ByeSignal = 7,
 
-    AppRequest = 6,
-    AppResponse = 7,
-    AppSignal = 8,
+    AppRequest = 8,
+    AppResponse = 9,
+    AppSignal = 10,
 
-    _reserved1,
-    _reserved2,
-    _reserved3,
-    _reserved4,
-    _reserved5,
-    _reserved6,
+    _reserved11,
+    _reserved12,
+    _reserved13,
+    _reserved14,
 };
 
 /// Structure representing a complete message, including binary header, text headers, and body.
@@ -481,7 +481,7 @@ pub const Message = struct {
 
         const bhdr: BinaryHeader = msg.bhdr;
         const mtype = bhdr.proto.mtype;
-        const mode = bhdr.proto.mode;
+        const mode = bhdr.proto.role;
         const origin = bhdr.proto.origin;
         const more = bhdr.proto.more;
 
@@ -512,6 +512,7 @@ pub const Message = struct {
             },
             .welcome => switch (mode) {
                 .request => .WelcomeRequest,
+                .signal => .WelcomeSignal,
                 .response => {
                     msg.bhdr.status = status_to_raw(.not_allowed);
                     return AmpeError.NotAllowed;
@@ -524,6 +525,7 @@ pub const Message = struct {
             .hello => switch (mode) {
                 .request => .HelloRequest,
                 .response => .HelloResponse,
+                .signal => .HelloSignal,
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AmpeError.InvalidMessageMode;
@@ -542,7 +544,7 @@ pub const Message = struct {
         const channel_number = msg.bhdr.channel_number;
         if (channel_number == 0) {
             switch (vc) {
-                .WelcomeRequest, .HelloRequest => {},
+                .WelcomeRequest, .HelloRequest, .WelcomeSignal, .HelloSignal => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
                     return AmpeError.InvalidChannelNumber;
@@ -568,6 +570,10 @@ pub const Message = struct {
             return AmpeError.InvalidHeadersLen;
         }
         msg.bhdr.body_len = @intCast(actualBodyLen);
+
+        if (msg.bhdr.message_id == 0) {
+            msg.bhdr.message_id = next_mid();
+        }
 
         return vc;
     }

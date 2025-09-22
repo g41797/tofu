@@ -428,7 +428,7 @@ inline fn prepareForServer(msg: *Message) void {
 
     msg.bhdr.proto = .{
         .mtype = .welcome,
-        .mode = .request,
+        .role = .request,
     };
 }
 
@@ -438,7 +438,7 @@ inline fn prepareForClient(msg: *Message) void {
 
     msg.bhdr.proto = .{
         .mtype = .hello,
-        .mode = .request,
+        .role = .request,
     };
 }
 
@@ -447,7 +447,7 @@ inline fn isFirstServerRequest(msg: *Message) bool {
     if (msg.bhdr.proto.mtype != .welcome) {
         return false;
     }
-    if (msg.bhdr.proto.mode != .request) {
+    if (msg.bhdr.proto.role != .request) {
         return false;
     }
     if (msg.bhdr.proto.more != .last) {
@@ -465,7 +465,7 @@ inline fn isFirstClientRequest(msg: *Message) bool {
     if (msg.bhdr.proto.mtype != .hello) {
         return false;
     }
-    if (msg.bhdr.proto.mode != .request) {
+    if (msg.bhdr.proto.role != .request) {
         return false;
     }
     if (msg.bhdr.proto.more != .last) {
@@ -488,3 +488,5 @@ pub const AmpeError = @import("status.zig").AmpeError;
 
 const std = @import("std");
 const activeTag = std.meta.activeTag;
+
+// 2DO prepareRequest - replace with prepare +

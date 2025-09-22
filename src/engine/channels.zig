@@ -93,6 +93,7 @@ pub const ChannelNodeQueue = struct {
 pub const ActiveChannel = struct {
     chn: ChannelNumber = undefined,
     mid: MessageID = undefined,
+    intr: ?message.ValidCombination = undefined,
     ctx: ?*anyopaque = undefined,
 };
 
@@ -151,7 +152,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    pub fn createChannel(cns: *ActiveChannels, mID: ?MessageID, ptr: ?*anyopaque) ActiveChannel {
+    pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ValidCombination, ptr: ?*anyopaque) ActiveChannel {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
@@ -166,16 +167,10 @@ pub const ActiveChannels = struct {
                 continue;
             }
 
-            var mid: MessageID = undefined;
-            if (mID) |mval| {
-                mid = mval;
-            } else {
-                mid = message.Message.next_mid();
-            }
-
             const ach: ActiveChannel = .{
                 .chn = rv,
                 .mid = mid,
+                .intr = intr,
                 .ctx = ptr,
             };
             cns.active.put(rv, ach) catch unreachable;

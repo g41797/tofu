@@ -3,13 +3,6 @@
 
 pub const Distributor = @This();
 
-pub const TriggeredChannel = struct {
-    acn: channels.ActiveChannel = undefined,
-    tskt: TriggeredSkt = undefined,
-    exp: sockets.Triggers = undefined,
-    act: sockets.Triggers = undefined,
-};
-
 pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
 
 pub const Iterator = struct {
@@ -54,11 +47,13 @@ plr: poller.Poller = undefined,
 // Accessible from the thread - don't lock/unlock
 trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
-ntfc: Notifier.Notification = undefined,
-unpnt: Notifier.UnpackedNotification,
+
+currNtfc: Notifier.Notification = undefined,
 currMsg: ?*Message = undefined,
-bhdr: BinaryHeader = undefined,
-tcopt: ?*TriggeredChannel = undefined,
+currBhdr: BinaryHeader = undefined,
+currTcopt: ?*TriggeredChannel = undefined,
+
+unpnt: Notifier.UnpackedNotification,
 
 pub fn ampe(dtr: *Distributor) !Ampe {
     try dtr.*.createThread();
@@ -66,8 +61,8 @@ pub fn ampe(dtr: *Distributor) !Ampe {
     const result: Ampe = .{
         .ptr = dtr,
         .vtable = &.{
-            .acquire = create,
-            .release = destroy,
+            .create = create,
+            .destroy = destroy,
         },
     };
 
@@ -103,10 +98,10 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .maxid = 0,
         .plr = plru,
         .unpnt = .{},
-        .ntfc = .{},
+        .currNtfc = .{},
         .currMsg = null,
-        .bhdr = .{},
-        .tcopt = null,
+        .currBhdr = .{},
+        .currTcopt = null,
     };
 
     dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
@@ -197,11 +192,11 @@ fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
     var dstr = try Gate.get(mcgimpl, .always);
     errdefer Gate.put(mcgimpl, &dstr);
 
-    // Create Signal for release of
+    // Create Signal for destroy of
     // resources of mcg
     var dmsg = dstr.?;
     dmsg.bhdr.proto.mtype = .application;
-    dmsg.bhdr.proto.mode = .signal;
+    dmsg.bhdr.proto.role = .signal;
     dmsg.bhdr.proto.origin = .engine;
     dmsg.bhdr.proto.oob = .on;
     dmsg.bhdr.proto.more = .last;
@@ -341,10 +336,10 @@ fn loop(dtr: *Distributor) void {
 fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
     it.reset();
 
-    dtr.tcopt = it.next();
+    dtr.currTcopt = it.next();
 
-    while (dtr.tcopt != null) : (dtr.tcopt = it.next()) {
-        const tc = dtr.tcopt.?;
+    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
+        const tc = dtr.currTcopt.?;
 
         const trgrs = tc.act;
 
@@ -362,11 +357,11 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
 }
 
 fn processNotify(dtr: *Distributor, tc: *TriggeredChannel) !void {
-    dtr.ntfc = try tc.tskt.tryRecvNotification();
-    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.ntfc);
+    dtr.currNtfc = try tc.tskt.tryRecvNotification();
+    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.currNtfc);
 
-    if (dtr.ntfc.kind == .alert) {
-        switch (dtr.ntfc.alert) {
+    if (dtr.currNtfc.kind == .alert) {
+        switch (dtr.currNtfc.alert) {
             .shutdownStarted => {
                 return AmpeError.ShutdownStarted;
             },
@@ -378,12 +373,12 @@ fn processNotify(dtr: *Distributor, tc: *TriggeredChannel) !void {
         }
     }
 
-    assert(dtr.ntfc.kind == .message);
+    assert(dtr.currNtfc.kind == .message);
 
-    return dtr.processMcgMessage();
+    return dtr.processSendMessage();
 }
 
-fn processMcgMessage(dtr: *Distributor) !void {
+fn processSendMessage(dtr: *Distributor) !void {
     dtr.currMsg = null;
 
     var currMsg: *message.Message = undefined;
@@ -410,25 +405,27 @@ fn processMcgMessage(dtr: *Distributor) !void {
     }
 
     dtr.currMsg = currMsg;
-    dtr.bhdr = currMsg.bhdr;
+    dtr.currBhdr = currMsg.bhdr;
     defer Message.DestroySendMsg(&dtr.currMsg);
 
-    if (dtr.bhdr.proto.origin == .engine) {
+    if (dtr.currBhdr.proto.origin == .engine) {
         return dtr.processInternal();
     }
 
-    const hint = dtr.ntfc.hint;
+    const hint = dtr.currNtfc.hint;
 
     switch (hint) {
-        .HelloResponse => return dtr.processHelloResponse(),
-        .AppRequest => return dtr.processAppRequest(),
-        .AppResponse => return dtr.processAppResponse(),
-        .AppSignal => return dtr.processAppSignal(),
-        .ByeRequest => return dtr.processByeRequest(),
-        .ByeResponse => return dtr.processByeResponse(),
-        .ByeSignal => return dtr.processByeSignal(),
-        .WelcomeRequest => return dtr.processWelcomeRequest(),
-        .HelloRequest => return dtr.processHelloRequest(),
+        .HelloRequest, .HelloSignal => return dtr.sendHello(),
+        .HelloResponse => return dtr.sendHelloResponse(),
+
+        .WelcomeRequest, .WelcomeSignal => return dtr.sendWelcome(),
+
+        .AppRequest, .AppSignal => return dtr.sendApp(),
+        .AppResponse => return dtr.sendAppResponse(),
+
+        .ByeRequest, .ByeSignal => return dtr.sendBye(),
+        .ByeResponse => return dtr.sendByeResponse(),
+
         else => return AmpeError.InvalidMessage,
     }
 
@@ -447,15 +444,13 @@ const processWaitTriggersFailure = partial.processWaitTriggersFailure;
 const processMarkedForDelete = partial.processMarkedForDelete;
 const processInternal = partial.processInternal;
 
-const processHelloResponse = partial.processHelloResponse;
-const processAppRequest = partial.processAppRequest;
-const processAppResponse = partial.processAppResponse;
-const processAppSignal = partial.processAppSignal;
-const processByeRequest = partial.processByeRequest;
-const processByeResponse = partial.processByeResponse;
-const processByeSignal = partial.processByeSignal;
-const processWelcomeRequest = partial.processWelcomeRequest;
-const processHelloRequest = partial.processHelloRequest;
+const sendHelloResponse = partial.sendHelloResponse;
+const sendApp = partial.sendApp;
+const sendAppResponse = partial.sendAppResponse;
+const sendByeResponse = partial.sendByeResponse;
+const sendBye = partial.sendBye;
+const sendWelcome = partial.sendWelcome;
+const sendHello = partial.sendHello;
 
 const addNotificationChannel = partial.addNotificationChannel;
 pub const responseFailure = partial.responseFailure;
@@ -463,7 +458,7 @@ pub const markForDelete = partial.markForDelete;
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
-const MessageMode = message.MessageMode;
+const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
 const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
@@ -500,6 +495,8 @@ const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
 const Gate = @import("Gate.zig");
 
 const poller = @import("poller.zig");
+
+pub const TriggeredChannel = @import("TriggeredChannel.zig");
 
 const Appendable = @import("nats").Appendable;
 

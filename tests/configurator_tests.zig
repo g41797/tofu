@@ -46,7 +46,7 @@ fn allocMsg() *Message {
 }
 pub const message = @import("tofu").message;
 pub const MessageType = message.MessageType;
-pub const MessageMode = message.MessageMode;
+pub const MessageRole = message.MessageRole;
 pub const OriginFlag = message.OriginFlag;
 pub const MoreMessagesFlag = message.MoreMessagesFlag;
 pub const ProtoFields = message.ProtoFields;

@@ -50,7 +50,7 @@ const MessageChannelGroup = engine.MessageChannelGroup;
 
 const message = tofu.message;
 const MessageType = message.MessageType;
-const MessageMode = message.MessageMode;
+const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
 const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;

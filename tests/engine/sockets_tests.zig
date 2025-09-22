@@ -286,7 +286,7 @@ pub const Exchanger = struct {
 
             smsg.bhdr.channel_number = exc.srvCN;
             smsg.bhdr.message_id = i + 1;
-            smsg.bhdr.proto.mode = .signal;
+            smsg.bhdr.proto.role = .signal;
             smsg.bhdr.proto.more = .last;
             smsg.bhdr.proto.mtype = .application;
             smsg.bhdr.proto.origin = .application;
@@ -502,7 +502,7 @@ const tofu = @import("tofu");
 
 const message = tofu.message;
 const MessageType = message.MessageType;
-const MessageMode = message.MessageMode;
+const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
 const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;

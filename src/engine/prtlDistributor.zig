@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub fn processWelcomeRequest(dtr: *Distributor) !void {
+pub fn sendWelcome(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn processHelloRequest(dtr: *Distributor) !void {
+pub fn sendHello(dtr: *Distributor) !void {
     // 2DO - Add processing
 
     const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
@@ -23,43 +23,31 @@ pub fn processHelloRequest(dtr: *Distributor) !void {
     return AmpeError.ShutdownStarted;
 }
 
-pub fn processHelloResponse(dtr: *Distributor) !void {
+pub fn sendHelloResponse(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn processByeRequest(dtr: *Distributor) !void {
+pub fn sendByeResponse(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn processByeResponse(dtr: *Distributor) !void {
+pub fn sendBye(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn processByeSignal(dtr: *Distributor) !void {
+pub fn sendApp(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn processAppRequest(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
-}
-
-pub fn processAppResponse(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
-}
-
-pub fn processAppSignal(dtr: *Distributor) !void {
+pub fn sendAppResponse(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
@@ -94,20 +82,7 @@ pub fn processInternal(dtr: *Distributor) !void {
 }
 
 pub fn addNotificationChannel(dtr: *Distributor) !void {
-    const nSkt = dtr.ntfr.receiver;
-
-    const ntcn: Distributor.TriggeredChannel = .{
-        .acn = .{
-            .chn = 0,
-            .mid = 0,
-            .ctx = null,
-        },
-        .tskt = .{
-            .notification = sockets.NotificationSkt.init(nSkt),
-        },
-        .exp = sockets.TriggersOff,
-        .act = sockets.TriggersOff,
-    };
+    const ntcn = try TriggeredChannel.createNotificationChannel(dtr);
 
     dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
         return AmpeError.AllocationFailed;
@@ -133,18 +108,19 @@ pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
 }
 
 pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
-    _ = dtr;
-    _ = chn;
-    // var trchn = dtr.trgrd_map.getPtr(chn);
+    const trchn = dtr.trgrd_map.getPtr(chn);
+    if (trchn) |ch| {
+        ch.mrk4del = true;
+    }
 
-    return AmpeError.NotImplementedYet;
+    return;
 }
 
 const Distributor = @import("Distributor.zig");
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
-const MessageMode = message.MessageMode;
+const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
 const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
@@ -177,6 +153,8 @@ const ActiveChannels = channels.ActiveChannels;
 
 const sockets = @import("sockets.zig");
 const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
+
+const TriggeredChannel = @import("TriggeredChannel.zig");
 
 const Gate = @import("Gate.zig");
 

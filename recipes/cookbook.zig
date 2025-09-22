@@ -30,10 +30,10 @@ pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
 
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
+    const mchgr = try ampe.create();
 
-    // You destroy MessageChannelGroup via release it by ampe
-    try ampe.release(mchgr);
+    // You destroy MessageChannelGroup via destroy it by ampe
+    try ampe.destroy(mchgr);
 }
 
 pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
@@ -48,8 +48,8 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     defer dtr.Destroy();
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
-    defer ampe.release(mchgr) catch {
+    const mchgr = try ampe.create();
+    defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
@@ -89,8 +89,8 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     defer dtr.Destroy();
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
-    defer ampe.release(mchgr) catch {
+    const mchgr = try ampe.create();
+    defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
@@ -115,8 +115,8 @@ pub fn sendMessageWithWrongChannelNumber(gpa: Allocator) !void {
     defer dtr.Destroy();
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
-    defer ampe.release(mchgr) catch {
+    const mchgr = try ampe.create();
+    defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
@@ -130,7 +130,7 @@ pub fn sendMessageWithWrongChannelNumber(gpa: Allocator) !void {
     // Invalid Bye Request
     var bhdr = &msg.?.bhdr;
     bhdr.proto.mtype = .bye;
-    bhdr.proto.mode = .request;
+    bhdr.proto.role = .request;
 
     _ = try mchgr.asyncSend(&msg);
 
@@ -147,8 +147,8 @@ pub fn sendHelloWithoutConfiguration(gpa: Allocator) !void {
     defer dtr.Destroy();
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
-    defer ampe.release(mchgr) catch {
+    const mchgr = try ampe.create();
+    defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
@@ -163,7 +163,7 @@ pub fn sendHelloWithoutConfiguration(gpa: Allocator) !void {
 
     // Hello Request without server address - in terms of tofu 'configuration'
     bhdr.proto.mtype = .hello;
-    bhdr.proto.mode = .request;
+    bhdr.proto.role = .request;
 
     _ = try mchgr.asyncSend(&msg);
 
@@ -180,8 +180,8 @@ pub fn sendHelloWithWrongConfiguration(gpa: Allocator) !bool {
     defer dtr.Destroy();
     const ampe = try dtr.ampe();
 
-    const mchgr = try ampe.acquire();
-    defer ampe.release(mchgr) catch {
+    const mchgr = try ampe.create();
+    defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
@@ -201,7 +201,7 @@ pub fn sendHelloWithWrongConfiguration(gpa: Allocator) !bool {
     // Setup hello message - you don't need 3 lines below
     // var bhdr = &msg.?.bhdr;
     // bhdr.proto.mtype = .hello;
-    // bhdr.proto.mode = .request;
+    // bhdr.proto.role = .request;
 
     // Appends configuration to TextHeaders of the message
     _ = try cnfg.prepareRequest(msg.?);

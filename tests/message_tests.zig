@@ -17,7 +17,7 @@ test "BinaryHeader marshalling and demarshalling" {
         .channel_number = 0x1234,
         .proto = .{
             .mtype = .hello,
-            .mode = .request,
+            .role = .request,
             .origin = .application,
             .more = .last,
             .oob = .off,
@@ -36,7 +36,7 @@ test "BinaryHeader marshalling and demarshalling" {
 
     try std.testing.expectEqual(header.channel_number, demarshaled.channel_number);
     try std.testing.expectEqual(header.proto.mtype, demarshaled.proto.mtype);
-    try std.testing.expectEqual(header.proto.mode, demarshaled.proto.mode);
+    try std.testing.expectEqual(header.proto.role, demarshaled.proto.role);
     try std.testing.expectEqual(header.status, demarshaled.status);
     try std.testing.expectEqual(header.message_id, demarshaled.message_id);
     try std.testing.expectEqual(header.text_headers_len, demarshaled.text_headers_len);

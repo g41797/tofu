@@ -102,20 +102,14 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
     const gt: *Gate = @alignCast(@ptrCast(ptr));
 
-    if ((sendMsg.bhdr.channel_number != 0) and (!gt.prnt.acns.exists(sendMsg.bhdr.channel_number))) {
-        return AmpeError.InvalidChannelNumber;
+    if (sendMsg.bhdr.channel_number != 0) {
+        if (!gt.prnt.acns.exists(sendMsg.bhdr.channel_number)) {
+            return AmpeError.InvalidChannelNumber;
+        }
+    } else {
+        const ach = gt.prnt.acns.createChannel(sendMsg.bhdr.message_id, vc, gt);
+        sendMsg.bhdr.channel_number = ach.chn;
     }
-
-    var mID: ?MessageID = null;
-    if (sendMsg.bhdr.message_id != 0) {
-        mID = sendMsg.bhdr.message_id;
-    }
-
-    const ach = gt.prnt.acns.createChannel(mID, gt);
-
-    sendMsg.bhdr.channel_number = ach.chn;
-    sendMsg.bhdr.message_id = ach.mid;
-
     try gt.prnt.submitMsg(sendMsg, vc);
 
     amsg.* = null;
@@ -162,7 +156,7 @@ pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
 
 pub const message = @import("../message.zig");
 pub const MessageType = message.MessageType;
-pub const MessageMode = message.MessageMode;
+pub const MessageRole = message.MessageRole;
 pub const OriginFlag = message.OriginFlag;
 pub const MoreMessagesFlag = message.MoreMessagesFlag;
 pub const ProtoFields = message.ProtoFields;

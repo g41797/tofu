@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 /// Represents an asynchronous message passing engine interface.
-/// Provides methods to acquire and release message channel groups for communication.
+/// Provides methods to create and destroy message channel groups for communication.
 pub const Ampe = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.AmpeVTable,
 
-    /// Acquires a new message channel group.
-    /// Call `release` on the result to stop communication and free associated memory.
+    /// Creates a new message channel group.
+    /// Call `destroy` on the result to stop communication and free associated memory.
     /// Thread-safe.
-    pub fn acquire(ampe: Ampe) status.AmpeError!MessageChannelGroup {
-        return ampe.vtable.acquire(ampe.ptr);
+    pub fn create(ampe: Ampe) status.AmpeError!MessageChannelGroup {
+        return ampe.vtable.create(ampe.ptr);
     }
 
-    /// Releases a message channel group, stopping communication and freeing associated memory.
+    /// Destroys a message channel group, stopping communication and freeing associated memory.
     /// Thread-safe.
-    pub fn release(ampe: Ampe, mcg: MessageChannelGroup) status.AmpeError!void {
-        return ampe.vtable.release(ampe.ptr, mcg.ptr);
+    pub fn destroy(ampe: Ampe, mcg: MessageChannelGroup) status.AmpeError!void {
+        return ampe.vtable.destroy(ampe.ptr, mcg.ptr);
     }
 };
 
@@ -38,7 +38,7 @@ pub const MessageChannelGroup = struct {
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
     /// Returns null if the pool is empty and the strategy is poolOnly.
-    /// Returns an error during mcg release or if allocation failed.
+    /// Returns an error during mcg destroy or if allocation failed.
     /// Thread-safe.
     pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
         return mcg.vtable.get(mcg.ptr, strategy);

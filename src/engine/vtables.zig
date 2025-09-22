@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 pub const AmpeVTable = struct {
-    /// Acquires a new message channel group.
-    /// Call `release` on the result to stop communication and free associated memory.
+    /// Creates a new message channel group.
+    /// Call `destroy` on the result to stop communication and free associated memory.
     ///
     /// Thread-safe.
-    acquire: *const fn (ptr: ?*anyopaque) AmpeError!engine.MessageChannelGroup,
+    create: *const fn (ptr: ?*anyopaque) AmpeError!engine.MessageChannelGroup,
 
-    /// Releases a message channel group, stopping communication and freeing associated memory.
+    /// Destroys a message channel group, stopping communication and freeing associated memory.
     ///
     /// Thread-safe.
-    release: *const fn (ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void,
+    destroy: *const fn (ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void,
 };
 
 pub const MCGVTable = struct {
