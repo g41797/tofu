@@ -595,85 +595,6 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
-/// Structure for managing a queue of messages in a FIFO order.
-pub const MessageQueue = struct {
-    const Self = @This();
-
-    first: ?*Message = null,
-    last: ?*Message = null,
-
-    /// Adds a message to the end of the queue.
-    pub fn enqueue(fifo: *Self, msg: *Message) void {
-        msg.prev = null;
-        msg.next = null;
-
-        if (fifo.last) |last| {
-            last.next = msg;
-            msg.prev = last;
-        } else {
-            fifo.first = msg;
-        }
-
-        fifo.last = msg;
-
-        return;
-    }
-
-    /// Removes and returns the message at the front of the queue, or null if empty.
-    pub fn dequeue(fifo: *Self) ?*Message {
-        if (fifo.first == null) {
-            return null;
-        }
-
-        var result = fifo.first;
-        fifo.first = result.?.next;
-
-        if (fifo.first == null) {
-            fifo.last = null;
-        } else {
-            fifo.first.?.prev = fifo.first;
-        }
-
-        result.?.prev = null;
-        result.?.next = null;
-
-        return result;
-    }
-
-    /// Checks if the queue is empty.
-    pub fn empty(fifo: *Self) bool {
-        return (fifo.first == null);
-    }
-
-    /// Clears the queue, destroying all messages.
-    pub fn clear(fifo: *Self) void {
-        var next = fifo.dequeue();
-        while (next != null) {
-            next.?.destroy();
-            next = fifo.dequeue();
-        }
-    }
-
-    /// Returns the number of messages in the queue.
-    pub fn count(fifo: *Self) usize {
-        var ret: usize = 0;
-        var next = fifo.first;
-        while (next != null) : (ret += 1) {
-            next = next.?.next;
-        }
-        return ret;
-    }
-
-    /// Moves all messages from one queue to another.
-    pub fn move(src: *MessageQueue, dest: *MessageQueue) void {
-        var next = src.dequeue();
-        while (next != null) {
-            dest.enqueue(next.?);
-            next = src.dequeue();
-        }
-    }
-};
-
 // ===================================
 // Gemini generated helpers
 // used as prototypes within own funcs
@@ -734,6 +655,9 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
     std.mem.copyForwards(u8, std.mem.asBytes(destination), slice);
     return true;
 }
+
+/// Structure for managing a queue of messages in a FIFO order.
+pub const MessageQueue = @import("engine/IntrusiveQueue.zig").IntrusiveQueue(Message);
 
 const Appendable = @import("nats").Appendable;
 
