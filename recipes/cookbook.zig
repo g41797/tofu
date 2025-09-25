@@ -105,7 +105,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     return;
 }
 
-pub fn sendMessageWithWrongChannelNumber(gpa: Allocator) !void {
+pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example
@@ -137,7 +137,7 @@ pub fn sendMessageWithWrongChannelNumber(gpa: Allocator) !void {
     return;
 }
 
-pub fn sendHelloWithoutConfiguration(gpa: Allocator) !void {
+pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example
@@ -170,7 +170,7 @@ pub fn sendHelloWithoutConfiguration(gpa: Allocator) !void {
     return;
 }
 
-pub fn sendHelloWithWrongConfiguration(gpa: Allocator) !bool {
+pub fn handleHelloWithWrongConfiguration(gpa: Allocator) !bool {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example

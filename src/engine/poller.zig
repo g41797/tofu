@@ -145,7 +145,9 @@ pub const Poll = struct {
             const tc = tcptr.?;
             tcptr = pl.it.?.next();
 
-            tc.act = .{};
+            tc.act = .{
+                .pool = tc.exp.pool,
+            };
 
             while (true) {
                 const revents = pl.pollfdVtor.items[indx].revents;

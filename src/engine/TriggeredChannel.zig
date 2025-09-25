@@ -5,7 +5,7 @@ pub const TriggeredChannel = @This();
 
 prnt: *Distributor = undefined,
 acn: channels.ActiveChannel = undefined,
-ntfcEnabled: bool = undefined,
+resp2ac: bool = undefined,
 tskt: TriggeredSkt = undefined,
 exp: sockets.Triggers = undefined,
 act: sockets.Triggers = undefined,
@@ -25,7 +25,7 @@ pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
         .exp = sockets.TriggersOff,
         .act = sockets.TriggersOff,
         .mrk4del = false,
-        .ntfcEnabled = false,
+        .resp2ac = false,
     };
     return ret;
 }

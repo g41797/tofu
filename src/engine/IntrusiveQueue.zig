@@ -5,8 +5,6 @@
 /// pub const T = struct {
 ///     prev: ?*T = null,
 ///     next: ?*T = null,
-///
-///     pub fn destroy(msg: *Message) void {
 ///     ....................................
 ///     }
 /// };
@@ -58,15 +56,6 @@ pub fn IntrusiveQueue(comptime T: type) type {
         /// Checks if the queue is empty.
         pub fn empty(fifo: *Self) bool {
             return (fifo.first == null);
-        }
-
-        /// Clears the queue, destroying all items.
-        pub fn clear(fifo: *Self) void {
-            var next = fifo.dequeue();
-            while (next != null) {
-                next.?.destroy();
-                next = fifo.dequeue();
-            }
         }
 
         /// Returns the number of items in the queue.

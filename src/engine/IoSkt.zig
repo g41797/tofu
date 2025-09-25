@@ -210,7 +210,7 @@ pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
 
 pub fn deinit(ioskt: *IoSkt) void {
     ioskt.skt.deinit();
-    ioskt.sendQ.clear();
+    message.clearQueue(&ioskt.sendQ);
 
     ioskt.currSend.deinit();
     ioskt.currRecv.deinit();

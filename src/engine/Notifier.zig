@@ -28,10 +28,9 @@ pub const NotificationKind = enum(u1) {
     alert = 1,
 };
 
-pub const Alert = enum(u2) {
+pub const Alert = enum(u1) {
     freedMemory = 0,
-    mcgremoved = 1,
-    shutdownStarted = 2,
+    shutdownStarted = 1,
 };
 
 pub const SendAlert = *const fn (context: ?*anyopaque, alrt: Alert) AmpeError!void;
@@ -50,6 +49,7 @@ pub const Notification = packed struct(u8) {
     oob: Oob = undefined,
     hint: ValidCombination = undefined,
     alert: Alert = undefined,
+    _reserved7: u1 = 0,
 };
 
 pub const UnpackedNotification = struct {

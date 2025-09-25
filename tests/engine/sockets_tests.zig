@@ -419,9 +419,9 @@ pub const Exchanger = struct {
     }
 
     pub fn clearQs(exc: *Exchanger) void {
-        exc.forCmpr.clear();
-        exc.forRecv.clear();
-        exc.forSend.clear();
+        message.clearQueue(&exc.forCmpr);
+        message.clearQueue(&exc.forRecv);
+        message.clearQueue(&exc.forSend);
     }
 
     pub fn clearPool(exc: *Exchanger) void {

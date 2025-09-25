@@ -43,14 +43,21 @@ maxid: u32 = undefined,
 ntfsEnabled: bool = undefined,
 thread: ?Thread = null,
 plr: poller.Poller = undefined,
-
+//
 // Accessible from the thread - don't lock/unlock
+//
 trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
 
+// Summary of triggers after poller
+loopTrgrs: Triggers = undefined, // Summary of triggers after poller
+
+// Notification flow
 currNtfc: Notifier.Notification = undefined,
 currMsg: ?*Message = undefined,
 currBhdr: BinaryHeader = undefined,
+
+// Iteration flow
 currTcopt: ?*TriggeredChannel = undefined,
 
 unpnt: Notifier.UnpackedNotification,
@@ -98,6 +105,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .maxid = 0,
         .plr = plru,
         .unpnt = .{},
+        .loopTrgrs = .{},
         .currNtfc = .{},
         .currMsg = null,
         .currBhdr = .{},
@@ -139,15 +147,19 @@ pub fn Destroy(dtr: *Distributor) void {
         dtr.mutex.lock();
         defer dtr.mutex.unlock();
 
-        for (dtr.msgs, 0..) |_, i| {
-            var mbx = dtr.msgs[i];
-            var allocated = mbx.close();
-            while (allocated != null) {
-                const next = allocated.?.next;
-                allocated.?.destroy();
-                allocated = next;
-            }
+        var waitEnabled: bool = true;
+
+        dtr._sendAlert(.shutdownStarted) catch {
+            waitEnabled = false;
+        };
+
+        if (waitEnabled) {
+            dtr.waitFinish();
         }
+
+        // dtr.cleanMboxes();
+
+        Message.DestroySendMsg(&dtr.currMsg);
 
         dtr.pool.close();
         dtr.acns.deinit();
@@ -156,14 +168,24 @@ pub fn Destroy(dtr: *Distributor) void {
         dtr.ntfsEnabled = false;
     }
 
-    dtr.waitFinish();
-
     //
     // All releases should be done here, not on the thread!!!
     //
     dtr.plr.deinit();
-    dtr.trgrd_map.deinit();
+    dtr.trgrd_map.deinit(); // 2DO - destroy/deinit triggered channels
     dtr.* = undefined;
+}
+
+fn cleanMboxes(dtr: *Distributor) void {
+    for (dtr.msgs, 0..) |_, i| {
+        var mbx = dtr.msgs[i];
+        var allocated = mbx.close();
+        while (allocated != null) {
+            const next = allocated.?.next;
+            allocated.?.destroy();
+            allocated = next;
+        }
+    }
 }
 
 fn create(ptr: ?*anyopaque) AmpeError!MessageChannelGroup {
@@ -247,6 +269,10 @@ pub fn sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 
+    return dtr._sendAlert(alrt);
+}
+
+fn _sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
     if (!dtr.ntfsEnabled) {
         return AmpeError.NotificationDisabled;
     }
@@ -281,11 +307,18 @@ fn onThread(dtr: *Distributor) void {
 }
 
 fn loop(dtr: *Distributor) void {
+    log.debug("loop ->", .{});
+    defer log.debug("<- loop", .{});
+
+    defer dtr.cleanMboxes();
+
     dtr.cnmapChanged = false;
     var it = Iterator.init(&dtr.trgrd_map);
     var withItrtr: bool = true;
 
     while (true) {
+        dtr.loopTrgrs = .{};
+
         if (dtr.cnmapChanged) {
             it = Iterator.init(&dtr.trgrd_map);
             dtr.cnmapChanged = false;
@@ -297,7 +330,7 @@ fn loop(dtr: *Distributor) void {
             itropt = it;
         }
 
-        const trgrs = dtr.plr.waitTriggers(itropt, Notifier.SEC_TIMEOUT_MS * 20) catch |err| {
+        dtr.loopTrgrs = dtr.plr.waitTriggers(itropt, Notifier.SEC_TIMEOUT_MS * 20) catch |err| {
             log.err("waitTriggers error {any}", .{
                 err,
             });
@@ -305,12 +338,29 @@ fn loop(dtr: *Distributor) void {
             return;
         };
 
-        const utrs = sockets.UnpackedTriggers.fromTriggers(trgrs);
+        const utrs = sockets.UnpackedTriggers.fromTriggers(dtr.loopTrgrs);
         _ = utrs;
 
-        if (trgrs.timeout == .on) {
+        if (dtr.loopTrgrs.timeout == .on) {
             dtr.processTimeOut();
             continue;
+        }
+
+        if (dtr.loopTrgrs.notify == .on) {
+            dtr.processNotify(&it) catch |err|
+                switch (err) {
+                    AmpeError.ShutdownStarted => {
+                        return;
+                    },
+                    else => {
+                        log.err("processNotify failed with error {any}", .{err});
+                        return;
+                    },
+                };
+
+            // if ((dtr.loopTrgrs.off()) and (dtr.currMsg == null)){
+            //     continue;
+            // }
         }
 
         dtr.processTriggeredChannels(&it) catch |err|
@@ -324,6 +374,17 @@ fn loop(dtr: *Distributor) void {
                 },
             };
 
+        dtr.processMessageFromMcg() catch |err|
+            switch (err) {
+                AmpeError.ShutdownStarted => {
+                    return;
+                },
+                else => {
+                    log.err("processMessageFromMcg failed with error {any}", .{err});
+                    return;
+                },
+            };
+
         dtr.cnmapChanged = dtr.processMarkedForDelete() catch |err| {
             log.err("processMarkedForDelete failed with error {any}", .{err});
             return;
@@ -333,7 +394,45 @@ fn loop(dtr: *Distributor) void {
     return;
 }
 
-fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
+fn processNotify(dtr: *Distributor, it: *Iterator) !void {
+    log.debug("processNotify ->", .{});
+    defer log.debug("<- processNotify", .{});
+
+    // dtr.loopTrgrs.notify = .off;
+
+    const notfTrChnOpt = dtr.trgrd_map.getPtr(0);
+    assert(notfTrChnOpt != null);
+    const notfTrChn = notfTrChnOpt.?;
+    assert(notfTrChn.act.notify == .on);
+
+    dtr.currNtfc = try notfTrChn.tskt.tryRecvNotification();
+    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.currNtfc);
+
+    notfTrChn.act = .{}; // Disable obsolete processing during iteration
+
+    if (dtr.currNtfc.kind == .alert) {
+        switch (dtr.currNtfc.alert) {
+            .shutdownStarted => {
+                // Exit processing loop.
+                // All resources will be released/destroyed
+                // after waitFinish() of the thread
+                return AmpeError.ShutdownStarted;
+            },
+            .freedMemory => {
+                return dtr.addMessagesForRecv(it);
+            },
+        }
+    }
+
+    assert(dtr.currNtfc.kind == .message);
+
+    return dtr.storeMessageFromMcg();
+}
+
+fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
+    log.debug("addMessagesForRecv ->", .{});
+    defer log.debug("<- addMessagesForRecv", .{});
+
     it.reset();
 
     dtr.currTcopt = it.next();
@@ -343,42 +442,26 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
 
         const trgrs = tc.act;
 
-        if (trgrs.off()) {
+        if (trgrs.pool != .on) {
             continue;
         }
 
-        if (trgrs.notify == .on) {
-            try dtr.processNotify(tc);
-            continue;
-        }
+        const rcvmsg = dtr.pool.get(.poolOnly) catch {
+            return;
+        };
+        errdefer dtr.pool.put(rcvmsg);
+
+        try tc.tskt.addForRecv(rcvmsg);
+        tc.act.pool = .off;
     }
 
-    return AmpeError.ShutdownStarted;
+    return;
 }
 
-fn processNotify(dtr: *Distributor, tc: *TriggeredChannel) !void {
-    dtr.currNtfc = try tc.tskt.tryRecvNotification();
-    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.currNtfc);
+fn storeMessageFromMcg(dtr: *Distributor) !void {
+    log.debug("storeMessageFromMcg ->", .{});
+    defer log.debug("<- storeMessageFromMcg", .{});
 
-    if (dtr.currNtfc.kind == .alert) {
-        switch (dtr.currNtfc.alert) {
-            .shutdownStarted => {
-                return AmpeError.ShutdownStarted;
-            },
-            else => {
-                // Alert from the pool just interrupts poller.
-                // During loop engine checks channels waiting for free messages
-                return;
-            },
-        }
-    }
-
-    assert(dtr.currNtfc.kind == .message);
-
-    return dtr.processSendMessage();
-}
-
-fn processSendMessage(dtr: *Distributor) !void {
     dtr.currMsg = null;
 
     var currMsg: *message.Message = undefined;
@@ -406,6 +489,42 @@ fn processSendMessage(dtr: *Distributor) !void {
 
     dtr.currMsg = currMsg;
     dtr.currBhdr = currMsg.bhdr;
+    return;
+}
+
+fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
+    log.debug("processTriggeredChannels ->", .{});
+    defer log.debug("<- processTriggeredChannels", .{});
+
+    it.reset();
+
+    dtr.currTcopt = it.next();
+
+    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
+        const tc = dtr.currTcopt.?;
+
+        const trgrs = tc.act;
+
+        if (trgrs.off()) {
+            continue;
+        }
+
+        if (trgrs.notify == .on) {
+            continue;
+        }
+    }
+
+    return;
+}
+
+fn processMessageFromMcg(dtr: *Distributor) !void {
+    log.debug("processMessageFromMcg ->", .{});
+    defer log.debug("<- processMessageFromMcg", .{});
+
+    if (dtr.currMsg == null) {
+        return;
+    }
+
     defer Message.DestroySendMsg(&dtr.currMsg);
 
     if (dtr.currBhdr.proto.origin == .engine) {
@@ -433,6 +552,9 @@ fn processSendMessage(dtr: *Distributor) !void {
 }
 
 inline fn waitFinish(dtr: *Distributor) void {
+    log.debug("waitFinish ->", .{});
+    defer log.debug("<- waitFinish", .{});
+
     if (dtr.thread) |t| {
         t.join();
     }
@@ -490,6 +612,7 @@ const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
 
 const sockets = @import("sockets.zig");
+const Triggers = @import("triggeredSkts.zig").Triggers;
 const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
 
 const Gate = @import("Gate.zig");

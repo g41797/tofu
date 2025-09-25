@@ -7,28 +7,31 @@ test {
 }
 
 test "ampe just create/destroy" {
+    std.testing.log_level = .debug;
     try recipes.createDestroyMain(gpa);
     try recipes.createDestroyEngine(gpa);
     try recipes.createDestroyMessageChannelGroup(gpa);
 }
 
 test "dealing with pool" {
+    std.testing.log_level = .debug;
     try recipes.getMsgsFromSmallestPool(gpa);
 }
 
 test "send illegal messages" {
+    std.testing.log_level = .debug;
     recipes.sendMessageFromThePool(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidMessageMode);
     };
-    recipes.sendMessageWithWrongChannelNumber(gpa) catch |err| {
+    recipes.handleMessageWithWrongChannelNumber(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
-    recipes.sendHelloWithoutConfiguration(gpa) catch |err| {
+    recipes.handleHelloWithoutConfiguration(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongConfiguration);
     };
 
     // var res: bool = false;
-    // if (recipes.sendHelloWithWrongConfiguration(gpa)) |val| {
+    // if (recipes.handleHelloWithWrongConfiguration(gpa)) |val| {
     //     res = val;
     // } else |err| {
     //     if (err == AmpeError.WrongConfiguration) {

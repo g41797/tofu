@@ -597,7 +597,7 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
 
 // ===================================
 // Gemini generated helpers
-// used as prototypes within own funcs
+// used as prototypes for own funcs
 // ===================================
 
 /// Converts a struct pointer's address into a provided slice.
@@ -658,6 +658,14 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
 
 /// Structure for managing a queue of messages in a FIFO order.
 pub const MessageQueue = @import("engine/IntrusiveQueue.zig").IntrusiveQueue(Message);
+
+pub fn clearQueue(queue: *MessageQueue) void {
+    var next = queue.dequeue();
+    while (next != null) {
+        next.?.destroy();
+        next = queue.dequeue();
+    }
+}
 
 const Appendable = @import("nats").Appendable;
 
