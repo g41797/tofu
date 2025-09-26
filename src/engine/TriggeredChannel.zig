@@ -30,6 +30,35 @@ pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
     return ret;
 }
 
+pub fn deinit(tchn: *TriggeredChannel) void {
+    if (tchn.acn.ctx != null) {
+        const gtCtx: *Gate = @alignCast(@ptrCast(tchn.acn.ctx.?));
+
+        var mq = tchn.tskt.detach();
+        var next = mq.dequeue();
+        while (next != null) {
+            next.?.bhdr.proto.origin = .engine;
+            next.?.bhdr.status = status.status_to_raw(.closing_channel);
+            gtCtx.msgs.send(next.?) catch {
+                next.?.destroy();
+            };
+            next = mq.dequeue();
+        }
+
+        const statusMsgUn = tchn.prnt.pool.get(.always);
+        if (statusMsgUn) |statusMsg| {
+            statusMsg.bhdr.proto.role = .signal;
+            statusMsg.bhdr.proto.origin = .engine;
+            statusMsg.bhdr.status = status.status_to_raw(.closing_channel);
+            gtCtx.msgs.send(statusMsg) catch {
+                statusMsg.destroy();
+            };
+        } else |_| {}
+    }
+
+    tchn.tskt.deinit();
+}
+
 const message = @import("../message.zig");
 const MessageType = message.MessageType;
 const MessageRole = message.MessageRole;

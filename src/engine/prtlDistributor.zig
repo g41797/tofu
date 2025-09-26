@@ -23,7 +23,7 @@ pub fn sendHello(dtr: *Distributor) !void {
     return AmpeError.ShutdownStarted;
 }
 
-pub fn sendHelloResponse(dtr: *Distributor) !void {
+pub fn sendBye(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
@@ -35,19 +35,7 @@ pub fn sendByeResponse(dtr: *Distributor) !void {
     return AmpeError.NotImplementedYet;
 }
 
-pub fn sendBye(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
-}
-
-pub fn sendApp(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
-}
-
-pub fn sendAppResponse(dtr: *Distributor) !void {
+pub fn sendToPeer(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
@@ -77,6 +65,28 @@ pub fn processInternal(dtr: *Distributor) !void {
     var cmsg = dtr.currMsg.?;
     const mcgimpl: ?*Gate = cmsg.bodyToPtr(Gate);
     const gt = mcgimpl.?;
+
+    const chgr = dtr.acns.channelsGroup(mcgimpl) catch unreachable;
+    defer chgr.deinit();
+    _ = dtr.acns.removeChannels(mcgimpl) catch unreachable;
+
+    for (chgr.items) |chN| {
+        const trcopt = dtr.trgrd_map.getPtr(chN);
+
+        if (trcopt != null) {
+            var tc = trcopt.?;
+
+            assert(tc.acn.ctx != null);
+            const gtCtx: *Gate = @alignCast(@ptrCast(tc.acn.ctx.?));
+            assert(gt == gtCtx);
+            tc.acn.ctx = null; // Prevents notifications during tc.deinit()
+
+            tc.deinit();
+
+            _ = dtr.trgrd_map.orderedRemove(chN);
+        }
+    }
+
     gt.setReleaseCompleted();
     return;
 }
@@ -88,7 +98,7 @@ pub fn addNotificationChannel(dtr: *Distributor) !void {
         return AmpeError.AllocationFailed;
     };
 
-    dtr.ntfsEnabled = true;
+    dtr.ntfcsEnabled = true;
     dtr.cnmapChanged = false;
     return;
 }
@@ -103,6 +113,8 @@ pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
         });
         return; // or Message.DestroySendMsg(&dtr.currMsg)
     }
+
+    // 2DO - check implementation, add notification etc, mark for delete !!
     trchn.?.act.err = .on;
     return;
 }

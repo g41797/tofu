@@ -49,9 +49,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     const ampe = try dtr.ampe();
 
     const mchgr = try ampe.create();
-    defer ampe.destroy(mchgr) catch {
-        // What can you do?
-    };
+    defer destroyMcg(ampe, mchgr);
 
     var msg1 = try mchgr.get(tofu.AllocationStrategy.poolOnly);
 
@@ -209,6 +207,14 @@ pub fn handleHelloWithWrongConfiguration(gpa: Allocator) !bool {
     _ = try mchgr.asyncSend(&msg);
 
     return true;
+}
+
+// Helper function - allows to destroy MessageChannelGroup using defer
+// It's OK for the test and go-no-go examples.
+// In production, MessageChannelGroup is long life "object" and you will
+// use other approach for the destroy (at least you need to handle possible failure)
+pub fn destroyMcg(ampe: tofu.Ampe, mcg: tofu.MessageChannelGroup) void {
+    ampe.destroy(mcg) catch {};
 }
 
 pub fn hi() void {

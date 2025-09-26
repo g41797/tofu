@@ -159,7 +159,7 @@ pub const TriggeredSkt = union(enum) {
     pub fn detach(tsk: *TriggeredSkt) MessageQueue {
         return switch (tsk.*) {
             .io => tsk.*.io.detach(),
-            inline else => return null,
+            inline else => return .{},
         };
     }
 
@@ -200,7 +200,7 @@ pub const NotificationSkt = struct {
     }
 
     pub fn deinit(nskt: *NotificationSkt) void {
-        // Notification sockets will be closed later by engine itself
+        // Notification sockets will be closed by engine itself
         _ = nskt;
         return;
     }

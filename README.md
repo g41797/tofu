@@ -58,8 +58,13 @@ As development moves forward, I’ll be preparing proper documentation.
 
 A link will be added when the project is ready for release.
 
-## Why not use another library?
-Why not? — Go ahead and use it.
+## NAQ or **N**ever **A**sked **Q**uestions
+
+<details><summary><i>Why not use another library?</i></summary>
+  Why not? — Go ahead and use it.
+</details>
+
+
 
 
 ## Credits

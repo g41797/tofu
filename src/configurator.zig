@@ -65,7 +65,13 @@ pub const TCPClientConfigurator = struct {
 
     /// Prepares a message with TCP client configuration for a Hello request.
     pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg);
+        prepareForClient(msg, .request);
+        try self.toConfiguration(&msg.*.thdrs);
+    }
+
+    /// Prepares a message with TCP client configuration for a Hello signal.
+    pub fn prepareSignal(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
+        prepareForClient(msg, .signal);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -137,7 +143,13 @@ pub const TCPServerConfigurator = struct {
 
     /// Prepares a message with TCP server configuration for a Welcome request.
     pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg);
+        prepareForServer(msg, .request);
+        try self.toConfiguration(&msg.*.thdrs);
+    }
+
+    /// Prepares a message with TCP server configuration for a Welcome signal.
+    pub fn prepareSignal(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
+        prepareForServer(msg, .signal);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -199,7 +211,13 @@ pub const UDSClientConfigurator = struct {
 
     /// Prepares a message with UDS client configuration for a Hello request.
     pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg);
+        prepareForClient(msg, .request);
+        try self.toConfiguration(&msg.*.thdrs);
+    }
+
+    /// Prepares a message with UDS client configuration for a Hello signal.
+    pub fn prepareSignal(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
+        prepareForClient(msg, .signal);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -250,7 +268,13 @@ pub const UDSServerConfigurator = struct {
 
     /// Prepares a message with UDS server configuration for a Welcome request.
     pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg);
+        prepareForServer(msg, .request);
+        try self.toConfiguration(&msg.*.thdrs);
+    }
+
+    /// Prepares a message with UDS server configuration for a Welcome signal.
+    pub fn prepareSignal(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
+        prepareForServer(msg, .signal);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -287,8 +311,15 @@ pub const UDSServerConfigurator = struct {
 
 /// Structure representing an invalid configurator that always returns an error.
 pub const WrongConfigurator = struct {
-    /// Returns an error when attempting to prepare a request, indicating an invalid configurator.
+    /// Returns an error when attempting to prepare request, indicating an invalid configurator.
     pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
+        _ = self;
+        _ = msg;
+        return AmpeError.WrongConfiguration;
+    }
+
+    /// Returns an error when attempting to prepare signal, indicating an invalid configurator.
+    pub fn prepareSignal(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
         _ = self;
         _ = msg;
         return AmpeError.WrongConfiguration;
@@ -303,10 +334,17 @@ pub const Configurator = union(enum) {
     uds_client: UDSClientConfigurator,
     wrong: WrongConfigurator,
 
-    /// Prepares a message with the appropriate configuration based on the active configurator type.
+    /// Prepares request with the appropriate configuration based on the active configurator type.
     pub fn prepareRequest(self: *const Configurator, msg: *Message) AmpeError!void {
         return switch (self.*) {
             inline else => |conf| try conf.prepareRequest(msg),
+        };
+    }
+
+    /// Prepares signal with the appropriate configuration based on the active configurator type.
+    pub fn prepareSignal(self: *const Configurator, msg: *Message) AmpeError!void {
+        return switch (self.*) {
+            inline else => |conf| try conf.prepareSignal(msg),
         };
     }
 
@@ -422,23 +460,23 @@ pub const Configurator = union(enum) {
     }
 };
 
-/// Prepares a message for a server Welcome request by setting the appropriate binary header fields.
-inline fn prepareForServer(msg: *Message) void {
+/// Prepares a message for a server Welcome request/signal by setting the appropriate binary header fields.
+inline fn prepareForServer(msg: *Message, role: message.MessageRole) void {
     msg.bhdr = .{};
 
     msg.bhdr.proto = .{
         .mtype = .welcome,
-        .role = .request,
+        .role = role,
     };
 }
 
-/// Prepares a message for a client Hello request by setting the appropriate binary header fields.
-inline fn prepareForClient(msg: *Message) void {
+/// Prepares a message for a client Hello request/signal by setting the appropriate binary header fields.
+inline fn prepareForClient(msg: *Message, role: message.MessageRole) void {
     msg.bhdr = .{};
 
     msg.bhdr.proto = .{
         .mtype = .hello,
-        .role = .request,
+        .role = role,
     };
 }
 

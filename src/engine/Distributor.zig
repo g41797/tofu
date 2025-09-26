@@ -40,7 +40,7 @@ ntfr: Notifier = undefined,
 pool: Pool = undefined,
 acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
-ntfsEnabled: bool = undefined,
+ntfcsEnabled: bool = undefined,
 thread: ?Thread = null,
 plr: poller.Poller = undefined,
 //
@@ -159,21 +159,35 @@ pub fn Destroy(dtr: *Distributor) void {
 
         // dtr.cleanMboxes();
 
-        Message.DestroySendMsg(&dtr.currMsg);
-
         dtr.pool.close();
         dtr.acns.deinit();
 
         dtr.ntfr.deinit();
-        dtr.ntfsEnabled = false;
+        dtr.ntfcsEnabled = false;
     }
 
     //
     // All releases should be done here, not on the thread!!!
     //
+    Message.DestroySendMsg(&dtr.currMsg);
     dtr.plr.deinit();
-    dtr.trgrd_map.deinit(); // 2DO - destroy/deinit triggered channels
+    dtr.deinitTrgrdChns();
     dtr.* = undefined;
+}
+
+fn deinitTrgrdChns(dtr: *Distributor) void {
+    var it = Iterator.init(&dtr.trgrd_map);
+
+    it.reset();
+
+    var tcopt = it.next();
+
+    while (tcopt != null) : (tcopt = it.next()) {
+        tcopt.?.acn.ctx = null;
+        tcopt.?.deinit();
+    }
+
+    dtr.trgrd_map.deinit();
 }
 
 fn cleanMboxes(dtr: *Distributor) void {
@@ -241,7 +255,7 @@ pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC) AmpeError!void {
     dtr.mutex.lock();
     defer dtr.mutex.unlock();
 
-    if (!dtr.ntfsEnabled) {
+    if (!dtr.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
     }
 
@@ -273,7 +287,7 @@ pub fn sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
 }
 
 fn _sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
-    if (!dtr.ntfsEnabled) {
+    if (!dtr.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
     }
 
@@ -535,15 +549,11 @@ fn processMessageFromMcg(dtr: *Distributor) !void {
 
     switch (hint) {
         .HelloRequest, .HelloSignal => return dtr.sendHello(),
-        .HelloResponse => return dtr.sendHelloResponse(),
-
         .WelcomeRequest, .WelcomeSignal => return dtr.sendWelcome(),
-
-        .AppRequest, .AppSignal => return dtr.sendApp(),
-        .AppResponse => return dtr.sendAppResponse(),
-
         .ByeRequest, .ByeSignal => return dtr.sendBye(),
         .ByeResponse => return dtr.sendByeResponse(),
+
+        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return dtr.sendToPeer(),
 
         else => return AmpeError.InvalidMessage,
     }
@@ -566,9 +576,7 @@ const processWaitTriggersFailure = partial.processWaitTriggersFailure;
 const processMarkedForDelete = partial.processMarkedForDelete;
 const processInternal = partial.processInternal;
 
-const sendHelloResponse = partial.sendHelloResponse;
-const sendApp = partial.sendApp;
-const sendAppResponse = partial.sendAppResponse;
+const sendToPeer = partial.sendToPeer;
 const sendByeResponse = partial.sendByeResponse;
 const sendBye = partial.sendBye;
 const sendWelcome = partial.sendWelcome;
