@@ -10,15 +10,19 @@ pub fn sendWelcome(dtr: *Distributor) !void {
 pub fn sendHello(dtr: *Distributor) !void {
     // 2DO - Add processing
 
-    const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
-    switch (cnfgr) {
-        .wrong => {
-            try dtr.responseFailure(AmpeStatus.wrong_configuration);
-        },
-        else => {
-            return AmpeError.ShutdownStarted;
-        },
-    }
+    try dtr.addDumbChannel(dtr.currBhdr.channel_number);
+
+    try dtr.responseFailure(AmpeStatus.wrong_configuration);
+
+    // const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
+    // switch (cnfgr) {
+    //     .wrong => {
+    //         try dtr.responseFailure(AmpeStatus.wrong_configuration);
+    //     },
+    //     else => {
+    //         return AmpeError.ShutdownStarted;
+    //     },
+    // }
 
     return AmpeError.ShutdownStarted;
 }
@@ -79,15 +83,24 @@ pub fn processInternal(dtr: *Distributor) !void {
             assert(tc.acn.ctx != null);
             const gtCtx: *Gate = @alignCast(@ptrCast(tc.acn.ctx.?));
             assert(gt == gtCtx);
-            tc.acn.ctx = null; // Prevents notifications during tc.deinit()
-
+            tc.resp2ac = false;
             tc.deinit();
-
-            _ = dtr.trgrd_map.orderedRemove(chN);
         }
     }
 
     gt.setReleaseCompleted();
+    return;
+}
+
+pub fn addDumbChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
+    var dcn = TriggeredChannel.createDumbChannel(dtr);
+
+    dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
+
+    dtr.trgrd_map.put(chN, dcn) catch {
+        return AmpeError.AllocationFailed;
+    };
+
     return;
 }
 
@@ -104,18 +117,17 @@ pub fn addNotificationChannel(dtr: *Distributor) !void {
 }
 
 pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
-    dtr.currMsg.?.bhdr.status = status.status_to_raw(failure);
-    const chn = dtr.currMsg.?.bhdr.channel_number;
-    const trchn = dtr.trgrd_map.getPtr(chn);
-    if (trchn == null) {
-        log.info("channel {d} does not exists", .{
-            chn,
-        });
-        return; // or Message.DestroySendMsg(&dtr.currMsg)
-    }
+    defer dtr.releaseToPool(&dtr.currMsg);
 
-    // 2DO - check implementation, add notification etc, mark for delete !!
-    trchn.?.act.err = .on;
+    dtr.currMsg.?.bhdr.status = status.status_to_raw(failure);
+    dtr.currMsg.?.bhdr.proto.origin = .engine;
+
+    const chn = dtr.currMsg.?.bhdr.channel_number;
+    var trchn = dtr.trgrd_map.getPtr(chn);
+    assert(trchn != null);
+
+    trchn.?.mrk4del = true;
+    trchn.?.sendToCtx(&dtr.currMsg);
     return;
 }
 

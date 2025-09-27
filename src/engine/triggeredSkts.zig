@@ -80,16 +80,23 @@ pub const UnpackedTriggers = struct {
     }
 };
 
+pub const Side = enum(u1) {
+    client = 0,
+    server = 1,
+};
+
 pub const TriggeredSkt = union(enum) {
     notification: NotificationSkt,
     accept: AcceptSkt,
     io: IoSkt,
+    dumb: DumbSkt,
 
     pub fn triggers(tsk: *TriggeredSkt) !Triggers {
         const ret = switch (tsk.*) {
             .notification => try tsk.*.notification.triggers(),
             .accept => try tsk.*.accept.triggers(),
             .io => try tsk.*.io.triggers(),
+            inline else => return .{},
         };
 
         if (DBG) {
@@ -104,6 +111,7 @@ pub const TriggeredSkt = union(enum) {
             .notification => tsk.*.notification.getSocket(),
             .accept => tsk.*.accept.getSocket(),
             .io => tsk.*.io.getSocket(),
+            inline else => return 0, // For Linux
         };
     }
 
@@ -168,6 +176,7 @@ pub const TriggeredSkt = union(enum) {
             .notification => tsk.*.notification.deinit(),
             .accept => tsk.*.accept.deinit(),
             .io => tsk.*.io.deinit(),
+            .dumb => tsk.*.dumb.deinit(),
         };
     }
 };
@@ -234,6 +243,13 @@ pub const AcceptSkt = struct {
 
     pub fn deinit(askt: *AcceptSkt) void {
         std.posix.close(askt.skt.socket);
+        return;
+    }
+};
+
+pub const DumbSkt = struct {
+    pub fn deinit(dskt: *DumbSkt) void {
+        _ = dskt;
         return;
     }
 };

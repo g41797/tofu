@@ -31,15 +31,14 @@ test "send illegal messages" {
     };
 
     // var res: bool = false;
-    // if (recipes.handleHelloWithWrongConfiguration(gpa)) |val| {
+    // if (recipes.handleHelloForNonListeningServer(gpa)) |val| {
     //     res = val;
     // } else |err| {
     //     if (err == AmpeError.WrongConfiguration) {
     //         res = true;
     //     }
     // }
-
-    // 2DO remove cmnts
+    //
     // try testing.expect(!res);
 }
 

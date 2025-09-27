@@ -169,7 +169,7 @@ pub fn Destroy(dtr: *Distributor) void {
     //
     // All releases should be done here, not on the thread!!!
     //
-    Message.DestroySendMsg(&dtr.currMsg);
+    dtr.releaseToPool(&dtr.currMsg);
     dtr.plr.deinit();
     dtr.deinitTrgrdChns();
     dtr.* = undefined;
@@ -371,10 +371,6 @@ fn loop(dtr: *Distributor) void {
                         return;
                     },
                 };
-
-            // if ((dtr.loopTrgrs.off()) and (dtr.currMsg == null)){
-            //     continue;
-            // }
         }
 
         dtr.processTriggeredChannels(&it) catch |err|
@@ -503,6 +499,7 @@ fn storeMessageFromMcg(dtr: *Distributor) !void {
 
     dtr.currMsg = currMsg;
     dtr.currBhdr = currMsg.bhdr;
+
     return;
 }
 
@@ -539,7 +536,7 @@ fn processMessageFromMcg(dtr: *Distributor) !void {
         return;
     }
 
-    defer Message.DestroySendMsg(&dtr.currMsg);
+    defer dtr.releaseToPool(&dtr.currMsg);
 
     if (dtr.currBhdr.proto.origin == .engine) {
         return dtr.processInternal();
@@ -570,6 +567,14 @@ inline fn waitFinish(dtr: *Distributor) void {
     }
 }
 
+pub fn releaseToPool(dtr: *Distributor, storedMsg: *?*Message) void {
+    if (storedMsg.*) |msg| {
+        dtr.pool.put(msg);
+        storedMsg.* = null;
+    }
+    return;
+}
+
 const partial = @import("prtlDistributor.zig");
 const processTimeOut = partial.processTimeOut;
 const processWaitTriggersFailure = partial.processWaitTriggersFailure;
@@ -582,7 +587,8 @@ const sendBye = partial.sendBye;
 const sendWelcome = partial.sendWelcome;
 const sendHello = partial.sendHello;
 
-const addNotificationChannel = partial.addNotificationChannel;
+pub const addNotificationChannel = partial.addNotificationChannel;
+pub const addDumbChannel = partial.addDumbChannel;
 pub const responseFailure = partial.responseFailure;
 pub const markForDelete = partial.markForDelete;
 

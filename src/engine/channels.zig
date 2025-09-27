@@ -201,11 +201,13 @@ pub const ActiveChannels = struct {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
-        const achn = cns.active.get(cn) catch |err| {
-            return err;
-        };
+        const achn = cns.active.get(cn);
 
-        return achn;
+        if (achn == null) {
+            return AmpeError.InvalidChannelNumber;
+        }
+
+        return achn.?;
     }
 
     pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
@@ -299,6 +301,10 @@ pub const ActiveChannels = struct {
         return;
     }
 };
+
+const status = @import("../status.zig");
+const AmpeStatus = status.AmpeStatus;
+const AmpeError = status.AmpeError;
 
 const message = @import("../message.zig");
 pub const ChannelNumber = message.ChannelNumber;

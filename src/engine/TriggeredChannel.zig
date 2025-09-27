@@ -11,7 +11,7 @@ exp: sockets.Triggers = undefined,
 act: sockets.Triggers = undefined,
 mrk4del: bool = undefined,
 
-pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
+pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
     const ret: Distributor.TriggeredChannel = .{
         .prnt = prnt,
         .acn = .{
@@ -20,43 +20,85 @@ pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
             .ctx = null,
         },
         .tskt = .{
-            .notification = sockets.NotificationSkt.init(prnt.ntfr.receiver),
+            .dumb = .{},
         },
         .exp = sockets.TriggersOff,
         .act = sockets.TriggersOff,
         .mrk4del = false,
-        .resp2ac = false,
+        .resp2ac = true,
     };
     return ret;
 }
 
+pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
+    var ret = createDumbChannel(prnt);
+    ret.resp2ac = true;
+    ret.tskt = .{
+        .notification = sockets.NotificationSkt.init(prnt.ntfr.receiver),
+    };
+
+    return ret;
+}
+
 pub fn deinit(tchn: *TriggeredChannel) void {
-    if (tchn.acn.ctx != null) {
-        const gtCtx: *Gate = @alignCast(@ptrCast(tchn.acn.ctx.?));
-
-        var mq = tchn.tskt.detach();
-        var next = mq.dequeue();
-        while (next != null) {
-            next.?.bhdr.proto.origin = .engine;
-            next.?.bhdr.status = status.status_to_raw(.closing_channel);
-            gtCtx.msgs.send(next.?) catch {
-                next.?.destroy();
-            };
-            next = mq.dequeue();
-        }
-
-        const statusMsgUn = tchn.prnt.pool.get(.always);
-        if (statusMsgUn) |statusMsg| {
-            statusMsg.bhdr.proto.role = .signal;
-            statusMsg.bhdr.proto.origin = .engine;
-            statusMsg.bhdr.status = status.status_to_raw(.closing_channel);
-            gtCtx.msgs.send(statusMsg) catch {
-                statusMsg.destroy();
-            };
-        } else |_| {}
+    if (tchn.acn.chn != 0) {
+        _ = tchn.prnt.acns.removeChannel(tchn.acn.chn);
+        tchn.prnt.cnmapChanged = tchn.prnt.trgrd_map.orderedRemove(tchn.acn.chn);
     }
 
+    if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
+        tchn.tskt.deinit();
+        return;
+    }
+
+    var mq = tchn.tskt.detach();
+    var next = mq.dequeue();
+    while (next != null) {
+        next.?.bhdr.proto.origin = .engine;
+        next.?.bhdr.status = status.status_to_raw(.channel_closed);
+        tchn.sendToCtx(&next);
+        next = mq.dequeue();
+    }
+
+    const statusMsgUn = tchn.prnt.pool.get(.always);
+    if (statusMsgUn) |statusMsg| {
+        statusMsg.bhdr.channel_number = tchn.acn.chn;
+        statusMsg.bhdr.message_id = tchn.acn.mid;
+        statusMsg.bhdr.proto.origin = .engine;
+        statusMsg.bhdr.status = status.status_to_raw(.channel_closed);
+
+        switch (tchn.acn.intr.?) {
+            .WelcomeRequest => {}, // Accept skt
+            .WelcomeSignal => {}, // Accept skt
+            .HelloRequest => {}, // IO skt client
+            .HelloSignal => {}, // IO skt client
+            else => {}, // IO skt server
+        }
+
+        statusMsg.bhdr.proto.role = .signal;
+
+        var responseToCtx: ?*Message = statusMsg;
+
+        tchn.sendToCtx(&responseToCtx);
+    } else |_| {}
+
     tchn.tskt.deinit();
+}
+
+pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {
+    if (storedMsg.* == null) {
+        return;
+    }
+
+    defer tchn.prnt.releaseToPool(storedMsg);
+
+    if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
+        return;
+    }
+
+    Gate.sendToWaiter(tchn.acn.ctx.?, storedMsg) catch {};
+
+    return;
 }
 
 const message = @import("../message.zig");
@@ -94,6 +136,7 @@ const ActiveChannels = channels.ActiveChannels;
 
 const sockets = @import("sockets.zig");
 const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
+const DumbSkt = @import("triggeredSkts.zig").DumbSkt;
 
 const Gate = @import("Gate.zig");
 

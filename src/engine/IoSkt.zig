@@ -3,11 +3,6 @@
 
 pub const IoSkt = @This();
 
-const Side = enum(u1) {
-    client = 0,
-    server = 1,
-};
-
 pool: *Pool = undefined,
 side: Side = undefined,
 cn: message.ChannelNumber = undefined,
@@ -234,6 +229,7 @@ const Message = message.Message;
 const MessageQueue = message.MessageQueue;
 const sockets = @import("sockets.zig");
 const Triggers = sockets.Triggers;
+const Side = @import("triggeredSkts.zig").Side;
 
 const DBG = @import("../engine.zig").DBG;
 

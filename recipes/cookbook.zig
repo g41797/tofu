@@ -168,7 +168,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     return;
 }
 
-pub fn handleHelloWithWrongConfiguration(gpa: Allocator) !bool {
+pub fn handleHelloForNonListeningServer(gpa: Allocator) !bool {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example
@@ -215,16 +215,4 @@ pub fn handleHelloWithWrongConfiguration(gpa: Allocator) !bool {
 // use other approach for the destroy (at least you need to handle possible failure)
 pub fn destroyMcg(ampe: tofu.Ampe, mcg: tofu.MessageChannelGroup) void {
     ampe.destroy(mcg) catch {};
-}
-
-pub fn hi() void {
-    if (tofu.DBG) {
-        std.log.debug("   ****  tofu HI (DEBUG MODE)  ****", .{});
-    } else {
-        std.log.debug("   ****  tofu HI (NON-DEBUG MODE)  ****", .{});
-    }
-}
-
-pub fn bye() void {
-    std.log.debug("   ****  tofu BYE  ****", .{});
 }
