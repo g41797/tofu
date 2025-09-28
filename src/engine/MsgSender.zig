@@ -149,7 +149,7 @@ pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
                 return null;
             },
             std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
-            else => return AmpeError.CommunicatioinFailure,
+            else => return AmpeError.CommunicationFailed,
         }
     };
 
@@ -167,7 +167,7 @@ pub fn sendBufTo(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
             std.posix.SendError.WouldBlock => {
                 return null;
             },
-            else => return AmpeError.CommunicatioinFailure,
+            else => return AmpeError.CommunicationFailed,
         }
     };
 

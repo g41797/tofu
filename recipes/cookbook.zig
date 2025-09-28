@@ -8,6 +8,10 @@ pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
 pub const Configurator = configurator.Configurator;
 pub const TCPClientConfigurator = configurator.TCPClientConfigurator;
+pub const status = tofu.status;
+
+const SEC_TIMEOUT_MS = 1_000;
+const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
 
 pub fn createDestroyMain(gpa: Allocator) !void {
     var dtr = try Distributor.Create(gpa, DefaultOptions);
@@ -168,7 +172,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     return;
 }
 
-pub fn handleHelloForNonListeningServer(gpa: Allocator) !bool {
+pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 1, // just for example
@@ -179,9 +183,7 @@ pub fn handleHelloForNonListeningServer(gpa: Allocator) !bool {
     const ampe = try dtr.ampe();
 
     const mchgr = try ampe.create();
-    defer ampe.destroy(mchgr) catch {
-        // What can you do?
-    };
+    defer destroyMcg(ampe, mchgr);
 
     var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
     defer mchgr.put(&msg);
@@ -206,7 +208,11 @@ pub fn handleHelloForNonListeningServer(gpa: Allocator) !bool {
 
     _ = try mchgr.asyncSend(&msg);
 
-    return true;
+    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    const st = recvMsg.?.bhdr.status;
+    mchgr.put(&recvMsg);
+    return status.raw_to_error(st);
 }
 
 // Helper function - allows to destroy MessageChannelGroup using defer

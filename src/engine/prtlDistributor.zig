@@ -1,18 +1,14 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub fn sendWelcome(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
-}
-
 pub fn sendHello(dtr: *Distributor) !void {
     // 2DO - Add processing
 
-    try dtr.addDumbChannel(dtr.currBhdr.channel_number);
-
-    try dtr.responseFailure(AmpeStatus.wrong_configuration);
+    TriggeredChannel.createIoClientChannel(dtr, dtr.currMsg.?) catch |err| {
+        const st = status.errorToStatus(err);
+        dtr.responseFailure(st) catch {};
+        return;
+    };
 
     // const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
     // switch (cnfgr) {
@@ -25,6 +21,12 @@ pub fn sendHello(dtr: *Distributor) !void {
     // }
 
     return AmpeError.ShutdownStarted;
+}
+
+pub fn sendWelcome(dtr: *Distributor) !void {
+    // 2DO - Add processing
+    _ = dtr;
+    return AmpeError.NotImplementedYet;
 }
 
 pub fn sendBye(dtr: *Distributor) !void {
@@ -104,15 +106,21 @@ pub fn addDumbChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
     return;
 }
 
-pub fn addNotificationChannel(dtr: *Distributor) !void {
-    const ntcn = try TriggeredChannel.createNotificationChannel(dtr);
+pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
+    var cnfgr: Configurator = Configurator.fromMessage(dtr.currMsg.?);
 
-    dtr.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
+    if (cnfgr.isWrong()) {
+        return AmpeError.WrongConfiguration;
+    }
+
+    var dcn = TriggeredChannel.createDumbChannel(dtr);
+
+    dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
+
+    dtr.trgrd_map.put(chN, dcn) catch {
         return AmpeError.AllocationFailed;
     };
 
-    dtr.ntfcsEnabled = true;
-    dtr.cnmapChanged = false;
     return;
 }
 
@@ -167,6 +175,9 @@ const AmpeError = status.AmpeError;
 const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
+
+const configurator = @import("../configurator.zig");
+const Configurator = configurator.Configurator;
 
 const Notifier = @import("Notifier.zig");
 

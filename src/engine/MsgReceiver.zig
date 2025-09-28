@@ -165,7 +165,7 @@ pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
                 return null;
             },
             std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
-            else => return AmpeError.CommunicatioinFailure,
+            else => return AmpeError.CommunicationFailed,
         }
     };
 

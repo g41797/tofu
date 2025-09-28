@@ -127,7 +127,7 @@ pub const Poll = struct {
 
     fn poll(pl: *Poll, timeout: i32) !bool {
         const triggered = std.posix.poll(pl.pollfdVtor.items, timeout) catch {
-            return AmpeError.CommunicatioinFailure;
+            return AmpeError.CommunicationFailed;
         };
 
         return triggered == 0;

@@ -42,7 +42,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
             std.posix.AcceptError.ConnectionAborted,
             std.posix.AcceptError.ConnectionResetByPeer,
             => return AmpeError.PeerDisconnected,
-            else => return AmpeError.CommunicatioinFailure,
+            else => return AmpeError.CommunicationFailed,
         }
     };
     errdefer posix.close(skt.socket);

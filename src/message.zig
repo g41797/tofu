@@ -9,7 +9,7 @@ pub const Trigger = enum(u1) {
 
 /// Enum representing the type of a message, used to categorize messages for processing.
 pub const MessageType = enum(u2) {
-    application = 0,
+    regular = 0,
     welcome = 1,
     hello = 2,
     bye = 3,
@@ -41,7 +41,7 @@ pub const Oob = Trigger;
 
 /// Packed struct containing protocol fields for message metadata.
 pub const ProtoFields = packed struct(u8) {
-    mtype: MessageType = .application,
+    mtype: MessageType = .regular,
     role: MessageRole = .invalid,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
@@ -495,13 +495,13 @@ pub const Message = struct {
             return AmpeError.NotAllowed;
         }
 
-        if ((mtype != .application) and (more == .more)) {
+        if ((mtype != .regular) and (more == .more)) {
             msg.bhdr.status = status_to_raw(.invalid_more_usage);
             return AmpeError.InvalidMoreUsage;
         }
 
         const vc: ValidCombination = switch (mtype) {
-            .application => switch (mode) {
+            .regular => switch (mode) {
                 .request => .AppRequest,
                 .response => .AppResponse,
                 .signal => .AppSignal,

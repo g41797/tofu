@@ -58,9 +58,9 @@ test "create UDS client" {
 
     defer listener.deinit();
 
-    // const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
-    // const length = std.mem.len(c_array_ptr);
-    // const zig_slice: []const u8 = c_array_ptr[0..length];
+     const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
+     const length = std.mem.len(c_array_ptr);
+     const zig_slice: []const u8 = c_array_ptr[0..length];
 
     var clcnfr: Configurator = .{
         .uds_client = UDSClientConfigurator.init(udsPath),
@@ -74,8 +74,8 @@ test "create UDS client" {
 
 
 
-    // tardy: poll.zig - slightly changed
-    if (comptime builtin.os.tag == .macos) { // was false
+     tardy: poll.zig - slightly changed
+    if (comptime builtin.os.tag == .macos) {  was false
         const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
         defer std.posix.close(server_socket);
 
@@ -105,16 +105,16 @@ test "create UDS client" {
     }
 
 
-// Grok generated from former waitConnect
-// Define kqueue constants for macOS
+ Grok generated from former waitConnect
+ Define kqueue constants for macOS
 pub fn waitConnect(client: posix.socket_t) !bool {
     log.debug("TRY WAITCONNECT ON FD {x}", .{client});
     defer log.debug("FINISH WAITCONNECT ON FD {x}", .{client});
-    if (comptime false) { // grok version below
-        // Compile-time OS detection
+    if (comptime false) {  grok version below
+         Compile-time OS detection
         switch (builtin.os.tag) {
             .linux => {
-                // Linux implementation using poll
+                 Linux implementation using poll
                 var spoll: [1]posix.pollfd = .{
                     .{
                         .fd = client,
@@ -123,7 +123,7 @@ pub fn waitConnect(client: posix.socket_t) !bool {
                     },
                 };
 
-                const timeout_ms = 3000; // Assuming SEC_TIMEOUT_MS is 1000
+                const timeout_ms = 3000;  Assuming SEC_TIMEOUT_MS is 1000
                 const pollstatus = try posix.poll(&spoll, timeout_ms);
 
                 if (pollstatus == 0) {
@@ -137,7 +137,7 @@ pub fn waitConnect(client: posix.socket_t) !bool {
                 return true;
             },
             .macos => {
-                // macOS implementation using kqueue
+                 macOS implementation using kqueue
                 const kq = try posix.kqueue();
                 defer posix.close(kq);
 
@@ -152,7 +152,7 @@ pub fn waitConnect(client: posix.socket_t) !bool {
                     },
                 };
 
-                const timeout_ms = 3000; // Assuming SEC_TIMEOUT_MS is 1000
+                const timeout_ms = 3000;  Assuming SEC_TIMEOUT_MS is 1000
                 var timeout = posix.timespec{
                     .sec = timeout_ms / 1000,
                     .nsec = (timeout_ms % 1000) * 1_000_000,
@@ -254,7 +254,7 @@ fn waitConnectMacos(client: posix.socket_t) !bool {
 }
 
 const KqueueConstants = if (builtin.os.tag == .macos) struct {
-    const EVFILT_WRITE: i16 = -2; // From sys/event.h
+    const EVFILT_WRITE: i16 = -2;  From sys/event.h
     const EV_ADD: u16 = 0x0001;
     const EV_ONESHOT: u16 = 0x0010;
     const EV_ERROR: u16 = 0x4000;
@@ -283,3 +283,29 @@ tools:
     enabled: true
 
 
+
+
+ const ErrorToStatusMap = std.enums.EnumMap(AmpeError, AmpeStatus).init(.{
+     .NotImplementedYet = .not_implemented_yet,
+     .WrongConfiguration = .wrong_configuration,
+     .NotAllowed = .not_allowed,
+     .NullMessage = .null_message,
+     .InvalidMessage = .invalid_message,
+     .InvalidMessageType = .invalid_message_type,
+     .InvalidMessageMode = .invalid_message_mode,
+     .InvalidHeadersLen = .invalid_headers_len,
+     .InvalidBodyLen = .invalid_body_len,
+     .InvalieChannelNumber = .invalid_channel_number,
+     .InvalieMessageId = .invalid_message_id,
+     .InvalidAddress = .invalid_address,
+     .InvalidMoreUsage = .invalid_more_usage,
+     .NotificationDisabled = .notification_disabled,
+     .NotificationFailed = .notification_failed,
+     .PeerDisconnected = .peer_disconnected,
+     .CommunicationFailed = .communication_failed,
+     .PoolEmpty = .pool_empty,
+     .AllocationFailed = .allocation_failed,
+     .WaitInterrupted = .wait_interrupted,
+     .ChannelClosed = .channel_closed,
+     .ShutdownStarted = .shutdown_started,
+ });

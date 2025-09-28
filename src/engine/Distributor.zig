@@ -3,35 +3,6 @@
 
 pub const Distributor = @This();
 
-pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
-
-pub const Iterator = struct {
-    itrtr: ?TriggeredChannelsMap.Iterator = null,
-
-    pub fn init(tcm: *TriggeredChannelsMap) Iterator {
-        return .{
-            .itrtr = tcm.iterator(),
-        };
-    }
-
-    pub fn next(itr: *Iterator) ?*TriggeredChannel {
-        if (itr.itrtr != null) {
-            const entry = itr.itrtr.?.next();
-            if (entry) |entr| {
-                return entr.value_ptr;
-            }
-        }
-        return null;
-    }
-
-    pub fn reset(itr: *Iterator) void {
-        if (itr.itrtr != null) {
-            itr.itrtr.?.reset();
-        }
-        return;
-    }
-};
-
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
 options: engine.Options = undefined,
@@ -61,28 +32,6 @@ currBhdr: BinaryHeader = undefined,
 currTcopt: ?*TriggeredChannel = undefined,
 
 unpnt: Notifier.UnpackedNotification,
-
-pub fn ampe(dtr: *Distributor) !Ampe {
-    try dtr.*.createThread();
-
-    const result: Ampe = .{
-        .ptr = dtr,
-        .vtable = &.{
-            .create = create,
-            .destroy = destroy,
-        },
-    };
-
-    return result;
-}
-
-fn alerter(dtr: *Distributor) Notifier.Alerter {
-    const result: Notifier.Alerter = .{
-        .ptr = dtr,
-        .func = send_alert,
-    };
-    return result;
-}
 
 pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     const dtr: *Distributor = gpa.create(Distributor) catch {
@@ -135,7 +84,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
 
     dtr.trgrd_map = trgrd_map;
 
-    try dtr.addNotificationChannel();
+    try TriggeredChannel.createNotificationChannel(dtr);
 
     return dtr;
 }
@@ -231,7 +180,7 @@ fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
     // Create Signal for destroy of
     // resources of mcg
     var dmsg = dstr.?;
-    dmsg.bhdr.proto.mtype = .application;
+    dmsg.bhdr.proto.mtype = .regular;
     dmsg.bhdr.proto.role = .signal;
     dmsg.bhdr.proto.origin = .engine;
     dmsg.bhdr.proto.oob = .on;
@@ -575,6 +524,66 @@ pub fn releaseToPool(dtr: *Distributor, storedMsg: *?*Message) void {
     return;
 }
 
+pub fn buildStatusSignal(dtr: *Distributor, stat: AmpeStatus) *Message {
+    var ret = dtr.pool.get(.always) catch unreachable;
+    ret.bhdr.status = status.status_to_raw(stat);
+    ret.bhdr.proto.mtype = .regular;
+    ret.bhdr.proto.origin = .engine;
+    ret.bhdr.proto.role = .signal;
+    return ret;
+}
+
+pub fn ampe(dtr: *Distributor) !Ampe {
+    try dtr.*.createThread();
+
+    const result: Ampe = .{
+        .ptr = dtr,
+        .vtable = &.{
+            .create = create,
+            .destroy = destroy,
+        },
+    };
+
+    return result;
+}
+
+fn alerter(dtr: *Distributor) Notifier.Alerter {
+    const result: Notifier.Alerter = .{
+        .ptr = dtr,
+        .func = send_alert,
+    };
+    return result;
+}
+
+pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
+
+pub const Iterator = struct {
+    itrtr: ?TriggeredChannelsMap.Iterator = null,
+
+    pub fn init(tcm: *TriggeredChannelsMap) Iterator {
+        return .{
+            .itrtr = tcm.iterator(),
+        };
+    }
+
+    pub fn next(itr: *Iterator) ?*TriggeredChannel {
+        if (itr.itrtr != null) {
+            const entry = itr.itrtr.?.next();
+            if (entry) |entr| {
+                return entr.value_ptr;
+            }
+        }
+        return null;
+    }
+
+    pub fn reset(itr: *Iterator) void {
+        if (itr.itrtr != null) {
+            itr.itrtr.?.reset();
+        }
+        return;
+    }
+};
+
 const partial = @import("prtlDistributor.zig");
 const processTimeOut = partial.processTimeOut;
 const processWaitTriggersFailure = partial.processWaitTriggersFailure;
@@ -587,7 +596,6 @@ const sendBye = partial.sendBye;
 const sendWelcome = partial.sendWelcome;
 const sendHello = partial.sendHello;
 
-pub const addNotificationChannel = partial.addNotificationChannel;
 pub const addDumbChannel = partial.addDumbChannel;
 pub const responseFailure = partial.responseFailure;
 pub const markForDelete = partial.markForDelete;

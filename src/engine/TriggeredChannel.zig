@@ -24,26 +24,66 @@ pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
         },
         .exp = sockets.TriggersOff,
         .act = sockets.TriggersOff,
-        .mrk4del = false,
+        .mrk4del = true,
         .resp2ac = true,
     };
     return ret;
 }
 
-pub fn createNotificationChannel(prnt: *Distributor) !TriggeredChannel {
-    var ret = createDumbChannel(prnt);
-    ret.resp2ac = true;
-    ret.tskt = .{
+pub fn createNotificationChannel(prnt: *Distributor) !void {
+    var ntcn = createDumbChannel(prnt);
+    ntcn.resp2ac = true;
+    ntcn.tskt = .{
         .notification = sockets.NotificationSkt.init(prnt.ntfr.receiver),
     };
 
-    return ret;
+    prnt.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
+        return AmpeError.AllocationFailed;
+    };
+    prnt.cnmapChanged = true;
+
+    prnt.ntfcsEnabled = true;
+
+    return;
+}
+
+pub fn createIoClientChannel(prnt: *Distributor, hello: *Message) AmpeError!void {
+    var tc = createDumbChannel(prnt);
+    tc.acn = prnt.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
+
+    // 2DO - Add method put to dtr
+    prnt.trgrd_map.put(hello.bhdr.channel_number, tc) catch {
+        return AmpeError.AllocationFailed;
+    };
+    prnt.cnmapChanged = true;
+
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(prnt.allocator);
+    var clSkt: sockets.IoSkt = .{};
+    try clSkt.initClientSide(&prnt.pool, hello, &sc);
+    errdefer clSkt.deinit();
+
+    const tcptr = prnt.trgrd_map.getPtr(hello.bhdr.channel_number).?;
+    tcptr.*.mrk4del = false;
+    tcptr.*.resp2ac = true;
+
+    const tskt: TriggeredSkt = .{
+        .io = clSkt,
+    };
+    tcptr.*.tskt = tskt;
+
+    return;
 }
 
 pub fn deinit(tchn: *TriggeredChannel) void {
+    defer tchn.remove();
+
     if (tchn.acn.chn != 0) {
         _ = tchn.prnt.acns.removeChannel(tchn.acn.chn);
-        tchn.prnt.cnmapChanged = tchn.prnt.trgrd_map.orderedRemove(tchn.acn.chn);
+
+        const exists = tchn.prnt.trgrd_map.contains(tchn.acn.chn);
+        if (exists) {
+            tchn.prnt.cnmapChanged = true;
+        }
     }
 
     if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
@@ -100,6 +140,19 @@ pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {
 
     return;
 }
+
+inline fn remove(tchn: *TriggeredChannel) void {
+    if (tchn.acn.chn != 0) {
+        const prnt = tchn.prnt;
+        const wasRemoved = tchn.prnt.trgrd_map.orderedRemove(tchn.acn.chn);
+        if (wasRemoved) {
+            prnt.cnmapChanged = true;
+        }
+    }
+}
+
+const configurator = @import("../configurator.zig");
+const Configurator = configurator.Configurator;
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;

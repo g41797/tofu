@@ -8,7 +8,7 @@ test {
 
 const localIP = "127.0.0.1";
 const SEC_TIMEOUT_MS = 1_000;
-const INFINITE_TIMEOUT_MS = -1;
+const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
 
 pub const std_options: @import("std").Options = .{ .log_level = .debug };
 

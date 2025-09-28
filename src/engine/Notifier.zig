@@ -21,7 +21,7 @@ pub const TempUdsPath = struct {
 };
 
 pub const SEC_TIMEOUT_MS = 1_000;
-pub const INFINITE_TIMEOUT_MS = -1;
+pub const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
 
 pub const NotificationKind = enum(u1) {
     message = 0,

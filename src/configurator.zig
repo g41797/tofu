@@ -458,6 +458,14 @@ pub const Configurator = union(enum) {
         }
         return cftr;
     }
+
+    // Returns true if .wrong is active field
+    pub fn isWrong(self: *const Configurator) bool {
+        switch (self.*) {
+            .wrong => return true,
+            inline else => return false,
+        }
+    }
 };
 
 /// Prepares a message for a server Welcome request/signal by setting the appropriate binary header fields.

@@ -45,7 +45,7 @@ pub const AmpeError = error{
     NotificationDisabled,
     NotificationFailed,
     PeerDisconnected,
-    CommunicatioinFailure,
+    CommunicationFailed,
     PoolEmpty,
     AllocationFailed,
     WaitInterrupted,
@@ -55,30 +55,41 @@ pub const AmpeError = error{
 };
 
 // Comptime mapping from AmpeStatus to AmpeError.
-const StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
-    .not_implemented_yet = .NotImplementedYet,
-    .wrong_configuration = .WrongConfiguration,
-    .not_allowed = .NotAllowed,
-    .null_message = .NullMessage,
-    .invalid_message = .InvalidMessage,
-    .invalid_message_type = .InvalidMessageType,
-    .invalid_message_mode = .InvalidMessageMode,
-    .invalid_headers_len = .InvalidHeadersLen,
-    .invalid_body_len = .InvalidBodyLen,
-    .invalid_channel_number = .InvalieChannelNumber,
-    .invalid_message_id = .InvalieMessageId,
-    .invalid_address = .InvalidAddress,
-    .invalid_more_usage = .InvalidMoreUsage,
-    .notification_disabled = .NotificationDisabled,
-    .notification_failed = .NotificationFailed,
-    .peer_disconnected = .PeerDisconnected,
-    .communication_failed = .CommunicationFailed,
-    .pool_empty = .PoolEmpty,
-    .allocation_failed = .AllocationFailed,
-    .wait_interrupted = .WaitInterrupted,
-    .channel_closed = .ChannelClosed,
-    .shutdown_started = .ShutdownStarted,
+var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
+    .not_implemented_yet = AmpeError.NotImplementedYet,
+    .wrong_configuration = AmpeError.WrongConfiguration,
+    .not_allowed = AmpeError.NotAllowed,
+    .null_message = AmpeError.NullMessage,
+    .invalid_message = AmpeError.InvalidMessage,
+    .invalid_message_type = AmpeError.InvalidMessageType,
+    .invalid_message_mode = AmpeError.InvalidMessageMode,
+    .invalid_headers_len = AmpeError.InvalidHeadersLen,
+    .invalid_body_len = AmpeError.InvalidBodyLen,
+    .invalid_channel_number = AmpeError.InvalidChannelNumber,
+    .invalid_message_id = AmpeError.InvalidMessageId,
+    .invalid_address = AmpeError.InvalidAddress,
+    .invalid_more_usage = AmpeError.InvalidMoreUsage,
+    .notification_disabled = AmpeError.NotificationDisabled,
+    .notification_failed = AmpeError.NotificationFailed,
+    .peer_disconnected = AmpeError.PeerDisconnected,
+    .communication_failed = AmpeError.CommunicationFailed,
+    .pool_empty = AmpeError.PoolEmpty,
+    .allocation_failed = AmpeError.AllocationFailed,
+    .wait_interrupted = AmpeError.WaitInterrupted,
+    .channel_closed = AmpeError.ChannelClosed,
+    .shutdown_started = AmpeError.ShutdownStarted,
 });
+
+pub fn errorToStatus(err: AmpeError) AmpeStatus {
+    var iter = StatusToErrorMap.iterator();
+    while (iter.next()) |item| {
+        if (item.value.* == err) {
+            return item.key;
+        }
+    }
+
+    return AmpeStatus.unknown_error;
+}
 
 pub inline fn raw_to_status(rs: u8) AmpeStatus {
     if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
@@ -92,7 +103,7 @@ pub inline fn raw_to_error(rs: u8) AmpeError!void {
         return;
     }
     if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
-        return .UnknownError;
+        return AmpeError.UnknownError;
     }
 
     return StatusToErrorMap.get(@enumFromInt(rs)).?;
