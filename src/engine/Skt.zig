@@ -59,7 +59,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
 
     var connected = true;
 
-    std.posix.connect(
+    connectPosix(
         skt.socket,
         &skt.address.any,
         skt.address.getOsSockLen(),
@@ -69,6 +69,9 @@ pub fn connect(skt: *Skt) AmpeError!bool {
         },
         std.posix.ConnectError.ConnectionPending => {
             connected = true; // for macOs
+        },
+        std.posix.ConnectError.ConnectionRefused => {
+            return AmpeError.PeerDisconnected;
         },
         else => return AmpeError.PeerDisconnected,
     };
@@ -166,6 +169,72 @@ fn disable_nagle(socket: std.posix.socket_t) !void {
     }
 }
 
+pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len: posix.socklen_t) !void { //ConnectError
+    while (true) {
+        const erStat = posix.errno(posix.system.connect(sock, sock_addr, len));
+
+        const intErrStatus = @intFromEnum(erStat);
+
+        if (intErrStatus == @intFromEnum(E.INTR)) {
+            continue;
+        }
+        if (intErrStatus == @intFromEnum(E.SUCCESS)) {
+            return;
+        }
+        if (intErrStatus == @intFromEnum(E.AGAIN)) {
+            return error.WouldBlock;
+        }
+        if (intErrStatus == @intFromEnum(E.INPROGRESS)) {
+            return error.WouldBlock;
+        }
+        if (intErrStatus == @intFromEnum(E.ALREADY)) {
+            return error.ConnectionPending;
+        }
+        if (intErrStatus == @intFromEnum(E.CONNREFUSED)) {
+            return error.ConnectionRefused;
+        }
+        if (intErrStatus == @intFromEnum(E.CONNABORTED)) {
+            return connectError.ConnectedAborted;
+        }
+        return error.Unexpected;
+
+        // switch (intErrStatus) {
+        //     @intFromEnum(E.SUCCESS) => return,
+        //     @intFromEnum(E.ACCES) => return connectError.AccessDenied,
+        //     @intFromEnum(E.PERM) => return error.PermissionDenied,
+        //     @intFromEnum(E.ADDRINUSE) => return error.AddressInUse,
+        //     @intFromEnum(E.ADDRNOTAVAIL) => return error.AddressNotAvailable,
+        //     @intFromEnum(E.AFNOSUPPORT) => return error.AddressFamilyNotSupported,
+        //     @intFromEnum(E.AGAIN), @intFromEnum(E.INPROGRESS) => return error.WouldBlock,
+        //     @intFromEnum(E.ALREADY) => return error.ConnectionPending,
+        //     @intFromEnum(E.BADF) => unreachable, // sockfd is not a valid open file descriptor.
+        //     @intFromEnum(E.CONNREFUSED) => return error.ConnectionRefused,
+        //     @intFromEnum(E.CONNRESET) => return error.ConnectionResetByPeer,
+        //     @intFromEnum(E.FAULT) => error.Unexpected, // The socket structure address is outside the user's address space.
+        //     @intFromEnum(E.INTR) => continue,
+        //     @intFromEnum(E.ISCONN) => return connectError.AlreadyConnected, // The socket is already connected.
+        //     @intFromEnum(E.HOSTUNREACH) => return error.NetworkUnreachable,
+        //     @intFromEnum(E.NETUNREACH) => return error.NetworkUnreachable,
+        //     @intFromEnum(E.NOTSOCK) => error.Unexpected, // The file descriptor sockfd does not refer to a socket.
+        //     @intFromEnum(E.PROTOTYPE) => error.Unexpected, // The socket type does not support the requested communications protocol.
+        //     @intFromEnum(E.TIMEDOUT) => return error.ConnectionTimedOut,
+        //     @intFromEnum(E.NOENT) => return error.FileNotFound, // Returned when socket is AF.UNIX and the given path does not exist.
+        //     @intFromEnum(E.CONNABORTED) => return connectError.ConnectedAborted,
+        //     // _ => return error.Unexpected,
+        //     // else => return error.Unexpected,
+        //     // else =>  | _ | return error.Unexpected,
+        //     else =>  |err| return posix.unexpectedErrno(@enumFromInt(err)),
+        // }
+    }
+}
+
+pub const connectError = error{
+    AccessDenied,
+    AlreadyConnected,
+    ConnectedAborted,
+    _,
+} || posix.ConnectError;
+
 const MsgSender = @import("MsgSender.zig");
 const message = @import("../message.zig");
 const Trigger = message.Trigger;
@@ -181,7 +250,13 @@ const std = @import("std");
 const posix = std.posix;
 const mem = std.mem;
 const builtin = @import("builtin");
+const native_os = builtin.os.tag;
 const os = builtin.os.tag;
+const linux = std.os.linux;
+const windows = std.os.windows;
+const wasi = std.os.wasi;
+const system = posix.system;
+const E = system.E;
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;

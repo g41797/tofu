@@ -309,3 +309,12 @@ tools:
      .ChannelClosed = .channel_closed,
      .ShutdownStarted = .shutdown_started,
  });
+
+
+pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
+    const trchn = dtr.trgrd_map.getPtr(chn);
+    if (trchn) |ch| {
+        ch.mrk4del = true;
+    }
+    return;
+}

@@ -292,9 +292,7 @@ pub const ActiveChannels = struct {
     pub fn allChannels(cns: *ActiveChannels, chns: *std.ArrayList(ChannelNumber)) !void {
         cns.mutex.lock();
         defer cns.mutex.unlock();
-        chns.resize(0);
-
-        errdefer chns.resize(0);
+        chns.resize(0) catch unreachable;
 
         var it = cns.active.iterator();
         while (it.next()) |kv_pair| {

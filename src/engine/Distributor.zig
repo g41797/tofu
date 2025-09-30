@@ -33,6 +33,10 @@ currTcopt: ?*TriggeredChannel = undefined,
 
 unpnt: Notifier.UnpackedNotification,
 
+m4delCnt: usize = undefined,
+
+allChnN: std.ArrayList(message.ChannelNumber) = undefined,
+
 pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     const dtr: *Distributor = gpa.create(Distributor) catch {
         return AmpeError.AllocationFailed;
@@ -59,6 +63,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .currMsg = null,
         .currBhdr = .{},
         .currTcopt = null,
+        .m4delCnt = 0,
     };
 
     dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
@@ -83,6 +88,11 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
     };
 
     dtr.trgrd_map = trgrd_map;
+
+    dtr.allChnN = std.ArrayList(message.ChannelNumber).initCapacity(dtr.allocator, 256) catch {
+        return AmpeError.AllocationFailed;
+    };
+    errdefer dtr.allChnN.deinit();
 
     try TriggeredChannel.createNotificationChannel(dtr);
 
@@ -110,7 +120,7 @@ pub fn Destroy(dtr: *Distributor) void {
 
         dtr.pool.close();
         dtr.acns.deinit();
-
+        dtr.allChnN.deinit();
         dtr.ntfr.deinit();
         dtr.ntfcsEnabled = false;
     }
@@ -280,6 +290,7 @@ fn loop(dtr: *Distributor) void {
     var withItrtr: bool = true;
 
     while (true) {
+        dtr.m4delCnt = 0;
         dtr.loopTrgrs = .{};
 
         if (dtr.cnmapChanged) {
@@ -310,7 +321,7 @@ fn loop(dtr: *Distributor) void {
         }
 
         if (dtr.loopTrgrs.notify == .on) {
-            dtr.processNotify(&it) catch |err|
+            dtr.processNotify() catch |err|
                 switch (err) {
                     AmpeError.ShutdownStarted => {
                         return;
@@ -344,16 +355,20 @@ fn loop(dtr: *Distributor) void {
                 },
             };
 
-        dtr.cnmapChanged = dtr.processMarkedForDelete() catch |err| {
+        const wasRemoved = dtr.processMarkedForDelete() catch |err| {
             log.err("processMarkedForDelete failed with error {any}", .{err});
             return;
         };
+
+        if (wasRemoved) {
+            dtr.cnmapChanged = true;
+        }
     }
 
     return;
 }
 
-fn processNotify(dtr: *Distributor, it: *Iterator) !void {
+fn processNotify(dtr: *Distributor) !void {
     log.debug("processNotify ->", .{});
     defer log.debug("<- processNotify", .{});
 
@@ -378,7 +393,8 @@ fn processNotify(dtr: *Distributor, it: *Iterator) !void {
                 return AmpeError.ShutdownStarted;
             },
             .freedMemory => {
-                return dtr.addMessagesForRecv(it);
+                return; // Adding message from pool will be handled in processTriggeredChannels
+                // return dtr.addMessagesForRecv(it);
             },
         }
     }
@@ -386,35 +402,6 @@ fn processNotify(dtr: *Distributor, it: *Iterator) !void {
     assert(dtr.currNtfc.kind == .message);
 
     return dtr.storeMessageFromMcg();
-}
-
-fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
-    log.debug("addMessagesForRecv ->", .{});
-    defer log.debug("<- addMessagesForRecv", .{});
-
-    it.reset();
-
-    dtr.currTcopt = it.next();
-
-    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
-        const tc = dtr.currTcopt.?;
-
-        const trgrs = tc.act;
-
-        if (trgrs.pool != .on) {
-            continue;
-        }
-
-        const rcvmsg = dtr.pool.get(.poolOnly) catch {
-            return;
-        };
-        errdefer dtr.pool.put(rcvmsg);
-
-        try tc.tskt.addForRecv(rcvmsg);
-        tc.act.pool = .off;
-    }
-
-    return;
 }
 
 fn storeMessageFromMcg(dtr: *Distributor) !void {
@@ -460,10 +447,13 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
 
     dtr.currTcopt = it.next();
 
-    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
+    trcIter: while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
         const tc = dtr.currTcopt.?;
 
         const trgrs = tc.act;
+
+        const utrgs = sockets.UnpackedTriggers.fromTriggers(trgrs);
+        _ = utrgs;
 
         if (trgrs.off()) {
             continue;
@@ -472,6 +462,52 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
         if (trgrs.notify == .on) {
             continue;
         }
+
+        if (trgrs.err == .on) {
+            tc.markForDelete(trgrs.toStatus());
+            continue;
+        }
+
+        if (trgrs.connect == .on) {
+            _ = tc.tskt.tryConnect() catch {
+                tc.markForDelete(.connect_failed);
+            };
+            continue;
+        }
+
+        if (trgrs.pool == .on) {
+            while (true) {
+                const rcvmsg = dtr.pool.get(.poolOnly) catch {
+                    break;
+                };
+
+                tc.tskt.addForRecv(rcvmsg) catch |err| {
+                    dtr.pool.put(rcvmsg);
+                    var reason: AmpeStatus = .recv_failed;
+                    if (err == AmpeError.NotAllowed) {
+                        reason = .not_allowed;
+                    }
+                    tc.markForDelete(reason);
+                    continue :trcIter;
+                };
+                tc.act.pool = .off;
+                break;
+            }
+        }
+
+        if (trgrs.accept == .on) {
+            return AmpeError.NotImplementedYet;
+        }
+
+        if (trgrs.send == .on) {
+            return AmpeError.NotImplementedYet;
+        }
+
+        if (trgrs.recv == .on) {
+            return AmpeError.NotImplementedYet;
+        }
+
+        break;
     }
 
     return;
@@ -584,6 +620,35 @@ pub const Iterator = struct {
     }
 };
 
+fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
+    log.debug("addMessagesForRecv ->", .{});
+    defer log.debug("<- addMessagesForRecv", .{});
+
+    it.reset();
+
+    dtr.currTcopt = it.next();
+
+    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
+        const tc = dtr.currTcopt.?;
+
+        const trgrs = tc.act;
+
+        if (trgrs.pool != .on) {
+            continue;
+        }
+
+        const rcvmsg = dtr.pool.get(.poolOnly) catch {
+            return;
+        };
+        errdefer dtr.pool.put(rcvmsg);
+
+        try tc.tskt.addForRecv(rcvmsg);
+        tc.act.pool = .off;
+    }
+
+    return;
+}
+
 const partial = @import("prtlDistributor.zig");
 const processTimeOut = partial.processTimeOut;
 const processWaitTriggersFailure = partial.processWaitTriggersFailure;
@@ -599,6 +664,7 @@ const sendHello = partial.sendHello;
 pub const addDumbChannel = partial.addDumbChannel;
 pub const responseFailure = partial.responseFailure;
 pub const markForDelete = partial.markForDelete;
+pub const clearForDelete = partial.clearForDelete;
 
 const message = @import("../message.zig");
 const MessageType = message.MessageType;

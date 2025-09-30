@@ -25,6 +25,26 @@ pub const Triggers = packed struct(u8) {
         const b: u8 = @bitCast(other);
         return @bitCast(a | b);
     }
+
+    pub fn toStatus(self: Triggers) AmpeStatus {
+        if (self.err == .off) {
+            return .success;
+        }
+
+        if (self.notify == .on) {
+            return AmpeStatus.notification_failed;
+        }
+
+        if (self.connect == .on) {
+            return AmpeStatus.connect_failed;
+        }
+
+        if (self.accept == .on) {
+            return AmpeStatus.accept_failed;
+        }
+
+        return AmpeStatus.communication_failed;
+    }
 };
 
 pub const TriggersOff: Triggers = .{
@@ -265,6 +285,7 @@ const MessageQueue = message.MessageQueue;
 const sockets = @import("sockets.zig");
 const DBG = @import("../engine.zig").DBG;
 const AmpeError = @import("../status.zig").AmpeError;
+const AmpeStatus = @import("../status.zig").AmpeStatus;
 const Notifier = @import("Notifier.zig");
 const Notification = Notifier.Notification;
 

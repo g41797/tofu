@@ -158,6 +158,24 @@ pub const Poll = struct {
 
                 if ((revents & err_mask) != 0) {
                     tc.act.err = .on;
+                    if (tc.exp.notify == .on) {
+                        tc.act.notify = .on;
+                        break;
+                    }
+                    if (tc.exp.accept == .on) {
+                        tc.act.accept = .on;
+                        break;
+                    }
+                    if (tc.exp.connect == .on) {
+                        tc.act.connect = .on;
+                        break;
+                    }
+                    if (tc.exp.send == .on) {
+                        tc.act.send = .on;
+                    }
+                    if (tc.exp.recv == .on) {
+                        tc.act.recv = .on;
+                    }
                     break;
                 }
 

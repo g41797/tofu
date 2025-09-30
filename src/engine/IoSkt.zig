@@ -66,13 +66,9 @@ pub fn triggers(ioskt: *IoSkt) !Triggers {
     if (ioskt.side == .client) { // Initial state of client ioskt - not-connected
 
         if (!ioskt.connected) {
-            ioskt.connected = try ioskt.tryConnect();
-
-            if (!ioskt.connected) {
-                return .{
-                    .connect = .on,
-                };
-            }
+            return .{
+                .connect = .on,
+            };
         }
     }
 

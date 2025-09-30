@@ -10,6 +10,7 @@ tskt: TriggeredSkt = undefined,
 exp: sockets.Triggers = undefined,
 act: sockets.Triggers = undefined,
 mrk4del: bool = undefined,
+st: ?AmpeStatus = undefined,
 
 pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
     const ret: Distributor.TriggeredChannel = .{
@@ -26,6 +27,7 @@ pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
         .act = sockets.TriggersOff,
         .mrk4del = true,
         .resp2ac = true,
+        .st = null,
     };
     return ret;
 }
@@ -47,23 +49,27 @@ pub fn createNotificationChannel(prnt: *Distributor) !void {
     return;
 }
 
-pub fn createIoClientChannel(prnt: *Distributor, hello: *Message) AmpeError!void {
-    var tc = createDumbChannel(prnt);
-    tc.acn = prnt.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
+pub fn createIoClientChannel(dtr: *Distributor) AmpeError!void {
+    const hello: *Message = dtr.currMsg.?;
+
+    var tc = createDumbChannel(dtr);
+    tc.acn = dtr.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
 
     // 2DO - Add method put to dtr
-    prnt.trgrd_map.put(hello.bhdr.channel_number, tc) catch {
+    dtr.trgrd_map.put(hello.bhdr.channel_number, tc) catch {
         return AmpeError.AllocationFailed;
     };
-    prnt.cnmapChanged = true;
+    dtr.cnmapChanged = true;
 
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(prnt.allocator);
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(dtr.allocator);
     var clSkt: sockets.IoSkt = .{};
-    try clSkt.initClientSide(&prnt.pool, hello, &sc);
     errdefer clSkt.deinit();
 
-    const tcptr = prnt.trgrd_map.getPtr(hello.bhdr.channel_number).?;
-    tcptr.*.mrk4del = false;
+    try clSkt.initClientSide(&dtr.pool, hello, &sc);
+    dtr.currMsg = null;
+
+    const tcptr = dtr.trgrd_map.getPtr(hello.bhdr.channel_number).?;
+    tcptr.disableDelete();
     tcptr.*.resp2ac = true;
 
     const tskt: TriggeredSkt = .{
@@ -93,9 +99,10 @@ pub fn deinit(tchn: *TriggeredChannel) void {
 
     var mq = tchn.tskt.detach();
     var next = mq.dequeue();
+    const st = if (tchn.st != null) status.status_to_raw(tchn.st.?) else status.status_to_raw(.channel_closed);
     while (next != null) {
         next.?.bhdr.proto.origin = .engine;
-        next.?.bhdr.status = status.status_to_raw(.channel_closed);
+        next.?.bhdr.status = st;
         tchn.sendToCtx(&next);
         next = mq.dequeue();
     }
@@ -149,6 +156,16 @@ inline fn remove(tchn: *TriggeredChannel) void {
             prnt.cnmapChanged = true;
         }
     }
+}
+
+pub inline fn markForDelete(tchn: *TriggeredChannel, reason: AmpeStatus) void {
+    tchn.mrk4del = true;
+    tchn.st = reason;
+}
+
+pub inline fn disableDelete(tchn: *TriggeredChannel) void {
+    tchn.mrk4del = false;
+    tchn.st = null;
 }
 
 const configurator = @import("../configurator.zig");

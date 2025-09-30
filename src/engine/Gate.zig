@@ -119,7 +119,7 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
     const gt: *Gate = @alignCast(@ptrCast(ptr));
-    const recvMsg: *Message  = gt.msgs.receive(timeout_ns) catch | err | {
+    const recvMsg: *Message = gt.msgs.receive(timeout_ns) catch |err| {
         switch (err) {
             error.Timeout => {
                 return null;
@@ -127,7 +127,9 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
             error.Closed => {
                 return AmpeError.ShutdownStarted;
             },
-            error.Interrupted => {return gt.prnt.buildStatusSignal(.wait_interrupted);},
+            error.Interrupted => {
+                return gt.prnt.buildStatusSignal(.wait_interrupted);
+            },
         }
     };
 

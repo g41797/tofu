@@ -204,9 +204,49 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // bhdr.proto.role = .request;
 
     // Appends configuration to TextHeaders of the message
-    _ = try cnfg.prepareRequest(msg.?);
+    try cnfg.prepareRequest(msg.?);
 
     _ = try mchgr.asyncSend(&msg);
+
+    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    const st = recvMsg.?.bhdr.status;
+    mchgr.put(&recvMsg);
+    return status.raw_to_error(st);
+}
+
+pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 16, // just for example
+        .maxPoolMsgs = 64, // just for example
+    };
+
+    var dtr = try Distributor.Create(gpa, options);
+    defer dtr.Destroy();
+    const ampe = try dtr.ampe();
+
+    const mchgr = try ampe.create();
+    defer destroyMcg(ampe, mchgr);
+
+    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
+    defer mchgr.put(&msg);
+
+    // MessageType.hello should contain address of peer(server) to connect with.
+    // This address should be resolved. For IP - it should be also valid.
+
+    // Configuration is dedicated 'TextHeader' added to TextHeaders of the message.
+    // tofu has helper objects (ok - structs) for creation of configuration in required format.
+    // Let's suppose TCP server has address "127.0.0.1" and port 32987.
+    // We are going to use helpers for creation of server configuration within hello request.
+
+    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", 32987) };
+
+    // Appends configuration to TextHeaders of the message
+    try cnfg.prepareRequest(msg.?);
+
+    // Store information for further processing
+    const bhdr = try mchgr.asyncSend(&msg);
+    _ = bhdr;
 
     var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
 

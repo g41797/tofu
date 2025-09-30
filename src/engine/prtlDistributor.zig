@@ -4,23 +4,13 @@
 pub fn sendHello(dtr: *Distributor) !void {
     // 2DO - Add processing
 
-    TriggeredChannel.createIoClientChannel(dtr, dtr.currMsg.?) catch |err| {
+    TriggeredChannel.createIoClientChannel(dtr) catch |err| {
         const st = status.errorToStatus(err);
         dtr.responseFailure(st) catch {};
         return;
     };
 
-    // const cnfgr = engine.configurator.Configurator.fromMessage(dtr.currMsg.?);
-    // switch (cnfgr) {
-    //     .wrong => {
-    //         try dtr.responseFailure(AmpeStatus.wrong_configuration);
-    //     },
-    //     else => {
-    //         return AmpeError.ShutdownStarted;
-    //     },
-    // }
-
-    return AmpeError.ShutdownStarted;
+    return;
 }
 
 pub fn sendWelcome(dtr: *Distributor) !void {
@@ -60,8 +50,21 @@ pub fn processWaitTriggersFailure(dtr: *Distributor) void {
 }
 
 pub fn processMarkedForDelete(dtr: *Distributor) !bool {
-    _ = dtr;
-    return false;
+    var wasRemoved: bool = false;
+
+    try dtr.acns.allChannels(&dtr.allChnN);
+
+    for (dtr.allChnN.items) |chN| {
+        const tcOpt = dtr.trgrd_map.getPtr(chN);
+        if (tcOpt) |tcPtr| {
+            if (tcPtr.mrk4del) {
+                tcPtr.deinit();
+                wasRemoved = true;
+            }
+        }
+    }
+
+    return wasRemoved;
 }
 
 pub fn processInternal(dtr: *Distributor) !void {
@@ -133,18 +136,20 @@ pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
     const chn = dtr.currMsg.?.bhdr.channel_number;
     var trchn = dtr.trgrd_map.getPtr(chn);
     assert(trchn != null);
-
-    trchn.?.mrk4del = true;
+    trchn.?.markForDelete(failure);
     trchn.?.sendToCtx(&dtr.currMsg);
     return;
 }
 
-pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
-    const trchn = dtr.trgrd_map.getPtr(chn);
-    if (trchn) |ch| {
-        ch.mrk4del = true;
-    }
+pub inline fn markForDelete(dtr: *Distributor, trchn: *TriggeredChannel) void {
+    trchn.mrk4del = true;
+    dtr.m4delCnt += 1;
+    return;
+}
 
+pub inline fn clearForDelete(dtr: *Distributor, trchn: *TriggeredChannel) void {
+    trchn.mrk4del = false;
+    dtr.m4delCnt -= 1;
     return;
 }
 
