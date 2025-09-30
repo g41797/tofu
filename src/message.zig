@@ -46,7 +46,7 @@ pub const ProtoFields = packed struct(u8) {
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
     oob: Oob = .off,
-    _: u1 = 0,
+    _internal: u1 = 0,
 };
 
 /// Type alias for channel number, represented as a 16-bit unsigned integer.

@@ -254,7 +254,7 @@ pub const AcceptSkt = struct {
     }
 
     pub inline fn getSocket(self: *AcceptSkt) Socket {
-        return self.skt.socket;
+        return self.skt.socket.?;
     }
 
     pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
@@ -262,7 +262,7 @@ pub const AcceptSkt = struct {
     }
 
     pub fn deinit(askt: *AcceptSkt) void {
-        std.posix.close(askt.skt.socket);
+        askt.skt.close();
         return;
     }
 };

@@ -40,6 +40,13 @@ test "send illegal messages" {
         });
         try testing.expect(err == AmpeError.ConnectFailed);
     };
+
+    recipes.handleWelcomeWithWrongAddress(gpa) catch |err| {
+        log.debug("handleWelcomeWithWrongAddress {any}", .{
+            err,
+        });
+        try testing.expect(err == AmpeError.InvalidAddress);
+    };
 }
 
 const tofu = @import("tofu");

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 pub fn sendHello(dtr: *Distributor) !void {
-    // 2DO - Add processing
-
     TriggeredChannel.createIoClientChannel(dtr) catch |err| {
         const st = status.errorToStatus(err);
         dtr.responseFailure(st) catch {};
@@ -14,9 +12,13 @@ pub fn sendHello(dtr: *Distributor) !void {
 }
 
 pub fn sendWelcome(dtr: *Distributor) !void {
-    // 2DO - Add processing
-    _ = dtr;
-    return AmpeError.NotImplementedYet;
+    TriggeredChannel.createAcceptChannel(dtr) catch |err| {
+        const st = status.errorToStatus(err);
+        dtr.responseFailure(st) catch {};
+        return;
+    };
+
+    return;
 }
 
 pub fn sendBye(dtr: *Distributor) !void {
@@ -35,18 +37,6 @@ pub fn sendToPeer(dtr: *Distributor) !void {
     // 2DO - Add processing
     _ = dtr;
     return AmpeError.NotImplementedYet;
-}
-
-pub fn processTimeOut(dtr: *Distributor) void {
-    // 2DO - Add processing
-    _ = dtr;
-    return;
-}
-
-pub fn processWaitTriggersFailure(dtr: *Distributor) void {
-    // 2DO - Add failure processing
-    _ = dtr;
-    return;
 }
 
 pub fn processMarkedForDelete(dtr: *Distributor) !bool {
@@ -97,36 +87,6 @@ pub fn processInternal(dtr: *Distributor) !void {
     return;
 }
 
-pub fn addDumbChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
-    var dcn = TriggeredChannel.createDumbChannel(dtr);
-
-    dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
-
-    dtr.trgrd_map.put(chN, dcn) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    return;
-}
-
-pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
-    var cnfgr: Configurator = Configurator.fromMessage(dtr.currMsg.?);
-
-    if (cnfgr.isWrong()) {
-        return AmpeError.WrongConfiguration;
-    }
-
-    var dcn = TriggeredChannel.createDumbChannel(dtr);
-
-    dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
-
-    dtr.trgrd_map.put(chN, dcn) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    return;
-}
-
 pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
     defer dtr.releaseToPool(&dtr.currMsg);
 
@@ -141,15 +101,15 @@ pub fn responseFailure(dtr: *Distributor, failure: AmpeStatus) !void {
     return;
 }
 
-pub inline fn markForDelete(dtr: *Distributor, trchn: *TriggeredChannel) void {
-    trchn.mrk4del = true;
-    dtr.m4delCnt += 1;
+pub fn processTimeOut(dtr: *Distributor) void {
+    // Placeholder for idle processing
+    _ = dtr;
     return;
 }
 
-pub inline fn clearForDelete(dtr: *Distributor, trchn: *TriggeredChannel) void {
-    trchn.mrk4del = false;
-    dtr.m4delCnt -= 1;
+pub fn processWaitTriggersFailure(dtr: *Distributor) void {
+    // 2DO - Add failure processing
+    _ = dtr;
     return;
 }
 

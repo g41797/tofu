@@ -35,12 +35,12 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
 
     const address = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
-        log.err("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
+        log.info("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
         return AmpeError.InvalidAddress;
     };
 
     const skt = createListenerSocket(&address) catch |er| {
-        log.err("createListenerSocket failed with error {s}", .{@errorName(er)});
+        log.info("createListenerSocket failed with error {s}", .{@errorName(er)});
         return AmpeError.InvalidAddress;
     };
 
@@ -88,7 +88,7 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
     };
 
     const skt = createListenerSocket(&address) catch {
-        log.err("createUDSListenerSocket failed", .{});
+        log.info("createUDSListenerSocket failed", .{});
         return AmpeError.InvalidAddress;
     };
 
@@ -115,11 +115,11 @@ pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
 fn createListenerSocket(address: *const std.net.Address) !Skt {
     var ret: Skt = .{
         .address = address.*,
-        .socket = undefined,
+        .socket = null,
     };
 
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
-    errdefer posix.close(ret.socket);
+    errdefer ret.close();
 
     try ret.listen();
 
@@ -129,7 +129,7 @@ fn createListenerSocket(address: *const std.net.Address) !Skt {
 pub fn createConnectSocket(address: *const std.net.Address) !Skt {
     var ret: Skt = .{
         .address = address.*,
-        .socket = undefined,
+        .socket = null,
     };
 
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);

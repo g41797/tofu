@@ -93,7 +93,7 @@ pub const ChannelNodeQueue = struct {
 pub const ActiveChannel = struct {
     chn: ChannelNumber = undefined,
     mid: MessageID = undefined,
-    intr: ?message.ValidCombination = undefined,
+    intr: ?message.ProtoFields = undefined,
     ctx: ?*anyopaque = undefined,
 };
 
@@ -153,7 +153,7 @@ pub const ActiveChannels = struct {
     }
 
     // Called on both caller and Distributor threads
-    pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ValidCombination, ptr: ?*anyopaque) ActiveChannel {
+    pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) ActiveChannel {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 

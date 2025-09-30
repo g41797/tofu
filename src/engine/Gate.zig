@@ -107,7 +107,10 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
             return AmpeError.InvalidChannelNumber;
         }
     } else {
-        const ach = gt.prnt.acns.createChannel(sendMsg.bhdr.message_id, vc, gt);
+        var proto = sendMsg.bhdr.proto;
+        proto._internal = 0; // As sign of the "local" hello/welcome
+
+        const ach = gt.prnt.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, gt);
         sendMsg.bhdr.channel_number = ach.chn;
     }
     try gt.prnt.submitMsg(sendMsg, vc);

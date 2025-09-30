@@ -39,10 +39,7 @@ pub fn createNotificationChannel(prnt: *Distributor) !void {
         .notification = sockets.NotificationSkt.init(prnt.ntfr.receiver),
     };
 
-    prnt.trgrd_map.put(ntcn.acn.chn, ntcn) catch {
-        return AmpeError.AllocationFailed;
-    };
-    prnt.cnmapChanged = true;
+    try prnt.addChannel(ntcn);
 
     prnt.ntfcsEnabled = true;
 
@@ -55,11 +52,7 @@ pub fn createIoClientChannel(dtr: *Distributor) AmpeError!void {
     var tc = createDumbChannel(dtr);
     tc.acn = dtr.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
 
-    // 2DO - Add method put to dtr
-    dtr.trgrd_map.put(hello.bhdr.channel_number, tc) catch {
-        return AmpeError.AllocationFailed;
-    };
-    dtr.cnmapChanged = true;
+    try dtr.addChannel(tc);
 
     var sc: sockets.SocketCreator = sockets.SocketCreator.init(dtr.allocator);
     var clSkt: sockets.IoSkt = .{};
@@ -80,6 +73,33 @@ pub fn createIoClientChannel(dtr: *Distributor) AmpeError!void {
     return;
 }
 
+pub fn createAcceptChannel(dtr: *Distributor) AmpeError!void {
+    const welcome: *Message = dtr.currMsg.?;
+
+    var tc = createDumbChannel(dtr);
+    tc.acn = dtr.*.acns.activeChannel(welcome.bhdr.channel_number) catch unreachable;
+
+    try dtr.addChannel(tc);
+
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(dtr.allocator);
+    var accSkt: sockets.AcceptSkt = .{};
+    errdefer accSkt.deinit();
+
+    accSkt = try sockets.AcceptSkt.init(welcome, &sc);
+    dtr.currMsg = null;
+
+    const tcptr = dtr.trgrd_map.getPtr(welcome.bhdr.channel_number).?;
+    tcptr.disableDelete();
+    tcptr.*.resp2ac = true;
+
+    const tskt: TriggeredSkt = .{
+        .accept = accSkt,
+    };
+    tcptr.*.tskt = tskt;
+
+    return;
+}
+
 pub fn deinit(tchn: *TriggeredChannel) void {
     defer tchn.remove();
 
@@ -92,8 +112,9 @@ pub fn deinit(tchn: *TriggeredChannel) void {
         }
     }
 
+    defer tchn.tskt.deinit();
+
     if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
-        tchn.tskt.deinit();
         return;
     }
 
@@ -107,29 +128,25 @@ pub fn deinit(tchn: *TriggeredChannel) void {
         next = mq.dequeue();
     }
 
-    const statusMsgUn = tchn.prnt.pool.get(.always);
-    if (statusMsgUn) |statusMsg| {
-        statusMsg.bhdr.channel_number = tchn.acn.chn;
-        statusMsg.bhdr.message_id = tchn.acn.mid;
-        statusMsg.bhdr.proto.origin = .engine;
-        statusMsg.bhdr.status = status.status_to_raw(.channel_closed);
+    var statusMsg = tchn.prnt.buildStatusSignal(.channel_closed);
 
-        switch (tchn.acn.intr.?) {
-            .WelcomeRequest => {}, // Accept skt
-            .WelcomeSignal => {}, // Accept skt
-            .HelloRequest => {}, // IO skt client
-            .HelloSignal => {}, // IO skt client
-            else => {}, // IO skt server
-        }
+    statusMsg.bhdr.channel_number = tchn.acn.chn;
+    statusMsg.bhdr.message_id = tchn.acn.mid;
 
-        statusMsg.bhdr.proto.role = .signal;
+    // 2DO Move processing of intr to another place
+    // switch (tchn.acn.intr.?) {
+    //     .WelcomeRequest => {}, // Accept skt
+    //     .WelcomeSignal => {}, // Accept skt
+    //     .HelloRequest => {}, // IO skt client
+    //     .HelloSignal => {}, // IO skt client
+    //     else => {}, // IO skt server
+    // }
 
-        var responseToCtx: ?*Message = statusMsg;
+    var responseToCtx: ?*Message = statusMsg;
 
-        tchn.sendToCtx(&responseToCtx);
-    } else |_| {}
+    tchn.sendToCtx(&responseToCtx);
 
-    tchn.tskt.deinit();
+    return;
 }
 
 pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {

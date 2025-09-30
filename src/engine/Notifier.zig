@@ -97,16 +97,16 @@ pub fn init(allocator: Allocator) !Notifier {
     var senderSkt = try SCreator.createUdsSocket(socket_file);
     errdefer senderSkt.deinit();
 
-    _ = try waitConnect(senderSkt.socket);
+    _ = try waitConnect(senderSkt.socket.?);
 
-    try posix.connect(senderSkt.socket, &listSkt.address.any, listSkt.address.getOsSockLen());
+    try posix.connect(senderSkt.socket.?, &listSkt.address.any, listSkt.address.getOsSockLen());
 
     // Accept a sender connection - create receiver socket
-    const receiver_fd = try posix.accept(listSkt.socket, null, null, posix.SOCK.NONBLOCK);
+    const receiver_fd = try posix.accept(listSkt.socket.?, null, null, posix.SOCK.NONBLOCK);
     errdefer posix.close(receiver_fd);
 
     return .{
-        .sender = senderSkt.socket,
+        .sender = senderSkt.socket.?,
         .receiver = receiver_fd,
     };
 }

@@ -591,6 +591,14 @@ fn alerter(dtr: *Distributor) Notifier.Alerter {
     return result;
 }
 
+pub fn addChannel(dtr: *Distributor, tchn: TriggeredChannel) AmpeError!void {
+    dtr.trgrd_map.put(tchn.acn.chn, tchn) catch {
+        return AmpeError.AllocationFailed;
+    };
+    dtr.cnmapChanged = true;
+    return;
+}
+
 pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
 
 pub const Iterator = struct {

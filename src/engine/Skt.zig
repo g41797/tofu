@@ -3,7 +3,7 @@
 
 pub const Skt = @This();
 
-socket: std.posix.socket_t = undefined,
+socket: ?std.posix.socket_t = null,
 address: std.net.Address = undefined,
 server: bool = false,
 
@@ -13,12 +13,12 @@ pub fn listen(skt: *Skt) !void {
 
     const kernel_backlog = 64;
     try skt.setREUSE();
-    try posix.bind(skt.socket, &skt.address.any, skt.address.getOsSockLen());
-    try posix.listen(skt.socket, kernel_backlog);
+    try posix.bind(skt.socket.?, &skt.address.any, skt.address.getOsSockLen());
+    try posix.listen(skt.socket.?, kernel_backlog);
 
     // set address to the OS-chosen information - check for UDS!!!.
     var slen: posix.socklen_t = skt.address.getOsSockLen();
-    try posix.getsockname(skt.socket, &skt.address.any, &slen);
+    try posix.getsockname(skt.socket.?, &skt.address.any, &slen);
 
     return;
 }
@@ -45,7 +45,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
             else => return AmpeError.CommunicationFailed,
         }
     };
-    errdefer posix.close(skt.socket);
+    errdefer skt.close();
 
     skt.address = addr;
 
@@ -53,14 +53,14 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 }
 
 pub fn connect(skt: *Skt) AmpeError!bool {
-    if (isAlreadyConnected(skt.socket)) {
+    if (isAlreadyConnected(skt.socket.?)) {
         return true;
     }
 
     var connected = true;
 
     connectPosix(
-        skt.socket,
+        skt.socket.?,
         &skt.address.any,
         skt.address.getOsSockLen(),
     ) catch |e| switch (e) {
@@ -77,7 +77,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
     };
 
     if (connected) {
-        log.debug("CONNECTED FD {x}", .{skt.socket});
+        log.debug("CONNECTED FD {x}", .{skt.socket.?});
     }
     return connected;
 }
@@ -86,11 +86,11 @@ pub fn setREUSE(skt: *Skt) !void {
     switch (skt.address.any.family) {
         std.posix.AF.INET, std.posix.AF.INET6 => {
             if (@hasDecl(std.posix.SO, "REUSEPORT_LB")) {
-                try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT_LB, &std.mem.toBytes(@as(c_int, 1)));
+                try std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT_LB, &std.mem.toBytes(@as(c_int, 1)));
             } else if (@hasDecl(std.posix.SO, "REUSEPORT")) {
-                try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
+                try std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
             }
-            try std.posix.setsockopt(skt.socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
+            try std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
         },
         else => return,
     }
@@ -102,7 +102,7 @@ pub fn disableNagle(skt: *Skt) !void {
             // try disable Nagle
             // const tcp_nodelay: c_int = 0;
             // try os.setsockopt(skt.socket, os.IPPROTO.TCP, os.TCP.NODELAY, mem.asBytes(&tcp_nodelay));
-            try disable_nagle(skt.socket);
+            try disable_nagle(skt.socket.?);
         },
         else => return,
     }
@@ -127,7 +127,14 @@ fn deleteUDSPath(skt: *Skt) void {
 
 pub fn deinit(skt: *Skt) void {
     skt.deleteUDSPath();
-    posix.close(skt.socket);
+    skt.close();
+}
+
+pub fn close(skt: *Skt) void {
+    if (skt.socket) |socket| {
+        posix.close(socket);
+        skt.socket = null;
+    }
 }
 
 pub fn knock(socket: std.posix.socket_t) bool {

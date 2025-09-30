@@ -175,7 +175,7 @@ pub fn waitConnect(client: posix.socket_t) !bool {
             },
             else => @compileError("Unsupported OS: waitConnect is only implemented for Linux (poll) and macOS (kqueue)."),
         }
-    } else { //chatgpt version
+    } else { chatgpt version
         if (builtin.os.tag == .linux) {
             return waitConnectLinux(client);
         } else if (builtin.os.tag == .macos) {
@@ -317,4 +317,33 @@ pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
         ch.mrk4del = true;
     }
     return;
+}
+
+
+pub fn addDumbChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
+     var dcn = TriggeredChannel.createDumbChannel(dtr);
+
+     dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
+
+     try dtr.addChannel(dcn);
+
+     return;
+}
+
+pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
+     var cnfgr: Configurator = Configurator.fromMessage(dtr.currMsg.?);
+
+     if (cnfgr.isWrong()) {
+         return AmpeError.WrongConfiguration;
+     }
+
+     var dcn = TriggeredChannel.createDumbChannel(dtr);
+
+     dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
+
+     dtr.trgrd_map.put(chN, dcn) catch {
+         return AmpeError.AllocationFailed;
+     };
+
+     return;
 }

@@ -86,6 +86,9 @@ pub const Poll = struct {
 
         while (tcptr != null) {
             const tc = tcptr.?;
+
+            tc.disableDelete();
+
             tcptr = pl.it.?.next();
 
             tc.exp = try tc.tskt.triggers();

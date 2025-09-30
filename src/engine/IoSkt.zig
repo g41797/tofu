@@ -95,7 +95,7 @@ pub fn triggers(ioskt: *IoSkt) !Triggers {
 }
 
 pub inline fn getSocket(self: *IoSkt) Socket {
-    return self.skt.socket;
+    return self.skt.socket.?;
 }
 
 pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
@@ -124,8 +124,8 @@ pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
 }
 
 fn postConnect(ioskt: *IoSkt) void {
-    ioskt.currSend.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
-    ioskt.currRecv.set(ioskt.cn, ioskt.skt.socket) catch unreachable;
+    ioskt.currSend.set(ioskt.cn, ioskt.skt.socket.?) catch unreachable;
+    ioskt.currRecv.set(ioskt.cn, ioskt.skt.socket.?) catch unreachable;
 
     ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable;
     ioskt.alreadySend = null;

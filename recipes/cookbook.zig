@@ -255,6 +255,43 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     return status.raw_to_error(st);
 }
 
+pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 1, // just for example
+        .maxPoolMsgs = 16, // just for example
+    };
+
+    var dtr = try Distributor.Create(gpa, options);
+    defer dtr.Destroy();
+    const ampe = try dtr.ampe();
+
+    const mchgr = try ampe.create();
+    defer destroyMcg(ampe, mchgr);
+
+    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
+    defer mchgr.put(&msg);
+
+    // MessageType.welcome should contain ip address and port of listening server.
+
+    // Configuration is dedicated 'TextHeader' added to TextHeaders of the message.
+    // tofu has helper objects (ok - structs) for creation of configuration in required format.
+    // Let's suppose our listening TCP server has wrong IP address "192.128.4.5" and port 3298.
+    // We are going to use helpers for creation of server configuration within welcome request.
+
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("192.128.4.5", 3298) };
+
+    // Appends configuration to TextHeaders of the message
+    try cnfg.prepareRequest(msg.?);
+
+    _ = try mchgr.asyncSend(&msg);
+
+    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    const st = recvMsg.?.bhdr.status;
+    mchgr.put(&recvMsg);
+    return status.raw_to_error(st);
+}
+
 // Helper function - allows to destroy MessageChannelGroup using defer
 // It's OK for the test and go-no-go examples.
 // In production, MessageChannelGroup is long life "object" and you will
