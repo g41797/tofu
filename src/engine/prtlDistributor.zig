@@ -4,6 +4,13 @@
 pub fn sendHello(dtr: *Distributor) !void {
     TriggeredChannel.createIoClientChannel(dtr) catch |err| {
         const st = status.errorToStatus(err);
+        if (dtr.currMsg.?.bhdr.proto.role == .request) {
+            dtr.currMsg.?.bhdr.proto.role = .response;
+        } else {
+            dtr.currMsg.?.bhdr.proto.role = .signal;
+            dtr.currMsg.?.bhdr.proto.mtype = .regular;
+        }
+
         dtr.responseFailure(st) catch {};
         return;
     };

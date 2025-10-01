@@ -49,6 +49,18 @@ test "send illegal messages" {
     };
 }
 
+test "connect/disconnect" {
+    std.testing.log_level = .debug;
+
+    const listenStatus = recipes.handleStartOfTcpServerAkaListener(gpa) catch |err| {
+        log.debug("handleStartOfTcpServerAkaListener {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(listenStatus == .success);
+}
+
 const tofu = @import("tofu");
 
 const recipes = @import("recipes");

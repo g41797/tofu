@@ -667,12 +667,12 @@ pub fn clearQueue(queue: *MessageQueue) void {
     }
 }
 
-const Appendable = @import("nats").Appendable;
+pub const Appendable = @import("nats").Appendable;
 
-const status = @import("status.zig");
-const AmpeStatus = status.AmpeStatus;
-const AmpeError = status.AmpeError;
-const status_to_raw = status.status_to_raw;
+pub const status = @import("status.zig");
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
+pub const status_to_raw = status.status_to_raw;
 
 const std = @import("std");
 const builtin = @import("builtin");

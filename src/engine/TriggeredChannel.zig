@@ -86,7 +86,6 @@ pub fn createAcceptChannel(dtr: *Distributor) AmpeError!void {
     errdefer accSkt.deinit();
 
     accSkt = try sockets.AcceptSkt.init(welcome, &sc);
-    dtr.currMsg = null;
 
     const tcptr = dtr.trgrd_map.getPtr(welcome.bhdr.channel_number).?;
     tcptr.disableDelete();
@@ -96,6 +95,13 @@ pub fn createAcceptChannel(dtr: *Distributor) AmpeError!void {
         .accept = accSkt,
     };
     tcptr.*.tskt = tskt;
+
+    // Listener started, so we can send succ. status to the caller.
+    if (tcptr.*.acn.intr.?.role == .request) {
+        dtr.currMsg.?.bhdr.proto.role = .response;
+        dtr.currMsg.?.bhdr.status = 0;
+        tcptr.sendToCtx(&dtr.currMsg);
+    }
 
     return;
 }

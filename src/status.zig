@@ -105,7 +105,7 @@ pub fn errorToStatus(err: AmpeError) AmpeStatus {
 
 pub inline fn raw_to_status(rs: u8) AmpeStatus {
     if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
-        return .UnknownError;
+        return .unknown_error;
     }
     return @enumFromInt(rs);
 }

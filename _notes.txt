@@ -320,3 +320,6 @@ Relearn
 
 SIGPIPE when trying to serve file in an HTTP server with sendFile
     https://discord.com/channels/605571803288698900/1412812874178363519/1412812874178363519
+
+Working with writer = stream.writer(&w_buf).interface
+    https://discord.com/channels/605571803288698900/1422544826339037245/1422760119049126002

@@ -1,5 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const log = std.log;
+const assert = std.debug.assert;
 
 pub const tofu = @import("tofu");
 pub const Distributor = tofu.Distributor;
@@ -9,6 +11,9 @@ pub const configurator = tofu.configurator;
 pub const Configurator = configurator.Configurator;
 pub const TCPClientConfigurator = configurator.TCPClientConfigurator;
 pub const status = tofu.status;
+pub const message = tofu.message;
+pub const BinaryHeader = message.BinaryHeader;
+pub const Message = message.Message;
 
 const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
@@ -290,6 +295,63 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     const st = recvMsg.?.bhdr.status;
     mchgr.put(&recvMsg);
     return status.raw_to_error(st);
+}
+
+pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 1, // just for example
+        .maxPoolMsgs = 16, // just for example
+    };
+
+    var dtr = try Distributor.Create(gpa, options);
+    defer dtr.Destroy();
+    const ampe = try dtr.ampe();
+
+    const mchgr = try ampe.create();
+    defer destroyMcg(ampe, mchgr);
+
+    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
+    defer mchgr.put(&msg);
+
+    // MessageType.welcome should contain ip address and port of listening server.
+
+    // Configuration is dedicated 'TextHeader' added to TextHeaders of the message.
+    // tofu has helper structs for creation of configuration in required format.
+    // Let's suppose our TCP server listens on all available network interfaces (IPv4 address "0.0.0.0" and port 32984.
+    // We are going to use helpers for creation of server configuration within welcome request.
+
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+
+    // Appends configuration to TextHeaders of the message
+    try cnfg.prepareRequest(msg.?);
+
+    const corrInfo: message.BinaryHeader = try mchgr.asyncSend(&msg);
+    log.debug("Listen will start on channel {d} ", .{corrInfo.channel_number});
+
+    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    // Don't forget return message to the pool:
+    defer mchgr.put(&recvMsg);
+
+    const st = recvMsg.?.bhdr.status;
+
+    // Received message should contain the same channel number
+    assert(corrInfo.channel_number == recvMsg.?.bhdr.channel_number);
+
+    // Because we send 'WelcomeRequest', received message should be 'WelcomeResponse'
+    // with status of listen (success or failure).
+    // We also may send 'WelcomeSignal'. As result we will get Signal with error
+    // status only for failed listen.
+    assert(recvMsg.?.bhdr.proto.mtype == .welcome);
+    assert(recvMsg.?.bhdr.proto.role == .response);
+
+    // We don't close this channel explicitly.
+    // It will be closed during destroy of MessageChannelGroup
+    // see 'defer destroyMcg(ampe, mchgr)' above.
+
+    // raw_to_status converts status byte (u8) from binary header
+    // to AmpeStatus enum for your convenience.
+    return status.raw_to_status(st);
 }
 
 // Helper function - allows to destroy MessageChannelGroup using defer
