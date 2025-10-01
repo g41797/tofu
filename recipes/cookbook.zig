@@ -298,6 +298,45 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 }
 
 pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
+
+    // WelcomeRequest for TCP/IP server should contain ip address and port of listening server.
+
+    // Configuration is dedicated 'TextHeader' added to TextHeaders of the message.
+    // tofu has helper structs for creation of configuration in required format.
+    // Let's suppose our TCP server listens on all available network interfaces (IPv4 address "0.0.0.0" and port 32984.
+    // We are going to use helpers for creation of server configuration within welcome request.
+
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+
+    return handleStartOfListener(gpa, &cnfg);
+}
+
+pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
+
+    // "Unlike network sockets that use IP addresses and port numbers,
+    // UDS utilizes a file path within the local file system to facilitate
+    // inter-process communication (IPC) on the same machine."
+    //
+    // => WelcomeRequest for UDS server should contain file path.
+    //
+    // For testing purposes tofu has helper for creation of such (temporary) file.
+
+    var tup: tofu.Notifier.TempUdsPath = .{};
+
+    const filePath = try tup.buildPath(gpa);
+
+    // Create configurator for UDS Server
+    var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
+
+    // Call the same code used also for TCP/IP server
+    return handleStartOfListener(gpa, &cnfg);
+}
+
+pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeStatus {
+
+    // The same code is used for both TCP amd UDS servers
+    // Only configuration is different.
+
     const options: tofu.Options = .{
         .initialPoolMsgs = 1, // just for example
         .maxPoolMsgs = 16, // just for example
@@ -312,15 +351,6 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
 
     var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
     defer mchgr.put(&msg);
-
-    // MessageType.welcome should contain ip address and port of listening server.
-
-    // Configuration is dedicated 'TextHeader' added to TextHeaders of the message.
-    // tofu has helper structs for creation of configuration in required format.
-    // Let's suppose our TCP server listens on all available network interfaces (IPv4 address "0.0.0.0" and port 32984.
-    // We are going to use helpers for creation of server configuration within welcome request.
-
-    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
 
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
@@ -354,10 +384,128 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     return status.raw_to_status(st);
 }
 
+pub fn handleConnnectOfTcpClientServer(gpa: Allocator) !status.AmpeStatus {
+
+    // Both server and client are on the localhost
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
+
+    return handleConnect(gpa, &srvCfg, &cltCfg);
+}
+
+pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) !status.AmpeStatus {
+
+    // The same code is used for both TCP amd UDS client/server
+    // Only configurations are different.
+    // Of course configurations should be or for TCP client/server or for UDS ones.
+
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 1, // just for example
+        .maxPoolMsgs = 16, // just for example
+    };
+
+    var dtr = try Distributor.Create(gpa, options);
+    defer dtr.Destroy();
+    const ampe = try dtr.ampe();
+
+    // For simplicity we create separated groups for the client and server.
+    // You can create and use the same group for clients and servers simultaneously.
+    const srvMchgr = try ampe.create();
+
+    // We don't close this channel explicitly.
+    // It will be closed during destroy of it's MessageChannelGroup
+    defer destroyMcg(ampe, srvMchgr);
+
+    var welcome = try srvMchgr.get(tofu.AllocationStrategy.poolOnly);
+
+    // If message was send to engine, welcome will be null.
+    // It's safe to put null message to the pool.
+    // For failed send, message will be returned to the pool.
+    defer srvMchgr.put(&welcome);
+
+    // Appends configuration to TextHeaders of the message
+    try srvCfg.prepareRequest(welcome.?);
+
+    const srvCorrInfo: message.BinaryHeader = try srvMchgr.asyncSend(&welcome);
+    log.debug("Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
+
+    var welcomeResp = try srvMchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    // Don't forget return message to the pool:
+    defer srvMchgr.put(&welcomeResp);
+
+    var st = welcomeResp.?.bhdr.status;
+
+    // Received message should contain the same channel number
+    assert(srvCorrInfo.channel_number == welcomeResp.?.bhdr.channel_number);
+
+    // Because we send 'WelcomeRequest', received message should be 'WelcomeResponse'
+    // with status of listen (success or failure).
+    // We also may send 'WelcomeSignal'. As result we will get Signal with error
+    // status only for failed listen.
+    assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
+    assert(welcomeResp.?.bhdr.proto.role == .response);
+
+    // For simplicity we also started listener before connect.
+    //
+    // In production client code should check connect status
+    // and retry connect to the server.
+    //
+    // tofu does not support automatic re-connection
+    // for ideological reasons.
+
+    // In order to connect we will done almost the same boring
+    // calls that were done for the listener.
+    // tofu is boring, most of the time you will work with structs
+    // instead of playing with super-duper APIs
+
+    const cltMchgr = try ampe.create();
+    defer destroyMcg(ampe, cltMchgr);
+    var hello = try cltMchgr.get(tofu.AllocationStrategy.poolOnly);
+
+    // Pay attention, that both groups use the same pool.
+    // get/put functions were added to the message group for convenience.
+    // Pool belongs to engine and shared between all message channel groups.
+    defer cltMchgr.put(&hello);
+
+
+    // Appends configuration to TextHeaders of the message
+    try cltCfg.prepareRequest(welcome.?);
+
+    const cltCorrInfo: message.BinaryHeader = try cltMchgr.asyncSend(&hello);
+    log.debug("Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
+
+    // It should be different channels, because channels also belong to engine
+    assert(cltCorrInfo.channel_number != srvCorrInfo.channel_number);
+
+    var helloResp = try cltMchgr.waitReceive(INFINITE_TIMEOUT_MS);
+
+    // Don't forget return message to the pool:
+    defer cltMchgr.put(&helloResp);
+
+    st = helloResp.?.bhdr.status;
+
+    // Received message should contain the same channel number
+    assert(cltCorrInfo.channel_number == helloResp.?.bhdr.channel_number);
+
+    // Because we send 'HelloRequest', received message should be 'HelloResponse'
+    // - from engine with error status for the failure
+    // - from server side if connect + send HelloRequest were successful.
+    // We also may send 'HelloSignal'. As result we will get Signal with error
+    // status only for failed connect.
+    assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
+    assert(welcomeResp.?.bhdr.proto.role == .response);
+
+
+    // raw_to_status converts status byte (u8) from binary header
+    // to AmpeStatus enum for your convenience.
+    return status.raw_to_status(st);
+}
+
 // Helper function - allows to destroy MessageChannelGroup using defer
 // It's OK for the test and go-no-go examples.
 // In production, MessageChannelGroup is long life "object" and you will
-// use other approach for the destroy (at least you need to handle possible failure)
+// use different approach for the destroy (at least you need to handle possible failure)
 pub fn destroyMcg(ampe: tofu.Ampe, mcg: tofu.MessageChannelGroup) void {
     ampe.destroy(mcg) catch {};
 }
