@@ -323,3 +323,9 @@ SIGPIPE when trying to serve file in an HTTP server with sendFile
 
 Working with writer = stream.writer(&w_buf).interface
     https://discord.com/channels/605571803288698900/1422544826339037245/1422760119049126002
+
+Kraiklyn hugo theme
+    https://themes.gohugo.io/themes/kraiklyn/
+
+    cd docs
+    git submodule add --depth 1 https://github.com/jsnjack/kraiklyn.git themes/kraiklyn
