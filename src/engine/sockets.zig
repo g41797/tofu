@@ -1,39 +1,34 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const Triggers = @import("triggeredSkts.zig").Triggers;
-pub const TriggersOff = @import("triggeredSkts.zig").TriggersOff;
-pub const UnpackedTriggers = @import("triggeredSkts.zig").UnpackedTriggers;
+const tofu = @import("tofu");
 
-pub const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
-pub const NotificationSkt = @import("triggeredSkts.zig").NotificationSkt;
-pub const AcceptSkt = @import("triggeredSkts.zig").AcceptSkt;
-
-pub const IoSkt = @import("IoSkt.zig");
-pub const MsgSender = @import("MsgSender.zig");
-pub const MsgReceiver = @import("MsgReceiver.zig");
-
-pub const Skt = @import("Skt.zig");
-pub const SocketCreator = @import("SocketCreator.zig");
-
-const message = @import("../message.zig");
+const message = tofu.message;
 pub const Trigger = message.Trigger;
-
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
-
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
+const Engine = tofu.Engine;
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
 
-const Distributor = @import("Distributor.zig");
+const internal = @import("../internal.zig");
 
-const DBG = @import("../engine.zig").DBG;
-
-const AmpeError = @import("../status.zig").AmpeError;
-
-const Pool = @import("Pool.zig");
-const Notifier = @import("Notifier.zig");
+pub const Triggers = internal.triggeredSkts.Triggers;
+pub const TriggersOff = internal.triggeredSkts.TriggersOff;
+pub const UnpackedTriggers = internal.triggeredSkts.UnpackedTriggers;
+pub const TriggeredSkt = internal.triggeredSkts.TriggeredSkt;
+pub const NotificationSkt = internal.triggeredSkts.NotificationSkt;
+pub const AcceptSkt = internal.triggeredSkts.AcceptSkt;
+pub const IoSkt = internal.IoSkt;
+pub const MsgSender = internal.MsgSender;
+pub const MsgReceiver = internal.MsgReceiver;
+pub const Skt = internal.Skt;
+pub const SocketCreator = internal.SocketCreator;
+const Pool = internal.Pool;
+const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
 const Appendable = @import("nats").Appendable;

@@ -179,7 +179,7 @@ pub const Exchanger = struct {
     }
 
     pub fn waitConnectClient(exc: *Exchanger) !void {
-        var it = Distributor.Iterator.init(&exc.tcm.?);
+        var it = Engine.Iterator.init(&exc.tcm.?);
 
         var trgrs: sockets.Triggers = .{};
 
@@ -232,7 +232,7 @@ pub const Exchanger = struct {
 
                     try exc.tcm.?.put(exc.srvCN, srv);
 
-                    it = Distributor.Iterator.init(&exc.tcm.?);
+                    it = Engine.Iterator.init(&exc.tcm.?);
 
                     serverReady = true;
                     log.debug("wait connected client - server ready", .{});
@@ -323,7 +323,7 @@ pub const Exchanger = struct {
             return;
         }
 
-        const it = Distributor.Iterator.init(&exc.tcm.?);
+        const it = Engine.Iterator.init(&exc.tcm.?);
 
         var loop: usize = 1;
 
@@ -391,7 +391,7 @@ pub const Exchanger = struct {
     }
 
     fn closeChannels(exc: *Exchanger) void {
-        var it = Distributor.Iterator.init(&exc.tcm.?);
+        var it = Engine.Iterator.init(&exc.tcm.?);
 
         var next = it.next();
 
@@ -516,9 +516,9 @@ const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 const CN = message.ChannelNumber;
 
-const Distributor = tofu.Distributor;
-const TCM = Distributor.TriggeredChannelsMap;
-const TC = Distributor.TriggeredChannel;
+const Engine = tofu.Engine;
+const TCM = Engine.TriggeredChannelsMap;
+const TC = Engine.TriggeredChannel;
 
 const poller = tofu.poller;
 const Poller = poller.Poller;

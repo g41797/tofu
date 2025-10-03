@@ -5,7 +5,7 @@ pub const Poller = union(enum) {
     poll: Poll,
 
     // it == null means iterator was not changed since previous call, use saved
-    pub fn waitTriggers(self: *Poller, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(self: *Poller, it: ?Engine.Iterator, timeout: i32) AmpeError!Triggers {
         const ret = switch (self.*) {
             .poll => try self.*.poll.waitTriggers(it, timeout),
         };
@@ -29,7 +29,7 @@ pub const Poller = union(enum) {
 pub const Poll = struct {
     allocator: Allocator = undefined,
     pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
-    it: ?Distributor.Iterator = null,
+    it: ?Engine.Iterator = null,
 
     pub fn init(allocator: Allocator) !Poll {
         var ret: Poll = .{
@@ -49,7 +49,7 @@ pub const Poll = struct {
         return;
     }
 
-    pub fn waitTriggers(pl: *Poll, it: ?Distributor.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(pl: *Poll, it: ?Engine.Iterator, timeout: i32) AmpeError!Triggers {
         // const pl: *Poll = @alignCast(@ptrCast(ptr));
 
         if ((pl.it == null) and (it == null)) {
@@ -218,12 +218,13 @@ pub const Poll = struct {
 
 const err_mask = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
 
-const DBG = @import("../engine.zig").DBG;
+const tofu = @import("tofu");
+const DBG = tofu.DBG;
 
-pub const AmpeError = @import("../status.zig").AmpeError;
+pub const AmpeError = tofu.status.AmpeError;
 
-pub const ChannelNumber = @import("../message.zig").ChannelNumber;
-pub const MessageID = @import("../message.zig").MessageID;
+pub const ChannelNumber = tofu.message.ChannelNumber;
+pub const MessageID = tofu.message.MessageID;
 
 const sockets = @import("sockets.zig");
 const Skt = sockets.Skt;
@@ -233,10 +234,9 @@ const TriggeredSkt = sockets.TriggeredSkt;
 
 const ActiveChannel = @import("channels.zig").ActiveChannel;
 
-const Distributor = @import("Distributor.zig");
-const TriggeredChannel = Distributor.TriggeredChannel;
-const TriggeredChannelsMap = Distributor.TriggeredChannelsMap;
-const WaitTriggers = Distributor.WaitTriggers;
+const Engine = tofu.Engine;
+const TriggeredChannel = Engine.TriggeredChannel;
+const TriggeredChannelsMap = Engine.TriggeredChannelsMap;
 
 const std = @import("std");
 const assert = std.debug.assert;

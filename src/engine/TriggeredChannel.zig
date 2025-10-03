@@ -3,7 +3,7 @@
 
 pub const TriggeredChannel = @This();
 
-prnt: *Distributor = undefined,
+prnt: *Engine = undefined,
 acn: channels.ActiveChannel = undefined,
 resp2ac: bool = undefined,
 tskt: TriggeredSkt = undefined,
@@ -12,8 +12,8 @@ act: sockets.Triggers = undefined,
 mrk4del: bool = undefined,
 st: ?AmpeStatus = undefined,
 
-pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
-    const ret: Distributor.TriggeredChannel = .{
+pub fn createDumbChannel(prnt: *Engine) TriggeredChannel {
+    const ret: TriggeredChannel = .{
         .prnt = prnt,
         .acn = .{
             .chn = 0,
@@ -32,7 +32,7 @@ pub fn createDumbChannel(prnt: *Distributor) TriggeredChannel {
     return ret;
 }
 
-pub fn createNotificationChannel(prnt: *Distributor) !void {
+pub fn createNotificationChannel(prnt: *Engine) !void {
     var ntcn = createDumbChannel(prnt);
     ntcn.resp2ac = true;
     ntcn.tskt = .{
@@ -46,22 +46,22 @@ pub fn createNotificationChannel(prnt: *Distributor) !void {
     return;
 }
 
-pub fn createIoClientChannel(dtr: *Distributor) AmpeError!void {
-    const hello: *Message = dtr.currMsg.?;
+pub fn createIoClientChannel(eng: *Engine) AmpeError!void {
+    const hello: *Message = eng.currMsg.?;
 
-    var tc = createDumbChannel(dtr);
-    tc.acn = dtr.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
+    var tc = createDumbChannel(eng);
+    tc.acn = eng.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
 
-    try dtr.addChannel(tc);
+    try eng.addChannel(tc);
 
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(dtr.allocator);
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(eng.allocator);
     var clSkt: sockets.IoSkt = .{};
     errdefer clSkt.deinit();
 
-    try clSkt.initClientSide(&dtr.pool, hello, &sc);
-    dtr.currMsg = null;
+    try clSkt.initClientSide(&eng.pool, hello, &sc);
+    eng.currMsg = null;
 
-    const tcptr = dtr.trgrd_map.getPtr(hello.bhdr.channel_number).?;
+    const tcptr = eng.trgrd_map.getPtr(hello.bhdr.channel_number).?;
     tcptr.disableDelete();
     tcptr.*.resp2ac = true;
 
@@ -73,21 +73,21 @@ pub fn createIoClientChannel(dtr: *Distributor) AmpeError!void {
     return;
 }
 
-pub fn createAcceptChannel(dtr: *Distributor) AmpeError!void {
-    const welcome: *Message = dtr.currMsg.?;
+pub fn createAcceptChannel(eng: *Engine) AmpeError!void {
+    const welcome: *Message = eng.currMsg.?;
 
-    var tc = createDumbChannel(dtr);
-    tc.acn = dtr.*.acns.activeChannel(welcome.bhdr.channel_number) catch unreachable;
+    var tc = createDumbChannel(eng);
+    tc.acn = eng.*.acns.activeChannel(welcome.bhdr.channel_number) catch unreachable;
 
-    try dtr.addChannel(tc);
+    try eng.addChannel(tc);
 
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(dtr.allocator);
+    var sc: sockets.SocketCreator = sockets.SocketCreator.init(eng.allocator);
     var accSkt: sockets.AcceptSkt = .{};
     errdefer accSkt.deinit();
 
     accSkt = try sockets.AcceptSkt.init(welcome, &sc);
 
-    const tcptr = dtr.trgrd_map.getPtr(welcome.bhdr.channel_number).?;
+    const tcptr = eng.trgrd_map.getPtr(welcome.bhdr.channel_number).?;
     tcptr.disableDelete();
     tcptr.*.resp2ac = true;
 
@@ -98,9 +98,9 @@ pub fn createAcceptChannel(dtr: *Distributor) AmpeError!void {
 
     // Listener started, so we can send succ. status to the caller.
     if (tcptr.*.acn.intr.?.role == .request) {
-        dtr.currMsg.?.bhdr.proto.role = .response;
-        dtr.currMsg.?.bhdr.status = 0;
-        tcptr.sendToCtx(&dtr.currMsg);
+        eng.currMsg.?.bhdr.proto.role = .response;
+        eng.currMsg.?.bhdr.status = 0;
+        tcptr.sendToCtx(&eng.currMsg);
     }
 
     return;
@@ -166,7 +166,7 @@ pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {
         return;
     }
 
-    Gate.sendToWaiter(tchn.acn.ctx.?, storedMsg) catch {};
+    MchnGroup.sendToWaiter(tchn.acn.ctx.?, storedMsg) catch {};
 
     return;
 }
@@ -191,10 +191,14 @@ pub inline fn disableDelete(tchn: *TriggeredChannel) void {
     tchn.st = null;
 }
 
-const configurator = @import("../configurator.zig");
+const tofu = @import("tofu");
+
+const Engine = tofu.Engine;
+
+const configurator = tofu.configurator;
 const Configurator = configurator.Configurator;
 
-const message = @import("../message.zig");
+const message = tofu.message;
 const MessageType = message.MessageType;
 const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
@@ -202,45 +206,38 @@ const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
 const BinaryHeader = message.BinaryHeader;
 const TextHeader = message.TextHeader;
-const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
+const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 
-const engine = @import("../engine.zig");
-const Options = engine.Options;
-const Ampe = engine.Ampe;
-const MessageChannelGroup = engine.MessageChannelGroup;
+const Options = tofu.Options;
+const Ampe = tofu.Ampe;
 
-const status = @import("../status.zig");
+const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const Notifier = @import("Notifier.zig");
+const internal = @import("../internal.zig");
+const MchnGroup = internal.MchnGroup;
 
-const Pool = @import("Pool.zig");
-
-const channels = @import("channels.zig");
+const Notifier = internal.Notifier;
+const Pool = internal.Pool;
+const channels = internal.channels;
 const ActiveChannels = channels.ActiveChannels;
-
-const sockets = @import("sockets.zig");
-const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
-const DumbSkt = @import("triggeredSkts.zig").DumbSkt;
-
-const Gate = @import("Gate.zig");
-
-const poller = @import("poller.zig");
+const sockets = internal.sockets;
+const TriggeredSkt = internal.triggeredSkts.TriggeredSkt;
+const DumbSkt = internal.triggeredSkts.DumbSkt;
+const poller = internal.poller;
 
 const Appendable = @import("nats").Appendable;
 
 const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);
-
-const Distributor = @import("Distributor.zig");
 
 const std = @import("std");
 const builtin = @import("builtin");

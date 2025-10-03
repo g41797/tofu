@@ -656,9 +656,6 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
     return true;
 }
 
-/// Structure for managing a queue of messages in a FIFO order.
-pub const MessageQueue = @import("engine/IntrusiveQueue.zig").IntrusiveQueue(Message);
-
 pub fn clearQueue(queue: *MessageQueue) void {
     var next = queue.dequeue();
     while (next != null) {
@@ -669,7 +666,13 @@ pub fn clearQueue(queue: *MessageQueue) void {
 
 pub const Appendable = @import("nats").Appendable;
 
-pub const status = @import("status.zig");
+const tofu = @import("engine.zig");
+const message = tofu.message;
+
+/// Structure for managing a queue of messages in a FIFO order.
+pub const MessageQueue = @import("engine/IntrusiveQueue.zig").IntrusiveQueue(Message);
+
+pub const status = tofu.status;
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
 pub const status_to_raw = status.status_to_raw;
@@ -685,4 +688,4 @@ const AtomicOrder = std.builtin.AtomicOrder;
 const AtomicRmwOp = std.builtin.AtomicRmwOp;
 
 const log = std.log;
-const DBG = @import("engine.zig").DBG;
+const DBG = tofu.DBG;

@@ -178,14 +178,16 @@ pub fn sendBufTo(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
     return wasSend;
 }
 
-const message = @import("../message.zig");
+const tofu = @import("tofu");
+const message = tofu.message;
+
 const Trigger = message.Trigger;
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
 const MessageID = message.MessageID;
-const DBG = @import("../engine.zig").DBG;
-const AmpeError = @import("../status.zig").AmpeError;
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
 
 const std = @import("std");
 const assert = std.debug.assert;

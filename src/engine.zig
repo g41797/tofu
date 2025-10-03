@@ -2,10 +2,29 @@
 // SPDX-License-Identifier: MIT
 
 /// Represents an asynchronous message passing engine interface.
-/// Provides methods to create and destroy message channel groups for communication.
+/// Provides methods to
+/// - manage pool of the messages
+/// - create and destroy message channel groups
 pub const Ampe = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.AmpeVTable,
+
+    /// Retrieves a message from the internal pool based on the specified allocation strategy.
+    /// Returns null if the pool is empty and the strategy is poolOnly.
+    /// Returns an error during ampe shutdown or if allocation failed.
+    /// Thread-safe.
+    pub fn get(ampe: Ampe, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
+        return ampe.vtable.get(ampe.ptr, strategy);
+    }
+
+    /// Returns a message to the internal pool. If the pool is closed, destroys the message.
+    /// Sets msg to null for preventing further usage.
+    /// For safe destroying - use message.DestroySendMsg(msg),
+    /// where msg: *?*message.Message (see  asyncSend comment in MessageChannelGroup).
+    /// Thread-safe.
+    pub fn put(ampe: Ampe, msg: *?*message.Message) void {
+        ampe.vtable.put(ampe.ptr, msg);
+    }
 
     /// Creates a new message channel group.
     /// Call `destroy` on the result to stop communication and free associated memory.
@@ -36,23 +55,6 @@ pub const MessageChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.MCGVTable,
 
-    /// Retrieves a message from the internal pool based on the specified allocation strategy.
-    /// Returns null if the pool is empty and the strategy is poolOnly.
-    /// Returns an error during mcg destroy or if allocation failed.
-    /// Thread-safe.
-    pub fn get(mcg: MessageChannelGroup, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
-        return mcg.vtable.get(mcg.ptr, strategy);
-    }
-
-    /// Returns a message to the internal pool. If the pool is closed, destroys the message.
-    /// Sets msg to null for preventing further usage.
-    /// For safe destroying - use message.DestroySendMsg(msg),
-    /// where msg: *?*message.Message (see  asyncSend comment).
-    /// Thread-safe.
-    pub fn put(mcg: MessageChannelGroup, msg: *?*message.Message) void {
-        mcg.vtable.put(mcg.ptr, msg);
-    }
-
     /// Initiates an asynchronous send of a message to a peer.
     /// If the send is initiated successfully:
     ///     - set msg.* to null in order to prevent wrong message destroy/put.
@@ -66,7 +68,7 @@ pub const MessageChannelGroup = struct {
     ///
     ///     If was send - nothing,
     ///     if was not - message will be returned to the pool
-    ///     defer mcg.put(&msg);
+    ///     defer ampe.put(&msg);
     ///     ..................
     ///     ..................
     ///     const bh  = mcg.asyncSend(&msg);
@@ -78,21 +80,33 @@ pub const MessageChannelGroup = struct {
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
-    /// May receive messages with error status from the engine, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
+    ///
+    /// May receive messages from the engine, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
     /// or Signal ('pool_empty') (indicating no free messages for receive).
-    /// Idiomatic usage involves calling `waitReceive` in a loop within the same thread.
+    ///
+    /// Application also may send message via interruptWait.
+    /// In this case the status of this message will be set to 'wait_interrupted'.
+    ///
+    /// Idiomatic usage involves calling `waitReceive` in a loop within the same dispatch thread.
+    ///
     /// Thread-safe.
     pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
         return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
     }
 
-    /// Interrupts a `waitReceive` call, causing it to return a Signal with 'wait_interrupted' status.
+    /// Interrupts a `waitReceive` call with possibility transmit message to the waiter thread.
+    ///
+    /// If msg.* == nul, 'waitReceive" will return a Signal with 'wait_interrupted' status.
+    /// If msg.* != nul, 'waitReceive" will return the message with 'wait_interrupted' status.
+    ///
     /// If called before `waitReceive`, the next `waitReceive` call will be interrupted.
     /// Only the last interrupt is saved; no accumulation.
+    ///
     /// Idiomatic usage involves calling from a different thread to signal attention.
+    ///
     /// Thread-safe.
-    pub fn interruptWait(mcg: MessageChannelGroup) void {
-        mcg.vtable.interruptWait(mcg.ptr);
+    pub fn interruptWait(mcg: MessageChannelGroup, msg: *?*message.Message) status.AmpeError!void {
+        mcg.vtable.interruptWait(mcg.ptr, msg);
     }
 };
 
@@ -109,20 +123,12 @@ pub const DefaultOptions: Options = .{
 
 pub const DBG = (@import("builtin").mode == .Debug);
 
-pub const engine = @This();
-
 // For caller code
 pub const configurator = @import("configurator.zig");
 pub const message = @import("message.zig");
 pub const status = @import("status.zig");
-pub const Distributor = @import("engine/Distributor.zig");
-
-// For tests
-pub const channels = @import("engine/channels.zig");
-pub const Notifier = @import("engine/Notifier.zig");
-pub const Pool = @import("engine/Pool.zig");
-pub const poller = @import("engine/poller.zig");
-pub const sockets = @import("engine/sockets.zig");
+pub const Engine = @import("engine/Engine.zig");
+pub const TempUdsPath = @import("engine/TempUdsPath.zig");
 
 const vtables = @import("engine/vtables.zig");
 

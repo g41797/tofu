@@ -1,11 +1,27 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const Distributor = @This();
+pub const Engine = @This();
+
+pub fn ampe(eng: *Engine) !Ampe {
+    try eng.*.createThread();
+
+    const result: Ampe = .{
+        .ptr = eng,
+        .vtable = &.{
+            .get = get,
+            .put = put,
+            .create = create,
+            .destroy = destroy,
+        },
+    };
+
+    return result;
+}
 
 mutex: Mutex = undefined,
 allocator: Allocator = undefined,
-options: engine.Options = undefined,
+options: tofu.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
 pool: Pool = undefined,
@@ -37,11 +53,11 @@ m4delCnt: usize = undefined,
 
 allChnN: std.ArrayList(message.ChannelNumber) = undefined,
 
-pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
-    const dtr: *Distributor = gpa.create(Distributor) catch {
+pub fn Create(gpa: Allocator, options: Options) AmpeError!*Engine {
+    const eng: *Engine = gpa.create(Engine) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer gpa.destroy(dtr);
+    errdefer gpa.destroy(eng);
 
     // add here comptime creation based on os
     const plru: poller.Poller = .{
@@ -50,7 +66,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         },
     };
 
-    dtr.* = .{
+    eng.* = .{
         .mutex = .{},
         .allocator = gpa,
         .options = options,
@@ -66,76 +82,76 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Distributor {
         .m4delCnt = 0,
     };
 
-    dtr.acns = ActiveChannels.init(dtr.allocator, 255) catch {
+    eng.acns = ActiveChannels.init(eng.allocator, 255) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer dtr.acns.deinit();
+    errdefer eng.acns.deinit();
 
-    dtr.ntfr = Notifier.init(dtr.allocator) catch {
+    eng.ntfr = Notifier.init(eng.allocator) catch {
         return AmpeError.NotificationDisabled;
     };
-    errdefer dtr.ntfr.deinit();
+    errdefer eng.ntfr.deinit();
 
-    dtr.pool = Pool.init(dtr.allocator, dtr.options.initialPoolMsgs, dtr.options.maxPoolMsgs, dtr.alerter()) catch {
+    eng.pool = Pool.init(eng.allocator, eng.options.initialPoolMsgs, eng.options.maxPoolMsgs, eng.alerter()) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer dtr.pool.close();
+    errdefer eng.pool.close();
 
-    var trgrd_map = TriggeredChannelsMap.init(dtr.allocator);
+    var trgrd_map = TriggeredChannelsMap.init(eng.allocator);
     errdefer trgrd_map.deinit();
     trgrd_map.ensureTotalCapacity(256) catch {
         return AmpeError.AllocationFailed;
     };
 
-    dtr.trgrd_map = trgrd_map;
+    eng.trgrd_map = trgrd_map;
 
-    dtr.allChnN = std.ArrayList(message.ChannelNumber).initCapacity(dtr.allocator, 256) catch {
+    eng.allChnN = std.ArrayList(message.ChannelNumber).initCapacity(eng.allocator, 256) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer dtr.allChnN.deinit();
+    errdefer eng.allChnN.deinit();
 
-    try TriggeredChannel.createNotificationChannel(dtr);
+    try TriggeredChannel.createNotificationChannel(eng);
 
-    return dtr;
+    return eng;
 }
 
-pub fn Destroy(dtr: *Distributor) void {
-    const gpa = dtr.allocator;
-    defer gpa.destroy(dtr);
+pub fn Destroy(eng: *Engine) void {
+    const gpa = eng.allocator;
+    defer gpa.destroy(eng);
     {
-        dtr.mutex.lock();
-        defer dtr.mutex.unlock();
+        eng.mutex.lock();
+        defer eng.mutex.unlock();
 
         var waitEnabled: bool = true;
 
-        dtr._sendAlert(.shutdownStarted) catch {
+        eng._sendAlert(.shutdownStarted) catch {
             waitEnabled = false;
         };
 
         if (waitEnabled) {
-            dtr.waitFinish();
+            eng.waitFinish();
         }
 
-        // dtr.cleanMboxes();
+        // eng.cleanMboxes();
 
-        dtr.pool.close();
-        dtr.acns.deinit();
-        dtr.allChnN.deinit();
-        dtr.ntfr.deinit();
-        dtr.ntfcsEnabled = false;
+        eng.pool.close();
+        eng.acns.deinit();
+        eng.allChnN.deinit();
+        eng.ntfr.deinit();
+        eng.ntfcsEnabled = false;
     }
 
     //
     // All releases should be done here, not on the thread!!!
     //
-    dtr.releaseToPool(&dtr.currMsg);
-    dtr.plr.deinit();
-    dtr.deinitTrgrdChns();
-    dtr.* = undefined;
+    eng.releaseToPool(&eng.currMsg);
+    eng.plr.deinit();
+    eng.deinitTrgrdChns();
+    eng.* = undefined;
 }
 
-fn deinitTrgrdChns(dtr: *Distributor) void {
-    var it = Iterator.init(&dtr.trgrd_map);
+fn deinitTrgrdChns(eng: *Engine) void {
+    var it = Iterator.init(&eng.trgrd_map);
 
     it.reset();
 
@@ -146,12 +162,12 @@ fn deinitTrgrdChns(dtr: *Distributor) void {
         tcopt.?.deinit();
     }
 
-    dtr.trgrd_map.deinit();
+    eng.trgrd_map.deinit();
 }
 
-fn cleanMboxes(dtr: *Distributor) void {
-    for (dtr.msgs, 0..) |_, i| {
-        var mbx = dtr.msgs[i];
+fn cleanMboxes(eng: *Engine) void {
+    for (eng.msgs, 0..) |_, i| {
+        var mbx = eng.msgs[i];
         var allocated = mbx.close();
         while (allocated != null) {
             const next = allocated.?.next;
@@ -161,31 +177,65 @@ fn cleanMboxes(dtr: *Distributor) void {
     }
 }
 
+fn get(ptr: ?*anyopaque, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng._get(strategy);
+}
+
+fn _get(eng: *Engine, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
+    const msg = eng.pool.get(strategy) catch |err| {
+        switch (err) {
+            AmpeError.PoolEmpty => {
+                return null;
+            },
+            else => {
+                return err;
+            },
+        }
+    };
+    return msg;
+}
+
+fn put(ptr: ?*anyopaque, msg: *?*Message) void {
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng._put(msg);
+}
+
+fn _put(eng: *Engine, msg: *?*Message) void {
+    const msgopt = msg.*;
+    if (msgopt) |m| {
+        eng.pool.put(m);
+    }
+    msg.* = null;
+
+    return;
+}
+
 fn create(ptr: ?*anyopaque) AmpeError!MessageChannelGroup {
-    const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr.*._create();
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng.*._create();
 }
 
 fn destroy(ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void {
-    const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr._destroy(mcgimpl);
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng._destroy(mcgimpl);
 }
 
-inline fn _create(dtr: *Distributor) AmpeError!MessageChannelGroup {
-    dtr.maxid += 1;
+inline fn _create(eng: *Engine) AmpeError!MessageChannelGroup {
+    eng.maxid += 1;
 
-    const gt = try Gate.Create(dtr, dtr.maxid);
+    const grp = try MchnGroup.Create(eng, eng.maxid);
 
-    return gt.mcg();
+    return grp.mcg();
 }
 
-fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
+fn _destroy(eng: *Engine, mcgimpl: ?*anyopaque) AmpeError!void {
     if (mcgimpl == null) {
         return AmpeError.InvalidAddress;
     }
 
-    var dstr = try Gate.get(mcgimpl, .always);
-    errdefer Gate.put(mcgimpl, &dstr);
+    var dstr = try eng._get(.always);
+    errdefer eng._put(&dstr);
 
     // Create Signal for destroy of
     // resources of mcg
@@ -199,32 +249,32 @@ fn _destroy(dtr: *Distributor, mcgimpl: ?*anyopaque) AmpeError!void {
     dmsg.bhdr.channel_number = 0;
     dmsg.bhdr.status = status.status_to_raw(.shutdown_started);
 
-    const gt: *Gate = @alignCast(@ptrCast(mcgimpl));
-    _ = dmsg.ptrToBody(Gate, gt);
+    const grp: *MchnGroup = @alignCast(@ptrCast(mcgimpl));
+    _ = dmsg.ptrToBody(MchnGroup, grp);
 
-    try dtr.submitMsg(dmsg, .AppSignal);
+    try eng.submitMsg(dmsg, .AppSignal);
 
-    gt.waitReleaseCompleted();
-    gt.Destroy();
+    grp.waitReleaseCompleted();
+    grp.Destroy();
 
     return;
 }
 
-pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC) AmpeError!void {
-    dtr.mutex.lock();
-    defer dtr.mutex.unlock();
+pub fn submitMsg(eng: *Engine, msg: *Message, hint: VC) AmpeError!void {
+    eng.mutex.lock();
+    defer eng.mutex.unlock();
 
-    if (!dtr.ntfcsEnabled) {
+    if (!eng.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
     }
 
     const oob = msg.bhdr.proto.oob;
 
-    dtr.msgs[@intFromEnum(oob)].send(msg) catch {
+    eng.msgs[@intFromEnum(oob)].send(msg) catch {
         return AmpeError.NotAllowed;
     };
 
-    try dtr.ntfr.sendNotification(.{
+    try eng.ntfr.sendNotification(.{
         .kind = .message,
         .hint = hint,
         .oob = oob,
@@ -234,23 +284,23 @@ pub fn submitMsg(dtr: *Distributor, msg: *Message, hint: VC) AmpeError!void {
 }
 
 pub fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
-    const dtr: *Distributor = @alignCast(@ptrCast(ptr));
-    return dtr.sendAlert(alert);
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng.sendAlert(alert);
 }
 
-pub fn sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
-    dtr.mutex.lock();
-    defer dtr.mutex.unlock();
+pub fn sendAlert(eng: *Engine, alrt: Notifier.Alert) AmpeError!void {
+    eng.mutex.lock();
+    defer eng.mutex.unlock();
 
-    return dtr._sendAlert(alrt);
+    return eng._sendAlert(alrt);
 }
 
-fn _sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
-    if (!dtr.ntfcsEnabled) {
+fn _sendAlert(eng: *Engine, alrt: Notifier.Alert) AmpeError!void {
+    if (!eng.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
     }
 
-    try dtr.ntfr.sendNotification(.{
+    try eng.ntfr.sendNotification(.{
         .kind = .alert,
         .alert = alrt,
     });
@@ -258,44 +308,44 @@ fn _sendAlert(dtr: *Distributor, alrt: Notifier.Alert) AmpeError!void {
     return;
 }
 
-fn createThread(dtr: *Distributor) !void {
-    dtr.mutex.lock();
-    defer dtr.mutex.unlock();
+fn createThread(eng: *Engine) !void {
+    eng.mutex.lock();
+    defer eng.mutex.unlock();
 
-    if (dtr.thread != null) {
+    if (eng.thread != null) {
         return;
     }
 
-    dtr.thread = try std.Thread.spawn(.{}, onThread, .{dtr});
+    eng.thread = try std.Thread.spawn(.{}, onThread, .{eng});
 
-    _ = try dtr.ntfr.recvAck();
+    _ = try eng.ntfr.recvAck();
 
     return;
 }
 
-fn onThread(dtr: *Distributor) void {
-    dtr.ntfr.sendAck(0) catch unreachable;
-    loop(dtr);
+fn onThread(eng: *Engine) void {
+    eng.ntfr.sendAck(0) catch unreachable;
+    loop(eng);
     return;
 }
 
-fn loop(dtr: *Distributor) void {
+fn loop(eng: *Engine) void {
     log.debug("loop ->", .{});
     defer log.debug("<- loop", .{});
 
-    defer dtr.cleanMboxes();
+    defer eng.cleanMboxes();
 
-    dtr.cnmapChanged = false;
-    var it = Iterator.init(&dtr.trgrd_map);
+    eng.cnmapChanged = false;
+    var it = Iterator.init(&eng.trgrd_map);
     var withItrtr: bool = true;
 
     while (true) {
-        dtr.m4delCnt = 0;
-        dtr.loopTrgrs = .{};
+        eng.m4delCnt = 0;
+        eng.loopTrgrs = .{};
 
-        if (dtr.cnmapChanged) {
-            it = Iterator.init(&dtr.trgrd_map);
-            dtr.cnmapChanged = false;
+        if (eng.cnmapChanged) {
+            it = Iterator.init(&eng.trgrd_map);
+            eng.cnmapChanged = false;
             withItrtr = true;
         }
 
@@ -304,24 +354,24 @@ fn loop(dtr: *Distributor) void {
             itropt = it;
         }
 
-        dtr.loopTrgrs = dtr.plr.waitTriggers(itropt, Notifier.SEC_TIMEOUT_MS * 20) catch |err| {
+        eng.loopTrgrs = eng.plr.waitTriggers(itropt, Notifier.SEC_TIMEOUT_MS * 20) catch |err| {
             log.err("waitTriggers error {any}", .{
                 err,
             });
-            dtr.processWaitTriggersFailure();
+            eng.processWaitTriggersFailure();
             return;
         };
 
-        const utrs = sockets.UnpackedTriggers.fromTriggers(dtr.loopTrgrs);
+        const utrs = sockets.UnpackedTriggers.fromTriggers(eng.loopTrgrs);
         _ = utrs;
 
-        if (dtr.loopTrgrs.timeout == .on) {
-            dtr.processTimeOut();
+        if (eng.loopTrgrs.timeout == .on) {
+            eng.processTimeOut();
             continue;
         }
 
-        if (dtr.loopTrgrs.notify == .on) {
-            dtr.processNotify() catch |err|
+        if (eng.loopTrgrs.notify == .on) {
+            eng.processNotify() catch |err|
                 switch (err) {
                     AmpeError.ShutdownStarted => {
                         return;
@@ -333,7 +383,7 @@ fn loop(dtr: *Distributor) void {
                 };
         }
 
-        dtr.processTriggeredChannels(&it) catch |err|
+        eng.processTriggeredChannels(&it) catch |err|
             switch (err) {
                 AmpeError.ShutdownStarted => {
                     return;
@@ -344,7 +394,7 @@ fn loop(dtr: *Distributor) void {
                 },
             };
 
-        dtr.processMessageFromMcg() catch |err|
+        eng.processMessageFromMcg() catch |err|
             switch (err) {
                 AmpeError.ShutdownStarted => {
                     return;
@@ -355,37 +405,37 @@ fn loop(dtr: *Distributor) void {
                 },
             };
 
-        const wasRemoved = dtr.processMarkedForDelete() catch |err| {
+        const wasRemoved = eng.processMarkedForDelete() catch |err| {
             log.err("processMarkedForDelete failed with error {any}", .{err});
             return;
         };
 
         if (wasRemoved) {
-            dtr.cnmapChanged = true;
+            eng.cnmapChanged = true;
         }
     }
 
     return;
 }
 
-fn processNotify(dtr: *Distributor) !void {
+fn processNotify(eng: *Engine) !void {
     log.debug("processNotify ->", .{});
     defer log.debug("<- processNotify", .{});
 
-    // dtr.loopTrgrs.notify = .off;
+    // eng.loopTrgrs.notify = .off;
 
-    const notfTrChnOpt = dtr.trgrd_map.getPtr(0);
+    const notfTrChnOpt = eng.trgrd_map.getPtr(0);
     assert(notfTrChnOpt != null);
     const notfTrChn = notfTrChnOpt.?;
     assert(notfTrChn.act.notify == .on);
 
-    dtr.currNtfc = try notfTrChn.tskt.tryRecvNotification();
-    dtr.unpnt = Notifier.UnpackedNotification.fromNotification(dtr.currNtfc);
+    eng.currNtfc = try notfTrChn.tskt.tryRecvNotification();
+    eng.unpnt = Notifier.UnpackedNotification.fromNotification(eng.currNtfc);
 
     notfTrChn.act = .{}; // Disable obsolete processing during iteration
 
-    if (dtr.currNtfc.kind == .alert) {
-        switch (dtr.currNtfc.alert) {
+    if (eng.currNtfc.kind == .alert) {
+        switch (eng.currNtfc.alert) {
             .shutdownStarted => {
                 // Exit processing loop.
                 // All resources will be released/destroyed
@@ -394,27 +444,27 @@ fn processNotify(dtr: *Distributor) !void {
             },
             .freedMemory => {
                 return; // Adding message from pool will be handled in processTriggeredChannels
-                // return dtr.addMessagesForRecv(it);
+                // return eng.addMessagesForRecv(it);
             },
         }
     }
 
-    assert(dtr.currNtfc.kind == .message);
+    assert(eng.currNtfc.kind == .message);
 
-    return dtr.storeMessageFromMcg();
+    return eng.storeMessageFromMcg();
 }
 
-fn storeMessageFromMcg(dtr: *Distributor) !void {
+fn storeMessageFromMcg(eng: *Engine) !void {
     log.debug("storeMessageFromMcg ->", .{});
     defer log.debug("<- storeMessageFromMcg", .{});
 
-    dtr.currMsg = null;
+    eng.currMsg = null;
 
     var currMsg: *message.Message = undefined;
     var received: bool = false;
 
     for (0..2) |n| {
-        currMsg = dtr.msgs[n].receive(0) catch |err| {
+        currMsg = eng.msgs[n].receive(0) catch |err| {
             switch (err) {
                 error.Timeout, error.Interrupted => {
                     continue;
@@ -433,22 +483,22 @@ fn storeMessageFromMcg(dtr: *Distributor) !void {
         return;
     }
 
-    dtr.currMsg = currMsg;
-    dtr.currBhdr = currMsg.bhdr;
+    eng.currMsg = currMsg;
+    eng.currBhdr = currMsg.bhdr;
 
     return;
 }
 
-fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
+fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
     log.debug("processTriggeredChannels ->", .{});
     defer log.debug("<- processTriggeredChannels", .{});
 
     it.reset();
 
-    dtr.currTcopt = it.next();
+    eng.currTcopt = it.next();
 
-    trcIter: while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
-        const tc = dtr.currTcopt.?;
+    trcIter: while (eng.currTcopt != null) : (eng.currTcopt = it.next()) {
+        const tc = eng.currTcopt.?;
 
         const trgrs = tc.act;
 
@@ -477,12 +527,12 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
 
         if (trgrs.pool == .on) {
             while (true) {
-                const rcvmsg = dtr.pool.get(.poolOnly) catch {
+                const rcvmsg = eng.pool.get(.poolOnly) catch {
                     break;
                 };
 
                 tc.tskt.addForRecv(rcvmsg) catch |err| {
-                    dtr.pool.put(rcvmsg);
+                    eng.pool.put(rcvmsg);
                     var reason: AmpeStatus = .recv_failed;
                     if (err == AmpeError.NotAllowed) {
                         reason = .not_allowed;
@@ -513,29 +563,29 @@ fn processTriggeredChannels(dtr: *Distributor, it: *Iterator) !void {
     return;
 }
 
-fn processMessageFromMcg(dtr: *Distributor) !void {
+fn processMessageFromMcg(eng: *Engine) !void {
     log.debug("processMessageFromMcg ->", .{});
     defer log.debug("<- processMessageFromMcg", .{});
 
-    if (dtr.currMsg == null) {
+    if (eng.currMsg == null) {
         return;
     }
 
-    defer dtr.releaseToPool(&dtr.currMsg);
+    defer eng.releaseToPool(&eng.currMsg);
 
-    if (dtr.currBhdr.proto.origin == .engine) {
-        return dtr.processInternal();
+    if (eng.currBhdr.proto.origin == .engine) {
+        return eng.processInternal();
     }
 
-    const hint = dtr.currNtfc.hint;
+    const hint = eng.currNtfc.hint;
 
     switch (hint) {
-        .HelloRequest, .HelloSignal => return dtr.sendHello(),
-        .WelcomeRequest, .WelcomeSignal => return dtr.sendWelcome(),
-        .ByeRequest, .ByeSignal => return dtr.sendBye(),
-        .ByeResponse => return dtr.sendByeResponse(),
+        .HelloRequest, .HelloSignal => return eng.sendHello(),
+        .WelcomeRequest, .WelcomeSignal => return eng.sendWelcome(),
+        .ByeRequest, .ByeSignal => return eng.sendBye(),
+        .ByeResponse => return eng.sendByeResponse(),
 
-        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return dtr.sendToPeer(),
+        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return eng.sendToPeer(),
 
         else => return AmpeError.InvalidMessage,
     }
@@ -543,25 +593,25 @@ fn processMessageFromMcg(dtr: *Distributor) !void {
     return;
 }
 
-inline fn waitFinish(dtr: *Distributor) void {
+inline fn waitFinish(eng: *Engine) void {
     log.debug("waitFinish ->", .{});
     defer log.debug("<- waitFinish", .{});
 
-    if (dtr.thread) |t| {
+    if (eng.thread) |t| {
         t.join();
     }
 }
 
-pub fn releaseToPool(dtr: *Distributor, storedMsg: *?*Message) void {
+pub fn releaseToPool(eng: *Engine, storedMsg: *?*Message) void {
     if (storedMsg.*) |msg| {
-        dtr.pool.put(msg);
+        eng.pool.put(msg);
         storedMsg.* = null;
     }
     return;
 }
 
-pub fn buildStatusSignal(dtr: *Distributor, stat: AmpeStatus) *Message {
-    var ret = dtr.pool.get(.always) catch unreachable;
+pub fn buildStatusSignal(eng: *Engine, stat: AmpeStatus) *Message {
+    var ret = eng.pool.get(.always) catch unreachable;
     ret.bhdr.status = status.status_to_raw(stat);
     ret.bhdr.proto.mtype = .regular;
     ret.bhdr.proto.origin = .engine;
@@ -569,33 +619,19 @@ pub fn buildStatusSignal(dtr: *Distributor, stat: AmpeStatus) *Message {
     return ret;
 }
 
-pub fn ampe(dtr: *Distributor) !Ampe {
-    try dtr.*.createThread();
-
-    const result: Ampe = .{
-        .ptr = dtr,
-        .vtable = &.{
-            .create = create,
-            .destroy = destroy,
-        },
-    };
-
-    return result;
-}
-
-fn alerter(dtr: *Distributor) Notifier.Alerter {
+fn alerter(eng: *Engine) Notifier.Alerter {
     const result: Notifier.Alerter = .{
-        .ptr = dtr,
+        .ptr = eng,
         .func = send_alert,
     };
     return result;
 }
 
-pub fn addChannel(dtr: *Distributor, tchn: TriggeredChannel) AmpeError!void {
-    dtr.trgrd_map.put(tchn.acn.chn, tchn) catch {
+pub fn addChannel(eng: *Engine, tchn: TriggeredChannel) AmpeError!void {
+    eng.trgrd_map.put(tchn.acn.chn, tchn) catch {
         return AmpeError.AllocationFailed;
     };
-    dtr.cnmapChanged = true;
+    eng.cnmapChanged = true;
     return;
 }
 
@@ -628,16 +664,16 @@ pub const Iterator = struct {
     }
 };
 
-fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
+fn addMessagesForRecv(eng: *Engine, it: *Iterator) !void {
     log.debug("addMessagesForRecv ->", .{});
     defer log.debug("<- addMessagesForRecv", .{});
 
     it.reset();
 
-    dtr.currTcopt = it.next();
+    eng.currTcopt = it.next();
 
-    while (dtr.currTcopt != null) : (dtr.currTcopt = it.next()) {
-        const tc = dtr.currTcopt.?;
+    while (eng.currTcopt != null) : (eng.currTcopt = it.next()) {
+        const tc = eng.currTcopt.?;
 
         const trgrs = tc.act;
 
@@ -645,10 +681,10 @@ fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
             continue;
         }
 
-        const rcvmsg = dtr.pool.get(.poolOnly) catch {
+        const rcvmsg = eng.pool.get(.poolOnly) catch {
             return;
         };
-        errdefer dtr.pool.put(rcvmsg);
+        errdefer eng.pool.put(rcvmsg);
 
         try tc.tskt.addForRecv(rcvmsg);
         tc.act.pool = .off;
@@ -657,7 +693,7 @@ fn addMessagesForRecv(dtr: *Distributor, it: *Iterator) !void {
     return;
 }
 
-const partial = @import("prtlDistributor.zig");
+const partial = @import("prtlEngine.zig");
 const processTimeOut = partial.processTimeOut;
 const processWaitTriggersFailure = partial.processWaitTriggersFailure;
 const processMarkedForDelete = partial.processMarkedForDelete;
@@ -674,7 +710,8 @@ pub const responseFailure = partial.responseFailure;
 pub const markForDelete = partial.markForDelete;
 pub const clearForDelete = partial.clearForDelete;
 
-const message = @import("../message.zig");
+const tofu = @import("../engine.zig");
+const message = tofu.message;
 const MessageType = message.MessageType;
 const MessageRole = message.MessageRole;
 const OriginFlag = message.OriginFlag;
@@ -682,40 +719,40 @@ const MoreMessagesFlag = message.MoreMessagesFlag;
 const ProtoFields = message.ProtoFields;
 const BinaryHeader = message.BinaryHeader;
 const TextHeader = message.TextHeader;
-const TextHeaderIterator = @import("../message.zig").TextHeaderIterator;
+const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 
-const engine = @import("../engine.zig");
-const Options = engine.Options;
-const Ampe = engine.Ampe;
-const MessageChannelGroup = engine.MessageChannelGroup;
+const Options = tofu.Options;
+const Ampe = tofu.Ampe;
+const MessageChannelGroup = tofu.MessageChannelGroup;
 
-const status = @import("../status.zig");
+const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const Notifier = @import("Notifier.zig");
+const internal = @import("internal");
+const Notifier = internal.Notifier;
 
-const Pool = @import("Pool.zig");
+const Pool = internal.Pool;
 
-const channels = @import("channels.zig");
+const channels = internal.channels;
 const ActiveChannels = channels.ActiveChannels;
 
-const sockets = @import("sockets.zig");
-const Triggers = @import("triggeredSkts.zig").Triggers;
-const TriggeredSkt = @import("triggeredSkts.zig").TriggeredSkt;
+const sockets = internal.sockets;
+const Triggers = internal.triggeredSkts.Triggers;
+const TriggeredSkt = internal.triggeredSkts.TriggeredSkt;
 
-const Gate = @import("Gate.zig");
+const MchnGroup = internal.MchnGroup;
 
-const poller = @import("poller.zig");
+const poller = internal.poller;
 
-pub const TriggeredChannel = @import("TriggeredChannel.zig");
+const TriggeredChannel = internal.TriggeredChannel;
 
 const Appendable = @import("nats").Appendable;
 

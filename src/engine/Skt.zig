@@ -242,16 +242,19 @@ pub const connectError = error{
     _,
 } || posix.ConnectError;
 
-const MsgSender = @import("MsgSender.zig");
-const message = @import("../message.zig");
+const tofu = @import("tofu");
+const message = tofu.message;
 const Trigger = message.Trigger;
 
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
-const MessageQueue = message.MessageQueue;
-const sockets = @import("sockets.zig");
-const DBG = @import("../engine.zig").DBG;
-const AmpeError = @import("../status.zig").AmpeError;
+
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
+
+const internal = @import("../internal.zig");
+const MsgSender = internal.MsgSender;
+const sockets = internal.sockets;
 
 const std = @import("std");
 const posix = std.posix;

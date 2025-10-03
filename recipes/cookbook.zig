@@ -4,7 +4,7 @@ const log = std.log;
 const assert = std.debug.assert;
 
 pub const tofu = @import("tofu");
-pub const Distributor = tofu.Distributor;
+pub const Engine = tofu.Engine;
 pub const Options = tofu.Options;
 pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
@@ -19,25 +19,25 @@ const SEC_TIMEOUT_MS = 1_000;
 const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
 
 pub fn createDestroyMain(gpa: Allocator) !void {
-    var dtr = try Distributor.Create(gpa, DefaultOptions);
-    defer dtr.Destroy();
+    var eng = try Engine.Create(gpa, DefaultOptions);
+    defer eng.Destroy();
 }
 
 pub fn createDestroyEngine(gpa: Allocator) !void {
-    var dtr = try Distributor.Create(gpa, DefaultOptions);
-    defer dtr.Destroy();
+    var eng = try Engine.Create(gpa, DefaultOptions);
+    defer eng.Destroy();
 
-    const ampe = try dtr.ampe();
+    const ampe = try eng.ampe();
 
-    // You don't need to destroy/deinit ampe - it's just interface implemented by Distributor
+    // You don't need to destroy/deinit ampe - it's just interface implemented by Engine
     _ = ampe;
 }
 
 pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
-    var dtr = try Distributor.Create(gpa, DefaultOptions);
-    defer dtr.Destroy();
+    var eng = try Engine.Create(gpa, DefaultOptions);
+    defer eng.Destroy();
 
-    const ampe = try dtr.ampe();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
 
@@ -53,32 +53,32 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer destroyMcg(ampe, mchgr);
 
-    var msg1 = try mchgr.get(tofu.AllocationStrategy.poolOnly);
+    var msg1 = try ampe.get(tofu.AllocationStrategy.poolOnly);
 
     // if not null - return to the pool.
-    // pool will be cleaned during dtr.Destroy();
-    defer mchgr.put(&msg1);
+    // pool will be cleaned during eng.Destroy();
+    defer ampe.put(&msg1);
 
     if (msg1 == null) {
         return error.FirstMesssageShouldBeNotNull;
     }
 
-    var msg2 = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg2);
+    var msg2 = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg2);
     if (msg2 != null) {
         return error.SecondMesssageShouldBeNull;
     }
 
     // Pool is empty, but message will be allocated
-    var msg3 = try mchgr.get(tofu.AllocationStrategy.always);
-    defer mchgr.put(&msg3);
+    var msg3 = try ampe.get(tofu.AllocationStrategy.always);
+    defer ampe.put(&msg3);
     if (msg3 == null) {
         return error.THirdMesssageShouldBeNotNull;
     }
@@ -92,17 +92,17 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // Message retrieved from the poll is not valid for send
     // without setup.
@@ -118,17 +118,17 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // Only MessageType.hello and MessageType.welcome have message.ChannelNumber == 0
     // (this value has message returned from the pool).
@@ -150,17 +150,17 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer ampe.destroy(mchgr) catch {
         // What can you do?
     };
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // Right ChannelNumber is not enough.
     // MessageType.hello should contain address of peer(server) to connect with.
@@ -183,15 +183,15 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer destroyMcg(ampe, mchgr);
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // MessageType.hello should contain address of peer(server) to connect with.
     // This address should be resolved. For IP - it should be also valid.
@@ -216,7 +216,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
-    mchgr.put(&recvMsg);
+    ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
 
@@ -226,15 +226,15 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
         .maxPoolMsgs = 64, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer destroyMcg(ampe, mchgr);
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // MessageType.hello should contain address of peer(server) to connect with.
     // This address should be resolved. For IP - it should be also valid.
@@ -256,7 +256,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
-    mchgr.put(&recvMsg);
+    ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
 
@@ -266,15 +266,15 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 16, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer destroyMcg(ampe, mchgr);
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // MessageType.welcome should contain ip address and port of listening server.
 
@@ -293,7 +293,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
-    mchgr.put(&recvMsg);
+    ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
 
@@ -321,7 +321,7 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     //
     // For testing purposes tofu has helper for creation of such (temporary) file.
 
-    var tup: tofu.Notifier.TempUdsPath = .{};
+    var tup: tofu.TempUdsPath = .{};
 
     const filePath = try tup.buildPath(gpa);
 
@@ -342,15 +342,15 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
         .maxPoolMsgs = 16, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     const mchgr = try ampe.create();
     defer destroyMcg(ampe, mchgr);
 
-    var msg = try mchgr.get(tofu.AllocationStrategy.poolOnly);
-    defer mchgr.put(&msg);
+    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&msg);
 
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
@@ -361,7 +361,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
-    defer mchgr.put(&recvMsg);
+    defer ampe.put(&recvMsg);
 
     const st = recvMsg.?.bhdr.status;
 
@@ -404,9 +404,9 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
         .maxPoolMsgs = 16, // just for example
     };
 
-    var dtr = try Distributor.Create(gpa, options);
-    defer dtr.Destroy();
-    const ampe = try dtr.ampe();
+    var eng = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe = try eng.ampe();
 
     // For simplicity we create separated groups for the client and server.
     // You can create and use the same group for clients and servers simultaneously.
@@ -416,12 +416,12 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // It will be closed during destroy of it's MessageChannelGroup
     defer destroyMcg(ampe, srvMchgr);
 
-    var welcome = try srvMchgr.get(tofu.AllocationStrategy.poolOnly);
+    var welcome = try ampe.get(tofu.AllocationStrategy.poolOnly);
 
     // If message was send to engine, welcome will be null.
     // It's safe to put null message to the pool.
     // For failed send, message will be returned to the pool.
-    defer srvMchgr.put(&welcome);
+    defer ampe.put(&welcome);
 
     // Appends configuration to TextHeaders of the message
     try srvCfg.prepareRequest(welcome.?);
@@ -461,13 +461,8 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     const cltMchgr = try ampe.create();
     defer destroyMcg(ampe, cltMchgr);
-    var hello = try cltMchgr.get(tofu.AllocationStrategy.poolOnly);
-
-    // Pay attention, that both groups use the same pool.
-    // get/put functions were added to the message group for convenience.
-    // Pool belongs to engine and shared between all message channel groups.
-    defer cltMchgr.put(&hello);
-
+    var hello = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    defer ampe.put(&hello);
 
     // Appends configuration to TextHeaders of the message
     try cltCfg.prepareRequest(welcome.?);
@@ -481,7 +476,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     var helloResp = try cltMchgr.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
-    defer cltMchgr.put(&helloResp);
+    defer ampe.put(&helloResp);
 
     st = helloResp.?.bhdr.status;
 
@@ -495,7 +490,6 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // status only for failed connect.
     assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
     assert(welcomeResp.?.bhdr.proto.role == .response);
-
 
     // raw_to_status converts status byte (u8) from binary header
     // to AmpeStatus enum for your convenience.

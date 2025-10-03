@@ -329,3 +329,10 @@ Kraiklyn hugo theme
 
     cd docs
     git submodule add --depth 1 https://github.com/jsnjack/kraiklyn.git themes/kraiklyn
+
+mkdocs-sample
+    https://github.com/yriahi/mkdocs-sample
+
+Mkdocs Material theme
+    https://github.com/squidfunk/mkdocs-material
+

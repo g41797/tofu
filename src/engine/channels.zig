@@ -152,7 +152,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    // Called on both caller and Distributor threads
+    // Called on both caller and Engine threads
     pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) ActiveChannel {
         cns.mutex.lock();
         defer cns.mutex.unlock();
@@ -211,7 +211,7 @@ pub const ActiveChannels = struct {
         return achn.?;
     }
 
-    // Called only on Distributor thread
+    // Called only on Engine thread
     pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
         cns.mutex.lock();
         defer cns.mutex.unlock();
@@ -219,7 +219,7 @@ pub const ActiveChannels = struct {
         return _removeChannel(cns, cn);
     }
 
-    // Called only on Distributor thread
+    // Called only on Engine thread
     pub fn removeChannels(cns: *ActiveChannels, ptr: ?*anyopaque) !usize {
         cns.mutex.lock();
         defer cns.mutex.unlock();
@@ -303,11 +303,11 @@ pub const ActiveChannels = struct {
     }
 };
 
-const status = @import("../status.zig");
+const status = @import("tofu").status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 
-const message = @import("../message.zig");
+const message = @import("tofu").message;
 pub const ChannelNumber = message.ChannelNumber;
 const MessageID = message.MessageID;
 

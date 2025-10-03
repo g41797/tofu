@@ -42,7 +42,7 @@ test "Pool base finctionality" {
     pool.close();
 }
 
-const Pool = @import("tofu").Pool;
+const Pool = @import("internal").Pool;
 const AmpeError = @import("tofu").status.AmpeError;
 const engine = @import("tofu").engine;
 const AllocationStrategy = engine.AllocationStrategy;

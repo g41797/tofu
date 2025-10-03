@@ -107,8 +107,8 @@ pub fn addForRecv(ioskt: *IoSkt, rcvmsg: *Message) AmpeError!void {
     return ioskt.currRecv.attach(rcvmsg);
 }
 
-// tryConnect is called by Distributor for succ. connection.
-// For the failed connection Distributor uses detach: get Hello request , convert to filed Hello response...
+// tryConnect is called by Engine for succ. connection.
+// For the failed connection Engine uses detach: get Hello request , convert to filed Hello response...
 pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
     if (ioskt.connected) {
         return AmpeError.NotAllowed;
@@ -214,24 +214,27 @@ pub fn deinit(ioskt: *IoSkt) void {
     return;
 }
 
-const SocketCreator = @import("SocketCreator.zig");
-const Skt = @import("Skt.zig");
-const MsgReceiver = @import("MsgReceiver.zig");
-const MsgSender = @import("MsgSender.zig");
-const message = @import("../message.zig");
+const tofu = @import("tofu");
+
+const message = tofu.message;
 const Trigger = message.Trigger;
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
-const sockets = @import("sockets.zig");
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
+
+const internal = @import("../internal.zig");
+
+const SocketCreator = internal.SocketCreator;
+const Skt = internal.Skt;
+const MsgReceiver = internal.MsgReceiver;
+const MsgSender = internal.MsgSender;
+
+const sockets = internal.sockets;
 const Triggers = sockets.Triggers;
-const Side = @import("triggeredSkts.zig").Side;
-
-const DBG = @import("../engine.zig").DBG;
-
-const AmpeError = @import("../status.zig").AmpeError;
-
-const Pool = @import("Pool.zig");
+const Side = internal.triggeredSkts.Side;
+const Pool = internal.Pool;
 
 const std = @import("std");
 const assert = std.debug.assert;

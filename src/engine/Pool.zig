@@ -153,14 +153,16 @@ fn _freeAll(pool: *Pool) void {
 }
 
 const Appendable = @import("nats").Appendable;
-const message = @import("../message.zig");
+
+const tofu = @import("tofu");
+const message = tofu.message;
 const Message = message.Message;
-const AllocationStrategy = @import("../engine.zig").AllocationStrategy;
-const DefaultOptions = @import("../engine.zig").DefaultOptions;
+const AllocationStrategy = tofu.AllocationStrategy;
+const DefaultOptions = tofu.DefaultOptions;
+const AmpeError = tofu.status.AmpeError;
+
 const Notifier = @import("Notifier.zig");
 const Alert = Notifier.Alert;
-
-const AmpeError = @import("../status.zig").AmpeError;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

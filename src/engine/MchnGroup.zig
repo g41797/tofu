@@ -1,20 +1,18 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const Gate = @This();
+pub const MchnGroup = @This();
 
-prnt: *Distributor = undefined,
+prnt: *Engine = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
 cmpl: ResetEvent = undefined,
 
-pub fn mcg(gt: *Gate) MessageChannelGroup {
+pub fn mcg(grp: *MchnGroup) MessageChannelGroup {
     const result: MessageChannelGroup = .{
-        .ptr = gt,
+        .ptr = grp,
         .vtable = &.{
-            .get = get,
-            .put = put,
             .asyncSend = asyncSend,
             .waitReceive = waitReceive,
             .interruptWait = interruptWait,
@@ -23,23 +21,23 @@ pub fn mcg(gt: *Gate) MessageChannelGroup {
     return result;
 }
 
-pub fn Create(prnt: *Distributor, id: u32) AmpeError!*Gate {
-    const gt = prnt.allocator.create(Gate) catch {
+pub fn Create(prnt: *Engine, id: u32) AmpeError!*MchnGroup {
+    const grp = prnt.allocator.create(MchnGroup) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer prnt.allocator.destroy(gt);
-    gt.* = Gate.init(prnt, id);
-    return gt;
+    errdefer prnt.allocator.destroy(grp);
+    grp.* = MchnGroup.init(prnt, id);
+    return grp;
 }
 
-pub fn Destroy(gt: *Gate) void {
-    const gpa = gt.prnt.allocator;
-    gt.deinit();
-    gpa.destroy(gt);
+pub fn Destroy(grp: *MchnGroup) void {
+    const gpa = grp.prnt.allocator;
+    grp.deinit();
+    gpa.destroy(grp);
 }
 
-fn init(prnt: *Distributor, id: u32) Gate {
-    const gt: Gate = .{
+fn init(prnt: *Engine, id: u32) MchnGroup {
+    const grp: MchnGroup = .{
         .prnt = prnt,
         .id = id,
         .allocator = prnt.allocator,
@@ -47,45 +45,16 @@ fn init(prnt: *Distributor, id: u32) Gate {
         .cmpl = ResetEvent{},
     };
 
-    return gt;
+    return grp;
 }
 
-fn deinit(gt: *Gate) void {
-    // _ = gt.prnt.acns.removeChannels(gt) catch unreachable;
-
-    var allocated = gt.msgs.close();
+fn deinit(grp: *MchnGroup) void {
+    var allocated = grp.msgs.close();
     while (allocated != null) {
         const next = allocated.?.next;
-        allocated.?.destroy();
+        grp.prnt.pool.put(allocated.?);
         allocated = next;
     }
-
-    return;
-}
-
-pub fn get(ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!?*Message {
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
-    const msg = gt.prnt.pool.get(strategy) catch |err| {
-        switch (err) {
-            AmpeError.PoolEmpty => {
-                return null;
-            },
-            else => {
-                return err;
-            },
-        }
-    };
-    return msg;
-}
-
-pub fn put(ptr: ?*anyopaque, msg: *?*Message) void {
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
-
-    const msgopt = msg.*;
-    if (msgopt) |m| {
-        gt.prnt.pool.put(m);
-    }
-    msg.* = null;
 
     return;
 }
@@ -100,20 +69,20 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
     const vc = try sendMsg.check_and_prepare();
 
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
     if (sendMsg.bhdr.channel_number != 0) {
-        if (!gt.prnt.acns.exists(sendMsg.bhdr.channel_number)) {
+        if (!grp.prnt.acns.exists(sendMsg.bhdr.channel_number)) {
             return AmpeError.InvalidChannelNumber;
         }
     } else {
         var proto = sendMsg.bhdr.proto;
         proto._internal = 0; // As sign of the "local" hello/welcome
 
-        const ach = gt.prnt.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, gt);
+        const ach = grp.prnt.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, grp);
         sendMsg.bhdr.channel_number = ach.chn;
     }
-    try gt.prnt.submitMsg(sendMsg, vc);
+    try grp.prnt.submitMsg(sendMsg, vc);
 
     amsg.* = null;
 
@@ -121,8 +90,8 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
-    const recvMsg: *Message = gt.msgs.receive(timeout_ns) catch |err| {
+    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    const recvMsg: *Message = grp.msgs.receive(timeout_ns) catch |err| {
         switch (err) {
             error.Timeout => {
                 return null;
@@ -131,7 +100,7 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
                 return AmpeError.ShutdownStarted;
             },
             error.Interrupted => {
-                return gt.prnt.buildStatusSignal(.wait_interrupted);
+                return grp.prnt.buildStatusSignal(.wait_interrupted);
             },
         }
     };
@@ -139,19 +108,20 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
     return recvMsg;
 }
 
-pub fn interruptWait(ptr: ?*anyopaque) void {
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
-    gt.msgs.interrupt() catch {};
+pub fn interruptWait(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
+    _ = msg;
+    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    grp.msgs.interrupt() catch {};
+    return AmpeError.NotImplementedYet;
+}
+
+pub fn setReleaseCompleted(grp: *MchnGroup) void {
+    grp.cmpl.set();
     return;
 }
 
-pub fn setReleaseCompleted(gt: *Gate) void {
-    gt.cmpl.set();
-    return;
-}
-
-pub fn waitReleaseCompleted(gt: *Gate) void {
-    gt.cmpl.wait();
+pub fn waitReleaseCompleted(grp: *MchnGroup) void {
+    grp.cmpl.wait();
     return;
 }
 
@@ -159,9 +129,9 @@ pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     if (msg.* == null) {
         return AmpeError.NullMessage;
     }
-    const gt: *Gate = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
-    gt.msgs.send(msg.*.?) catch {
+    grp.msgs.send(msg.*.?) catch {
         return AmpeError.ShutdownStarted;
     };
 
@@ -169,7 +139,9 @@ pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     return;
 }
 
-pub const message = @import("../message.zig");
+const tofu = @import("tofu");
+
+pub const message = tofu.message;
 pub const MessageType = message.MessageType;
 pub const MessageRole = message.MessageRole;
 pub const OriginFlag = message.OriginFlag;
@@ -183,15 +155,16 @@ pub const Message = message.Message;
 pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
-pub const Distributor = @import("Distributor.zig");
+pub const Engine = tofu.Engine;
 
-const engine = @import("../engine.zig");
+const engine = tofu;
 const MessageChannelGroup = engine.MessageChannelGroup;
 const AllocationStrategy = engine.AllocationStrategy;
+const AmpeError = tofu.status.AmpeError;
 
-const AmpeError = @import("../status.zig").AmpeError;
 const Notifier = @import("Notifier.zig");
 const ActiveChannels = @import("channels.zig").ActiveChannels;
+
 const Appendable = @import("nats").Appendable;
 const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 

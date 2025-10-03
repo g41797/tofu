@@ -51,10 +51,22 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
+    const internalMod = b.createModule(.{
+        .root_source_file = b.path("src/internal.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = false,
+    });
+    internalMod.addImport("tofu", tofuMod);
+    internalMod.addImport("mailbox", mailbox.module("mailbox"));
+    internalMod.addImport("temp", temp.module("temp"));
+
+    tofuMod.addImport("internal", internalMod);
     tofuMod.addImport("nats", nats.module("nats"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
 
+    lib.root_module.addImport("internal", internalMod);
     lib.root_module.addImport("nats", nats.module("nats"));
     lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib.root_module.addImport("temp", temp.module("temp"));
@@ -84,6 +96,7 @@ pub fn build(b: *std.Build) void {
         .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
     });
 
+    lib_unit_tests.root_module.addImport("internal", internalMod);
     lib_unit_tests.root_module.addImport("tofu", tofuMod);
     lib_unit_tests.root_module.addImport("recipes", recipesMod);
     lib_unit_tests.root_module.addImport("nats", nats.module("nats"));

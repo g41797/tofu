@@ -76,7 +76,7 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
     var udsPath = path;
 
     if (udsPath.len == 0) {
-        var tup: Notifier.TempUdsPath = .{};
+        var tup: TempUdsPath = .{};
 
         udsPath = tup.buildPath(allocator) catch {
             return AmpeError.UnknownError;
@@ -138,7 +138,9 @@ pub fn createConnectSocket(address: *const std.net.Address) !Skt {
     return ret;
 }
 
-const configurator = @import("../configurator.zig");
+const tofu = @import("tofu");
+
+const configurator = tofu.configurator;
 const Configurator = configurator.Configurator;
 const TCPServerConfigurator = configurator.TCPServerConfigurator;
 const TCPClientConfigurator = configurator.TCPClientConfigurator;
@@ -146,16 +148,17 @@ const UDSServerConfigurator = configurator.UDSServerConfigurator;
 const UDSClientConfigurator = configurator.UDSClientConfigurator;
 const WrongConfigurator = configurator.WrongConfigurator;
 
-const message = @import("../message.zig");
+const message = tofu.message;
 const Message = message.Message;
-const sockets = @import("sockets.zig");
-const Skt = sockets.Skt;
 
-const DBG = @import("../engine.zig").DBG;
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
 
-const AmpeError = @import("../status.zig").AmpeError;
+const TempUdsPath = tofu.TempUdsPath;
 
 const Notifier = @import("Notifier.zig");
+const sockets = @import("sockets.zig");
+const Skt = sockets.Skt;
 
 const std = @import("std");
 const posix = std.posix;

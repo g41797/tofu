@@ -274,18 +274,21 @@ pub const DumbSkt = struct {
     }
 };
 
-const IoSkt = @import("IoSkt.zig");
-const SocketCreator = @import("SocketCreator.zig");
-const Skt = @import("Skt.zig");
-const message = @import("../message.zig");
+const tofu = @import("tofu");
+
+const message = tofu.message;
+const MessageQueue = message.MessageQueue;
 const Trigger = message.Trigger;
 const BinaryHeader = message.BinaryHeader;
 const Message = message.Message;
-const MessageQueue = message.MessageQueue;
+const DBG = tofu.DBG;
+const AmpeError = tofu.status.AmpeError;
+const AmpeStatus = tofu.status.AmpeStatus;
+
+const IoSkt = @import("IoSkt.zig");
+const SocketCreator = @import("SocketCreator.zig");
+const Skt = @import("Skt.zig");
 const sockets = @import("sockets.zig");
-const DBG = @import("../engine.zig").DBG;
-const AmpeError = @import("../status.zig").AmpeError;
-const AmpeStatus = @import("../status.zig").AmpeStatus;
 const Notifier = @import("Notifier.zig");
 const Notification = Notifier.Notification;
 
