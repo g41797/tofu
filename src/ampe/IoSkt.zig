@@ -214,7 +214,7 @@ pub fn deinit(ioskt: *IoSkt) void {
     return;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 const message = tofu.message;
 const Trigger = message.Trigger;
@@ -224,7 +224,7 @@ const MessageQueue = message.MessageQueue;
 const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 
 const SocketCreator = internal.SocketCreator;
 const Skt = internal.Skt;

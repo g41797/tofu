@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 const message = tofu.message;
 pub const Trigger = message.Trigger;
@@ -14,7 +14,7 @@ const Engine = tofu.Engine;
 const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 
 pub const Triggers = internal.triggeredSkts.Triggers;
 pub const TriggersOff = internal.triggeredSkts.TriggersOff;

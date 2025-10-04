@@ -243,8 +243,9 @@ pub fn deinit(ntfr: *Notifier) void {
     posix.close(ntfr.receiver);
 }
 
-const tofu = @import("tofu");
-const internal = @import("../internal.zig");
+const tofu = @import("../tofu.zig");
+
+const internal = @import("internal.zig");
 
 const TempUdsPath = tofu.TempUdsPath;
 

@@ -56,7 +56,9 @@ test "ChannelNodeQueue tests" {
     try testing.expectEqual(null, cq.dequeue());
 }
 
-const channels = @import("internal").channels;
+const tofu = @import("tofu");
+
+const channels = tofu.@"internal usage".channels;
 const ChannelNode = channels.ChannelNode;
 const ChannelNodeQueue = channels.ChannelNodeQueue;
 const ActiveChannels = channels.ActiveChannels;

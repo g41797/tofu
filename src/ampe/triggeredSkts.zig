@@ -229,7 +229,7 @@ pub const NotificationSkt = struct {
     }
 
     pub fn deinit(nskt: *NotificationSkt) void {
-        // Notification sockets will be closed by engine itself
+        // Notification sockets will be closed by ampe itself
         _ = nskt;
         return;
     }
@@ -274,7 +274,7 @@ pub const DumbSkt = struct {
     }
 };
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 const message = tofu.message;
 const MessageQueue = message.MessageQueue;

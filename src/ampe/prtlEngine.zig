@@ -120,7 +120,7 @@ pub fn processWaitTriggersFailure(eng: *Engine) void {
     return;
 }
 
-const tofu = @import("../engine.zig");
+const tofu = @import("../tofu.zig");
 
 const Engine = tofu.Engine;
 
@@ -152,7 +152,7 @@ const status_to_raw = status.status_to_raw;
 const configurator = tofu.configurator;
 const Configurator = configurator.Configurator;
 
-const internal = @import("internal");
+const internal = @import("internal.zig");
 
 const Notifier = internal.Notifier;
 

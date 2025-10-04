@@ -23,7 +23,7 @@ pub const MessageRole = enum(u2) {
     signal = 3,
 };
 
-/// Enum indicating the origin of a message, either from the application or the engine.
+/// Enum indicating the origin of a message, either from the application or the ampe.
 pub const OriginFlag = enum(u1) {
     application = 0,
     engine = 1,
@@ -666,13 +666,12 @@ pub fn clearQueue(queue: *MessageQueue) void {
 
 pub const Appendable = @import("nats").Appendable;
 
-const tofu = @import("engine.zig");
-const message = tofu.message;
+const message = @import("message.zig");
 
 /// Structure for managing a queue of messages in a FIFO order.
-pub const MessageQueue = @import("engine/IntrusiveQueue.zig").IntrusiveQueue(Message);
+pub const MessageQueue = @import("ampe/IntrusiveQueue.zig").IntrusiveQueue(Message);
 
-pub const status = tofu.status;
+pub const status = @import("status.zig");
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
 pub const status_to_raw = status.status_to_raw;
@@ -688,4 +687,4 @@ const AtomicOrder = std.builtin.AtomicOrder;
 const AtomicRmwOp = std.builtin.AtomicRmwOp;
 
 const log = std.log;
-const DBG = tofu.DBG;
+const DBG = @import("ampe.zig").DBG;

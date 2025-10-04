@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
         .name = "tofu",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/engine.zig"),
+        .root_source_file = b.path("src/ampe.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
@@ -45,28 +45,17 @@ pub fn build(b: *std.Build) void {
     }
 
     const tofuMod = b.addModule("tofu", .{
-        .root_source_file = b.path("src/engine.zig"),
+        .root_source_file = b.path("src/tofu.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
 
-    const internalMod = b.createModule(.{
-        .root_source_file = b.path("src/internal.zig"),
-        .target = target,
-        .optimize = optimize,
-        .single_threaded = false,
-    });
-    internalMod.addImport("tofu", tofuMod);
-    internalMod.addImport("mailbox", mailbox.module("mailbox"));
-    internalMod.addImport("temp", temp.module("temp"));
-
-    tofuMod.addImport("internal", internalMod);
     tofuMod.addImport("nats", nats.module("nats"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
 
-    lib.root_module.addImport("internal", internalMod);
+    lib.root_module.addImport("tofu", tofuMod);
     lib.root_module.addImport("nats", nats.module("nats"));
     lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib.root_module.addImport("temp", temp.module("temp"));
@@ -96,7 +85,6 @@ pub fn build(b: *std.Build) void {
         .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
     });
 
-    lib_unit_tests.root_module.addImport("internal", internalMod);
     lib_unit_tests.root_module.addImport("tofu", tofuMod);
     lib_unit_tests.root_module.addImport("recipes", recipesMod);
     lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
@@ -112,22 +100,6 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib_unit_tests);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
-
-    // const exe_unit_tests = b.addTest(.{
-    //     .root_source_file = b.path("src/tofu_tests.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    //     .error_tracing = true,
-    //     .test_runner = .{ .path = b.path("testRunner.zig"), .role = .simple },
-    // });
-    //
-    // // need libc for windows sockets
-    // if (target.result.os.tag == .windows) {
-    //     exe_unit_tests.linkLibC();
-    //     exe_unit_tests.linkSystemLibrary("ws2_32");
-    // }
-    //
-    // _ = b.addRunArtifact(exe_unit_tests);
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request

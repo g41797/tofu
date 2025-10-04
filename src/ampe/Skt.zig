@@ -242,7 +242,7 @@ pub const connectError = error{
     _,
 } || posix.ConnectError;
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 const message = tofu.message;
 const Trigger = message.Trigger;
 
@@ -252,7 +252,7 @@ const Message = message.Message;
 const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 const MsgSender = internal.MsgSender;
 const sockets = internal.sockets;
 

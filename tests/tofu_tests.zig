@@ -7,10 +7,10 @@ test {
     std.log.debug("\r\n   ****  tofu TESTS  ****\r\n", .{});
 
     _ = @import("engine_tests.zig");
-    // _ = @import("engine/sockets_tests.zig");
-    _ = @import("engine/Pool_tests.zig");
-    _ = @import("engine/Notifier_tests.zig");
-    _ = @import("engine/channels_tests.zig");
+    // _ = @import("ampe/sockets_tests.zig");
+    _ = @import("ampe/Pool_tests.zig");
+    _ = @import("ampe/Notifier_tests.zig");
+    _ = @import("ampe/channels_tests.zig");
     _ = @import("configurator_tests.zig");
     _ = @import("message_tests.zig");
 

@@ -81,9 +81,8 @@ const tofu = @import("tofu");
 
 const recipes = @import("recipes");
 
-const engine = tofu.engine;
-const Ampe = engine.Ampe;
-const MessageChannelGroup = engine.MessageChannelGroup;
+const Ampe = tofu.Ampe;
+const MessageChannelGroup = tofu.MessageChannelGroup;
 
 const message = tofu.message;
 const MessageType = message.MessageType;

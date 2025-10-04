@@ -41,8 +41,9 @@ test "base Notifier" {
 
     try testing.expectEqual(0xFF, ack);
 }
+const tofu = @import("tofu");
 
-const Notifier = @import("internal").Notifier;
+const Notifier = tofu.@"internal usage".Notifier;
 const NotificationKind = Notifier.NotificationKind;
 const Notification = Notifier.Notification;
 

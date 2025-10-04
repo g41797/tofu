@@ -154,7 +154,7 @@ fn _freeAll(pool: *Pool) void {
 
 const Appendable = @import("nats").Appendable;
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 const message = tofu.message;
 const Message = message.Message;
 const AllocationStrategy = tofu.AllocationStrategy;

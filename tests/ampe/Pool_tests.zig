@@ -42,10 +42,11 @@ test "Pool base finctionality" {
     pool.close();
 }
 
-const Pool = @import("internal").Pool;
-const AmpeError = @import("tofu").status.AmpeError;
-const engine = @import("tofu").engine;
-const AllocationStrategy = engine.AllocationStrategy;
+const tofu = @import("tofu");
+const AmpeError = tofu.status.AmpeError;
+const AllocationStrategy = tofu.AllocationStrategy;
+
+const Pool = tofu.@"internal usage".Pool;
 
 const std = @import("std");
 const testing = std.testing;

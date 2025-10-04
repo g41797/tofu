@@ -59,7 +59,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Engine {
     };
     errdefer gpa.destroy(eng);
 
-    // add here comptime creation based on os
+    // 2DO add here comptime creation based on os
     const plru: poller.Poller = .{
         .poll = poller.Poll.init(gpa) catch {
             return AmpeError.AllocationFailed;
@@ -710,7 +710,7 @@ pub const responseFailure = partial.responseFailure;
 pub const markForDelete = partial.markForDelete;
 pub const clearForDelete = partial.clearForDelete;
 
-const tofu = @import("../engine.zig");
+const tofu = @import("../tofu.zig");
 const message = tofu.message;
 const MessageType = message.MessageType;
 const MessageRole = message.MessageRole;
@@ -736,7 +736,7 @@ const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const internal = @import("internal");
+const internal = tofu.@"internal usage";
 const Notifier = internal.Notifier;
 
 const Pool = internal.Pool;

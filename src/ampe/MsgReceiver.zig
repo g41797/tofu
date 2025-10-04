@@ -172,7 +172,7 @@ pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
     return wasRecv;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 const message = tofu.message;
 const Trigger = message.Trigger;
 const BinaryHeader = message.BinaryHeader;
@@ -181,7 +181,7 @@ const MessageQueue = message.MessageQueue;
 const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 const Pool = internal.Pool;
 
 const std = @import("std");

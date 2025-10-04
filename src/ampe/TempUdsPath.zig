@@ -19,8 +19,7 @@ pub fn buildPath(tup: *TempUdsPath, allocator: Allocator) ![]u8 {
     return socket_file;
 }
 
-const tofu = @import("../engine.zig");
-const status = tofu.status;
+const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
 const temp = @import("temp");

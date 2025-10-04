@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-/// Represents an asynchronous message passing engine interface.
+/// Represents an asynchronous message passing ampe interface.
 /// Provides methods to
 /// - manage pool of the messages
 /// - create and destroy message channel groups
@@ -50,7 +50,7 @@ pub const AllocationStrategy = enum {
 
 /// Represents a message channel group interface for asynchronous message passing.
 /// Supports asynchronous bi-directional exchange of messages.
-/// Acts as a client to the Ampe engine.
+/// Acts as a client to the Ampe ampe.
 pub const MessageChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.MCGVTable,
@@ -81,7 +81,7 @@ pub const MessageChannelGroup = struct {
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
     ///
-    /// May receive messages from the engine, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
+    /// May receive messages from the ampe, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
     /// or Signal ('pool_empty') (indicating no free messages for receive).
     ///
     /// Application also may send message via interruptWait.
@@ -110,7 +110,7 @@ pub const MessageChannelGroup = struct {
     }
 };
 
-/// Structure for holding configuration options for the message passing engine.
+/// Structure for holding configuration options for the message passing ampe.
 pub const Options = struct {
     initialPoolMsgs: ?u16 = null,
     maxPoolMsgs: ?u16 = null,
@@ -123,14 +123,9 @@ pub const DefaultOptions: Options = .{
 
 pub const DBG = (@import("builtin").mode == .Debug);
 
-// For caller code
-pub const configurator = @import("configurator.zig");
-pub const message = @import("message.zig");
-pub const status = @import("status.zig");
-pub const Engine = @import("engine/Engine.zig");
-pub const TempUdsPath = @import("engine/TempUdsPath.zig");
-
-const vtables = @import("engine/vtables.zig");
+const message = @import("message.zig");
+const status = @import("status.zig");
+const vtables = @import("ampe/vtables.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

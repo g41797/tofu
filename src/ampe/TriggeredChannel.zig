@@ -191,7 +191,7 @@ pub inline fn disableDelete(tchn: *TriggeredChannel) void {
     tchn.st = null;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 const Engine = tofu.Engine;
 
@@ -222,7 +222,7 @@ const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 const MchnGroup = internal.MchnGroup;
 
 const Notifier = internal.Notifier;

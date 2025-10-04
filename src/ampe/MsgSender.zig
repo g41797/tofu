@@ -178,7 +178,7 @@ pub fn sendBufTo(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
     return wasSend;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 const message = tofu.message;
 
 const Trigger = message.Trigger;

@@ -218,7 +218,7 @@ pub const Poll = struct {
 
 const err_mask = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 const DBG = tofu.DBG;
 
 pub const AmpeError = tofu.status.AmpeError;

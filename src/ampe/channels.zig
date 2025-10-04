@@ -180,6 +180,22 @@ pub const ActiveChannels = struct {
         }
     }
 
+    pub fn check(cns: *ActiveChannels, cn: ChannelNumber, mchng: ?*anyopaque) AmpeError!void {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
+        const achn = cns.active.get(cn);
+        if (achn == null) {
+            return AmpeError.InvalidChannelNumber;
+        }
+
+        if (achn.?.ctx != mchng) {
+            return AmpeError.InvalidMessageChannelGroup;
+        }
+
+        return;
+    }
+
     pub fn exists(cns: *ActiveChannels, cn: ChannelNumber) bool {
         cns.mutex.lock();
         defer cns.mutex.unlock();
@@ -191,9 +207,10 @@ pub const ActiveChannels = struct {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
-        const achn = cns.active.get(cn) catch {
+        const achn = cns.active.get(cn);
+        if (achn == null) {
             return null;
-        };
+        }
 
         return achn.ctx;
     }
@@ -303,11 +320,12 @@ pub const ActiveChannels = struct {
     }
 };
 
-const status = @import("tofu").status;
+const tofu = @import("../tofu.zig");
+const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 
-const message = @import("tofu").message;
+const message = tofu.message;
 pub const ChannelNumber = message.ChannelNumber;
 const MessageID = message.MessageID;
 

@@ -138,7 +138,7 @@ pub fn createConnectSocket(address: *const std.net.Address) !Skt {
     return ret;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 const configurator = tofu.configurator;
 const Configurator = configurator.Configurator;

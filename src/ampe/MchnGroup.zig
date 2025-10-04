@@ -72,9 +72,7 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
     if (sendMsg.bhdr.channel_number != 0) {
-        if (!grp.prnt.acns.exists(sendMsg.bhdr.channel_number)) {
-            return AmpeError.InvalidChannelNumber;
-        }
+        try grp.prnt.acns.check(sendMsg.bhdr.channel_number, ptr);
     } else {
         var proto = sendMsg.bhdr.proto;
         proto._internal = 0; // As sign of the "local" hello/welcome
@@ -139,7 +137,7 @@ pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     return;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
 
 pub const message = tofu.message;
 pub const MessageType = message.MessageType;
@@ -157,9 +155,8 @@ pub const VC = message.ValidCombination;
 
 pub const Engine = tofu.Engine;
 
-const engine = tofu;
-const MessageChannelGroup = engine.MessageChannelGroup;
-const AllocationStrategy = engine.AllocationStrategy;
+const MessageChannelGroup = tofu.MessageChannelGroup;
+const AllocationStrategy = tofu.AllocationStrategy;
 const AmpeError = tofu.status.AmpeError;
 
 const Notifier = @import("Notifier.zig");

@@ -498,7 +498,8 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
     return tskt;
 }
 
-const tofu = @import("tofu");
+const tofu = @import("../tofu.zig");
+const internal = tofu.@"internal usage";
 
 const message = tofu.message;
 const MessageType = message.MessageType;
@@ -517,10 +518,10 @@ const VC = message.ValidCombination;
 const CN = message.ChannelNumber;
 
 const Engine = tofu.Engine;
-const TCM = Engine.TriggeredChannelsMap;
-const TC = Engine.TriggeredChannel;
+const TCM = internal.TriggeredChannelsMap;
+const TC = internal.TriggeredChannel;
 
-const poller = tofu.poller;
+const poller = internal.poller;
 const Poller = poller.Poller;
 const Poll = poller.Poll;
 
@@ -539,15 +540,15 @@ const raw_to_status = status.raw_to_status;
 const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
-const Pool = tofu.Pool;
-const Notifier = tofu.Notifier;
+const Pool = internal.Pool;
+const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
-const channels = tofu.channels;
+const channels = internal.channels;
 const ActiveChannel = channels.ActiveChannel;
 const ActiveChannels = channels.ActiveChannels;
 
-const sockets = tofu.sockets;
+const sockets = internal.sockets;
 
 const Appendable = @import("nats").Appendable;
 

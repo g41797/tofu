@@ -526,13 +526,11 @@ inline fn isFirstClientRequest(msg: *Message) bool {
 
 const LazyPTOP = 7099;
 
-const tofu = @import("engine.zig");
-
-pub const message = tofu.message;
+pub const message = @import("message.zig");
 pub const Message = message.Message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const TextHeaders = message.TextHeaders;
-pub const AmpeError = tofu.status.AmpeError;
+pub const AmpeError = @import("status.zig").AmpeError;
 
 const std = @import("std");
 const activeTag = std.meta.activeTag;

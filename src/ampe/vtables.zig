@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 pub const AmpeVTable = struct {
-    get: *const fn (ptr: ?*anyopaque, strategy: tofu.AllocationStrategy) AmpeError!?*message.Message,
+    get: *const fn (ptr: ?*anyopaque, strategy: AllocationStrategy) AmpeError!?*message.Message,
 
     put: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) void,
 
-    create: *const fn (ptr: ?*anyopaque) AmpeError!tofu.MessageChannelGroup,
+    create: *const fn (ptr: ?*anyopaque) AmpeError!MessageChannelGroup,
 
     destroy: *const fn (ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void,
 };
@@ -19,7 +19,8 @@ pub const MCGVTable = struct {
     interruptWait: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void,
 };
 
-pub const tofu = @import("../engine.zig");
-pub const message = tofu.message;
-pub const status = tofu.status;
-pub const AmpeError = status.AmpeError;
+const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
+const MessageChannelGroup = @import("../ampe.zig").MessageChannelGroup;
+const message = @import("../message.zig");
+const status = @import("../message.zig");
+const AmpeError = status.AmpeError;
