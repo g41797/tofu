@@ -236,6 +236,15 @@ pub const ActiveChannels = struct {
         return _removeChannel(cns, cn);
     }
 
+    pub fn removeChannelForDefer(cns: *ActiveChannels, cn: ChannelNumber) void {
+        cns.mutex.lock();
+        defer cns.mutex.unlock();
+
+        _ = _removeChannel(cns, cn);
+
+        return;
+    }
+
     // Called only on Engine thread
     pub fn removeChannels(cns: *ActiveChannels, ptr: ?*anyopaque) !usize {
         cns.mutex.lock();

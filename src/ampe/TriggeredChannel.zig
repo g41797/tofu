@@ -73,6 +73,47 @@ pub fn createIoClientChannel(eng: *Engine) AmpeError!void {
     return;
 }
 
+pub fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void {
+
+    // Try to get socket of the client
+    var listener = lstchn.*.tskt;
+    var srvsktOpt = listener.accept.tryAccept() catch {
+        // Failure on the client side
+        return;
+    };
+
+    if (srvsktOpt == null) {
+        // Continue to poll
+        return;
+    }
+
+    errdefer srvsktOpt.?.close();
+
+    var tc = createDumbChannel(eng);
+
+    const lactChn = lstchn.*.acn;
+
+    // new ActiveChannel for connected client
+    // 2DO set mid & inttr  to real values upon receive of HelloRequest/HelloSignal
+    const newAcn = eng.acns.createChannel(0, .{}, lactChn.ctx);
+    errdefer eng.acns.removeChannelForDefer(newAcn.chn);
+    tc.acn = newAcn;
+    try eng.addChannel(tc);
+
+    var clSkt: sockets.IoSkt = try sockets.IoSkt.initServerSide(&eng.pool, newAcn.chn, srvsktOpt.?);
+    errdefer clSkt.deinit();
+
+    const srvio: sockets.TriggeredSkt = .{
+        .io = clSkt,
+    };
+
+    const tcptr = eng.trgrd_map.getPtr(newAcn.chn).?;
+    tcptr.disableDelete();
+    tcptr.*.resp2ac = true;
+    tcptr.*.tskt = srvio;
+    return;
+}
+
 pub fn createAcceptChannel(eng: *Engine) AmpeError!void {
     const welcome: *Message = eng.currMsg.?;
 

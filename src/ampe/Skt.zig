@@ -30,7 +30,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
     var addr_len = askt.address.getOsSockLen();
 
     skt.socket = std.posix.accept(
-        askt.socket,
+        askt.socket.?,
         &addr.any,
         &addr_len,
         std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC,

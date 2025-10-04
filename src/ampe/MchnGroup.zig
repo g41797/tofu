@@ -71,6 +71,8 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
+    var newChannelWasCreated: bool = false;
+
     if (sendMsg.bhdr.channel_number != 0) {
         try grp.prnt.acns.check(sendMsg.bhdr.channel_number, ptr);
     } else {
@@ -79,8 +81,15 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
         const ach = grp.prnt.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, grp);
         sendMsg.bhdr.channel_number = ach.chn;
+        newChannelWasCreated = true;
     }
-    try grp.prnt.submitMsg(sendMsg, vc);
+
+    grp.prnt.submitMsg(sendMsg, vc) catch |err| {
+        if (newChannelWasCreated) {
+            _ = grp.prnt.acns.removeChannel(sendMsg.bhdr.channel_number);
+        }
+        return err;
+    };
 
     amsg.* = null;
 

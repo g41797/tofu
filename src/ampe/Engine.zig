@@ -546,7 +546,10 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         }
 
         if (trgrs.accept == .on) {
-            return AmpeError.NotImplementedYet;
+            TriggeredChannel.createIoServerChannel(eng, tc) catch |err| {
+                log.info("createIoServerChannel for connected client failed with error {s}", .{@errorName(err)});
+            };
+            continue;
         }
 
         if (trgrs.send == .on) {

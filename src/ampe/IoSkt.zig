@@ -28,8 +28,8 @@ pub fn initServerSide(pool: *Pool, cn: message.ChannelNumber, sskt: Skt) AmpeErr
         .alreadySend = null,
     };
 
-    ret.currSend.set(cn, sskt.socket) catch unreachable;
-    ret.currRecv.set(cn, sskt.socket) catch unreachable;
+    ret.currSend.set(cn, sskt.socket.?) catch unreachable;
+    ret.currRecv.set(cn, sskt.socket.?) catch unreachable;
 
     return ret;
 }
