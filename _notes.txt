@@ -332,6 +332,7 @@ Kraiklyn hugo theme
 
 mkdocs-sample
     https://github.com/yriahi/mkdocs-sample
+    https://yriahi.github.io/mkdocs-sample/
 
 Mkdocs Material theme
     https://github.com/squidfunk/mkdocs-material

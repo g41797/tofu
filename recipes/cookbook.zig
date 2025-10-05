@@ -338,8 +338,8 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     // Only configuration is different.
 
     const options: tofu.Options = .{
-        .initialPoolMsgs = 1, // just for example
-        .maxPoolMsgs = 16, // just for example
+        .initialPoolMsgs = 16, // just for example
+        .maxPoolMsgs = 32, // just for example
     };
 
     var eng = try Engine.Create(gpa, options);
@@ -400,8 +400,8 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Of course configurations should be or for TCP client/server or for UDS ones.
 
     const options: tofu.Options = .{
-        .initialPoolMsgs = 1, // just for example
-        .maxPoolMsgs = 16, // just for example
+        .initialPoolMsgs = 16, // just for example
+        .maxPoolMsgs = 32, // just for example
     };
 
     var eng = try Engine.Create(gpa, options);
@@ -417,23 +417,29 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // It will be closed during destroy of it's MessageChannelGroup
     defer destroyMcg(ampe, mchngr);
 
-    var welcome = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var welcomeRequest = try ampe.get(tofu.AllocationStrategy.poolOnly);
+
+    // If pool is empty, for poolOnly AllocationStrategy.poolOnly it returns null
+    if (welcomeRequest == null) {
+        // You can directly create message. Use the same allocator used by Engine.Create.
+        welcomeRequest = Message.create(gpa) catch unreachable;
+    }
 
     // If message was send to ampe, welcome will be null.
     // It's safe to put null message to the pool.
     // For failed send, message will be returned to the pool.
-    defer ampe.put(&welcome);
+    defer ampe.put(&welcomeRequest);
 
     // Appends configuration to TextHeaders of the message
-    try srvCfg.prepareRequest(welcome.?);
+    try srvCfg.prepareRequest(welcomeRequest.?);
 
-    const srvCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&welcome);
+    const srvCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&welcomeRequest);
     log.debug("Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
 
     var welcomeResp = try mchngr.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
-    defer mchngr.put(&welcomeResp);
+    defer ampe.put(&welcomeResp);
 
     var st = welcomeResp.?.bhdr.status;
 
@@ -465,13 +471,14 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // tofu is boring, most of the time you will work with structs
     // instead of playing with super-duper APIs
 
-    var hello = try ampe.get(tofu.AllocationStrategy.poolOnly);
-    defer ampe.put(&hello);
+    // We are lazy enough to check result and yse AllocationStrategy.always.
+    var helloRequest = try ampe.get(tofu.AllocationStrategy.always);
+    defer ampe.put(&helloRequest);
 
     // Appends configuration to TextHeaders of the message
-    try cltCfg.prepareRequest(welcome.?);
+    try cltCfg.prepareRequest(helloRequest.?);
 
-    const cltCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&hello);
+    const cltCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&helloRequest);
     log.debug("Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
 
     // It should be different channels.
