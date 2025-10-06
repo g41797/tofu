@@ -6,7 +6,7 @@ pub const MchnGroup = @This();
 prnt: *Engine = undefined,
 id: u32 = undefined,
 allocator: Allocator = undefined,
-msgs: MSGMailBox = undefined,
+msgs: [2]MSGMailBox = undefined,
 cmpl: ResetEvent = undefined,
 
 pub fn chnls(grp: *MchnGroup) Channels {
@@ -41,7 +41,7 @@ fn init(prnt: *Engine, id: u32) MchnGroup {
         .prnt = prnt,
         .id = id,
         .allocator = prnt.allocator,
-        .msgs = .{},
+        .msgs = .{ .{}, .{} },
         .cmpl = ResetEvent{},
     };
 
@@ -49,14 +49,20 @@ fn init(prnt: *Engine, id: u32) MchnGroup {
 }
 
 fn deinit(grp: *MchnGroup) void {
-    var allocated = grp.msgs.close();
-    while (allocated != null) {
-        const next = allocated.?.next;
-        grp.prnt.pool.put(allocated.?);
-        allocated = next;
-    }
-
+    grp.cleanMboxes();
     return;
+}
+
+fn cleanMboxes(grp: *MchnGroup) void {
+    for (0..2) |i| {
+        var mbx = grp.msgs[i];
+        var allocated = mbx.close();
+        while (allocated != null) {
+            const next = allocated.?.next;
+            grp.prnt.pool.put(allocated.?);
+            allocated = next;
+        }
+    }
 }
 
 pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
@@ -98,7 +104,7 @@ pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
-    const recvMsg: *Message = grp.msgs.receive(timeout_ns) catch |err| {
+    const recvMsg: *Message = grp.msgs[1].receive(timeout_ns) catch |err| {
         switch (err) {
             error.Timeout => {
                 return null;
@@ -107,19 +113,37 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
                 return AmpeError.ShutdownStarted;
             },
             error.Interrupted => {
-                return grp.prnt.buildStatusSignal(.wait_interrupted);
+                const intrptMsg: ?*Message = grp.msgs[0].receive(0) catch |er| {
+                    if (er == error.Closed) {
+                        return AmpeError.ShutdownStarted;
+                    }
+                    return grp.prnt.buildStatusSignal(.wait_interrupted);
+                };
+                return intrptMsg;
             },
         }
     };
-
     return recvMsg;
 }
 
 pub fn interruptWait(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
-    _ = msg;
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
-    grp.msgs.interrupt() catch {};
-    return AmpeError.NotImplementedYet;
+
+    if (msg.* != null) {
+        msg.*.?.bhdr.proto.origin = .application;
+        msg.*.?.bhdr.status = tofu.status.status_to_raw(.wait_interrupted);
+
+        grp.msgs[0].send(msg.*.?) catch {
+            return AmpeError.ShutdownStarted;
+        };
+        msg.* = null;
+    }
+
+    grp.msgs[1].interrupt() catch {
+        return AmpeError.ShutdownStarted;
+    };
+
+    return;
 }
 
 pub fn setReleaseCompleted(grp: *MchnGroup) void {
@@ -138,7 +162,7 @@ pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     }
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
-    grp.msgs.send(msg.*.?) catch {
+    grp.msgs[1].send(msg.*.?) catch {
         return AmpeError.ShutdownStarted;
     };
 
@@ -167,6 +191,7 @@ pub const Engine = tofu.Engine;
 const Channels = tofu.Channels;
 const AllocationStrategy = tofu.AllocationStrategy;
 const AmpeError = tofu.status.AmpeError;
+const AmpeStatus = tofu.status.AmpeStatus;
 
 const Notifier = @import("Notifier.zig");
 const ActiveChannels = @import("channels.zig").ActiveChannels;

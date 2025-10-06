@@ -80,7 +80,7 @@ pub fn triggers(ioskt: *IoSkt) !Triggers {
 
     var ret: Triggers = .{};
     if (!ioskt.sendQ.empty() or ioskt.currSend.started()) {
-        if(!ioskt.byeWasSend) {
+        if (!ioskt.byeWasSend) {
             ret.send = .on;
         }
     }
@@ -184,7 +184,7 @@ pub fn tryRecv(ioskt: *IoSkt) AmpeError!MessageQueue {
 
         ret.enqueue(received.?);
 
-        if(ioskt.byeResponseReceived) {
+        if (ioskt.byeResponseReceived) {
             break;
         }
     }
@@ -213,13 +213,13 @@ pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
             break;
         }
 
-        if (wasSend.?.bhdr.proto.mtype == .bye){
+        if (wasSend.?.bhdr.proto.mtype == .bye) {
             ioskt.byeWasSend = true;
         }
 
         ret.enqueue(wasSend.?);
 
-        if(ioskt.byeWasSend) {
+        if (ioskt.byeWasSend) {
             break;
         }
     }
