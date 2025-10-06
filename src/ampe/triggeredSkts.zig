@@ -173,6 +173,8 @@ pub const TriggeredSkt = union(enum) {
     pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
         return switch (tsk.*) {
             .io => tsk.*.io.addToSend(sndmsg),
+            // Any attempt to send to listener is interpreted as close
+            .accept => return AmpeError.ChannelClosed,
             inline else => return AmpeError.NotAllowed,
         };
     }

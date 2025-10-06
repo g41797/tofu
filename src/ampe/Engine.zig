@@ -400,8 +400,7 @@ fn loop(eng: *Engine) void {
                     return;
                 },
                 else => {
-                    log.err("processMessageFromChannels failed with error {any}", .{err});
-                    return;
+                    log.debug("processMessageFromChannels returned error {any}", .{err});
                 },
             };
 
@@ -718,7 +717,7 @@ const processWaitTriggersFailure = partial.processWaitTriggersFailure;
 const processMarkedForDelete = partial.processMarkedForDelete;
 const processInternal = partial.processInternal;
 
-const sendToPeer = partial.sendToPeer;
+pub const sendToPeer = partial.sendToPeer;
 const sendByeResponse = partial.sendByeResponse;
 const sendBye = partial.sendBye;
 const sendWelcome = partial.sendWelcome;

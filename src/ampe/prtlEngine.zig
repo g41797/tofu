@@ -36,15 +36,21 @@ pub fn sendWelcome(eng: *Engine) !void {
 }
 
 pub fn sendBye(eng: *Engine) !void {
-    // 2DO - Add processing
-    _ = eng;
-    return AmpeError.NotImplementedYet;
+    const bye: *Message = eng.currMsg.?;
+
+    if ((bye.bhdr.proto.role == .signal) and (bye.bhdr.proto.oob == .on)) {
+        // Initiate close of the channel
+        eng.responseFailure(AmpeStatus.channel_closed) catch {};
+        return;
+    }
+
+    return eng.sendToPeer();
 }
 
 pub fn sendByeResponse(eng: *Engine) !void {
-    // 2DO - Add processing
-    _ = eng;
-    return AmpeError.NotImplementedYet;
+    // For now - nothing special, just sendToPeer
+    // In the future - possibly to disable further sends
+    return eng.sendToPeer();
 }
 
 pub fn sendToPeer(eng: *Engine) !void {

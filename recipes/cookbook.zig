@@ -569,10 +569,52 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
     assert(welcomeResp.?.bhdr.proto.role == .response);
 
+    // Close all 3 channels in 'force' mode.
+    // It's dono via ByeSignal with oob == on
+
+    var closeListener: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
+
+    // Prepare BySignal to listener channel
+    closeListener.?.bhdr.proto.mtype = .bye;
+    closeListener.?.bhdr.proto.role = .signal;
+    closeListener.?.bhdr.proto.oob = .on;
+
+    // Set channel_number in order to close this channel
+    closeListener.?.bhdr.channel_number = srvCorrInfo.channel_number;
+
+    _ = try chnls.asyncSend(&closeListener);
+
+    var closeListenerResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
+    defer ampe.put(&closeListenerResp);
+
+    assert(closeListenerResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+
+    // Close one of the client channels
+    var closeClient: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
+
+    // Prepare BySignal to listener channel
+    closeClient.?.bhdr.proto.mtype = .bye;
+    closeClient.?.bhdr.proto.role = .signal;
+    closeClient.?.bhdr.proto.oob = .on;
+
+    // Set channel_number in order to close this channel
+    closeClient.?.bhdr.channel_number = cltCorrInfo.channel_number; //client channel on the client side
+
+    _ = try chnls.asyncSend(&closeClient);
+
+    // We should receive two messages with statuses,
+    // because close of on socket on the side will immediately close
+    // socket on the server side
+    for (0..2) |_| {
+        var closeClientResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
+        defer ampe.put(&closeClientResp);
+        assert(closeClientResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+    }
+
     // You saw that main tofu programming are done via
     // setting information within message itself.
-    // There are only 3 APIs work communication.
-    // For now we are know two of them:
+    // There are only 3 communication APIs.
+    // For now we know two of them:
     // - asyncSend
     // - waitRecv
 
