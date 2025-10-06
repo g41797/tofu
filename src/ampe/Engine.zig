@@ -570,7 +570,14 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
             };
             var next: ?*Message = wereRecv.dequeue();
             while (next != null) {
+                var byeResponseReceived: bool = false;
+                if ((next.?.bhdr.proto.mtype == .bye) and (next.?.bhdr.proto.role == .response)) {
+                    byeResponseReceived = true;
+                }
                 tc.sendToCtx(&next);
+                if (byeResponseReceived) {
+                    tc.markForDelete(.channel_closed);
+                }
                 next = wereRecv.dequeue();
             }
         }

@@ -10,7 +10,9 @@ skt: Skt = undefined,
 connected: bool = undefined,
 sendQ: MessageQueue = undefined,
 currSend: MsgSender = undefined,
+byeWasSend: bool = undefined,
 currRecv: MsgReceiver = undefined,
+byeResponseReceived: bool = undefined,
 alreadySend: ?*Message = null,
 
 pub fn initServerSide(pool: *Pool, cn: message.ChannelNumber, sskt: Skt) AmpeError!IoSkt {
@@ -25,6 +27,8 @@ pub fn initServerSide(pool: *Pool, cn: message.ChannelNumber, sskt: Skt) AmpeErr
         .sendQ = .{},
         .currSend = MsgSender.init(),
         .currRecv = MsgReceiver.init(pool),
+        .byeWasSend = false,
+        .byeResponseReceived = false,
         .alreadySend = null,
     };
 
@@ -45,6 +49,8 @@ pub fn initClientSide(ios: *IoSkt, pool: *Pool, hello: *Message, sc: *SocketCrea
     ios.sendQ = .{};
     ios.currSend = MsgSender.init();
     ios.currRecv = MsgReceiver.init(pool);
+    ios.byeResponseReceived = false;
+    ios.byeWasSend = false;
     ios.alreadySend = null;
 
     errdefer ios.skt.deinit();
@@ -74,16 +80,20 @@ pub fn triggers(ioskt: *IoSkt) !Triggers {
 
     var ret: Triggers = .{};
     if (!ioskt.sendQ.empty() or ioskt.currSend.started()) {
-        ret.send = .on;
+        if(!ioskt.byeWasSend) {
+            ret.send = .on;
+        }
     }
 
-    const recvPossible = try ioskt.currRecv.recvIsPossible();
+    if (!ioskt.byeResponseReceived) {
+        const recvPossible = try ioskt.currRecv.recvIsPossible();
 
-    if (recvPossible) {
-        ret.recv = .on;
-    } else {
-        assert(ioskt.currRecv.ptrg == .on);
-        ret.pool = .on;
+        if (recvPossible) {
+            ret.recv = .on;
+        } else {
+            assert(ioskt.currRecv.ptrg == .on);
+            ret.pool = .on;
+        }
     }
 
     if (DBG) {
@@ -168,7 +178,15 @@ pub fn tryRecv(ioskt: *IoSkt) AmpeError!MessageQueue {
         // Replace "remote" channel_number with "local" one
         received.?.bhdr.channel_number = ioskt.cn;
 
+        if ((received.?.bhdr.proto.mtype == .bye) and (received.?.bhdr.proto.role == .response)) {
+            ioskt.byeResponseReceived = true;
+        }
+
         ret.enqueue(received.?);
+
+        if(ioskt.byeResponseReceived) {
+            break;
+        }
     }
 
     return ret;
@@ -195,7 +213,15 @@ pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
             break;
         }
 
+        if (wasSend.?.bhdr.proto.mtype == .bye){
+            ioskt.byeWasSend = true;
+        }
+
         ret.enqueue(wasSend.?);
+
+        if(ioskt.byeWasSend) {
+            break;
+        }
     }
 
     return ret;
