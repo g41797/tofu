@@ -5,6 +5,8 @@ const assert = std.debug.assert;
 
 pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
+pub const Ampe = tofu.Ampe;
+pub const Channels = tofu.Channels;
 pub const Options = tofu.Options;
 pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
@@ -39,10 +41,10 @@ pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
 
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
+    const chnls = try ampe.create();
 
-    // You destroy MessageChannelGroup via destroy it by ampe
-    try ampe.destroy(mchgr);
+    // You destroy Channels via destroy it by ampe
+    try ampe.destroy(chnls);
 }
 
 pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
@@ -57,8 +59,8 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer destroyMcg(ampe, mchgr);
+    const chnls = try ampe.create();
+    defer destroyChannels(ampe, chnls);
 
     var msg1 = try ampe.get(tofu.AllocationStrategy.poolOnly);
 
@@ -96,8 +98,8 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer ampe.destroy(mchgr) catch {
+    const chnls = try ampe.create();
+    defer ampe.destroy(chnls) catch {
         // What can you do?
     };
 
@@ -107,7 +109,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     // Message retrieved from the poll is not valid for send
     // without setup.
     // It will be returned to the pool by defer above
-    _ = try mchgr.asyncSend(&msg);
+    _ = try chnls.asyncSend(&msg);
 
     return;
 }
@@ -122,8 +124,8 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer ampe.destroy(mchgr) catch {
+    const chnls = try ampe.create();
+    defer ampe.destroy(chnls) catch {
         // What can you do?
     };
 
@@ -139,7 +141,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     bhdr.proto.mtype = .bye;
     bhdr.proto.role = .request;
 
-    _ = try mchgr.asyncSend(&msg);
+    _ = try chnls.asyncSend(&msg);
 
     return;
 }
@@ -154,8 +156,8 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer ampe.destroy(mchgr) catch {
+    const chnls = try ampe.create();
+    defer ampe.destroy(chnls) catch {
         // What can you do?
     };
 
@@ -172,7 +174,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     bhdr.proto.mtype = .hello;
     bhdr.proto.role = .request;
 
-    _ = try mchgr.asyncSend(&msg);
+    _ = try chnls.asyncSend(&msg);
 
     return;
 }
@@ -187,8 +189,8 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer destroyMcg(ampe, mchgr);
+    const chnls = try ampe.create();
+    defer destroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
@@ -211,9 +213,9 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    _ = try mchgr.asyncSend(&msg);
+    _ = try chnls.asyncSend(&msg);
 
-    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+    var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
     ampe.put(&recvMsg);
@@ -230,8 +232,8 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer destroyMcg(ampe, mchgr);
+    const chnls = try ampe.create();
+    defer destroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
@@ -250,10 +252,10 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     try cnfg.prepareRequest(msg.?);
 
     // Store information for further processing
-    const bhdr = try mchgr.asyncSend(&msg);
+    const bhdr = try chnls.asyncSend(&msg);
     _ = bhdr;
 
-    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+    var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
     ampe.put(&recvMsg);
@@ -270,8 +272,8 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     defer eng.Destroy();
     const ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer destroyMcg(ampe, mchgr);
+    const chnls = try ampe.create();
+    defer destroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
@@ -288,9 +290,9 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    _ = try mchgr.asyncSend(&msg);
+    _ = try chnls.asyncSend(&msg);
 
-    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+    var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     const st = recvMsg.?.bhdr.status;
     ampe.put(&recvMsg);
@@ -342,12 +344,12 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
         .maxPoolMsgs = 32, // just for example
     };
 
-    var eng = try Engine.Create(gpa, options);
+    var eng: *Engine = try Engine.Create(gpa, options);
     defer eng.Destroy();
-    const ampe = try eng.ampe();
+    const ampe: Ampe = try eng.ampe();
 
-    const mchgr = try ampe.create();
-    defer destroyMcg(ampe, mchgr);
+    const chnls: Channels = try ampe.create();
+    defer destroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
@@ -355,10 +357,10 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    const corrInfo: message.BinaryHeader = try mchgr.asyncSend(&msg);
-    log.debug("Listen will start on channel {d} ", .{corrInfo.channel_number});
+    const corrInfo: BinaryHeader = try chnls.asyncSend(&msg);
+    log.debug(">><< Listen will start on channel {d} ", .{corrInfo.channel_number});
 
-    var recvMsg = try mchgr.waitReceive(INFINITE_TIMEOUT_MS);
+    var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
     defer ampe.put(&recvMsg);
@@ -376,24 +378,35 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     assert(recvMsg.?.bhdr.proto.role == .response);
 
     // We don't close this channel explicitly.
-    // It will be closed during destroy of MessageChannelGroup
-    // see 'defer destroyMcg(ampe, mchgr)' above.
+    // It will be closed during destroy of Channels
+    // see 'defer destroyChannels(ampe, chnls)' above.
 
     // raw_to_status converts status byte (u8) from binary header
     // to AmpeStatus enum for your convenience.
     return status.raw_to_status(st);
 }
 
-pub fn handleConnnectOfTcpClientServer(gpa: Allocator) !status.AmpeStatus {
+pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
 
     // Both server and client are on the localhost
-    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
 
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) !status.AmpeStatus {
+pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
+    var tup: tofu.TempUdsPath = .{};
+
+    const filePath = try tup.buildPath(gpa);
+
+    var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
+    var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
+
+    return handleConnect(gpa, &srvCfg, &cltCfg);
+}
+
+pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
 
     // The same code is used for both TCP amd UDS client/server
     // Only configurations are different.
@@ -404,20 +417,20 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
         .maxPoolMsgs = 32, // just for example
     };
 
-    var eng = try Engine.Create(gpa, options);
+    var eng: *Engine = try Engine.Create(gpa, options);
     defer eng.Destroy();
-    const ampe = try eng.ampe();
+    const ampe: Ampe = try eng.ampe();
 
-    // For simplicity we create the same group for the client and server.
+    // For simplicity we create the same Channels for the client and server.
     // You can create and use separated groups for the client and server.
 
-    const mchngr = try ampe.create();
+    const chnls: Channels = try ampe.create();
 
     // We don't close this channel explicitly.
-    // It will be closed during destroy of it's MessageChannelGroup
-    defer destroyMcg(ampe, mchngr);
+    // It will be closed during destroy of it's Channels
+    defer destroyChannels(ampe, chnls);
 
-    var welcomeRequest = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var welcomeRequest: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
 
     // If pool is empty, for poolOnly AllocationStrategy.poolOnly it returns null
     if (welcomeRequest == null) {
@@ -425,23 +438,29 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
         welcomeRequest = Message.create(gpa) catch unreachable;
     }
 
-    // If message was send to ampe, welcome will be null.
-    // It's safe to put null message to the pool.
+    // If message was send to ampe, welcome will be null
+    // (tt's safe to put null message to the pool).
     // For failed send, message will be returned to the pool.
     defer ampe.put(&welcomeRequest);
 
     // Appends configuration to TextHeaders of the message
     try srvCfg.prepareRequest(welcomeRequest.?);
 
-    const srvCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&welcomeRequest);
-    log.debug("Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
+    const srvCorrInfo: BinaryHeader = try chnls.asyncSend(&welcomeRequest);
+    log.debug(">><< Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
 
-    var welcomeResp = try mchngr.waitReceive(INFINITE_TIMEOUT_MS);
+    var welcomeResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
     defer ampe.put(&welcomeResp);
 
-    var st = welcomeResp.?.bhdr.status;
+    var st: u8 = welcomeResp.?.bhdr.status;
+
+    // This is the way of convert u8 status to AmpeError
+    status.raw_to_error(st) catch |err| {
+        log.debug(">><< welcomeResp error {s} ", .{@errorName(err)});
+    };
+    assert(st == 0);
 
     // Received message should contain the same channel number
     assert(srvCorrInfo.channel_number == welcomeResp.?.bhdr.channel_number);
@@ -471,17 +490,17 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // tofu is boring, most of the time you will work with structs
     // instead of playing with super-duper APIs
 
-    // We are lazy enough to check result and yse AllocationStrategy.always.
-    var helloRequest = try ampe.get(tofu.AllocationStrategy.always);
+    // We are lazy enough to check result and use AllocationStrategy.always.
+    var helloRequest: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&helloRequest);
 
     // Appends configuration to TextHeaders of the message
     try cltCfg.prepareRequest(helloRequest.?);
 
-    const cltCorrInfo: message.BinaryHeader = try mchngr.asyncSend(&helloRequest);
-    log.debug("Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
+    const cltCorrInfo: BinaryHeader = try chnls.asyncSend(&helloRequest);
+    log.debug(">><< Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
 
-    // It should be different channels.
+    // Should be different channels.
     assert(cltCorrInfo.channel_number != srvCorrInfo.channel_number);
 
     // Funny part - because group works with both client and server,
@@ -495,16 +514,24 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // with internal message queues and don't make and socket calls.
     //
     // We use different names for HelloRequest - try to understand why...
-    var helloRequestOnServerSide = try mchngr.waitReceive(INFINITE_TIMEOUT_MS);
+    var helloRequestOnServerSide: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
     defer ampe.put(&helloRequestOnServerSide);
 
+    st = helloRequestOnServerSide.?.bhdr.status;
+    const chN: message.ChannelNumber = helloRequestOnServerSide.?.bhdr.channel_number;
+    status.raw_to_error(st) catch |err| {
+        log.debug(">><< helloRequestOnServerSide channel {d} error {s} ", .{ chN, @errorName(err) });
+    };
+    assert(st == 0);
+
     // Store information about connected client
-    const connectedClientInfo = helloRequestOnServerSide.?.bhdr;
+    const connectedClientInfo: BinaryHeader = helloRequestOnServerSide.?.bhdr;
+    log.debug(">><< Channel of new connected client on the server side {d} ", .{connectedClientInfo.channel_number});
 
     // We have 3 different channels:
     // - listener channel (srvCorrInfo.channel_number)
     // - client channel on the client side (cltCorrInfo.channel_number)
-    // - client channel on the server side (helloRequestOnServerSide.?.bhdr.channel_number)
+    // - client channel on the server side (connectedClientInfo.channel_number)
     //
     // Remember - physical representation of the channel is stream oriented socket
     // (TCP/IP or UDS).
@@ -520,10 +547,10 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Use the same message and send HelloResponse back
     // Set role to .response in order to create HelloResponse
     helloRequestOnServerSide.?.bhdr.proto.role = .response;
-    _ = try mchngr.asyncSend(&helloRequestOnServerSide);
+    _ = try chnls.asyncSend(&helloRequestOnServerSide);
 
     // Now we are on the client side:
-    var helloResp = try mchngr.waitReceive(INFINITE_TIMEOUT_MS);
+    var helloResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
     // Don't forget return message to the pool:
     defer ampe.put(&helloResp);
@@ -554,10 +581,10 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     return status.raw_to_status(st);
 }
 
-// Helper function - allows to destroy MessageChannelGroup using defer
+// Helper function - allows to destroy Channels using defer
 // It's OK for the test and go-no-go examples.
-// In production, MessageChannelGroup is long life "object" and you will
+// In production, Channels is long life "object" and you will
 // use different approach for the destroy (at least you need to handle possible failure)
-pub fn destroyMcg(ampe: tofu.Ampe, mcg: tofu.MessageChannelGroup) void {
-    ampe.destroy(mcg) catch {};
+pub fn destroyChannels(ampe: tofu.Ampe, chnls: tofu.Channels) void {
+    ampe.destroy(chnls) catch {};
 }

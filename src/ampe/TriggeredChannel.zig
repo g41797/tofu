@@ -33,6 +33,9 @@ pub fn createDumbChannel(prnt: *Engine) TriggeredChannel {
 }
 
 pub fn createNotificationChannel(prnt: *Engine) !void {
+    log.debug("createNotificationChannel ->", .{});
+    defer log.debug("<- createNotificationChannel", .{});
+
     var ntcn = createDumbChannel(prnt);
     ntcn.resp2ac = true;
     ntcn.tskt = .{
@@ -48,9 +51,12 @@ pub fn createNotificationChannel(prnt: *Engine) !void {
 
 pub fn createIoClientChannel(eng: *Engine) AmpeError!void {
     const hello: *Message = eng.currMsg.?;
+    const chN = hello.bhdr.channel_number;
+    log.debug("createIoClientChannel -> {d}", .{chN});
+    defer log.debug("<- createIoClientChannel {d}", .{chN});
 
     var tc = createDumbChannel(eng);
-    tc.acn = eng.*.acns.activeChannel(hello.bhdr.channel_number) catch unreachable;
+    tc.acn = eng.*.acns.activeChannel(chN) catch unreachable;
 
     try eng.addChannel(tc);
 
@@ -60,6 +66,8 @@ pub fn createIoClientChannel(eng: *Engine) AmpeError!void {
 
     try clSkt.initClientSide(&eng.pool, hello, &sc);
     eng.currMsg = null;
+
+    _ = try clSkt.tryConnect();
 
     const tcptr = eng.trgrd_map.getPtr(hello.bhdr.channel_number).?;
     tcptr.disableDelete();
@@ -74,16 +82,20 @@ pub fn createIoClientChannel(eng: *Engine) AmpeError!void {
 }
 
 pub fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void {
+    log.debug("createIoServerChannel -> listener channel {d}", .{lstchn.*.acn.chn});
+    defer log.debug("<- createIoServerChannel listener channel {d}", .{lstchn.*.acn.chn});
 
     // Try to get socket of the client
     var listener = lstchn.*.tskt;
-    var srvsktOpt = listener.accept.tryAccept() catch {
-        // Failure on the client side
+    var srvsktOpt = listener.accept.tryAccept() catch |err| {
+        // Failure on the client side ???
+        log.info("createIoServerChannel tryAccept error {any}", .{err});
         return;
     };
 
     if (srvsktOpt == null) {
         // Continue to poll
+        log.info("createIoServerChannel srvsktOpt == null ", .{});
         return;
     }
 
@@ -114,11 +126,14 @@ pub fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!
     return;
 }
 
-pub fn createAcceptChannel(eng: *Engine) AmpeError!void {
+pub fn createListenerChannel(eng: *Engine) AmpeError!void {
     const welcome: *Message = eng.currMsg.?;
+    const chN = welcome.bhdr.channel_number;
+    log.debug("createListenerChannel -> {d}", .{chN});
+    defer log.debug("<- createListenerChannel {d}", .{chN});
 
     var tc = createDumbChannel(eng);
-    tc.acn = eng.*.acns.activeChannel(welcome.bhdr.channel_number) catch unreachable;
+    tc.acn = eng.*.acns.activeChannel(chN) catch unreachable;
 
     try eng.addChannel(tc);
 

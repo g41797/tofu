@@ -102,17 +102,26 @@ pub const Poll = struct {
                     _ = utrgs;
                 }
 
+                const nSkt = tc.tskt.getSocket();
+                const chN = tc.acn.chn;
+
                 if (tc.exp.notify == .on) {
-                    const nSkt = tc.tskt.getSocket();
-                    log.debug("chn {d} notify expected fd {x}", .{ tc.acn.chn, nSkt });
                     events |= std.posix.POLL.IN;
                 }
-                if ((tc.exp.send == .on) or (tc.exp.connect == .on)) {
-                    log.debug("chn {d} send/connect expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
+                if (tc.exp.send == .on) {
+                    log.debug("chn {d} send expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.OUT;
                 }
-                if ((tc.exp.recv == .on) or (tc.exp.accept == .on)) {
-                    log.debug("chn {d} recv/accept expected fd {x}", .{ tc.acn.chn, tc.tskt.getSocket() });
+                if (tc.exp.connect == .on) {
+                    log.debug("chn {d} connect expected fd {x}", .{ chN, nSkt });
+                    events |= std.posix.POLL.OUT;
+                }
+                if (tc.exp.recv == .on) {
+                    log.debug("chn {d} recv expected fd {x}", .{ chN, nSkt });
+                    events |= std.posix.POLL.IN;
+                }
+                if (tc.exp.accept == .on) {
+                    log.debug("chn {d} accept expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.IN;
                 }
                 if (tc.exp.pool == .off) {
@@ -160,6 +169,8 @@ pub const Poll = struct {
                 }
 
                 if ((revents & err_mask) != 0) {
+                    log.info("indx {d} poll error on chn {d} fd {x} ", .{ indx, tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+
                     tc.act.err = .on;
                     if (tc.exp.notify == .on) {
                         tc.act.notify = .on;

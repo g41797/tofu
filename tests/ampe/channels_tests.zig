@@ -6,7 +6,7 @@ test {
     std.log.debug("channels_tests\r\n", .{});
 }
 
-test "Channels basic tests" {
+test "channels basic tests" {
     var acns = try ActiveChannels.init(std.testing.allocator, 3);
     acns.deinit();
 }

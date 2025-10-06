@@ -44,6 +44,8 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         return AmpeError.InvalidAddress;
     };
 
+    log.info("create ListenerSocket {x}", .{skt.socket.?});
+
     return skt;
 }
 
@@ -63,6 +65,9 @@ pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
         const ret = createConnectSocket(&addr) catch {
             continue;
         };
+
+        log.info("create ClientSocket {x}", .{ret.socket.?});
+
         return ret;
     }
     return AmpeError.InvalidAddress;
@@ -123,6 +128,8 @@ fn createListenerSocket(address: *const std.net.Address) !Skt {
 
     try ret.listen();
 
+    log.debug("CREATED LISTEN SOCKET FD {x}", .{ret.socket.?});
+
     return ret;
 }
 
@@ -134,6 +141,8 @@ pub fn createConnectSocket(address: *const std.net.Address) !Skt {
 
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer posix.close(ret.socket);
+
+    log.debug("CREATED CONNECT SOCKET FD {x}", .{ret.socket.?});
 
     return ret;
 }

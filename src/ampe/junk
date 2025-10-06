@@ -347,3 +347,48 @@ pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void 
 
      return;
 }
+
+
+    const TofuClient = struct {
+        const Self = @This();
+        gpa: Allocator = undefined,
+        ampe: Ampe = undefined,
+        cfg: *Configurator = undefined,
+        result: anyerror!status.AmpeStatus = undefined,
+
+        fn runOnThread(tfcl: *Self) void {
+            log.debug("---> On client thread", .{});
+            defer log.debug("<--- On client thread", .{});
+            _ = tfcl;
+            return;
+        }
+    };
+
+    var clnt: TofuClient = .{};
+
+    const TofuServer = struct {
+        const Self = @This();
+        gpa: Allocator = undefined,
+        ampe: Ampe = undefined,
+        cfg: *Configurator = undefined,
+        result: anyerror!status.AmpeStatus = undefined,
+
+        fn runOnThread(tfsrv: *Self) void {
+            log.debug("---> On server thread", .{});
+            defer log.debug("<--- On server thread", .{});
+            _ = tfsrv;
+            return;
+        }
+    };
+    var srvr: TofuServer = .{};
+
+    {
+        const clntThread: std.Thread =
+            try std.Thread.spawn(.{}, TofuClient.runOnThread, .{&clnt});
+        defer clntThread.join();
+
+        const srvrThread: std.Thread =
+            try std.Thread.spawn(.{}, TofuServer.runOnThread, .{&srvr});
+        defer srvrThread.join();
+    }
+

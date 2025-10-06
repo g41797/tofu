@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-/// Represents an asynchronous message passing ampe interface.
+/// Represents an asynchronous message passing engine (Ampe) interface.
 /// Provides methods to
 /// - manage pool of the messages
 /// - create and destroy message channel groups
@@ -11,7 +11,7 @@ pub const Ampe = struct {
 
     /// Retrieves a message from the internal pool based on the specified allocation strategy.
     /// Returns null if the pool is empty and the strategy is poolOnly.
-    /// Returns an error during ampe shutdown or if allocation failed.
+    /// Returns an error during Ampe shutdown or if allocation failed.
     /// Thread-safe.
     pub fn get(ampe: Ampe, strategy: AllocationStrategy) status.AmpeError!?*message.Message {
         return ampe.vtable.get(ampe.ptr, strategy);
@@ -20,23 +20,23 @@ pub const Ampe = struct {
     /// Returns a message to the internal pool. If the pool is closed, destroys the message.
     /// Sets msg to null for preventing further usage.
     /// For safe destroying - use message.DestroySendMsg(msg),
-    /// where msg: *?*message.Message (see  asyncSend comment in MessageChannelGroup).
+    /// where msg: *?*message.Message (see  asyncSend comment in Channels).
     /// Thread-safe.
     pub fn put(ampe: Ampe, msg: *?*message.Message) void {
         ampe.vtable.put(ampe.ptr, msg);
     }
 
-    /// Creates a new message channel group.
+    /// Creates a new Channels.
     /// Call `destroy` on the result to stop communication and free associated memory.
     /// Thread-safe.
-    pub fn create(ampe: Ampe) status.AmpeError!MessageChannelGroup {
+    pub fn create(ampe: Ampe) status.AmpeError!Channels {
         return ampe.vtable.create(ampe.ptr);
     }
 
-    /// Destroys a message channel group, stopping communication and freeing associated memory.
+    /// Destroys Channels, stopping communication and freeing associated memory.
     /// Thread-safe.
-    pub fn destroy(ampe: Ampe, mcg: MessageChannelGroup) status.AmpeError!void {
-        return ampe.vtable.destroy(ampe.ptr, mcg.ptr);
+    pub fn destroy(ampe: Ampe, chnls: Channels) status.AmpeError!void {
+        return ampe.vtable.destroy(ampe.ptr, chnls.ptr);
     }
 };
 
@@ -48,12 +48,12 @@ pub const AllocationStrategy = enum {
     always,
 };
 
-/// Represents a message channel group interface for asynchronous message passing.
+/// Represents Channels interface for asynchronous message passing.
 /// Supports asynchronous bi-directional exchange of messages.
-/// Acts as a client to the Ampe ampe.
-pub const MessageChannelGroup = struct {
+/// Acts as a client of Ampe.
+pub const Channels = struct {
     ptr: ?*anyopaque,
-    vtable: *const vtables.MCGVTable,
+    vtable: *const vtables.CHNLSVTable,
 
     /// Initiates an asynchronous send of a message to a peer.
     /// If the send is initiated successfully:
@@ -64,24 +64,24 @@ pub const MessageChannelGroup = struct {
     ///
     /// Idiomatic way of handling send messages:
     ///
-    ///     var msg: ?*Message = try mcg.get(tofu.AllocationStrategy.poolOnly);
+    ///     var msg: ?*Message = try chnls.get(tofu.AllocationStrategy.poolOnly);
     ///
     ///     If was send - nothing,
     ///     if was not - message will be returned to the pool
     ///     defer ampe.put(&msg);
     ///     ..................
     ///     ..................
-    ///     const bh  = mcg.asyncSend(&msg);
+    ///     const bh  = chnls.asyncSend(&msg);
     ///
     /// Thread-safe.
-    pub fn asyncSend(mcg: MessageChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
-        return mcg.vtable.asyncSend(mcg.ptr, msg);
+    pub fn asyncSend(chnls: Channels, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
+        return chnls.vtable.asyncSend(chnls.ptr, msg);
     }
 
     /// Waits for a message on the internal queue.
     /// Returns null if no message is received within the specified timeout (in nanoseconds).
     ///
-    /// May receive messages from the ampe, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
+    /// May receive messages from Ampe, such as Bye ('peer disconnected'), Signal ('wait_interrupted'),
     /// or Signal ('pool_empty') (indicating no free messages for receive).
     ///
     /// Application also may send message via interruptWait.
@@ -90,8 +90,8 @@ pub const MessageChannelGroup = struct {
     /// Idiomatic usage involves calling `waitReceive` in a loop within the same dispatch thread.
     ///
     /// Thread-safe.
-    pub fn waitReceive(mcg: MessageChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
-        return mcg.vtable.waitReceive(mcg.ptr, timeout_ns);
+    pub fn waitReceive(chnls: Channels, timeout_ns: u64) status.AmpeError!?*message.Message {
+        return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
     }
 
     /// Interrupts a `waitReceive` call with possibility transmit message to the waiter thread.
@@ -105,12 +105,12 @@ pub const MessageChannelGroup = struct {
     /// Idiomatic usage involves calling from a different thread to signal attention.
     ///
     /// Thread-safe.
-    pub fn interruptWait(mcg: MessageChannelGroup, msg: *?*message.Message) status.AmpeError!void {
-        mcg.vtable.interruptWait(mcg.ptr, msg);
+    pub fn interruptWait(chnls: Channels, msg: *?*message.Message) status.AmpeError!void {
+        chnls.vtable.interruptWait(chnls.ptr, msg);
     }
 };
 
-/// Structure for holding configuration options for the message passing ampe.
+/// Structure for holding configuration options for the message passing engine.
 pub const Options = struct {
     initialPoolMsgs: ?u16 = null,
     maxPoolMsgs: ?u16 = null,

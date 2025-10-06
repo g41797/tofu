@@ -337,3 +337,14 @@ mkdocs-sample
 Mkdocs Material theme
     https://github.com/squidfunk/mkdocs-material
 
+ How to wait all threads?
+    https://ziggit.dev/t/how-to-wait-all-threads/3094
+
+Zig | 106, WaitGroup
+    https://medium.com/@mikecode/zig-waitgroup-acf1163c1885
+
+Multithreading in Zig with Thread Pools, Mutexes, and Waitgroups
+    https://www.bradcypert.com/multithreading-zig/
+
+Concurrency primitives for Zig
+    https://github.com/zxubian/cozi

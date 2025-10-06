@@ -20,10 +20,13 @@ pub fn listen(skt: *Skt) !void {
     var slen: posix.socklen_t = skt.address.getOsSockLen();
     try posix.getsockname(skt.socket.?, &skt.address.any, &slen);
 
+    log.debug("LISTENER FD {x}", .{skt.socket.?});
+
     return;
 }
 
 pub fn accept(askt: *Skt) AmpeError!?Skt {
+    log.debug("ACCEPT ON FD {x}", .{askt.socket.?});
     var skt: Skt = .{};
 
     var addr: std.net.Address = undefined;
@@ -49,14 +52,12 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 
     skt.address = addr;
 
+    log.debug("CONNECTED CLIENT  FD {x}", .{skt.socket.?});
+
     return skt;
 }
 
 pub fn connect(skt: *Skt) AmpeError!bool {
-    if (isAlreadyConnected(skt.socket.?)) {
-        return true;
-    }
-
     var connected = true;
 
     connectPosix(
@@ -132,13 +133,14 @@ pub fn deinit(skt: *Skt) void {
 
 pub fn close(skt: *Skt) void {
     if (skt.socket) |socket| {
+        log.debug("CLOSE FD {x}", .{skt.socket.?});
         posix.close(socket);
         skt.socket = null;
     }
 }
 
 pub fn knock(socket: std.posix.socket_t) bool {
-    log.debug("knock-knock", .{});
+    log.debug("knock-knock FD {x}", .{socket});
 
     const slice: [1]u8 = .{0};
 
@@ -186,6 +188,9 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
             continue;
         }
         if (intErrStatus == @intFromEnum(E.SUCCESS)) {
+            return;
+        }
+        if (intErrStatus == @intFromEnum(E.ISCONN)) {
             return;
         }
         if (intErrStatus == @intFromEnum(E.AGAIN)) {

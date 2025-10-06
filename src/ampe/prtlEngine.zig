@@ -3,7 +3,6 @@
 
 pub fn sendHello(eng: *Engine) !void {
     TriggeredChannel.createIoClientChannel(eng) catch |err| {
-        const st = status.errorToStatus(err);
         if (eng.currMsg.?.bhdr.proto.role == .request) {
             eng.currMsg.?.bhdr.proto.role = .response;
         } else {
@@ -11,6 +10,7 @@ pub fn sendHello(eng: *Engine) !void {
             eng.currMsg.?.bhdr.proto.mtype = .regular;
         }
 
+        const st = status.errorToStatus(err);
         eng.responseFailure(st) catch {};
         return;
     };
@@ -19,7 +19,14 @@ pub fn sendHello(eng: *Engine) !void {
 }
 
 pub fn sendWelcome(eng: *Engine) !void {
-    TriggeredChannel.createAcceptChannel(eng) catch |err| {
+    TriggeredChannel.createListenerChannel(eng) catch |err| {
+        if (eng.currMsg.?.bhdr.proto.role == .request) {
+            eng.currMsg.?.bhdr.proto.role = .response;
+        } else {
+            eng.currMsg.?.bhdr.proto.role = .signal;
+            eng.currMsg.?.bhdr.proto.mtype = .regular;
+        }
+
         const st = status.errorToStatus(err);
         eng.responseFailure(st) catch {};
         return;
@@ -41,9 +48,23 @@ pub fn sendByeResponse(eng: *Engine) !void {
 }
 
 pub fn sendToPeer(eng: *Engine) !void {
-    // 2DO - Add processing
-    _ = eng;
-    return AmpeError.NotImplementedYet;
+    const sendMsg: *Message = eng.currMsg.?;
+    const chN = sendMsg.bhdr.channel_number;
+
+    var tc = eng.trgrd_map.getPtr(chN);
+    if (tc == null) { // Already removed
+        return;
+    }
+
+    tc.?.tskt.addToSend(sendMsg) catch |err| {
+        log.info("addToSend on channel {d} failed with error {any}", .{ chN, err });
+        const st = status.errorToStatus(err);
+        eng.responseFailure(st) catch {};
+    };
+
+    eng.currMsg = null;
+
+    return;
 }
 
 pub fn processMarkedForDelete(eng: *Engine) !bool {
@@ -66,15 +87,15 @@ pub fn processMarkedForDelete(eng: *Engine) !bool {
 
 pub fn processInternal(eng: *Engine) !void {
     // Temporary - only one internal msg - destroy
-    // mcg(MchnGroup) : Signal with status == shutdown_started
+    // chnls(MchnGroup) : Signal with status == shutdown_started
     // body has *MchnGroup
     var cmsg = eng.currMsg.?;
-    const mcgimpl: ?*MchnGroup = cmsg.bodyToPtr(MchnGroup);
-    const grp = mcgimpl.?;
+    const chnlsimpl: ?*MchnGroup = cmsg.bodyToPtr(MchnGroup);
+    const grp = chnlsimpl.?;
 
-    const chgr = eng.acns.channelsGroup(mcgimpl) catch unreachable;
+    const chgr = eng.acns.channelsGroup(chnlsimpl) catch unreachable;
     defer chgr.deinit();
-    _ = eng.acns.removeChannels(mcgimpl) catch unreachable;
+    _ = eng.acns.removeChannels(chnlsimpl) catch unreachable;
 
     for (chgr.items) |chN| {
         const trcopt = eng.trgrd_map.getPtr(chN);
@@ -140,7 +161,7 @@ const VC = message.ValidCombination;
 
 const Options = tofu.Options;
 const Ampe = tofu.Ampe;
-const MessageChannelGroup = tofu.MessageChannelGroup;
+const Channels = tofu.Channels;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;

@@ -110,10 +110,8 @@ pub fn addForRecv(ioskt: *IoSkt, rcvmsg: *Message) AmpeError!void {
 // tryConnect is called by Engine for succ. connection.
 // For the failed connection Engine uses detach: get Hello request , convert to filed Hello response...
 pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
-    if (ioskt.connected) {
-        return AmpeError.NotAllowed;
-    }
 
+    // Now it's ok to connect to already connected socket
     ioskt.connected = try ioskt.skt.connect();
 
     if (ioskt.connected) {
@@ -166,6 +164,10 @@ pub fn tryRecv(ioskt: *IoSkt) AmpeError!MessageQueue {
         if (received == null) {
             break;
         }
+
+        // Replace "remote" channel_number with "local" one
+        received.?.bhdr.channel_number = ioskt.cn;
+
         ret.enqueue(received.?);
     }
 

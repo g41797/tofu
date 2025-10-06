@@ -211,26 +211,26 @@ fn _put(eng: *Engine, msg: *?*Message) void {
     return;
 }
 
-fn create(ptr: ?*anyopaque) AmpeError!MessageChannelGroup {
+fn create(ptr: ?*anyopaque) AmpeError!Channels {
     const eng: *Engine = @alignCast(@ptrCast(ptr));
     return eng.*._create();
 }
 
-fn destroy(ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void {
+fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
     const eng: *Engine = @alignCast(@ptrCast(ptr));
-    return eng._destroy(mcgimpl);
+    return eng._destroy(chnlsimpl);
 }
 
-inline fn _create(eng: *Engine) AmpeError!MessageChannelGroup {
+inline fn _create(eng: *Engine) AmpeError!Channels {
     eng.maxid += 1;
 
     const grp = try MchnGroup.Create(eng, eng.maxid);
 
-    return grp.mcg();
+    return grp.chnls();
 }
 
-fn _destroy(eng: *Engine, mcgimpl: ?*anyopaque) AmpeError!void {
-    if (mcgimpl == null) {
+fn _destroy(eng: *Engine, chnlsimpl: ?*anyopaque) AmpeError!void {
+    if (chnlsimpl == null) {
         return AmpeError.InvalidAddress;
     }
 
@@ -238,7 +238,7 @@ fn _destroy(eng: *Engine, mcgimpl: ?*anyopaque) AmpeError!void {
     errdefer eng._put(&dstr);
 
     // Create Signal for destroy of
-    // resources of mcg
+    // resources of chnls
     var dmsg = dstr.?;
     dmsg.bhdr.proto.mtype = .regular;
     dmsg.bhdr.proto.role = .signal;
@@ -249,7 +249,7 @@ fn _destroy(eng: *Engine, mcgimpl: ?*anyopaque) AmpeError!void {
     dmsg.bhdr.channel_number = 0;
     dmsg.bhdr.status = status.status_to_raw(.shutdown_started);
 
-    const grp: *MchnGroup = @alignCast(@ptrCast(mcgimpl));
+    const grp: *MchnGroup = @alignCast(@ptrCast(chnlsimpl));
     _ = dmsg.ptrToBody(MchnGroup, grp);
 
     try eng.submitMsg(dmsg, .AppSignal);
@@ -394,13 +394,13 @@ fn loop(eng: *Engine) void {
                 },
             };
 
-        eng.processMessageFromMcg() catch |err|
+        eng.processMessageFromChannels() catch |err|
             switch (err) {
                 AmpeError.ShutdownStarted => {
                     return;
                 },
                 else => {
-                    log.err("processMessageFromMcg failed with error {any}", .{err});
+                    log.err("processMessageFromChannels failed with error {any}", .{err});
                     return;
                 },
             };
@@ -451,12 +451,12 @@ fn processNotify(eng: *Engine) !void {
 
     assert(eng.currNtfc.kind == .message);
 
-    return eng.storeMessageFromMcg();
+    return eng.storeMessageFromChannels();
 }
 
-fn storeMessageFromMcg(eng: *Engine) !void {
-    log.debug("storeMessageFromMcg ->", .{});
-    defer log.debug("<- storeMessageFromMcg", .{});
+fn storeMessageFromChannels(eng: *Engine) !void {
+    log.debug("storeMessageFromChannels ->", .{});
+    defer log.debug("<- storeMessageFromChannels", .{});
 
     eng.currMsg = null;
 
@@ -553,11 +553,27 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         }
 
         if (trgrs.send == .on) {
-            return AmpeError.NotImplementedYet;
+            var wereSend: message.MessageQueue = tc.tskt.trySend() catch {
+                tc.markForDelete(.send_failed);
+                continue;
+            };
+            var next: ?*Message = wereSend.dequeue();
+            while (next != null) {
+                eng.pool.put(next.?);
+                next = wereSend.dequeue();
+            }
         }
 
         if (trgrs.recv == .on) {
-            return AmpeError.NotImplementedYet;
+            var wereRecv: message.MessageQueue = tc.tskt.tryRecv() catch {
+                tc.markForDelete(.recv_failed);
+                continue;
+            };
+            var next: ?*Message = wereRecv.dequeue();
+            while (next != null) {
+                tc.sendToCtx(&next);
+                next = wereRecv.dequeue();
+            }
         }
 
         break;
@@ -566,9 +582,9 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
     return;
 }
 
-fn processMessageFromMcg(eng: *Engine) !void {
-    log.debug("processMessageFromMcg ->", .{});
-    defer log.debug("<- processMessageFromMcg", .{});
+fn processMessageFromChannels(eng: *Engine) !void {
+    log.debug("processMessageFromChannels ->", .{});
+    defer log.debug("<- processMessageFromChannels", .{});
 
     if (eng.currMsg == null) {
         return;
@@ -730,7 +746,7 @@ const VC = message.ValidCombination;
 
 const Options = tofu.Options;
 const Ampe = tofu.Ampe;
-const MessageChannelGroup = tofu.MessageChannelGroup;
+const Channels = tofu.Channels;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;

@@ -9,8 +9,8 @@ allocator: Allocator = undefined,
 msgs: MSGMailBox = undefined,
 cmpl: ResetEvent = undefined,
 
-pub fn mcg(grp: *MchnGroup) MessageChannelGroup {
-    const result: MessageChannelGroup = .{
+pub fn chnls(grp: *MchnGroup) Channels {
+    const result: Channels = .{
         .ptr = grp,
         .vtable = &.{
             .asyncSend = asyncSend,
@@ -164,7 +164,7 @@ pub const VC = message.ValidCombination;
 
 pub const Engine = tofu.Engine;
 
-const MessageChannelGroup = tofu.MessageChannelGroup;
+const Channels = tofu.Channels;
 const AllocationStrategy = tofu.AllocationStrategy;
 const AmpeError = tofu.status.AmpeError;
 

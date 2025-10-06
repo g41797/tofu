@@ -3,7 +3,7 @@
 
 pub const Ampe = @import("ampe.zig").Ampe;
 pub const AllocationStrategy = @import("ampe.zig").AllocationStrategy;
-pub const MessageChannelGroup = @import("ampe.zig").MessageChannelGroup;
+pub const Channels = @import("ampe.zig").Channels;
 pub const Options = @import("ampe.zig").Options;
 pub const DefaultOptions = @import("ampe.zig").DefaultOptions;
 pub const DBG = @import("ampe.zig").DBG;

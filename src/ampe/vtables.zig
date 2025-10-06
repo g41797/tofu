@@ -6,12 +6,12 @@ pub const AmpeVTable = struct {
 
     put: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) void,
 
-    create: *const fn (ptr: ?*anyopaque) AmpeError!MessageChannelGroup,
+    create: *const fn (ptr: ?*anyopaque) AmpeError!Channels,
 
-    destroy: *const fn (ptr: ?*anyopaque, mcgimpl: ?*anyopaque) AmpeError!void,
+    destroy: *const fn (ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void,
 };
 
-pub const MCGVTable = struct {
+pub const CHNLSVTable = struct {
     asyncSend: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
 
     waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*message.Message,
@@ -20,7 +20,7 @@ pub const MCGVTable = struct {
 };
 
 const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
-const MessageChannelGroup = @import("../ampe.zig").MessageChannelGroup;
+const Channels = @import("../ampe.zig").Channels;
 const message = @import("../message.zig");
 const status = @import("../message.zig");
 const AmpeError = status.AmpeError;
