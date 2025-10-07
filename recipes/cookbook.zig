@@ -109,7 +109,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     // Message retrieved from the poll is not valid for send
     // without setup.
     // It will be returned to the pool by defer above
-    _ = try chnls.asyncSend(&msg);
+    _ = try chnls.sendToPeer(&msg);
 
     return;
 }
@@ -141,7 +141,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     bhdr.proto.mtype = .bye;
     bhdr.proto.role = .request;
 
-    _ = try chnls.asyncSend(&msg);
+    _ = try chnls.sendToPeer(&msg);
 
     return;
 }
@@ -174,7 +174,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     bhdr.proto.mtype = .hello;
     bhdr.proto.role = .request;
 
-    _ = try chnls.asyncSend(&msg);
+    _ = try chnls.sendToPeer(&msg);
 
     return;
 }
@@ -213,7 +213,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    _ = try chnls.asyncSend(&msg);
+    _ = try chnls.sendToPeer(&msg);
 
     var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
@@ -252,7 +252,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     try cnfg.prepareRequest(msg.?);
 
     // Store information for further processing
-    const bhdr = try chnls.asyncSend(&msg);
+    const bhdr = try chnls.sendToPeer(&msg);
     _ = bhdr;
 
     var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
@@ -290,7 +290,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    _ = try chnls.asyncSend(&msg);
+    _ = try chnls.sendToPeer(&msg);
 
     var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
 
@@ -357,7 +357,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     // Appends configuration to TextHeaders of the message
     try cnfg.prepareRequest(msg.?);
 
-    const corrInfo: BinaryHeader = try chnls.asyncSend(&msg);
+    const corrInfo: BinaryHeader = try chnls.sendToPeer(&msg);
     log.debug(">><< Listen will start on channel {d} ", .{corrInfo.channel_number});
 
     var recvMsg = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
@@ -446,7 +446,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Appends configuration to TextHeaders of the message
     try srvCfg.prepareRequest(welcomeRequest.?);
 
-    const srvCorrInfo: BinaryHeader = try chnls.asyncSend(&welcomeRequest);
+    const srvCorrInfo: BinaryHeader = try chnls.sendToPeer(&welcomeRequest);
     log.debug(">><< Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
 
     var welcomeResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
@@ -497,7 +497,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Appends configuration to TextHeaders of the message
     try cltCfg.prepareRequest(helloRequest.?);
 
-    const cltCorrInfo: BinaryHeader = try chnls.asyncSend(&helloRequest);
+    const cltCorrInfo: BinaryHeader = try chnls.sendToPeer(&helloRequest);
     log.debug(">><< Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
 
     // Should be different channels.
@@ -510,7 +510,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // - send HelloRequest message to the server
     //
     // Also it worth to remind, that real working with network/sockets is done
-    // on dedicated thread. So actually both asyncSend and waitReceive are working
+    // on dedicated thread. So actually both sendToPeer and waitReceive are working
     // with internal message queues and don't make and socket calls.
     //
     // We use different names for HelloRequest - try to understand why...
@@ -547,7 +547,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Use the same message and send HelloResponse back
     // Set role to .response in order to create HelloResponse
     helloRequestOnServerSide.?.bhdr.proto.role = .response;
-    _ = try chnls.asyncSend(&helloRequestOnServerSide);
+    _ = try chnls.sendToPeer(&helloRequestOnServerSide);
 
     // Now we are on the client side:
     var helloResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
@@ -582,7 +582,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Set channel_number in order to close this channel
     closeListener.?.bhdr.channel_number = srvCorrInfo.channel_number;
 
-    _ = try chnls.asyncSend(&closeListener);
+    _ = try chnls.sendToPeer(&closeListener);
 
     var closeListenerResp: ?*Message = try chnls.waitReceive(INFINITE_TIMEOUT_MS);
     defer ampe.put(&closeListenerResp);
@@ -600,7 +600,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Set channel_number in order to close this channel
     closeClient.?.bhdr.channel_number = cltCorrInfo.channel_number; //client channel on the client side
 
-    _ = try chnls.asyncSend(&closeClient);
+    _ = try chnls.sendToPeer(&closeClient);
 
     // We should receive two messages with statuses,
     // because close of on socket on the side will immediately close
@@ -615,12 +615,59 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // setting information within message itself.
     // There are only 3 communication APIs.
     // For now we know two of them:
-    // - asyncSend
+    // - sendToPeer
     // - waitRecv
 
     // raw_to_status converts status byte (u8) from binary header
     // to AmpeStatus enum for your convenience.
     return status.raw_to_status(st);
+}
+
+pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 16, // just for example
+        .maxPoolMsgs = 32, // just for example
+    };
+
+    var eng: *Engine = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe: Ampe = try eng.ampe();
+    const chnls: Channels = try ampe.create();
+    defer destroyChannels(ampe, chnls);
+
+    var attention: ?*Message = try chnls.waitReceive(100);
+    defer ampe.put(&attention);
+
+    // We did not expect any message
+    assert(attention == null);
+
+    // Send attention to itself
+    try chnls.updateWaiter(&attention);
+
+    attention = try chnls.waitReceive(100);
+
+    assert(attention.?.bhdr.message_id == 0);
+    assert(attention.?.bhdr.channel_number == 0);
+    assert(attention.?.bhdr.proto.origin == .engine);
+    assert(attention.?.bhdr.proto.role == .signal);
+    assert(status.raw_to_status(attention.?.bhdr.status) == .waiter_update);
+
+    // Build own update message from existing signal
+    attention.?.bhdr.proto.role = .request;
+    attention.?.bhdr.status = 0;
+    attention.?.bhdr.message_id = 1;
+
+    try chnls.updateWaiter(&attention);
+
+    attention = try chnls.waitReceive(100);
+
+    assert(attention.?.bhdr.message_id == 1);
+    assert(attention.?.bhdr.channel_number == 0);
+    assert(attention.?.bhdr.proto.origin == .application);
+    assert(attention.?.bhdr.proto.role == .request);
+    assert(status.raw_to_status(attention.?.bhdr.status) == .waiter_update);
+
+    return status.raw_to_status(attention.?.bhdr.status);
 }
 
 // Helper function - allows to destroy Channels using defer

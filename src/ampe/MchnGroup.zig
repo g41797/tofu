@@ -13,9 +13,9 @@ pub fn chnls(grp: *MchnGroup) Channels {
     const result: Channels = .{
         .ptr = grp,
         .vtable = &.{
-            .asyncSend = asyncSend,
+            .sendToPeer = sendToPeer,
             .waitReceive = waitReceive,
-            .interruptWait = interruptWait,
+            .updateWaiter = updateWaiter,
         },
     };
     return result;
@@ -65,7 +65,7 @@ fn cleanMboxes(grp: *MchnGroup) void {
     }
 }
 
-pub fn asyncSend(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
+pub fn sendToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     const msgopt = amsg.*;
     if (msgopt == null) {
         return AmpeError.NullMessage;
@@ -109,39 +109,34 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
             error.Timeout => {
                 return null;
             },
-            error.Closed => {
+            error.Closed, error.Interrupted => {
                 return AmpeError.ShutdownStarted;
-            },
-            error.Interrupted => {
-                const intrptMsg: ?*Message = grp.msgs[0].receive(0) catch |er| {
-                    if (er == error.Closed) {
-                        return AmpeError.ShutdownStarted;
-                    }
-                    return grp.prnt.buildStatusSignal(.wait_interrupted);
-                };
-                return intrptMsg;
             },
         }
     };
+
     return recvMsg;
 }
 
-pub fn interruptWait(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
+pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
-    if (msg.* != null) {
-        msg.*.?.bhdr.proto.origin = .application;
-        msg.*.?.bhdr.status = tofu.status.status_to_raw(.wait_interrupted);
-
-        grp.msgs[0].send(msg.*.?) catch {
+    if (msg.* == null) {
+        const updateSignal: *Message = grp.prnt.buildStatusSignal(.waiter_update);
+        grp.msgs[1].send(updateSignal) catch {
+            grp.prnt.pool.put(updateSignal);
             return AmpeError.ShutdownStarted;
         };
-        msg.* = null;
+        return;
     }
 
-    grp.msgs[1].interrupt() catch {
+    msg.*.?.bhdr.proto.origin = .application;
+    msg.*.?.bhdr.status = tofu.status.status_to_raw(.waiter_update);
+
+    grp.msgs[1].send(msg.*.?) catch {
         return AmpeError.ShutdownStarted;
     };
+    msg.* = null;
 
     return;
 }

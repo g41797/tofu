@@ -6,6 +6,18 @@ test {
     std.log.debug("engine_tests\r\n", .{});
 }
 
+test "update waiter" {
+    std.testing.log_level = .debug;
+
+    const updateStatus = recipes.handleUpdateWaiter(gpa) catch |err| {
+        log.debug("handleUpdateWaiter {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(updateStatus == .waiter_update);
+}
+
 test "connect/disconnect" {
     std.testing.log_level = .debug;
 

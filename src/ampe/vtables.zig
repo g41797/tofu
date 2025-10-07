@@ -12,11 +12,11 @@ pub const AmpeVTable = struct {
 };
 
 pub const CHNLSVTable = struct {
-    asyncSend: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
+    sendToPeer: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
 
     waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*message.Message,
 
-    interruptWait: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void,
+    updateWaiter: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void,
 };
 
 const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
