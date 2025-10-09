@@ -166,8 +166,8 @@ const AmpeError = tofu.status.AmpeError;
 const TempUdsPath = tofu.TempUdsPath;
 
 const Notifier = @import("Notifier.zig");
-const sockets = @import("sockets.zig");
-const Skt = sockets.Skt;
+const internal = @import("internal.zig");
+const Skt = internal.Skt;
 
 const std = @import("std");
 const posix = std.posix;

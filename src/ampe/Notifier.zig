@@ -1,9 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-pub const SEC_TIMEOUT_MS = 1_000;
-pub const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
-
 pub const NotificationKind = enum(u1) {
     message = 0,
     alert = 1,
@@ -105,7 +102,7 @@ pub fn _isReadyToRecv(receiver: socket_t) bool {
         },
     };
 
-    const pollstatus = posix.poll(&rpoll, SEC_TIMEOUT_MS) catch {
+    const pollstatus = posix.poll(&rpoll, poll_SEC_TIMEOUT) catch {
         return false;
     };
 
@@ -133,7 +130,7 @@ pub fn _isReadyToSend(sender: socket_t) bool {
         },
     };
 
-    const pollstatus = posix.poll(&spoll, SEC_TIMEOUT_MS) catch {
+    const pollstatus = posix.poll(&spoll, poll_SEC_TIMEOUT) catch {
         return false;
     };
 
@@ -160,7 +157,7 @@ pub fn waitConnect(client: socket_t) !bool {
             },
         };
 
-        const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
+        const pollstatus = try posix.poll(&spoll, poll_SEC_TIMEOUT * 3);
 
         if (pollstatus == 1) {
             break;
@@ -247,6 +244,9 @@ const tofu = @import("../tofu.zig");
 
 const internal = @import("internal.zig");
 
+const poll_INFINITE_TIMEOUT: i32 = @import("poller.zig").poll_INFINITE_TIMEOUT;
+const poll_SEC_TIMEOUT: i32 = @import("poller.zig").poll_SEC_TIMEOUT;
+
 const TempUdsPath = tofu.TempUdsPath;
 
 const message = tofu.message;
@@ -256,9 +256,8 @@ const ValidCombination = message.ValidCombination;
 const status = tofu.status;
 const AmpeError = status.AmpeError;
 
-const sockets = @import("sockets.zig");
-const Skt = sockets.Skt;
-const SCreator = sockets.SocketCreator;
+const Skt = internal.Skt;
+const SCreator = internal.SocketCreator;
 
 const nats = @import("nats");
 

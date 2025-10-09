@@ -6,6 +6,10 @@ pub const AllocationStrategy = @import("ampe.zig").AllocationStrategy;
 pub const Channels = @import("ampe.zig").Channels;
 pub const Options = @import("ampe.zig").Options;
 pub const DefaultOptions = @import("ampe.zig").DefaultOptions;
+
+pub const waitReceive_INFINITE_TIMEOUT = @import("ampe.zig").waitReceive_INFINITE_TIMEOUT;
+pub const waitReceive_SEC_TIMEOUT = @import("ampe.zig").waitReceive_SEC_TIMEOUT;
+
 pub const DBG = @import("ampe.zig").DBG;
 
 pub const configurator = @import("configurator.zig");

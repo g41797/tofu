@@ -348,3 +348,6 @@ Multithreading in Zig with Thread Pools, Mutexes, and Waitgroups
 
 Concurrency primitives for Zig
     https://github.com/zxubian/cozi
+
+Redirect test output
+   zig build test -freference-trace --summary all > /tmp/tofutest.log 2>&1

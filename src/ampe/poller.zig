@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+pub const poll_INFINITE_TIMEOUT: u32 = std.math.maxInt(i32);
+pub const poll_SEC_TIMEOUT: i32 = 1_000;
+
 pub const Poller = union(enum) {
     poll: Poll,
 
@@ -11,7 +14,7 @@ pub const Poller = union(enum) {
         };
 
         if (DBG) {
-            const utrgrs = sockets.UnpackedTriggers.fromTriggers(ret);
+            const utrgrs = internal.triggeredSkts.UnpackedTriggers.fromTriggers(ret);
             _ = utrgrs;
         }
 
@@ -98,30 +101,30 @@ pub const Poll = struct {
 
             if (!tc.exp.off()) {
                 if (DBG) {
-                    const utrgs = sockets.UnpackedTriggers.fromTriggers(tc.exp);
+                    const utrgs = internal.triggeredSkts.UnpackedTriggers.fromTriggers(tc.exp);
                     _ = utrgs;
                 }
 
-                const nSkt = tc.tskt.getSocket();
-                const chN = tc.acn.chn;
+                // const nSkt = tc.tskt.getSocket();
+                // const chN = tc.acn.chn;
 
                 if (tc.exp.notify == .on) {
                     events |= std.posix.POLL.IN;
                 }
                 if (tc.exp.send == .on) {
-                    log.debug("chn {d} send expected fd {x}", .{ chN, nSkt });
+                    // log.debug("chn {d} send expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.OUT;
                 }
                 if (tc.exp.connect == .on) {
-                    log.debug("chn {d} connect expected fd {x}", .{ chN, nSkt });
+                    // log.debug("chn {d} connect expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.OUT;
                 }
                 if (tc.exp.recv == .on) {
-                    log.debug("chn {d} recv expected fd {x}", .{ chN, nSkt });
+                    // log.debug("chn {d} recv expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.IN;
                 }
                 if (tc.exp.accept == .on) {
-                    log.debug("chn {d} accept expected fd {x}", .{ chN, nSkt });
+                    // log.debug("chn {d} accept expected fd {x}", .{ chN, nSkt });
                     events |= std.posix.POLL.IN;
                 }
                 if (tc.exp.pool == .off) {
@@ -195,22 +198,22 @@ pub const Poll = struct {
 
                 if ((revents & std.posix.POLL.IN != 0) or (revents & std.posix.POLL.RDNORM != 0)) {
                     if (tc.exp.recv == .on) {
-                        log.debug("chn {d} recv allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+                        // log.debug("chn {d} recv allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.recv = .on;
                     } else if (tc.exp.notify == .on) {
                         tc.act.notify = .on;
                     } else if (tc.exp.accept == .on) {
-                        log.debug("chn {d} accept allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+                        // log.debug("chn {d} accept allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.accept = .on;
                     }
                 }
 
                 if (revents & std.posix.POLL.OUT != 0) {
                     if (tc.exp.send == .on) {
-                        log.debug("chn {d} send allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+                        // log.debug("chn {d} send allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.send = .on;
                     } else if (tc.exp.connect == .on) {
-                        log.debug("chn {d} connect allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+                        // log.debug("chn {d} connect allowed fd {x} ", .{ tc.acn.chn, pl.pollfdVtor.items[indx].fd });
                         tc.act.connect = .on;
                     }
                 }
@@ -237,11 +240,11 @@ pub const AmpeError = tofu.status.AmpeError;
 pub const ChannelNumber = tofu.message.ChannelNumber;
 pub const MessageID = tofu.message.MessageID;
 
-const sockets = @import("sockets.zig");
-const Skt = sockets.Skt;
-const Trigger = sockets.Trigger;
-const Triggers = sockets.Triggers;
-const TriggeredSkt = sockets.TriggeredSkt;
+const internal = @import("internal.zig");
+const Skt = internal.Skt;
+const Trigger = internal.Trigger;
+const Triggers = internal.triggeredSkts.Triggers;
+const TriggeredSkt = internal.TriggeredSkt;
 
 const ActiveChannel = @import("channels.zig").ActiveChannel;
 

@@ -105,20 +105,7 @@ pub const ActiveChannels = struct {
     active: std.AutoArrayHashMap(ChannelNumber, ActiveChannel) = undefined,
     mutex: Mutex = undefined,
 
-    pub fn create(gpa: Allocator) !*ActiveChannels {
-        const cns = try gpa.create(ActiveChannels);
-        errdefer gpa.destroy(cns);
-        try cns.init(gpa);
-        return cns;
-    }
-
-    pub fn destroy(cns: *ActiveChannels) void {
-        const gpa = cns.allocator;
-        cns.deinit();
-        gpa.destroy(cns);
-    }
-
-    pub fn init(gpa: Allocator, rrchn: u8) !ActiveChannels {
+    pub fn init(gpa: Allocator, rrchn: u11) !ActiveChannels {
         if (rrchn == 0) {
             return error.RecentlyRemovedChannelsNumber;
         }
@@ -176,6 +163,8 @@ pub const ActiveChannels = struct {
             };
             cns.active.put(rv, ach) catch unreachable;
 
+            log.debug(">>> added channel {d} active channels count {d}", .{ ach.chn, cns.active.count() });
+
             return ach;
         }
     }
@@ -228,19 +217,11 @@ pub const ActiveChannels = struct {
         return achn.?;
     }
 
-    // Called only on Engine thread
-    pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
+    pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) void {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
-        return _removeChannel(cns, cn);
-    }
-
-    pub fn removeChannelForDefer(cns: *ActiveChannels, cn: ChannelNumber) void {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
-
-        _ = _removeChannel(cns, cn);
+        _ = cns._removeChannel(cn);
 
         return;
     }
@@ -263,7 +244,7 @@ pub const ActiveChannels = struct {
         }
 
         for (chns_to_remove.items) |cnm| {
-            if (_removeChannel(cns, cnm)) {
+            if (cns._removeChannel(cnm)) {
                 removedChns += 1;
             }
         }
@@ -272,7 +253,14 @@ pub const ActiveChannels = struct {
     }
 
     fn _removeChannel(cns: *ActiveChannels, cn: ChannelNumber) bool {
-        const wasRemoved = cns.active.orderedRemove(cn);
+        if (cn == 0) {
+            return false;
+        }
+
+        if (!cns.active.contains(cn)) {
+            log.info(">>>>> channel {d} does not exist channels count {d}", .{ cn, cns.active.count() });
+        }
+        const wasRemoved = cns.active.swapRemove(cn);
 
         const alreadyRemoved = cns.removed.remove(cn);
 
@@ -292,7 +280,9 @@ pub const ActiveChannels = struct {
             return true;
         }
 
-        const rewrcn = cns.free.dequeue().?;
+        // queue of free nodes is empty
+        // so all nodes are in removed queue
+        const rewrcn = cns.removed.dequeue().?;
         rewrcn.cn = cn;
         cns.removed.enqueue(rewrcn);
         return true;
@@ -307,15 +297,21 @@ pub const ActiveChannels = struct {
 
         var it = cns.active.iterator();
         while (it.next()) |kv_pair| {
+            if (ptr == null) {
+                continue;
+            }
             if (kv_pair.value_ptr.ctx == ptr) {
                 try chns.append(kv_pair.key_ptr.*);
             }
         }
 
+        log.debug(">>> all channels {d} channelsGroup {d}", .{ cns.active.count(), chns.items.len });
+
         return chns;
     }
 
     pub fn allChannels(cns: *ActiveChannels, chns: *std.ArrayList(ChannelNumber)) !void {
+        defer log.info(">>> all channels count {d}", .{cns.*.active.count()});
         cns.mutex.lock();
         defer cns.mutex.unlock();
         chns.resize(0) catch unreachable;
@@ -326,6 +322,17 @@ pub const ActiveChannels = struct {
         }
 
         return;
+    }
+
+    fn printChannels(cns: *ActiveChannels, text: []const u8) void {
+        _ = cns;
+        _ = text;
+        // var it = cns.*.active.iterator();
+        // var indx: usize = 0;
+        // while (it.next()) |entry| {
+        //     indx += 1;
+        //     log.debug("{s} [{d}] channel {d} count {d}", .{ text, indx, entry.key_ptr.*, cns.*.active.count() });
+        // }
     }
 };
 
@@ -342,3 +349,4 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const rand = std.crypto.random;
+const log = std.log;

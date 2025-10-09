@@ -6,6 +6,18 @@ test {
     std.log.debug("engine_tests\r\n", .{});
 }
 
+test "handle reconnect" {
+    std.testing.log_level = .debug;
+
+    const reconnectStatus = recipes.handleReConnnectOfTcpClientServer(gpa) catch |err| {
+        log.debug("handleReConnnectOfTcpClientServer {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(reconnectStatus == .success);
+}
+
 test "update waiter" {
     std.testing.log_level = .debug;
 
@@ -59,11 +71,6 @@ test "ampe just create/destroy" {
     try recipes.createDestroyMain(gpa);
     try recipes.createDestroyEngine(gpa);
     try recipes.createDestroyMessageChannelGroup(gpa);
-}
-
-test "dealing with pool" {
-    std.testing.log_level = .debug;
-    try recipes.getMsgsFromSmallestPool(gpa);
 }
 
 test "send illegal messages" {

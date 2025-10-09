@@ -7,8 +7,6 @@ test {
 }
 
 const localIP = "127.0.0.1";
-const SEC_TIMEOUT_MS = 1_000;
-const INFINITE_TIMEOUT_MS = std.math.maxInt(u64);
 
 pub const std_options: @import("std").Options = .{ .log_level = .debug };
 
@@ -181,7 +179,7 @@ pub const Exchanger = struct {
     pub fn waitConnectClient(exc: *Exchanger) !void {
         var it = Engine.Iterator.init(&exc.tcm.?);
 
-        var trgrs: sockets.Triggers = .{};
+        var trgrs: internal.triggeredSkts.Triggers = .{};
 
         var serverReady: bool = false;
         var clientReady: bool = false;
@@ -214,8 +212,8 @@ pub const Exchanger = struct {
                 const srvsktptr = try listener.tryAccept();
 
                 if (srvsktptr != null) {
-                    const srvio: sockets.TriggeredSkt = .{
-                        .io = try sockets.IoSkt.initServerSide(&exc.pool, exc.srvCN, srvsktptr.?),
+                    const srvio: internal.TriggeredSkt = .{
+                        .io = try internal.triggeredSkts.IoSkt.initServerSide(&exc.pool, exc.srvCN, srvsktptr.?),
                     };
 
                     var srv: TC = .{
@@ -328,7 +326,7 @@ pub const Exchanger = struct {
         var loop: usize = 1;
 
         while ((loop < 3 * count) and (exc.forRecv.count() < (count + 1))) : (loop += 1) {
-            var trgrs: sockets.Triggers = .{};
+            var trgrs: internal.triggeredSkts.Triggers = .{};
 
             trgrs = try exc.plr.?.waitTriggers(it, Notifier.SEC_TIMEOUT_MS);
 
@@ -415,7 +413,7 @@ pub const Exchanger = struct {
         if (tcp) |tc| {
             tc.*.tskt.deinit();
         }
-        _ = exc.tcm.?.orderedRemove(tcn);
+        _ = exc.tcm.?.swapRemove(tcn);
     }
 
     pub fn clearQs(exc: *Exchanger) void {
@@ -446,16 +444,16 @@ pub const Exchanger = struct {
     }
 };
 
-fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
+fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
     var wlcm: *Message = try Message.create(gpa);
     defer wlcm.destroy();
 
     try cnfr.prepareRequest(wlcm);
 
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
+    var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
 
-    var tskt: sockets.TriggeredSkt = .{
-        .accept = try sockets.AcceptSkt.init(wlcm, &sc),
+    var tskt: internal.TriggeredSkt = .{
+        .accept = try internal.AcceptSkt.init(wlcm, &sc),
     };
     errdefer tskt.deinit();
 
@@ -466,7 +464,7 @@ fn create_listener(cnfr: *Configurator) !sockets.TriggeredSkt {
     return tskt;
 }
 
-fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
+fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
     var hello: *Message = try Message.create(gpa);
 
     cnfr.prepareRequest(hello) catch |err| {
@@ -474,18 +472,18 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !sockets.TriggeredSkt {
         return err;
     };
 
-    var sc: sockets.SocketCreator = sockets.SocketCreator.init(gpa);
+    var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
 
-    var clSkt: sockets.IoSkt = .{};
+    var clSkt: internal.triggeredSkts.IoSkt = .{};
     try clSkt.initClientSide(pool, hello, &sc);
-    var tskt: sockets.TriggeredSkt = .{
+    var tskt: internal.TriggeredSkt = .{
         .io = clSkt,
     };
     errdefer tskt.deinit();
 
     const trgrs = try tskt.triggers();
 
-    const utrg = sockets.UnpackedTriggers.fromTriggers(trgrs);
+    const utrg = internal.triggeredSkts.UnpackedTriggers.fromTriggers(trgrs);
 
     const onTrigger: u8 = switch (cnfr.*) {
         .tcp_client => utrg.connect,

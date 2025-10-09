@@ -92,7 +92,8 @@ pub fn sendToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
 
     grp.prnt.submitMsg(sendMsg, vc) catch |err| {
         if (newChannelWasCreated) {
-            _ = grp.prnt.acns.removeChannel(sendMsg.bhdr.channel_number);
+            // Called on caller thread
+            grp.prnt.acns.removeChannel(sendMsg.bhdr.channel_number);
         }
         return err;
     };
