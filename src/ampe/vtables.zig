@@ -9,6 +9,8 @@ pub const AmpeVTable = struct {
     create: *const fn (ptr: ?*anyopaque) AmpeError!Channels,
 
     destroy: *const fn (ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void,
+
+    getAllocator: *const fn (ptr: ?*anyopaque) Allocator,
 };
 
 pub const CHNLSVTable = struct {
@@ -23,3 +25,6 @@ const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
 const Channels = @import("../ampe.zig").Channels;
 const message = @import("../message.zig");
 const AmpeError = @import("../status.zig").AmpeError;
+
+const std = @import("std");
+const Allocator = std.mem.Allocator;

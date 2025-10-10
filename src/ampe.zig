@@ -71,6 +71,8 @@ pub const Channels = struct {
 /// Provides methods to:
 /// - Manage the message pool.
 /// - Create and destroy channels.
+/// - Access to shared allocator used for memory management
+/// within engine.
 pub const Ampe = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.AmpeVTable,
@@ -110,6 +112,13 @@ pub const Ampe = struct {
     /// Safe for use in multiple threads.
     pub fn destroy(ampe: Ampe, chnls: Channels) status.AmpeError!void {
         return ampe.vtable.destroy(ampe.ptr, chnls.ptr);
+    }
+
+    /// Gets allocator used by engine for all memory management.
+    ///
+    /// Safe for use in multiple threads.
+    pub fn getAllocator(ampe: Ampe) Allocator {
+        return ampe.vtable.getAllocator(ampe.ptr);
     }
 };
 

@@ -11,6 +11,7 @@ pub fn ampe(eng: *Engine) !Ampe {
             .put = put,
             .create = create,
             .destroy = destroy,
+            .getAllocator = getAllocator,
         },
     };
 
@@ -118,7 +119,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Engine {
 
     try eng.createNotificationChannel();
 
-    eng.createThread() catch | err | {
+    eng.createThread() catch |err| {
         log.err("create engine thread error {s}", .{@errorName(err)});
         return AmpeError.AllocationFailed;
     };
@@ -242,6 +243,11 @@ fn _destroy(eng: *Engine, chnlsimpl: ?*anyopaque) AmpeError!void {
     grp.Destroy();
 
     return;
+}
+
+fn getAllocator(ptr: ?*anyopaque) Allocator {
+    const eng: *Engine = @alignCast(@ptrCast(ptr));
+    return eng.*.allocator;
 }
 
 pub fn submitMsg(eng: *Engine, msg: *Message, hint: VC) AmpeError!void {

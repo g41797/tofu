@@ -970,29 +970,28 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     const TofuServer = struct {
         const Self = @This();
-        gpa: Allocator = undefined,
         ampe: Ampe = undefined,
         chnls: ?tofu.Channels = undefined,
         cfg: Configurator = undefined,
         helloBh: message.BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+        pub fn create(engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+            const allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return status.AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
-            result.* = try Self.init(allocator, engine, cfg);
+            result.* = try Self.init(engine, cfg);
 
             try result.createListener();
 
             return result;
         }
 
-        pub fn init(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
+        pub fn init(engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
             return .{
-                .gpa = allocator,
                 .ampe = engine,
                 .cfg = cfg.*,
                 .chnls = try engine.create(),
@@ -1010,7 +1009,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.gpa;
+            const allocator = self.ampe.getAllocator();
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1115,27 +1114,26 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     const TofuClient = struct {
         const Self = @This();
-        gpa: Allocator = undefined,
         ampe: Ampe = undefined,
         chnls: ?tofu.Channels = undefined,
         cfg: Configurator = undefined,
         helloBh: message.BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+        pub fn create(engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+            const allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return status.AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
-            result.* = try Self.init(allocator, engine, cfg);
+            result.* = try Self.init(engine, cfg);
 
             return result;
         }
 
-        pub fn init(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
+        pub fn init(engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
             return .{
-                .gpa = allocator,
                 .ampe = engine,
                 .cfg = cfg.*,
                 .chnls = try engine.create(),
@@ -1153,7 +1151,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.gpa;
+            const allocator = self.ampe.getAllocator();
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1317,12 +1315,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
     };
 
-    var tCl: *TofuClient = try TofuClient.create(gpa, ampe, cltCfg);
+    var tCl: *TofuClient = try TofuClient.create(ampe, cltCfg);
     defer tCl.destroy();
 
     try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, null);
 
-    var tSr: *TofuServer = try TofuServer.create(gpa, ampe, srvCfg);
+    var tSr: *TofuServer = try TofuServer.create(ampe, srvCfg);
     defer tSr.destroy();
 
     try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
