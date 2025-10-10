@@ -4,8 +4,6 @@
 pub const Engine = @This();
 
 pub fn ampe(eng: *Engine) !Ampe {
-    try eng.*.createThread();
-
     const result: Ampe = .{
         .ptr = eng,
         .vtable = &.{
@@ -119,6 +117,11 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Engine {
     errdefer eng.allChnN.deinit();
 
     try eng.createNotificationChannel();
+
+    eng.createThread() catch | err | {
+        log.err("create engine thread error {s}", .{@errorName(err)});
+        return AmpeError.AllocationFailed;
+    };
 
     return eng;
 }
@@ -752,7 +755,7 @@ fn processMarkedForDelete(eng: *Engine) !bool {
             if (tcPtr.mrk4del) {
                 log.info("--- delete channel {d}  socket {x}", .{ chN, tcPtr.*.tskt.getSocket() });
                 tcPtr.deinitTc();
-                _ = eng.trgrd_map.swapRemove(chN);
+                _ = eng.trgrd_map.orderedRemove(chN);
                 removedCount += 1;
             }
         }
@@ -1124,7 +1127,7 @@ const TriggeredChannel = struct {
 
         eng.removeChannelOnT(chN);
 
-        if (eng.trgrd_map.swapRemove(chN)) {
+        if (eng.trgrd_map.orderedRemove(chN)) {
             eng.cnmapChanged = true;
         }
 
