@@ -22,5 +22,4 @@ pub const CHNLSVTable = struct {
 const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
 const Channels = @import("../ampe.zig").Channels;
 const message = @import("../message.zig");
-const status = @import("../message.zig");
-const AmpeError = status.AmpeError;
+const AmpeError = @import("../status.zig").AmpeError;

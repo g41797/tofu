@@ -6,11 +6,23 @@ test {
     std.log.debug("engine_tests\r\n", .{});
 }
 
-test "handle reconnect" {
+test "handle reconnect single threaded" {
     std.testing.log_level = .debug;
 
-    const reconnectStatus = recipes.handleReConnnectOfTcpClientServer(gpa) catch |err| {
-        log.debug("handleReConnnectOfTcpClientServer {any}", .{
+    const reconnectStatus = recipes.handleReConnnectOfTcpClientServerST(gpa) catch |err| {
+        log.debug("handleReConnnectOfTcpClientServerST {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(reconnectStatus == .success);
+}
+
+test "handle reconnect multithreaded" {
+    std.testing.log_level = .debug;
+
+    const reconnectStatus = recipes.handleReConnnectOfTcpClientServerMT(gpa) catch |err| {
+        log.debug("handleReConnnectOfTcpClientServerMT {any}", .{
             err,
         });
         return err;
@@ -132,6 +144,7 @@ const AmpeError = status.AmpeError;
 const Engine = tofu.Engine;
 
 const std = @import("std");
+
 const testing = std.testing;
 const gpa = std.testing.allocator;
 const log = std.log;

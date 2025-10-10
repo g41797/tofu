@@ -392,3 +392,57 @@ pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void 
         defer srvrThread.join();
     }
 
+
+
+
+pub const Library = struct {
+    gpa: Allocator = undefined,
+
+    pub fn Create(gpa: Allocator) !*Library {
+        const ret = try gpa.alloc(Library);
+        ret.gpa = gpa;
+        return ret;
+    }
+
+    pub fn giveAllocator(lib: *Library) Allocator {
+        return lib.gpa;
+    }
+
+    pub fn asyncSend(lib: *Library, buf: []const u8) void {
+        ......................................
+    }
+};
+
+pub const Client = struct {
+    lib: *Library = undefined,
+
+    pub fn Create(lib: *Library) !*Client {
+        const ret = try lib.giveAllocator();
+        ret.lib = lib;
+        return ret;
+    }
+
+    pub fn process(cln: *Client) void {
+        .....................................
+        const blob: []const u8 = try cln.lib.giveAllocator().alloc(u8, 1024);
+        cln.lib.asyncSend(blob);
+        .....................................
+    }
+};
+
+fn codeExample() !void {
+    var lib: *Library = try Library.Create(std.testing.allocator);
+
+    ........................
+    .........................
+
+    var client: *Client = try Client.Create(lib);
+
+    .........................
+    .........................
+
+    client.process();
+
+}
+
+

@@ -133,7 +133,7 @@ pub const DefaultOptions: Options = .{
 };
 
 pub const waitReceive_INFINITE_TIMEOUT: u64 = std.math.maxInt(u64);
-pub const waitReceive_SEC_TIMEOUT: u64 = 1_000_000_000;
+pub const waitReceive_SEC_TIMEOUT: u64 = std.time.ns_per_s;
 
 pub const DBG = (@import("builtin").mode == .Debug);
 

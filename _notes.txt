@@ -9,7 +9,10 @@ Posts
     https://ziggit.dev/t/zig-ways-of-the-code-reusing/10452/4
     https://ziggit.dev/t/wanted-zig-based-multithreaded-projects/10420
     https://ziggit.dev/t/zyamp-or-do-we-need-yet-another-messaging-protocol/10319
+
     https://www.reddit.com/r/Zig/comments/1l5gofs/wanted_zigbased_multithreaded_projects/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+
+    https://ziggit.dev/t/you-never-give-me-your-money-sorry-allocator/12435/1
 
 Interesting  Projects
 

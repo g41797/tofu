@@ -624,15 +624,15 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
     return status.raw_to_status(attention.?.bhdr.status);
 }
 
-pub fn handleReConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
 
-    return handleReConnect(gpa, &srvCfg, &cltCfg);
+    return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1024, // Example value.
         .maxPoolMsgs = 1024, // Example value.
@@ -822,7 +822,7 @@ pub fn handleReConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configura
             }
 
             while (true) {
-                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT) catch |err| {
+                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                     log.info("On server thread - waitReceive error {s}", .{@errorName(err)});
                     return;
                 };
@@ -855,11 +855,6 @@ pub fn handleReConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configura
                 log.debug("On server thread msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
 
                 assert(recvMsg.?.bhdr.proto.role == .request);
-
-                //
-                // if (recvMsg.?.bhdr.proto.role != .request) { // Process requests only
-                //     continue;
-                // }
 
                 if (recvMsg.?.bhdr.proto.mtype == .hello) {
                     self.*.result = .success;
@@ -950,6 +945,399 @@ pub fn handleReConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configura
     srvr.*.chnls.?.updateWaiter(&nullMsg) catch {};
 
     return .success;
+}
+
+pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!status.AmpeStatus {
+    // Both server and client are on localhost.
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
+    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
+
+    return handleReConnectST(gpa, &srvCfg, &cltCfg);
+}
+
+pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+    // Same code for TCP and UDS client/server, only configurations differ.
+    // Configurations must match (both TCP or both UDS).
+
+    const options: tofu.Options = .{
+        .initialPoolMsgs = 16, // Example value.
+        .maxPoolMsgs = 32, // Example value.
+    };
+
+    var eng: *Engine = try Engine.Create(gpa, options);
+    defer eng.Destroy();
+    const ampe: Ampe = try eng.ampe();
+
+    const TofuServer = struct {
+        const Self = @This();
+        gpa: Allocator = undefined,
+        ampe: Ampe = undefined,
+        chnls: ?tofu.Channels = undefined,
+        cfg: Configurator = undefined,
+        helloBh: message.BinaryHeader = undefined,
+        connected: bool = undefined,
+
+        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+            const result: *Self = allocator.create(Self) catch {
+                return status.AmpeError.AllocationFailed;
+            };
+            errdefer allocator.destroy(result);
+
+            result.* = try Self.init(allocator, engine, cfg);
+
+            try result.createListener();
+
+            return result;
+        }
+
+        pub fn init(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
+            return .{
+                .gpa = allocator,
+                .ampe = engine,
+                .cfg = cfg.*,
+                .chnls = try engine.create(),
+                .helloBh = .{},
+                .connected = false,
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            if (self.chnls != null) {
+                self.ampe.destroy(self.chnls.?) catch {};
+                self.chnls = null;
+            }
+            return;
+        }
+
+        pub fn destroy(self: *Self) void {
+            const allocator = self.gpa;
+            defer allocator.destroy(self);
+            self.deinit();
+            return;
+        }
+
+        fn createListener(server: *Self) status.AmpeError!void {
+            var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+            defer server.*.ampe.put(&welcomeRequest);
+
+            server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
+
+            var initialBh = server.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
+
+            initialBh.dumpProto("server send ");
+
+            var welcomeResponse: ?*Message = server.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+                log.info("server - waitReceive error {s}", .{@errorName(err)});
+                return err;
+            };
+            defer server.ampe.put(&welcomeResponse);
+
+            welcomeResponse.?.bhdr.dumpProto("server recv ");
+
+            if (welcomeResponse.?.bhdr.status == 0) {
+                return;
+            }
+            status.raw_to_error(welcomeResponse.?.bhdr.status) catch |err| {
+                log.info("server - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
+                return err;
+            };
+        }
+
+        pub fn waitConnect(server: *Self, timeOut: u64) status.AmpeError!bool {
+            log.debug("server wait HelloRequest send HelloResponse =>", .{});
+            defer log.debug("server wait HelloRequest send HelloResponse <=", .{});
+
+            if (server.connected) {
+                return true;
+            }
+
+            server.connected = try server.waitRequest(.hello, timeOut);
+            return server.connected;
+        }
+
+        pub fn recvByeRequest_sendByeResponse(server: *Self, timeOut: u64) status.AmpeError!bool {
+            log.debug("server wait ByeRequest send ByeResponse =>", .{});
+            defer log.debug("server wait ByeRequest send ByeResponse <=", .{});
+
+            if (!server.connected) {
+                return true;
+            }
+
+            return server.waitRequest(.bye, timeOut);
+        }
+
+        fn waitRequest(server: *Self, mtype: message.MessageType, timeOut: u64) status.AmpeError!bool {
+            while (true) {
+                var recvMsg: ?*Message = server.*.chnls.?.waitReceive(timeOut) catch |err| {
+                    log.info("server - waitReceive error {s}", .{@errorName(err)});
+                    return err;
+                };
+                defer server.ampe.put(&recvMsg);
+
+                if (recvMsg == null) {
+                    continue;
+                }
+
+                server.helloBh = recvMsg.?.bhdr;
+
+                server.helloBh.dumpProto("server recv");
+
+                if (recvMsg.?.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                        log.info("server - Pool is empy - return message to the pool", .{});
+                        continue;
+                    }
+
+                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                        log.info("server -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
+                        return err;
+                    };
+                }
+
+                log.debug("server msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
+
+                assert(recvMsg.?.bhdr.proto.role == .request);
+                assert(recvMsg.?.bhdr.proto.mtype == mtype);
+
+                recvMsg.?.bhdr.proto.role = .response;
+                recvMsg.?.bhdr.proto.origin = .application; // For sure
+
+                const bh: message.BinaryHeader = server.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
+                    log.info("server - sendToPeer error {s}", .{@errorName(err)});
+                    return err;
+                };
+
+                log.debug("server - send to channel {d} mid {d}", .{ bh.channel_number, bh.message_id });
+                return true;
+            }
+        }
+    };
+
+    const TofuClient = struct {
+        const Self = @This();
+        gpa: Allocator = undefined,
+        ampe: Ampe = undefined,
+        chnls: ?tofu.Channels = undefined,
+        cfg: Configurator = undefined,
+        helloBh: message.BinaryHeader = undefined,
+        connected: bool = undefined,
+
+        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!*Self {
+            const result: *Self = allocator.create(Self) catch {
+                return status.AmpeError.AllocationFailed;
+            };
+            errdefer allocator.destroy(result);
+
+            result.* = try Self.init(allocator, engine, cfg);
+
+            return result;
+        }
+
+        pub fn init(allocator: Allocator, engine: Ampe, cfg: *Configurator) status.AmpeError!Self {
+            return .{
+                .gpa = allocator,
+                .ampe = engine,
+                .cfg = cfg.*,
+                .chnls = try engine.create(),
+                .helloBh = .{},
+                .connected = false,
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            if (self.chnls != null) {
+                self.ampe.destroy(self.chnls.?) catch {};
+                self.chnls = null;
+            }
+            return;
+        }
+
+        pub fn destroy(self: *Self) void {
+            const allocator = self.gpa;
+            defer allocator.destroy(self);
+            self.deinit();
+            return;
+        }
+
+        pub fn sendHelloRequest_recvHelloResponse(client: *Self, tries: usize, sleepBetweenNS: u64, srv: ?*TofuServer) status.AmpeError!void {
+            log.debug("client send HelloRequest recv HelloResponse =>", .{});
+            defer log.debug("client send HelloRequest recv HelloResponse <=", .{});
+
+            if (client.connected) {
+                return;
+            }
+
+            var buildAndSendHelloRequest: bool = true;
+
+            for (0..tries) |i| {
+                while (true) {
+                    if (buildAndSendHelloRequest) {
+                        // Prepare and send HelloRequest
+                        var helloRequest: ?*Message = client.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+                        defer client.*.ampe.put(&helloRequest);
+                        client.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+                        client.*.helloBh = client.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+
+                        client.*.helloBh.dumpProto("client send ");
+
+                        buildAndSendHelloRequest = false;
+                    }
+
+                    if (srv != null) {
+                        _ = try srv.?.waitConnect(sleepBetweenNS);
+                    }
+
+                    // Wait result:
+                    // - failed connection (HelloResponse.status == connect_failed)
+                    // - connected (HelloResponse.status == 0)
+                    // - null - timeout
+                    // - ..........................
+                    var recvMsg: ?*Message = client.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT) catch |err| {
+                        log.info("Client - waitReceive error {s}", .{@errorName(err)});
+                        return err;
+                    };
+                    defer client.ampe.put(&recvMsg);
+
+                    if (recvMsg == null) { // timeout
+                        break;
+                    }
+
+                    recvMsg.?.bhdr.dumpProto("client recv");
+
+                    // Ignore messages for already closed channel
+                    if ((status.raw_to_status(recvMsg.?.bhdr.status) == .channel_closed) and (recvMsg.?.bhdr.channel_number != client.helloBh.channel_number)) {
+                        continue;
+                    }
+
+                    switch (status.raw_to_status(recvMsg.?.bhdr.status)) {
+                        .success => {
+                            log.info("Client connected", .{});
+                            client.connected = true;
+                            return;
+                        },
+                        .pool_empty => {
+                            log.info("Client - empty pool", .{});
+                            continue; // defer above will return received signal message to the pool
+                        },
+                        .connect_failed => {
+                            break; // connect should be repeated
+                        },
+                        .channel_closed => { // ????
+                            buildAndSendHelloRequest = true;
+                            continue;
+                        },
+                        else => {
+                            status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                                // For other errors - propagate up
+                                log.info("Client - recived message with non expected error {s}", .{@errorName(err)});
+                                return err;
+                            };
+                        },
+                    }
+                }
+                if (i != tries) {
+                    std.time.sleep(sleepBetweenNS);
+                }
+            }
+
+            return;
+        }
+
+        pub fn sendByeRequest(client: *Self) status.AmpeError!void {
+            log.debug("client send ByeRequest =>", .{});
+            defer log.debug("client send ByeRequest <=", .{});
+
+            if (!client.connected) {
+                return;
+            }
+
+            // Prepare and send ByeRequest
+            var byeRequest: ?*Message = client.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+            defer client.*.ampe.put(&byeRequest);
+
+            // Don't forget set the same channel # returned after send HelloRequest
+            byeRequest.?.bhdr.channel_number = client.*.helloBh.channel_number;
+            byeRequest.?.bhdr.proto.mtype = .bye;
+            byeRequest.?.bhdr.proto.role = .request;
+            byeRequest.?.bhdr.proto.origin = .application;
+
+            client.*.helloBh = client.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+
+            client.*.helloBh.dumpProto("client send ");
+
+            return;
+        }
+
+        pub fn recvByeResponse(client: *Self, timeOut: u64) status.AmpeError!bool {
+            log.debug("client wait ByeResponse =>", .{});
+            defer log.debug("client wait ByeResponse <=", .{});
+
+            if (!client.connected) {
+                return true;
+            }
+
+            return client.recvResponse(.bye, timeOut);
+        }
+
+        fn recvResponse(client: *Self, mtype: message.MessageType, timeOut: u64) status.AmpeError!bool {
+            while (true) {
+                var recvMsg: ?*Message = client.*.chnls.?.waitReceive(timeOut) catch |err| {
+                    log.info("client - waitReceive error {s}", .{@errorName(err)});
+                    return err;
+                };
+                defer client.ampe.put(&recvMsg);
+
+                if (recvMsg == null) {
+                    continue;
+                }
+
+                recvMsg.?.bhdr.dumpProto("client recv");
+
+                assert(client.helloBh.channel_number == recvMsg.?.bhdr.channel_number);
+
+                if (recvMsg.?.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                        log.info("client - Pool is empy - return message to the pool", .{});
+                        continue;
+                    }
+
+                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                        log.info("client -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
+                        return err;
+                    };
+                }
+
+                log.debug("client msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
+
+                assert(recvMsg.?.bhdr.proto.role == .response);
+                assert(recvMsg.?.bhdr.proto.mtype == mtype);
+
+                return true;
+            }
+        }
+    };
+
+    var tCl: *TofuClient = try TofuClient.create(gpa, ampe, cltCfg);
+    defer tCl.destroy();
+
+    try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, null);
+
+    var tSr: *TofuServer = try TofuServer.create(gpa, ampe, srvCfg);
+    defer tSr.destroy();
+
+    try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
+
+    // wait HelloResponse
+    // _ = try tCl.recvResponse(.hello, std.time.ns_per_ms * 100);
+
+    try tCl.sendByeRequest();
+
+    // wait ByeRequest on server and ByeResponse on client
+    if ((try tSr.recvByeRequest_sendByeResponse(std.time.ns_per_ms * 100)) and (try tCl.recvByeResponse(std.time.ns_per_ms * 100))) {
+        return status.AmpeStatus.success;
+    }
+
+    return status.AmpeStatus.communication_failed;
 }
 
 // Helper function to destroy Channels using defer.

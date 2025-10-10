@@ -126,6 +126,24 @@ pub const BinaryHeader = packed struct {
 
         return;
     }
+
+    pub inline fn dumpProto(self: *BinaryHeader, txt: []const u8) void {
+        if (!DBG) {
+            return;
+        }
+
+        const proto: message.ProtoFields = self.*.proto;
+
+        const mt = std.enums.tagName(MessageType, proto.mtype).?;
+        const rl = std.enums.tagName(MessageRole, proto.role).?;
+        const org = std.enums.tagName(OriginFlag, proto.origin).?;
+        const mr = std.enums.tagName(MoreMessagesFlag, proto.more).?;
+        const ob = std.enums.tagName(Oob, proto.oob).?;
+
+        log.debug("    [DUMP] ({d})   {s} {s} {s} {s} {s} {s} {s}", .{ self.*.channel_number, txt, mt, rl, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
+
+        return;
+    }
 };
 
 /// Structure representing a single text header as a name-value pair.
