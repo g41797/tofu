@@ -70,7 +70,7 @@ pub const Channels = struct {
 ///
 /// Provides methods to:
 /// - Manage the message pool.
-/// - Create and destroy channels.
+/// - Create and destroy communication channels.
 /// - Access to shared allocator used for memory management
 /// within engine.
 pub const Ampe = struct {

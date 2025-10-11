@@ -94,7 +94,7 @@ pub const Poll = struct {
 
             tcptr = pl.it.?.next();
 
-            tc.exp = try tc.tskt.triggers();
+            tc.exp = try tc.triggers();
             tc.act = .{};
 
             var events: i16 = 0;
@@ -132,7 +132,7 @@ pub const Poll = struct {
                 }
             }
 
-            pl.pollfdVtor.append(.{ .fd = tc.tskt.getSocket(), .events = events, .revents = 0 }) catch {
+            pl.pollfdVtor.append(.{ .fd = tc.getSocket(), .events = events, .revents = 0 }) catch {
                 return AmpeError.AllocationFailed;
             };
         }

@@ -298,23 +298,24 @@ pub const TextHeaders = struct {
     }
 };
 
-/// Enum representing valid message type and mode combinations allowed for sending by the application.
+/// Enum representing valid message type and mode combinations
+/// allowed for sending by the application.
 pub const ValidCombination = enum(u4) {
     WelcomeRequest = 0,
-    WelcomeSignal = 1,
 
-    HelloRequest = 2,
-    HelloResponse = 3,
-    HelloSignal = 4,
+    HelloRequest = 1,
+    HelloResponse = 2,
 
-    ByeRequest = 5,
-    ByeResponse = 6,
-    ByeSignal = 7,
+    ByeRequest = 3,
+    ByeResponse = 4,
+    ByeSignal = 5,
 
-    AppRequest = 8,
-    AppResponse = 9,
-    AppSignal = 10,
+    AppRequest = 6,
+    AppResponse = 7,
+    AppSignal = 8,
 
+    _reserved9,
+    _reserved10,
     _reserved11,
     _reserved12,
     _reserved13,
@@ -496,6 +497,8 @@ pub const Message = struct {
     /// Validates the message and updates its binary header fields based on content lengths.
     pub fn check_and_prepare(msg: *Message) AmpeError!ValidCombination {
         msg.bhdr.status = status_to_raw(.success);
+        msg.bhdr.body_len = 0;
+        msg.bhdr.text_headers_len = 0;
 
         const bhdr: BinaryHeader = msg.bhdr;
         const mtype = bhdr.proto.mtype;
@@ -503,14 +506,14 @@ pub const Message = struct {
         const origin = bhdr.proto.origin;
         const more = bhdr.proto.more;
 
-        if ((mode == .response) and (bhdr.message_id == 0)) {
-            msg.bhdr.status = status_to_raw(.invalid_message_id);
-            return AmpeError.InvalidMessageId;
-        }
-
         if (origin != .application) {
             msg.bhdr.status = status_to_raw(.not_allowed);
             return AmpeError.NotAllowed;
+        }
+
+        if ((mode == .response) and (bhdr.message_id == 0)) {
+            msg.bhdr.status = status_to_raw(.invalid_message_id);
+            return AmpeError.InvalidMessageId;
         }
 
         if ((mtype != .regular) and (more == .more)) {
@@ -530,7 +533,6 @@ pub const Message = struct {
             },
             .welcome => switch (mode) {
                 .request => .WelcomeRequest,
-                .signal => .WelcomeSignal,
                 .response => {
                     msg.bhdr.status = status_to_raw(.not_allowed);
                     return AmpeError.NotAllowed;
@@ -543,7 +545,6 @@ pub const Message = struct {
             .hello => switch (mode) {
                 .request => .HelloRequest,
                 .response => .HelloResponse,
-                .signal => .HelloSignal,
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_message_mode);
                     return AmpeError.InvalidMessageMode;
@@ -562,7 +563,7 @@ pub const Message = struct {
         const channel_number = msg.bhdr.channel_number;
         if (channel_number == 0) {
             switch (vc) {
-                .WelcomeRequest, .HelloRequest, .WelcomeSignal, .HelloSignal => {},
+                .WelcomeRequest, .HelloRequest => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
                     return AmpeError.InvalidChannelNumber;
@@ -584,8 +585,8 @@ pub const Message = struct {
 
         const actualBodyLen = msg.actual_body_len();
         if (actualBodyLen > std.math.maxInt(u16)) {
-            msg.bhdr.status = status_to_raw(.invalid_headers_len);
-            return AmpeError.InvalidHeadersLen;
+            msg.bhdr.status = status_to_raw(.invalid_body_len);
+            return AmpeError.InvalidBodyLen;
         }
         msg.bhdr.body_len = @intCast(actualBodyLen);
 

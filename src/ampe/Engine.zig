@@ -525,7 +525,7 @@ fn processNotify(eng: *Engine) !void {
     const notfTrChn = notfTrChnOpt.?;
     assert(notfTrChn.act.notify == .on);
 
-    eng.currNtfc = try notfTrChn.tskt.tryRecvNotification();
+    eng.currNtfc = try notfTrChn.tryRecvNotification();
     eng.unpnt = Notifier.UnpackedNotification.fromNotification(eng.currNtfc);
 
     notfTrChn.act = .{}; // Disable obsolete processing during iteration
@@ -614,7 +614,7 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         }
 
         if (trgrs.connect == .on) {
-            _ = tc.tskt.tryConnect() catch {
+            _ = tc.tryConnect() catch {
                 tc.markForDelete(.connect_failed);
             };
             continue;
@@ -626,7 +626,7 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
                     break;
                 };
 
-                tc.tskt.addForRecv(rcvmsg) catch |err| {
+                tc.addForRecv(rcvmsg) catch |err| {
                     eng.pool.put(rcvmsg);
                     var reason: AmpeStatus = .recv_failed;
                     if (err == AmpeError.NotAllowed) {
@@ -648,7 +648,7 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         }
 
         if (trgrs.send == .on) {
-            var wereSend: message.MessageQueue = tc.tskt.trySend() catch {
+            var wereSend: message.MessageQueue = tc.trySend() catch {
                 tc.markForDelete(.send_failed);
                 continue;
             };
@@ -660,7 +660,7 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         }
 
         if (trgrs.recv == .on) {
-            var wereRecv: message.MessageQueue = tc.tskt.tryRecv() catch {
+            var wereRecv: message.MessageQueue = tc.tryRecv() catch {
                 tc.markForDelete(.recv_failed);
                 continue;
             };
@@ -701,8 +701,8 @@ fn processMessageFromChannels(eng: *Engine) !void {
     const hint = eng.currNtfc.hint;
 
     switch (hint) {
-        .HelloRequest, .HelloSignal => return eng.sendHello(),
-        .WelcomeRequest, .WelcomeSignal => return eng.sendWelcome(),
+        .HelloRequest => return eng.sendHelloRequest(),
+        .WelcomeRequest => return eng.sendWelcomeRequest(),
         .ByeRequest, .ByeSignal => return eng.sendBye(),
         .ByeResponse => return eng.sendByeResponse(),
 
@@ -774,14 +774,9 @@ fn processMarkedForDelete(eng: *Engine) !bool {
     return removedCount > 0;
 }
 
-fn sendHello(eng: *Engine) !void {
+fn sendHelloRequest(eng: *Engine) !void {
     eng.createIoClientChannel() catch |err| {
-        if (eng.currMsg.?.bhdr.proto.role == .request) {
-            eng.currMsg.?.bhdr.proto.role = .response;
-        } else {
-            eng.currMsg.?.bhdr.proto.role = .signal;
-            eng.currMsg.?.bhdr.proto.mtype = .regular;
-        }
+        eng.currMsg.?.bhdr.proto.role = .response;
 
         const st = status.errorToStatus(err);
         eng.responseFailure(st);
@@ -791,14 +786,9 @@ fn sendHello(eng: *Engine) !void {
     return;
 }
 
-fn sendWelcome(eng: *Engine) !void {
+fn sendWelcomeRequest(eng: *Engine) !void {
     eng.createListenerChannel() catch |err| {
-        if (eng.currMsg.?.bhdr.proto.role == .request) {
-            eng.currMsg.?.bhdr.proto.role = .response;
-        } else {
-            eng.currMsg.?.bhdr.proto.role = .signal;
-            eng.currMsg.?.bhdr.proto.mtype = .regular;
-        }
+        eng.currMsg.?.bhdr.proto.role = .response;
 
         const st = status.errorToStatus(err);
         eng.responseFailure(st);
@@ -870,6 +860,7 @@ fn createDumbChannel(eng: *Engine) TriggeredChannel {
         .mrk4del = true,
         .resp2ac = true,
         .st = null,
+        .firstRecvFinished = false,
     };
     return ret;
 }
@@ -914,8 +905,7 @@ fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void
     defer log.debug("<- createIoServerChannel listener channel {d}", .{chN});
 
     // Try to get socket of the client
-    var listener = lstchn.*.tskt;
-    var srvsktOpt = listener.accept.tryAccept() catch |err| {
+    var srvsktOpt = lstchn.tryAccept() catch |err| {
         // Failure on the client side ???
         log.info("createIoServerChannel tryAccept error {any}", .{err});
         return;
@@ -1065,6 +1055,7 @@ const TriggeredChannel = struct {
     act: internal.triggeredSkts.Triggers = undefined,
     mrk4del: bool = undefined,
     st: ?AmpeStatus = undefined,
+    firstRecvFinished: bool = undefined,
 
     pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {
         if (storedMsg.* == null) {
@@ -1089,7 +1080,7 @@ const TriggeredChannel = struct {
             return;
         }
 
-        var mq = tchn.tskt.detach();
+        var mq = tchn.detach();
         var next = mq.dequeue();
         const st = if (tchn.st != null) status.status_to_raw(tchn.st.?) else status.status_to_raw(.channel_closed);
         while (next != null) {
@@ -1101,17 +1092,9 @@ const TriggeredChannel = struct {
 
         var statusMsg = tchn.prnt.buildStatusSignal(.channel_closed);
 
+        // Stored information from from received message
         statusMsg.bhdr.channel_number = tchn.acn.chn;
         statusMsg.bhdr.message_id = tchn.acn.mid;
-
-        // 2DO Move processing of intr to another place
-        // switch (tchn.acn.intr.?) {
-        //     .WelcomeRequest => {}, // Accept skt
-        //     .WelcomeSignal => {}, // Accept skt
-        //     .HelloRequest => {}, // IO skt client
-        //     .HelloSignal => {}, // IO skt client
-        //     else => {}, // IO skt server
-        // }
 
         var responseToCtx: ?*Message = statusMsg;
 
@@ -1156,6 +1139,55 @@ const TriggeredChannel = struct {
         tchn.mrk4del = false;
         tchn.st = null;
     }
+
+    // Wrappers of TriggeredSkt
+    pub inline fn triggers(tchn: *TriggeredChannel) !Triggers {
+        return tchn.tskt.triggers();
+    }
+
+    pub inline fn getSocket(tchn: *TriggeredChannel) Socket {
+        return tchn.tskt.getSocket();
+    }
+    pub inline fn tryRecvNotification(tchn: *TriggeredChannel) !Notification {
+        return tchn.tskt.tryRecvNotification();
+    }
+
+    pub inline fn tryAccept(tchn: *TriggeredChannel) !?Skt {
+        return tchn.tskt.tryAccept();
+    }
+
+    pub inline fn tryConnect(tchn: *TriggeredChannel) !bool {
+        return tchn.tskt.tryConnect();
+    }
+
+    pub inline fn tryRecv(tchn: *TriggeredChannel) !MessageQueue {
+        var mq: MessageQueue = try tchn.tskt.tryRecv();
+        if ((tchn.firstRecvFinished) or (mq.count() == 0)) {
+            return mq;
+        }
+
+        tchn.acn.mid = mq.first.?.bhdr.message_id;
+        tchn.acn.intr = mq.first.?.bhdr.proto;
+        tchn.firstRecvFinished = true;
+
+        return mq;
+    }
+
+    pub inline fn trySend(tchn: *TriggeredChannel) !MessageQueue {
+        return tchn.tskt.trySend();
+    }
+
+    pub inline fn addToSend(tchn: *TriggeredChannel, sndmsg: *Message) !void {
+        return tchn.tskt.addToSend(sndmsg);
+    }
+
+    pub inline fn addForRecv(tchn: *TriggeredChannel, rcvmsg: *Message) !void {
+        return tchn.tskt.addForRecv(rcvmsg);
+    }
+
+    pub inline fn detach(tchn: *TriggeredChannel) MessageQueue {
+        return tchn.tskt.detach();
+    }
 };
 
 const tofu = @import("../tofu.zig");
@@ -1172,6 +1204,7 @@ const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
 const VC = message.ValidCombination;
+const MessageQueue = message.MessageQueue;
 
 const Options = tofu.Options;
 const Ampe = tofu.Ampe;
@@ -1186,6 +1219,9 @@ const status_to_raw = status.status_to_raw;
 
 const internal = tofu.@"internal usage";
 const Notifier = internal.Notifier;
+const Notification = Notifier.Notification;
+
+const Skt = @import("Skt.zig");
 
 const Pool = internal.Pool;
 
@@ -1213,6 +1249,7 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
+const Socket = std.posix.socket_t;
 const log = std.log;
 const assert = std.debug.assert;
 

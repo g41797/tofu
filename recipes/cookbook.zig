@@ -1050,7 +1050,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 return true;
             }
 
-            server.connected = try server.waitRequest(.hello, timeOut);
+            server.connected = try server.waitRequestSendResponse(.hello, timeOut);
             return server.connected;
         }
 
@@ -1062,10 +1062,10 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 return true;
             }
 
-            return server.waitRequest(.bye, timeOut);
+            return server.waitRequestSendResponse(.bye, timeOut);
         }
 
-        fn waitRequest(server: *Self, mtype: message.MessageType, timeOut: u64) status.AmpeError!bool {
+        fn waitRequestSendResponse(server: *Self, mtype: message.MessageType, timeOut: u64) status.AmpeError!bool {
             while (true) {
                 var recvMsg: ?*Message = server.*.chnls.?.waitReceive(timeOut) catch |err| {
                     log.info("server - waitReceive error {s}", .{@errorName(err)});
@@ -1157,7 +1157,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return;
         }
 
-        pub fn sendHelloRequest_recvHelloResponse(client: *Self, tries: usize, sleepBetweenNS: u64, srv: ?*TofuServer) status.AmpeError!void {
+        pub fn sendHelloRequestRequest_recvHelloResponse(client: *Self, tries: usize, sleepBetweenNS: u64, srv: ?*TofuServer) status.AmpeError!void {
             log.debug("client send HelloRequest recv HelloResponse =>", .{});
             defer log.debug("client send HelloRequest recv HelloResponse <=", .{});
 
@@ -1318,12 +1318,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     var tCl: *TofuClient = try TofuClient.create(ampe, cltCfg);
     defer tCl.destroy();
 
-    try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, null);
+    try tCl.sendHelloRequestRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, null);
 
     var tSr: *TofuServer = try TofuServer.create(ampe, srvCfg);
     defer tSr.destroy();
 
-    try tCl.sendHelloRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
+    try tCl.sendHelloRequestRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
 
     // wait HelloResponse
     // _ = try tCl.recvResponse(.hello, std.time.ns_per_ms * 100);

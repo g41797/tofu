@@ -242,7 +242,7 @@ pub const Exchanger = struct {
                 const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
 
                 if (clTsktPtr.act.connect == .on) {
-                    _ = try clTsktPtr.tskt.tryConnect();
+                    _ = try clTsktPtr.tryConnect();
                 }
             }
 
