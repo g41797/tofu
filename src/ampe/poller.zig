@@ -171,8 +171,8 @@ pub const Poll = struct {
                     break;
                 }
 
-                if ((revents & err_mask) != 0) {
-                    log.info("indx {d} poll error on chn {d} fd {x} ", .{ indx, tc.acn.chn, pl.pollfdVtor.items[indx].fd });
+                if ((revents & err_mask) != 0) { // Actually it's disconnect or failed connect
+                    // log.info("indx {d} poll error on chn {d} fd {x} ", .{ indx, tc.acn.chn, pl.pollfdVtor.items[indx].fd });
 
                     tc.act.err = .on;
                     if (tc.exp.notify == .on) {

@@ -10,7 +10,7 @@ test "handle reconnect single threaded" {
     std.testing.log_level = .debug;
 
     const reconnectStatus = recipes.handleReConnnectOfTcpClientServerST(gpa) catch |err| {
-        log.debug("handleReConnnectOfTcpClientServerST {any}", .{
+        log.info("handleReConnnectOfTcpClientServerST {any}", .{
             err,
         });
         return err;
@@ -22,7 +22,7 @@ test "handle reconnect multithreaded" {
     std.testing.log_level = .debug;
 
     const reconnectStatus = recipes.handleReConnnectOfTcpClientServerMT(gpa) catch |err| {
-        log.debug("handleReConnnectOfTcpClientServerMT {any}", .{
+        log.info("handleReConnnectOfTcpClientServerMT {any}", .{
             err,
         });
         return err;
@@ -34,7 +34,7 @@ test "update waiter" {
     std.testing.log_level = .debug;
 
     const updateStatus = recipes.handleUpdateWaiter(gpa) catch |err| {
-        log.debug("handleUpdateWaiter {any}", .{
+        log.info("handleUpdateWaiter {any}", .{
             err,
         });
         return err;
@@ -46,7 +46,7 @@ test "connect/disconnect" {
     std.testing.log_level = .debug;
 
     const listenTcpStatus = recipes.handleStartOfTcpServerAkaListener(gpa) catch |err| {
-        log.debug("handleStartOfTcpServerAkaListener {any}", .{
+        log.info("handleStartOfTcpServerAkaListener {any}", .{
             err,
         });
         return err;
@@ -54,7 +54,7 @@ test "connect/disconnect" {
     try testing.expect(listenTcpStatus == .success);
 
     const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
-        log.debug("handleStartOfUdsServerAkaListener {any}", .{
+        log.info("handleStartOfUdsServerAkaListener {any}", .{
             err,
         });
         return err;
@@ -62,7 +62,7 @@ test "connect/disconnect" {
     try testing.expect(listenUdsStatus == .success);
 
     const connectTcpStatus = recipes.handleConnnectOfTcpClientServer(gpa) catch |err| {
-        log.debug("handleConnnectOfTcpClientServer {any}", .{
+        log.info("handleConnnectOfTcpClientServer {any}", .{
             err,
         });
         return err;
@@ -70,7 +70,7 @@ test "connect/disconnect" {
     try testing.expect(connectTcpStatus == .success);
 
     const connectUdsStatus = recipes.handleConnnectOfUdsClientServer(gpa) catch |err| {
-        log.debug("handleConnnectOfUdsClientServer {any}", .{
+        log.info("handleConnnectOfUdsClientServer {any}", .{
             err,
         });
         return err;
@@ -102,14 +102,14 @@ test "send illegal messages" {
     };
 
     recipes.handleHelloToNonListeningServer(gpa) catch |err| {
-        log.debug("handleHelloToNonListeningServer {any}", .{
+        log.info("handleHelloToNonListeningServer {any}", .{
             err,
         });
         try testing.expect(err == AmpeError.ConnectFailed);
     };
 
     recipes.handleWelcomeWithWrongAddress(gpa) catch |err| {
-        log.debug("handleWelcomeWithWrongAddress {any}", .{
+        log.info("handleWelcomeWithWrongAddress {any}", .{
             err,
         });
         try testing.expect(err == AmpeError.InvalidAddress);

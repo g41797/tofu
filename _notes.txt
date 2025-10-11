@@ -354,3 +354,6 @@ Concurrency primitives for Zig
 
 Redirect test output
    zig build test -freference-trace --summary all > /tmp/tofutest.log 2>&1
+
+Share snippets of zig code
+   https://zigbin.io/

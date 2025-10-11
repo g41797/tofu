@@ -299,9 +299,6 @@ fn _sendAlert(eng: *Engine, alrt: Notifier.Alert) AmpeError!void {
 }
 
 fn createNotificationChannel(eng: *Engine) !void {
-    log.debug("createNotificationChannel ->", .{});
-    defer log.debug("<- createNotificationChannel", .{});
-
     var ntcn = eng.createDumbChannel();
     ntcn.resp2ac = true;
     ntcn.tskt = .{
@@ -346,9 +343,6 @@ fn createThread(eng: *Engine) !void {
 }
 
 inline fn waitFinish(eng: *Engine) void {
-    log.debug("waitFinish ->", .{});
-    defer log.debug("<- waitFinish", .{});
-
     if (eng.thread) |t| {
         t.join();
     }
@@ -392,9 +386,6 @@ fn runOnThread(eng: *Engine) void {
 }
 
 fn loop(eng: *Engine) void {
-    log.debug("loop ->", .{});
-    defer log.debug("<- loop", .{});
-
     defer eng.cleanMboxes();
 
     eng.cnmapChanged = false;
@@ -417,8 +408,6 @@ fn loop(eng: *Engine) void {
         if (withItrtr) {
             itropt = it;
         }
-
-        log.debug(">>>> triggered channels count {d}", .{eng.trgrd_map.count()});
 
         eng.loopTrgrs = eng.plr.waitTriggers(itropt, poll_INFINITE_TIMEOUT) catch |err| {
             log.err("waitTriggers error {any}", .{
@@ -463,7 +452,7 @@ fn loop(eng: *Engine) void {
                     return;
                 },
                 else => {
-                    log.debug("processMessageFromChannels returned error {any}", .{err});
+                    log.info("processMessageFromChannels returned error {any}", .{err});
                 },
             };
 
@@ -481,25 +470,9 @@ fn loop(eng: *Engine) void {
 }
 
 fn validateChannels(eng: *Engine) void {
-    eng.acns.allChannels(&eng.allChnN) catch undefined;
-
-    log.debug(">>>> active channels {d} triggered channels {d}", .{ eng.allChnN.items.len, eng.trgrd_map.count() });
-
-    // for (eng.allChnN.items) |chN| {
-    //     const tcOpt: ?*TriggeredChannel = eng.trgrd_map.getPtr(chN);
-    //     if (tcOpt != null) {
-    //         continue;
-    //     }
-    //
-    //     const acn: channels.ActiveChannel = eng.*.acns.activeChannel(chN) catch unreachable;
-    //
-    //     var proto: u8 = 0;
-    //     if (acn.intr != null) {
-    //         proto = @bitCast(acn.intr.?);
-    //     }
-    //
-    //     log.debug("^,^,^, channel {d} is not triggered mid {d} proto {b}", .{ chN, acn.mid, proto });
-    // }
+    _ = eng;
+    // eng.acns.allChannels(&eng.allChnN) catch undefined;
+    // log.debug(">>>> active channels {d} triggered channels {d}", .{ eng.allChnN.items.len, eng.trgrd_map.count() });
 }
 
 fn processWaitTriggersFailure(eng: *Engine) void {
@@ -515,11 +488,6 @@ fn processTimeOut(eng: *Engine) void {
 }
 
 fn processNotify(eng: *Engine) !void {
-    log.debug("processNotify ->", .{});
-    defer log.debug("<- processNotify", .{});
-
-    // eng.loopTrgrs.notify = .off;
-
     const notfTrChnOpt = eng.trgrd_map.getPtr(0);
     assert(notfTrChnOpt != null);
     const notfTrChn = notfTrChnOpt.?;
@@ -550,9 +518,6 @@ fn processNotify(eng: *Engine) !void {
 }
 
 fn storeMessageFromChannels(eng: *Engine) !void {
-    log.debug("storeMessageFromChannels ->", .{});
-    defer log.debug("<- storeMessageFromChannels", .{});
-
     eng.currMsg = null;
 
     var currMsg: *message.Message = undefined;
@@ -585,9 +550,6 @@ fn storeMessageFromChannels(eng: *Engine) !void {
 }
 
 fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
-    log.debug("processTriggeredChannels {d} ->", .{eng.*.trgrd_map.count()});
-    defer log.debug("<- processTriggeredChannels {d} ", .{eng.*.trgrd_map.count()});
-
     it.reset();
 
     eng.currTcopt = it.next();
@@ -685,9 +647,6 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
 }
 
 fn processMessageFromChannels(eng: *Engine) !void {
-    log.debug("processMessageFromChannels ->", .{});
-    defer log.debug("<- processMessageFromChannels", .{});
-
     if (eng.currMsg == null) {
         return;
     }
@@ -715,9 +674,6 @@ fn processMessageFromChannels(eng: *Engine) !void {
 }
 
 fn processInternal(eng: *Engine) !void {
-    log.debug("processInternal ->", .{});
-    defer log.debug("<- processInternal", .{});
-
     var cmsg = eng.currMsg.?;
     const chnlsimpl: ?*MchnGroup = cmsg.bodyToPtr(MchnGroup);
     const grp = chnlsimpl.?;
@@ -759,16 +715,15 @@ fn processMarkedForDelete(eng: *Engine) !bool {
         const tcOpt: ?*TriggeredChannel = eng.trgrd_map.getPtr(chN);
         if (tcOpt) |tcPtr| {
             if (tcPtr.mrk4del) {
-                log.info("--- delete channel {d}  socket {x}", .{ chN, tcPtr.*.tskt.getSocket() });
                 tcPtr.deinitTc();
-                _ = eng.trgrd_map.orderedRemove(chN);
+                _ = eng.trgrd_map.swapRemove(chN);
                 removedCount += 1;
             }
         }
     }
 
     if (removedCount > 0) {
-        log.info("--- removed channels count {d}", .{removedCount});
+        // log.info("--- removed channels count {d}", .{removedCount});
     }
 
     return removedCount > 0;
@@ -868,9 +823,6 @@ fn createDumbChannel(eng: *Engine) TriggeredChannel {
 fn createIoClientChannel(eng: *Engine) AmpeError!void {
     const hello: *Message = eng.currMsg.?;
     const chN = hello.bhdr.channel_number;
-    log.debug("createIoClientChannel -> {d}", .{chN});
-    defer log.debug("<- createIoClientChannel {d}", .{chN});
-
     var tc = createDumbChannel(eng);
     tc.acn = eng.*.acns.activeChannel(chN) catch unreachable;
 
@@ -898,12 +850,6 @@ fn createIoClientChannel(eng: *Engine) AmpeError!void {
 }
 
 fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void {
-    log.debug("createIoServerChannel -> listener channel {d}", .{lstchn.*.acn.chn});
-
-    const chN = lstchn.*.acn.chn;
-
-    defer log.debug("<- createIoServerChannel listener channel {d}", .{chN});
-
     // Try to get socket of the client
     var srvsktOpt = lstchn.tryAccept() catch |err| {
         // Failure on the client side ???
@@ -947,8 +893,6 @@ fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void
 fn createListenerChannel(eng: *Engine) AmpeError!void {
     const welcome: *Message = eng.currMsg.?;
     const chN = welcome.bhdr.channel_number;
-    log.debug("createListenerChannel -> {d}", .{chN});
-    defer log.debug("<- createListenerChannel {d}", .{chN});
 
     var tc = createDumbChannel(eng);
     tc.acn = eng.*.acns.activeChannel(chN) catch unreachable;
@@ -995,8 +939,6 @@ fn createChannelOnT(eng: *Engine, mid: MessageID, intr: ?message.ProtoFields, pt
 }
 
 fn allTrgChannels(eng: *Engine, chns: *std.ArrayList(message.ChannelNumber)) !void {
-    defer log.info(">>> all trg channels count {d}", .{eng.*.trgrd_map.count()});
-
     chns.resize(0) catch unreachable;
 
     var it = eng.*.trgrd_map.iterator();
@@ -1116,21 +1058,22 @@ const TriggeredChannel = struct {
 
         eng.removeChannelOnT(chN);
 
-        if (eng.trgrd_map.orderedRemove(chN)) {
+        const wasRemoved: bool = eng.trgrd_map.swapRemove(chN);
+
+        if (wasRemoved) {
             eng.cnmapChanged = true;
         }
 
         const trcopt = eng.trgrd_map.getPtr(chN);
         if (trcopt != null) {
-            const tc = trcopt.?;
-            log.debug("trg channel {d} was not removed", .{tc.*.acn.chn});
+            assert(trcopt.?.acn.chn == chN);
+            log.err("trg channel {d} was not removed", .{chN});
         }
 
         return;
     }
 
     pub inline fn markForDelete(tchn: *TriggeredChannel, reason: AmpeStatus) void {
-        log.debug("marked for delete {d}", .{tchn.*.acn.chn});
         tchn.mrk4del = true;
         tchn.st = reason;
     }

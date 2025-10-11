@@ -163,8 +163,6 @@ pub const ActiveChannels = struct {
             };
             cns.active.put(rv, ach) catch unreachable;
 
-            log.debug(">>> added channel {d} active channels count {d}", .{ ach.chn, cns.active.count() });
-
             return ach;
         }
     }
@@ -258,7 +256,7 @@ pub const ActiveChannels = struct {
         }
 
         if (!cns.active.contains(cn)) {
-            log.info(">>>>> channel {d} does not exist channels count {d}", .{ cn, cns.active.count() });
+            // log.info(">>>>> channel {d} does not exist channels count {d}", .{ cn, cns.active.count() });
         }
         const wasRemoved = cns.active.swapRemove(cn);
 
@@ -305,13 +303,10 @@ pub const ActiveChannels = struct {
             }
         }
 
-        log.debug(">>> all channels {d} channelsGroup {d}", .{ cns.active.count(), chns.items.len });
-
         return chns;
     }
 
     pub fn allChannels(cns: *ActiveChannels, chns: *std.ArrayList(ChannelNumber)) !void {
-        defer log.info(">>> all channels count {d}", .{cns.*.active.count()});
         cns.mutex.lock();
         defer cns.mutex.unlock();
         chns.resize(0) catch unreachable;

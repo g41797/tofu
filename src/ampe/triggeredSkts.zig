@@ -211,7 +211,6 @@ pub const NotificationSkt = struct {
     socket: Socket = undefined,
 
     pub fn init(socket: Socket) NotificationSkt { // prnt.ntfr.receiver
-        log.debug("NotificationSkt init", .{});
         return .{
             .socket = socket,
         };
@@ -283,8 +282,6 @@ pub const IoSkt = struct {
     alreadySend: ?*Message = null,
 
     pub fn initServerSide(pool: *internal.Pool, cn: message.ChannelNumber, sskt: Skt) AmpeError!IoSkt {
-        log.debug("Server IoSkt init", .{});
-
         var ret: IoSkt = .{
             .pool = pool,
             .side = .server,
@@ -306,8 +303,6 @@ pub const IoSkt = struct {
     }
 
     pub fn initClientSide(ios: *IoSkt, pool: *internal.Pool, hello: *Message, sc: *SocketCreator) AmpeError!void {
-        log.debug("Client IoSkt init", .{});
-
         ios.pool = pool;
         ios.side = .client;
         ios.cn = hello.bhdr.channel_number;
@@ -643,24 +638,8 @@ pub const MsgSender = struct {
                 ms.msg = null;
 
                 if (ret != null) {
-                    if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .request)) {
-                        log.debug("HelloRequest was send to channel {d}", .{ret.?.bhdr.channel_number});
-                    }
-                    if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .response)) {
-                        log.debug("HelloResponse was send to channel {d}", .{ret.?.bhdr.channel_number});
-                    }
-                    if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .signal)) {
-                        log.debug("HelloSignal was send to channel {d}", .{ret.?.bhdr.channel_number});
-                    }
-
-                    if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .request)) {
-                        log.debug("ByeRequest was send to channel {d}", .{ret.?.bhdr.channel_number});
-                    }
-                    if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .response)) {
-                        log.debug("ByeResponse was send to channel {d}", .{ret.?.bhdr.channel_number});
-                    }
-                    if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .signal)) {
-                        log.debug("ByeSignal was send to channel {d}", .{ret.?.bhdr.channel_number});
+                    if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
+                        ret.?.bhdr.dumpProto("***-> ");
                     }
                 }
 
@@ -849,24 +828,10 @@ pub const MsgReceiver = struct {
         mr.msg = null;
 
         if (ret != null) {
-            if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .request)) {
-                log.debug("HelloRequest was received on channel {d}", .{ret.?.bhdr.channel_number});
-            }
-            if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .response)) {
-                log.debug("HelloResponse was received on channel {d}", .{ret.?.bhdr.channel_number});
-            }
-            if ((ret.?.bhdr.proto.mtype == .hello) and (ret.?.bhdr.proto.role == .signal)) {
-                log.debug("HelloSignal was received on channel {d}", .{ret.?.bhdr.channel_number});
-            }
-
-            if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .request)) {
-                log.debug("ByeRequest was received on channel {d}", .{ret.?.bhdr.channel_number});
-            }
-            if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .response)) {
-                log.debug("ByeResponse was received on channel {d}", .{ret.?.bhdr.channel_number});
-            }
-            if ((ret.?.bhdr.proto.mtype == .bye) and (ret.?.bhdr.proto.role == .signal)) {
-                log.debug("ByeSignal was received on channel {d}", .{ret.?.bhdr.channel_number});
+            if (ret != null) {
+                if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
+                    ret.?.bhdr.dumpProto("<-*** ");
+                }
             }
         }
 

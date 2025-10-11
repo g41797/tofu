@@ -343,7 +343,6 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     try cnfg.prepareRequest(msg.?);
 
     const corrInfo: BinaryHeader = try chnls.sendToPeer(&msg);
-    log.debug(">><< Listen will start on channel {d} ", .{corrInfo.channel_number});
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -425,7 +424,6 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     try srvCfg.prepareRequest(welcomeRequest.?);
 
     const srvCorrInfo: BinaryHeader = try chnls.sendToPeer(&welcomeRequest);
-    log.debug(">><< Listen will start on channel {d} ", .{srvCorrInfo.channel_number});
 
     var welcomeResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -436,7 +434,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     // Convert u8 status to AmpeError.
     status.raw_to_error(st) catch |err| {
-        log.debug(">><< welcomeResp error {s} ", .{@errorName(err)});
+        log.info(">><< welcomeResp error {s} ", .{@errorName(err)});
     };
     assert(st == 0);
 
@@ -465,7 +463,6 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     try cltCfg.prepareRequest(helloRequest.?);
 
     const cltCorrInfo: BinaryHeader = try chnls.sendToPeer(&helloRequest);
-    log.debug(">><< Connect will start on channel {d} ", .{cltCorrInfo.channel_number});
 
     // Client and server channels must be different.
     assert(cltCorrInfo.channel_number != srvCorrInfo.channel_number);
@@ -484,13 +481,12 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     st = helloRequestOnServerSide.?.bhdr.status;
     const chN: message.ChannelNumber = helloRequestOnServerSide.?.bhdr.channel_number;
     status.raw_to_error(st) catch |err| {
-        log.debug(">><< helloRequestOnServerSide channel {d} error {s} ", .{ chN, @errorName(err) });
+        log.info(">><< helloRequestOnServerSide channel {d} error {s} ", .{ chN, @errorName(err) });
     };
     assert(st == 0);
 
     // Store info about the connected client.
     const connectedClientInfo: BinaryHeader = helloRequestOnServerSide.?.bhdr;
-    log.debug(">><< Channel of new connected client on the server side {d} ", .{connectedClientInfo.channel_number});
 
     // Three different channels exist:
     // - Listener channel (srvCorrInfo.channel_number).
@@ -651,19 +647,13 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         result: ?status.AmpeStatus = undefined,
 
         fn runOnThread(self: *Self) void {
-            log.debug("---> On client thread", .{});
-            defer log.debug("<--- On client thread", .{});
-
             while (true) {
                 var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&helloRequest);
 
                 self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
-                const hrbh: message.BinaryHeader = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
-                const proto: u8 = @bitCast(hrbh.proto);
-
-                log.info("HelloRequest channel {d} mid {d} proto {b}", .{ hrbh.channel_number, hrbh.message_id, proto });
+                _ = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
 
                 var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                     log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -671,17 +661,8 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 };
                 defer self.ampe.put(&recvMsg);
 
-                log.debug("On client thread msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
-
-                const mt: message.MessageType = recvMsg.?.bhdr.proto.mtype;
-                const mr: message.MessageRole = recvMsg.?.bhdr.proto.role;
-                const org: message.OriginFlag = recvMsg.?.bhdr.proto.origin;
-                const st: u8 = recvMsg.?.bhdr.status;
-
-                log.info("On client thread mt {s} mr {s} org {s} st {s}", .{ @tagName(mt), @tagName(mr), @tagName(org), @tagName(status.raw_to_status(st)) });
-
                 if (status.raw_to_status(recvMsg.?.bhdr.status) == .connect_failed) {
-                    log.info("On client thread - connection failed - reconnect", .{});
+                    // Connection failed - reconnect
                     continue;
                 }
 
@@ -698,10 +679,10 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 if (recvMsg.?.bhdr.proto.mtype == .hello) {
                     assert(recvMsg.?.bhdr.proto.role == .response);
 
-                    log.info("On client thread - connected to server", .{});
+                    // Connected to server
                     self.*.result = .success;
 
-                    log.info("On client thread - disconnect from server", .{});
+                    // Disconnect from server
                     recvMsg.?.bhdr.proto.mtype = .bye;
                     recvMsg.?.bhdr.proto.origin = .application;
                     recvMsg.?.bhdr.proto.role = .signal;
@@ -721,8 +702,6 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 if (recvMsg == null) {
                     continue;
                 }
-
-                log.debug("On client thread msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
 
                 if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
                     log.info("Pool is empy - return message to the pool", .{});
@@ -785,9 +764,6 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         result: ?status.AmpeStatus = .unknown_error,
 
         fn runOnThread(self: *Self) void {
-            log.debug("---> On server thread", .{});
-            defer log.debug("<--- On server thread", .{});
-
             while (true) { // Create listener
 
                 var welcomeRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
@@ -852,8 +828,6 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     };
                 }
 
-                log.debug("On server thread msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
-
                 assert(recvMsg.?.bhdr.proto.role == .request);
 
                 if (recvMsg.?.bhdr.proto.mtype == .hello) {
@@ -863,12 +837,10 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 recvMsg.?.bhdr.proto.role = .response;
                 recvMsg.?.bhdr.proto.origin = .application; // For sure
 
-                const bh: message.BinaryHeader = self.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
+                _ = self.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
                     log.info("On server thread - sendToPeer error {s}", .{@errorName(err)});
                     return;
                 };
-
-                log.debug("On server thread send to channel {d} mid {d}", .{ bh.channel_number, bh.message_id });
             }
 
             return;
@@ -1043,9 +1015,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn waitConnect(server: *Self, timeOut: u64) status.AmpeError!bool {
-            log.debug("server wait HelloRequest send HelloResponse =>", .{});
-            defer log.debug("server wait HelloRequest send HelloResponse <=", .{});
-
             if (server.connected) {
                 return true;
             }
@@ -1055,9 +1024,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn recvByeRequest_sendByeResponse(server: *Self, timeOut: u64) status.AmpeError!bool {
-            log.debug("server wait ByeRequest send ByeResponse =>", .{});
-            defer log.debug("server wait ByeRequest send ByeResponse <=", .{});
-
             if (!server.connected) {
                 return true;
             }
@@ -1093,20 +1059,17 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     };
                 }
 
-                log.debug("server msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
-
                 assert(recvMsg.?.bhdr.proto.role == .request);
                 assert(recvMsg.?.bhdr.proto.mtype == mtype);
 
                 recvMsg.?.bhdr.proto.role = .response;
                 recvMsg.?.bhdr.proto.origin = .application; // For sure
 
-                const bh: message.BinaryHeader = server.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
+                _ = server.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
                     log.info("server - sendToPeer error {s}", .{@errorName(err)});
                     return err;
                 };
 
-                log.debug("server - send to channel {d} mid {d}", .{ bh.channel_number, bh.message_id });
                 return true;
             }
         }
@@ -1158,9 +1121,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn sendHelloRequestRequest_recvHelloResponse(client: *Self, tries: usize, sleepBetweenNS: u64, srv: ?*TofuServer) status.AmpeError!void {
-            log.debug("client send HelloRequest recv HelloResponse =>", .{});
-            defer log.debug("client send HelloRequest recv HelloResponse <=", .{});
-
             if (client.connected) {
                 return;
             }
@@ -1209,7 +1169,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
                     switch (status.raw_to_status(recvMsg.?.bhdr.status)) {
                         .success => {
-                            log.info("Client connected", .{});
+                            // Client connected
                             client.connected = true;
                             return;
                         },
@@ -1242,9 +1202,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn sendByeRequest(client: *Self) status.AmpeError!void {
-            log.debug("client send ByeRequest =>", .{});
-            defer log.debug("client send ByeRequest <=", .{});
-
             if (!client.connected) {
                 return;
             }
@@ -1267,9 +1224,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn recvByeResponse(client: *Self, timeOut: u64) status.AmpeError!bool {
-            log.debug("client wait ByeResponse =>", .{});
-            defer log.debug("client wait ByeResponse <=", .{});
-
             if (!client.connected) {
                 return true;
             }
@@ -1304,8 +1258,6 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         return err;
                     };
                 }
-
-                log.debug("client msg received on channel {d} mid {d}", .{ recvMsg.?.bhdr.channel_number, recvMsg.?.bhdr.message_id });
 
                 assert(recvMsg.?.bhdr.proto.role == .response);
                 assert(recvMsg.?.bhdr.proto.mtype == mtype);

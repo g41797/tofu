@@ -74,8 +74,6 @@ pub const BinaryHeader = packed struct {
 
     /// Serializes the binary header to a byte array, handling endianness conversion if needed.
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
-        self.dump("send");
-
         if (is_be) {
             // On BE platform, copy directly from self to buf
             const src_be: *[BHSIZE]u8 = @ptrCast(self);
@@ -108,8 +106,6 @@ pub const BinaryHeader = packed struct {
             self.text_headers_len = std.mem.bigToNative(u16, self.text_headers_len);
             self.body_len = std.mem.bigToNative(u16, self.body_len);
         }
-
-        self.dump("recv");
 
         return;
     }
