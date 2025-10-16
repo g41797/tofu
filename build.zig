@@ -28,6 +28,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const datetime = b.dependency("datetime", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const lib = b.addStaticLibrary(.{
         .name = "tofu",
         // In this case the main source file is merely a path, however, in more
@@ -54,11 +59,14 @@ pub fn build(b: *std.Build) void {
     tofuMod.addImport("nats", nats.module("nats"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
+    tofuMod.addImport("datetime", datetime.module("datetime"));
 
     lib.root_module.addImport("tofu", tofuMod);
     lib.root_module.addImport("nats", nats.module("nats"));
     lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib.root_module.addImport("temp", temp.module("temp"));
+
+    lib.root_module.addImport("datetime", datetime.module("datetime"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -90,6 +98,7 @@ pub fn build(b: *std.Build) void {
     lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
     lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
     lib_unit_tests.root_module.addImport("temp", temp.module("temp"));
+    lib_unit_tests.root_module.addImport("datetime", datetime.module("datetime"));
 
     // need libc for windows sockets
     if (target.result.os.tag == .windows) {

@@ -357,3 +357,11 @@ Redirect test output
 
 Share snippets of zig code
    https://zigbin.io/
+
+Import
+    zig fetch --save git+https://github.com/frmdstryr/zig-datetime#master
+
+
+To obtain a list of sockets associated with a specific port
+    ss -tulnpe | grep ":<port_number>"
+    ss -tulnpe | grep ":32984"

@@ -639,7 +639,7 @@ pub const MsgSender = struct {
 
                 if (ret != null) {
                     if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
-                        ret.?.bhdr.dumpProto("***-> ");
+                        ret.?.bhdr.dumpMeta("-->snd ");
                     }
                 }
 
@@ -830,7 +830,7 @@ pub const MsgReceiver = struct {
         if (ret != null) {
             if (ret != null) {
                 if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
-                    ret.?.bhdr.dumpProto("<-*** ");
+                    ret.?.bhdr.dumpMeta("<-rcv ");
                 }
             }
         }

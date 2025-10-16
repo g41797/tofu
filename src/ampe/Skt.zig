@@ -69,7 +69,13 @@ pub fn connect(skt: *Skt) AmpeError!bool {
         std.posix.ConnectError.ConnectionRefused => {
             return AmpeError.PeerDisconnected;
         },
-        else => return AmpeError.PeerDisconnected,
+        std.posix.ConnectError.FileNotFound => {
+            return AmpeError.InvalidAddress;
+        },
+        else => {
+            log.warn("connectPosix error {s}", .{@errorName(e)});
+            return AmpeError.PeerDisconnected;
+        },
     };
 
     if (connected) {
@@ -200,6 +206,12 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
         if (intErrStatus == @intFromEnum(E.CONNABORTED)) {
             return connectError.ConnectedAborted;
         }
+        if (intErrStatus == @intFromEnum(E.NOENT)) {
+            return connectError.FileNotFound;
+        }
+
+        log.warn("posix.system.connect errno {s}", .{@tagName(erStat)});
+
         return error.Unexpected;
 
         // switch (intErrStatus) {

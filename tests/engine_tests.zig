@@ -6,16 +6,36 @@ test {
     std.log.debug("engine_tests\r\n", .{});
 }
 
+// test "handle reconnect ST with connector helper" {
+//     std.testing.log_level = .debug;
+//
+//     const reconnectStatus = recipes.handleReConnnectOfUdsClientServerSTViaConnector(gpa) catch |err| {
+//         log.info("handleReConnnectOfUdsClientServerSTViaConnector {any}", .{
+//             err,
+//         });
+//         return err;
+//     };
+//     try testing.expect(reconnectStatus == .success);
+// }
+
 test "handle reconnect single threaded" {
     std.testing.log_level = .debug;
 
-    const reconnectStatus = recipes.handleReConnnectOfTcpClientServerST(gpa) catch |err| {
+    const reconnectUdsStatus = recipes.handleReConnnectOfUdsClientServerST(gpa) catch |err| {
+        log.info("handleReConnnectOfUdsClientServerST {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(reconnectUdsStatus == .success);
+
+    const reconnectTcpStatus = recipes.handleReConnnectOfTcpClientServerST(gpa) catch |err| {
         log.info("handleReConnnectOfTcpClientServerST {any}", .{
             err,
         });
         return err;
     };
-    try testing.expect(reconnectStatus == .success);
+    try testing.expect(reconnectTcpStatus == .success);
 }
 
 test "handle reconnect multithreaded" {
@@ -29,7 +49,7 @@ test "handle reconnect multithreaded" {
     };
     try testing.expect(reconnectStatus == .success);
 }
-
+//
 test "update waiter" {
     std.testing.log_level = .debug;
 
@@ -41,7 +61,7 @@ test "update waiter" {
     };
     try testing.expect(updateStatus == .waiter_update);
 }
-
+//
 test "connect/disconnect" {
     std.testing.log_level = .debug;
 
@@ -77,7 +97,7 @@ test "connect/disconnect" {
     };
     try testing.expect(connectUdsStatus == .success);
 }
-
+//
 test "ampe just create/destroy" {
     std.testing.log_level = .debug;
     try recipes.createDestroyMain(gpa);

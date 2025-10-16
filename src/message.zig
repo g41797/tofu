@@ -123,7 +123,7 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
-    pub inline fn dumpProto(self: *BinaryHeader, txt: []const u8) void {
+    pub inline fn dumpMeta(self: *BinaryHeader, txt: []const u8) void {
         if (!DBG) {
             return;
         }
@@ -136,7 +136,7 @@ pub const BinaryHeader = packed struct {
         const mr = std.enums.tagName(MoreMessagesFlag, proto.more).?;
         const ob = std.enums.tagName(Oob, proto.oob).?;
 
-        log.debug("    [DUMP] ({d})   {s} {s} {s} {s} {s} {s} {s}", .{ self.*.channel_number, txt, mt, rl, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
+        log.debug("    [mid {d}] ({d}) {s} {s} {s} {s} {s} {s} {s}", .{ self.*.message_id, self.*.channel_number, txt, mt, rl, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
 
         return;
     }

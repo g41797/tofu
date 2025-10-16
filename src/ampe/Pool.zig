@@ -50,11 +50,16 @@ pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.A
         });
     }
 
+    ret.currMsgs = ret.initialMsgs;
+
+    ret.inform();
+
     return ret;
 }
 
 pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
     pool.mutex.lock();
+    defer pool.*.inform();
     defer pool.mutex.unlock();
     if (pool.closed) {
         return AmpeError.NotAllowed;
@@ -67,10 +72,12 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
         result.?.next = null;
         result.?.prev = null;
         result.?.reset();
+        pool.*.currMsgs -= 1;
         return result.?;
     }
 
     if (ac == .poolOnly) {
+        assert(pool.*.currMsgs == 0);
         pool.emptyWasReturned = true;
         return AmpeError.PoolEmpty;
     }
@@ -84,6 +91,7 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
 
 pub fn put(pool: *Pool, msg: *Message) void {
     pool.mutex.lock();
+    defer pool.*.inform();
     defer pool.mutex.unlock();
 
     if ((pool.closed) or (pool.currMsgs == pool.maxMsgs)) {
@@ -97,6 +105,7 @@ pub fn put(pool: *Pool, msg: *Message) void {
     msg.reset();
 
     if (pool.first == null) {
+        assert(pool.*.currMsgs == 0);
         pool.first = msg;
         if ((pool.emptyWasReturned) and (pool.alerter != null)) {
             pool.alerter.?.send_alert(.freedMemory) catch {};
@@ -121,6 +130,7 @@ pub fn free(pool: *Pool, msg: *Message) void {
 
 pub fn freeAll(pool: *Pool) void {
     pool.mutex.lock();
+    defer pool.*.inform();
     defer pool.mutex.unlock();
     if (pool.closed) {
         return;
@@ -131,6 +141,7 @@ pub fn freeAll(pool: *Pool) void {
 
 pub fn close(pool: *Pool) void {
     pool.mutex.lock();
+    defer pool.*.inform();
     defer pool.mutex.unlock();
     if (pool.closed) {
         return;
@@ -149,12 +160,22 @@ fn _freeAll(pool: *Pool) void {
         chain = next;
     }
     pool.first = null;
+    assert(pool.currMsgs == 0);
     return;
+}
+
+inline fn inform(pool: *Pool) void {
+    if (DBG) {
+        if (pool.*.currMsgs > 0) {
+            // log.debug("pool msgs {d}", .{pool.*.currMsgs});
+        }
+    }
 }
 
 const Appendable = @import("nats").Appendable;
 
 const tofu = @import("../tofu.zig");
+const DBG = tofu.DBG;
 const message = tofu.message;
 const Message = message.Message;
 const AllocationStrategy = tofu.AllocationStrategy;
@@ -167,5 +188,8 @@ const Alert = Notifier.Alert;
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
+
+const assert = std.debug.assert;
+const log = std.log;
 
 // 2DO  Timeout for Alerts - restrict number of alerts per sec

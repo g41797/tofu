@@ -731,6 +731,7 @@ fn processMarkedForDelete(eng: *Engine) !bool {
 
 fn sendHelloRequest(eng: *Engine) !void {
     eng.createIoClientChannel() catch |err| {
+        assert(eng.currMsg != null);
         eng.currMsg.?.bhdr.proto.role = .response;
 
         const st = status.errorToStatus(err);
@@ -833,9 +834,17 @@ fn createIoClientChannel(eng: *Engine) AmpeError!void {
     errdefer clSkt.deinit();
 
     try clSkt.initClientSide(&eng.pool, hello, &sc);
-    eng.currMsg = null;
+    eng.*.currMsg = null;
 
-    _ = try clSkt.tryConnect();
+    _ = clSkt.tryConnect() catch |err| {
+        // Restore HelloRequest
+        var smsgs: MessageQueue = clSkt.detach();
+        const helloMsg: ?*Message = smsgs.dequeue();
+        if (helloMsg != null) {
+            eng.*.currMsg = helloMsg.?;
+        }
+        return err;
+    };
 
     const tcptr = eng.trgrd_map.getPtr(hello.bhdr.channel_number).?;
     tcptr.disableDelete();
