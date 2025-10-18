@@ -325,6 +325,7 @@ pub const Message = struct {
     bhdr: BinaryHeader = .{},
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
+    @"<ctx>": ?*anyopaque = null, // 2DO - Replace with Channels ID
 
     const blen: u16 = 256;
     const tlen: u16 = 64;
@@ -351,7 +352,7 @@ pub const Message = struct {
         return msg;
     }
 
-    /// Creates a deep copy of the Message, including its headers and body.
+    /// Creates a deep copy of the Message, including its headers and body, except @"<ctx>".
     pub fn clone(self: *Message) !*Message {
         const alc = self.body.allocator;
         var msg = try alc.create(Message);
@@ -359,6 +360,7 @@ pub const Message = struct {
 
         msg.* = .{};
         msg.bhdr = self.bhdr;
+        msg.@"<ctx>" = null;
 
         try msg.body.init(alc, @max(self.body.buffer.?.len, blen), null);
         if (self.body.body()) |src| {
@@ -610,10 +612,42 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
-// ===================================
-// Gemini generated helpers
-// used as prototypes for own funcs
-// ===================================
+pub fn clearQueue(queue: *MessageQueue) void {
+    var next = queue.dequeue();
+    while (next != null) {
+        next.?.destroy();
+        next = queue.dequeue();
+    }
+}
+
+pub const Appendable = @import("nats").Appendable;
+
+const message = @import("message.zig");
+
+/// Structure for managing a queue of messages in a FIFO order.
+pub const MessageQueue = @import("ampe/IntrusiveQueue.zig").IntrusiveQueue(Message);
+
+pub const status = @import("status.zig");
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
+pub const status_to_raw = status.status_to_raw;
+
+const std = @import("std");
+const builtin = @import("builtin");
+const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
+const is_be = builtin.target.cpu.arch.endian() == .big;
+
+const Atomic = std.atomic.Value;
+const AtomicOrder = std.builtin.AtomicOrder;
+const AtomicRmwOp = std.builtin.AtomicRmwOp;
+
+const log = std.log;
+const DBG = @import("ampe.zig").DBG;
+
+// ====================================
+//  Gemini generated helpers nad tests
+// ====================================
 
 /// Converts a struct pointer's address into a provided slice.
 /// Returns a slice of the filled portion of the destination slice.
@@ -671,35 +705,145 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
     return true;
 }
 
-pub fn clearQueue(queue: *MessageQueue) void {
-    var next = queue.dequeue();
-    while (next != null) {
-        next.?.destroy();
-        next = queue.dequeue();
+const SliceTooSmallError = error{SliceTooSmall};
+
+/// Converts a single scalar value into a byte slice representation.
+///
+/// This function relies on the in-memory representation of the scalar value
+/// (native endianness).
+///
+/// Returns a comptime error if the type T is an aggregate (e.g., struct, array, pointer).
+///
+/// Args:
+///     T: The type of the value (e.g., u32, i16, f64).
+///     value: The scalar value to convert.
+///     dest: The destination byte slice.
+///
+/// Returns:
+///     A slice of the filled portion of the destination slice, or an empty slice
+///     if the destination is too small.
+pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
+    // 1. Comptime error check for aggregate types (as requested)
+    comptime {
+        const info = @typeInfo(T);
+        if (info == .Struct or info == .Array or info == .Pointer or info == .Union) {
+            @compileError("Type '" ++ @typeName(T) ++ "' is an aggregate (struct/array/pointer/union) and not supported for scalar conversion.");
+        }
+    }
+
+    const value_size = @sizeOf(T);
+
+    // 2. Destination size check
+    if (dest.len < value_size) {
+        return dest[0..0]; // Return empty slice
+    }
+
+    // 3. Conversion and copying
+    // std.mem.span safely provides a []const u8 view of the scalar value.
+    const value_bytes = std.mem.span(&value);
+    std.mem.copy(u8, dest[0..value_size], value_bytes);
+
+    // 4. Return filled slice
+    return dest[0..value_size];
+}
+
+/// Converts a byte slice back to a single scalar value.
+///
+/// This function interprets the slice contents based on the scalar value's
+/// native endianness.
+///
+/// Returns a comptime error if the type T is an aggregate.
+///
+/// Args:
+///     T: The target scalar type (e.g., u32, i16, f64).
+///     slice: The byte slice containing the value data.
+///
+/// Returns:
+///     The decoded scalar value, or SliceTooSmallError if the slice length
+///     is less than the size of T.
+pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
+    // 1. Comptime error check for aggregate types
+    comptime {
+        const info = @typeInfo(T);
+        if (info == .Struct or info == .Array or info == .Pointer or info == .Union) {
+            @compileError("Target type '" ++ @typeName(T) ++ "' is an aggregate (struct/array/pointer/union) and not supported for scalar conversion.");
+        }
+    }
+
+    const value_size = @sizeOf(T);
+
+    // 2. Slice size check
+    if (slice.len < value_size) {
+        return SliceTooSmallError;
+    }
+
+    // 3. Decoding by copying bytes into an aligned variable
+    var result: T = undefined;
+    const result_bytes: []u8 = std.mem.span(&result);
+
+    // Copy only the required size from the input slice
+    std.mem.copy(u8, result_bytes, slice[0..value_size]);
+
+    return result;
+}
+
+test "valueToSlice - success (u32)" {
+    var dest = [_]u8{0} ** 8;
+    const value: u32 = 0x12345678;
+    const expected_size = @sizeOf(u32);
+
+    const filled_slice = valueToSlice(u32, value, dest[0..]);
+    try std.testing.expectEqual(expected_size, filled_slice.len);
+
+    // Check content based on native endianness
+    if (std.builtin.target.cpu.arch.endian() == .little) {
+        // Little-endian: Least significant byte first (78)
+        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[0]);
+        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[3]);
+    } else {
+        // Big-endian: Most significant byte first (12)
+        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[0]);
+        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[3]);
     }
 }
 
-pub const Appendable = @import("nats").Appendable;
+test "valueToSlice - destination too small" {
+    var dest = [_]u8{0} ** 3; // Needs 4 bytes for u32
+    const value: u32 = 0x12345678;
+    const filled_slice = valueToSlice(u32, value, dest[0..]);
+    try std.testing.expectEqual(@as(usize, 0), filled_slice.len);
+}
 
-const message = @import("message.zig");
+test "sliceToValue - success (i64)" {
+    // A slice representing the i64 value 0x0102030405060708
+    const bytes_le = [_]u8{ 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
+    const bytes_be = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
 
-/// Structure for managing a queue of messages in a FIFO order.
-pub const MessageQueue = @import("ampe/IntrusiveQueue.zig").IntrusiveQueue(Message);
+    const slice_to_test = if (std.builtin.target.cpu.arch.endian() == .little) bytes_le[0..] else bytes_be[0..];
+    const expected_value: i64 = 0x0102030405060708;
 
-pub const status = @import("status.zig");
-pub const AmpeStatus = status.AmpeStatus;
-pub const AmpeError = status.AmpeError;
-pub const status_to_raw = status.status_to_raw;
+    const value = try sliceToValue(i64, slice_to_test);
+    try std.testing.expectEqual(expected_value, value);
+}
 
-const std = @import("std");
-const builtin = @import("builtin");
-const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
-const is_be = builtin.target.cpu.arch.endian() == .big;
+test "sliceToValue - slice too small" {
+    const bytes = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }; // Needs 8 bytes for i64
+    const err = sliceToValue(i64, bytes[0..]);
+    try std.testing.expectEqual(err, error.SliceTooSmall);
+}
 
-const Atomic = std.atomic.Value;
-const AtomicOrder = std.builtin.AtomicOrder;
-const AtomicRmwOp = std.builtin.AtomicRmwOp;
+test "roundtrip conversion (f32)" {
+    var dest = [_]u8{0} ** 8;
+    const original_value: f32 = 3.14159;
+    const expected_size = @sizeOf(f32);
 
-const log = std.log;
-const DBG = @import("ampe.zig").DBG;
+    // Value to Slice
+    const filled_slice = valueToSlice(f32, original_value, dest[0..]);
+    try std.testing.expectEqual(expected_size, filled_slice.len);
+
+    // Slice to Value
+    const decoded_value = try sliceToValue(f32, filled_slice);
+
+    // Due to the nature of floating point, comparing equality is fine for an exact byte-for-byte round trip.
+    try std.testing.expectEqual(original_value, decoded_value);
+}

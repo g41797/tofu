@@ -41,13 +41,21 @@ test "handle reconnect single threaded" {
 test "handle reconnect multithreaded" {
     std.testing.log_level = .debug;
 
-    const reconnectStatus = recipes.handleReConnnectOfTcpClientServerMT(gpa) catch |err| {
+    const reconnectStatusTcp = recipes.handleReConnnectOfTcpClientServerMT(gpa) catch |err| {
         log.info("handleReConnnectOfTcpClientServerMT {any}", .{
             err,
         });
         return err;
     };
-    try testing.expect(reconnectStatus == .success);
+    try testing.expect(reconnectStatusTcp == .success);
+
+    const reconnectStatusUds = recipes.handleReConnnectOfUdsClientServerMT(gpa) catch |err| {
+        log.info("handleReConnnectOfTcpClientServerMT {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(reconnectStatusUds == .success);
 }
 //
 test "update waiter" {

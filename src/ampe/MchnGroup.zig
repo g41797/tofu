@@ -72,6 +72,7 @@ pub fn sendToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     }
 
     const sendMsg = msgopt.?;
+    sendMsg.*.@"<ctx>" = ptr;
 
     const vc = try sendMsg.check_and_prepare();
 
@@ -116,6 +117,7 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
         }
     };
 
+    recvMsg.*.@"<ctx>" = null;
     return recvMsg;
 }
 
@@ -133,6 +135,7 @@ pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
 
     msg.*.?.bhdr.proto.origin = .application;
     msg.*.?.bhdr.status = tofu.status.status_to_raw(.waiter_update);
+    msg.*.?.@"<ctx>" = null;
 
     grp.msgs[1].send(msg.*.?) catch {
         return AmpeError.ShutdownStarted;

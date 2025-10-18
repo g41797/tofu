@@ -830,7 +830,7 @@ pub const MsgReceiver = struct {
         if (ret != null) {
             if (ret != null) {
                 if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
-                    ret.?.bhdr.dumpMeta("<-rcv ");
+                    ret.?.bhdr.dumpMeta("<--rcv ");
                 }
             }
         }

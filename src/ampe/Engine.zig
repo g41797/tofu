@@ -207,6 +207,9 @@ fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
 }
 
 inline fn _create(eng: *Engine) AmpeError!Channels {
+    eng.mutex.lock();
+    defer eng.mutex.unlock();
+
     eng.maxid += 1;
 
     const grp = try MchnGroup.Create(eng, eng.maxid);
@@ -794,9 +797,19 @@ fn responseFailure(eng: *Engine, failure: AmpeStatus) void {
 
     const chn = eng.currMsg.?.bhdr.channel_number;
     var trchn = eng.trgrd_map.getPtr(chn);
-    assert(trchn != null);
-    trchn.?.markForDelete(failure);
-    trchn.?.sendToCtx(&eng.currMsg);
+    if (trchn != null) {
+        trchn.?.markForDelete(failure);
+        trchn.?.sendToCtx(&eng.currMsg);
+        return;
+    }
+    if (eng.currMsg.?.@"<ctx>" == null) {
+        // Both channel and channels were deleted
+        // Message will be returned to Pool via defer above
+        return;
+    }
+
+    // Try notify Channels directly
+    _ = MchnGroup.sendToWaiter(eng.currMsg.?.@"<ctx>", &eng.currMsg) catch {};
     return;
 }
 
@@ -935,10 +948,11 @@ fn createListenerChannel(eng: *Engine) AmpeError!void {
 
 // Wrappers working with ActiveChannels on the thread
 fn removeChannelOnT(eng: *Engine, cn: message.ChannelNumber) void {
-    eng.acns.removeChannel(cn);
     var tc = eng.trgrd_map.getPtr(cn);
     if (tc != null) {
         tc.?.markForDelete(status.AmpeStatus.channel_closed);
+    } else {
+        eng.acns.removeChannel(cn);
     }
     return;
 }

@@ -70,7 +70,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
             return AmpeError.PeerDisconnected;
         },
         std.posix.ConnectError.FileNotFound => {
-            return AmpeError.InvalidAddress;
+            return AmpeError.UDSPathNotFound;
         },
         else => {
             log.warn("connectPosix error {s}", .{@errorName(e)});

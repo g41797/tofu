@@ -630,6 +630,17 @@ pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeS
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
+pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
+    var tup: tofu.TempUdsPath = .{};
+
+    const filePath = try tup.buildPath(gpa);
+
+    var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
+    var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
+
+    return handleReConnectMT(gpa, &srvCfg, &cltCfg);
+}
+
 pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1024, // Example value.
@@ -949,9 +960,15 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
+    // Just for example - let's create two engines :-)
+
+    var engA: *Engine = try Engine.Create(gpa, options);
+    defer engA.Destroy();
+    const ampeA: Ampe = try engA.ampe();
+
+    var engB: *Engine = try Engine.Create(gpa, options);
+    defer engB.Destroy();
+    const ampeB: Ampe = try engA.ampe();
 
     const TofuServer = struct {
         const Self = @This();
@@ -1203,15 +1220,22 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                             try client.*.addMessagesToPool(3);
                             continue;
                         },
-                        .connect_failed, .communication_failed, .peer_disconnected, .send_failed, .recv_failed, => {
+                        .connect_failed,
+                        .communication_failed,
+                        .peer_disconnected,
+                        .send_failed,
+                        .recv_failed,
+                        => {
                             break; // connect should be repeated
                         },
 
                         .invalid_address => {
-                            if(client.*.cfg == .uds_client) { // Possibly listener is not ready
-                                break;
-                            }
                             return status.AmpeError.InvalidAddress;
+                        },
+
+                        .uds_path_not_found => { // Up to developer, possibly uds listener was not started
+                            break; // connect should be repeated - my decision for the test
+                            // or return status.AmpeError.UdsPathNotFound
                         },
 
                         .channel_closed => { // ????
@@ -1311,12 +1335,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
     };
 
-    var tCl: *TofuClient = try TofuClient.create(ampe, cltCfg);
+    var tCl: *TofuClient = try TofuClient.create(ampeA, cltCfg);
     defer tCl.destroy();
 
     try tCl.sendHelloRequestRequest_recvHelloResponse(1000, std.time.ns_per_ms * 1, null);
 
-    var tSr: *TofuServer = try TofuServer.create(ampe, srvCfg);
+    var tSr: *TofuServer = try TofuServer.create(ampeB, srvCfg);
     defer tSr.destroy();
 
     try tCl.sendHelloRequestRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
@@ -1351,6 +1375,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     var eng: *Engine = try Engine.Create(gpa, options);
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
+    defer destroyChannels(eng, ampe);
 
     // Helper object - for re-connect logic
     const ClientConnector = struct {
@@ -1421,6 +1446,13 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             }
 
             switch (status.raw_to_status(recvd.*.?.bhdr.status)) {
+                .invalid_address => return status.AmpeError.InvalidAddress,
+                .uds_path_not_found => return status.AmpeError.UDSPathNotFound,
+                .recv_failed, .send_failed => {
+                    cc.*.helloBh = null;
+                    return false;
+                },
+
                 .success => {
                     // Client connected
                     cc.*.connected = true;
