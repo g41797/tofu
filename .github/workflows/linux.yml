@@ -21,10 +21,18 @@ jobs:
           version: 0.14.1
           use-cache: false
 
+      - run: rm -rf ./.zig-cache/
+
       - run: zig build test -freference-trace --summary all -Doptimize=Debug
+
+      - run: rm -rf ./.zig-cache/
 
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
 
+      - run: rm -rf ./.zig-cache/
+
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
+
+      - run: rm -rf ./.zig-cache/
 
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
