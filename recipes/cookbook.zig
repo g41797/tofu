@@ -302,7 +302,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
 
     var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
 
-    return handleStartOfListener(gpa, &cnfg);
+    return handleStartOfListener(gpa, &cnfg, false);
 }
 
 pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
@@ -319,11 +319,40 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     // Create configurator for UDS server.
     var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
 
-    // Use the same code as for TCP server.
-    return handleStartOfListener(gpa, &cnfg);
+    return handleStartOfListener(gpa, &cnfg, false);
 }
 
-pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeStatus {
+pub fn handleStartOfTcpListeners(gpa: Allocator) !status.AmpeStatus {
+    // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
+
+    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Tofu provides helper structs for creating configurations.
+    // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
+    // Use helpers to create the configuration for a welcome request.
+
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+
+    return handleStartOfListener(gpa, &cnfg, true);
+}
+
+pub fn handleStartOfUdsListeners(gpa: Allocator) !status.AmpeStatus {
+    // UDS (Unix Domain Socket) uses a file path for communication on the same machine,
+    // unlike network sockets that use IP addresses and ports.
+
+    // WelcomeRequest for a UDS server needs a file path.
+    // Tofu provides a helper to create a temporary file path for testing.
+
+    var tup: tofu.TempUdsPath = .{};
+
+    const filePath = try tup.buildPath(gpa);
+
+    // Create configurator for UDS server.
+    var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
+
+    return handleStartOfListener(gpa, &cnfg, true);
+}
+
+pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bool) !status.AmpeStatus {
     // Same code for TCP and UDS servers, only configuration differs.
 
     const options: tofu.Options = .{
@@ -361,6 +390,12 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator) !status.AmpeSt
     // A WelcomeSignal would return a Signal with an error status for failed listen.
     assert(recvMsg.?.bhdr.proto.mtype == .welcome);
     assert(recvMsg.?.bhdr.proto.role == .response);
+
+    // Run of the same listener should fail with status TBD
+    if (runTheSame) {
+        const lst: status.AmpeStatus = try handleStartOfListener(gpa, cnfg, false);
+        return lst;
+    }
 
     // Channel is not closed explicitly.
     // It closes during Channels destruction (see defer above).

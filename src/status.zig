@@ -28,6 +28,7 @@ pub const AmpeStatus = enum(u8) {
     channel_closed,
     shutdown_started,
     connect_failed,
+    listen_failed,
     accept_failed,
     send_failed,
     recv_failed,
@@ -60,6 +61,7 @@ pub const AmpeError = error{
     ChannelClosed,
     ShutdownStarted,
     ConnectFailed,
+    ListenFailed,
     AcceptFailed,
     SendFailed,
     RecvFailed,
@@ -92,6 +94,7 @@ var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .waiter_update = AmpeError.WaiterUpdate, // not exactly error
     .channel_closed = AmpeError.ChannelClosed,
     .connect_failed = AmpeError.ConnectFailed,
+    .listen_failed = AmpeError.ListenFailed,
     .accept_failed = AmpeError.AcceptFailed,
     .send_failed = AmpeError.SendFailed,
     .recv_failed = AmpeError.RecvFailed,

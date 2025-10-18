@@ -81,6 +81,14 @@ test "connect/disconnect" {
     };
     try testing.expect(listenTcpStatus == .success);
 
+    const listen2TcpStatus = recipes.handleStartOfTcpListeners(gpa) catch |err| {
+        log.info("handleStartOfTcpServerAkaListener {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(listen2TcpStatus == .success);
+
     const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
         log.info("handleStartOfUdsServerAkaListener {any}", .{
             err,
@@ -88,6 +96,14 @@ test "connect/disconnect" {
         return err;
     };
     try testing.expect(listenUdsStatus == .success);
+
+    const listen2UdsStatus = recipes.handleStartOfUdsListeners(gpa) catch |err| {
+        log.info("handleStartOfUdsServerAkaListener {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(listen2UdsStatus == .success);
 
     const connectTcpStatus = recipes.handleConnnectOfTcpClientServer(gpa) catch |err| {
         log.info("handleConnnectOfTcpClientServer {any}", .{

@@ -41,7 +41,12 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
 
     const skt = createListenerSocket(&address) catch |er| {
         log.info("createListenerSocket failed with error {s}", .{@errorName(er)});
-        return AmpeError.InvalidAddress;
+
+        switch (er) {
+            error.AddressNotAvailable => return AmpeError.InvalidAddress,
+            error.AddressInUse, error.FileDescriptorNotASocket, error.OperationNotSupported => return AmpeError.ListenFailed,
+            else => return AmpeError.UnknownError,
+        }
     };
 
     return skt;
