@@ -1,4 +1,5 @@
 const std = @import("std");
+const posix = std.posix;
 const Allocator = std.mem.Allocator;
 const log = std.log;
 const assert = std.debug.assert;
@@ -201,7 +202,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Example: TCP server address is "tofu.server.zig", port 3298.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("tofu.server.zig", 3298) };
+    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("tofu.server.zig", try findFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -239,7 +240,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // Example: TCP server address is "127.0.0.1", port 32987.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", 32987) };
+    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", try findFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -300,7 +301,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try findFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, false);
 }
@@ -330,7 +331,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !status.AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", 32984) };
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try findFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, true);
 }
@@ -406,8 +407,10 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
 pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
-    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
+    const port = try findFreeTcpPort();
+
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
+    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
@@ -659,8 +662,9 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
 
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
-    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
+    const port = try findFreeTcpPort();
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
+    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
@@ -969,8 +973,9 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", 32984) };
-    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", 32984) };
+    const port = try findFreeTcpPort();
+    var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
+    var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
@@ -1852,4 +1857,30 @@ pub inline fn sleep1MlSec() void {
 
 pub inline fn sleep10MlSec() void {
     std.time.sleep(1_000_000_0);
+}
+
+/// Helper function for finding free TCP/IP port
+/// Because there is a problem with 'Address In Use'
+/// for repeating tests, it's better to get free TCP/IP socket
+/// and use it's port for the listener
+pub fn findFreeTcpPort() !u16 {
+    const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
+    defer posix.close(sockfd); // Ensure socket is closed immediately after use
+
+    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
+    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
+
+    // Set up sockaddr_in structure with port 0 (ephemeral port)
+    var addr: posix.sockaddr.in = .{
+        .family = posix.AF.INET,
+        .port = 0, // Let the system assign a free port
+        .addr = 0, // INADDR_ANY (0.0.0.0)
+    };
+
+    try posix.bind(sockfd, @ptrCast(&addr), @sizeOf(posix.sockaddr.in));
+
+    var addr_len: posix.socklen_t = @sizeOf(posix.sockaddr.in);
+    try posix.getsockname(sockfd, @ptrCast(&addr), &addr_len);
+
+    return std.mem.bigToNative(u16, addr.port);
 }

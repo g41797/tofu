@@ -160,6 +160,15 @@ test "send illegal messages" {
     };
 }
 
+test "find free TCP/IP port" {
+    std.testing.log_level = .debug;
+    const port = try recipes.findFreeTcpPort();
+
+    log.debug("free TCP/IP port {d}", .{port});
+
+    try std.testing.expect(port > 0); // Ensure a valid port is returned
+}
+
 const tofu = @import("tofu");
 
 const recipes = @import("recipes");

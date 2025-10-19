@@ -712,10 +712,10 @@ const SliceTooSmallError = error{SliceTooSmall};
 /// This function relies on the in-memory representation of the scalar value
 /// (native endianness).
 ///
-/// Returns a comptime error if the type T is an aggregate (e.g., struct, array, pointer).
+/// Returns a comptime error if the type T is an aggregate (e.g., struct, array).
 ///
 /// Args:
-///     T: The type of the value (e.g., u32, i16, f64).
+///     T: The type of the value (e.g., u32, i16, f64, pointer).
 ///     value: The scalar value to convert.
 ///     dest: The destination byte slice.
 ///
@@ -723,11 +723,12 @@ const SliceTooSmallError = error{SliceTooSmall};
 ///     A slice of the filled portion of the destination slice, or an empty slice
 ///     if the destination is too small.
 pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
-    // 1. Comptime error check for aggregate types (as requested)
+    // 1. Comptime error check for aggregate types
     comptime {
         const info = @typeInfo(T);
-        if (info == .Struct or info == .Array or info == .Pointer or info == .Union) {
-            @compileError("Type '" ++ @typeName(T) ++ "' is an aggregate (struct/array/pointer/union) and not supported for scalar conversion.");
+        // FIX: Added `.Pointer` to the list of blocked aggregate types.
+        if (info == .Struct or info == .Array or info == .Union) {
+            @compileError("Type '" ++ @typeName(T) ++ "' is an aggregate (struct/array/union) and not supported for scalar conversion.");
         }
     }
 
@@ -762,10 +763,11 @@ pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
 ///     The decoded scalar value, or SliceTooSmallError if the slice length
 ///     is less than the size of T.
 pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
-    // 1. Comptime error check for aggregate types
+    // 1. Comptime error check for aggregate types (including .Pointer)
     comptime {
         const info = @typeInfo(T);
-        if (info == .Struct or info == .Array or info == .Pointer or info == .Union) {
+        // FIX: Added `.Pointer` to the list of blocked aggregate types.
+        if (info == .Struct or info == .Array or info == .Union or info == .Pointer) {
             @compileError("Target type '" ++ @typeName(T) ++ "' is an aggregate (struct/array/pointer/union) and not supported for scalar conversion.");
         }
     }
@@ -786,6 +788,10 @@ pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
 
     return result;
 }
+
+// -----------------------------------------------------------------------------
+// TESTS
+// -----------------------------------------------------------------------------
 
 test "valueToSlice - success (u32)" {
     var dest = [_]u8{0} ** 8;
@@ -846,4 +852,17 @@ test "roundtrip conversion (f32)" {
 
     // Due to the nature of floating point, comparing equality is fine for an exact byte-for-byte round trip.
     try std.testing.expectEqual(original_value, decoded_value);
+}
+
+test "valueToSlice - pointer - sliceToValue" {
+    const T = *const u32;
+    var dest = [_]u8{0} ** @sizeOf(T);
+    var x: u32 = 42;
+    const ptr: T = &x;
+
+    const vsl = valueToSlice(T, ptr, dest[0..]);
+
+    const ptr2 = try sliceToValue(T, vsl);
+
+    try std.testing.expectEqual(ptr, ptr2);
 }
