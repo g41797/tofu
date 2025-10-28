@@ -16,6 +16,9 @@ pub const configurator = @import("configurator.zig");
 pub const message = @import("message.zig");
 pub const status = @import("status.zig");
 pub const Engine = @import("ampe/Engine.zig");
-pub const TempUdsPath = @import("ampe/TempUdsPath.zig");
+
+// For test lovers
+pub const TempUdsPath = @import("ampe/testHelpers.zig").TempUdsPath;
+pub const FindFreeTcpPort = @import("ampe/testHelpers.zig").FindFreeTcpPort;
 
 pub const @"internal usage" = @import("ampe/internal.zig");

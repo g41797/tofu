@@ -909,3 +909,80 @@ Use code with caution.
 
 
 
+// -----------------------------------------------------------------------------
+// TESTS
+// -----------------------------------------------------------------------------
+
+test "valueToSlice - success (u32)" {
+    var dest = [_]u8{0} ** 8;
+    const value: u32 = 0x12345678;
+    const expected_size = @sizeOf(u32);
+
+    const filled_slice = valueToSlice(u32, value, dest[0..]);
+    try std.testing.expectEqual(expected_size, filled_slice.len);
+
+    // Check content based on native endianness
+    if (std.builtin.target.cpu.arch.endian() == .little) {
+        // Little-endian: Least significant byte first (78)
+        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[0]);
+        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[3]);
+    } else {
+        // Big-endian: Most significant byte first (12)
+        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[0]);
+        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[3]);
+    }
+}
+
+test "valueToSlice - destination too small" {
+    var dest = [_]u8{0} ** 3; // Needs 4 bytes for u32
+    const value: u32 = 0x12345678;
+    const filled_slice = valueToSlice(u32, value, dest[0..]);
+    try std.testing.expectEqual(@as(usize, 0), filled_slice.len);
+}
+
+test "sliceToValue - success (i64)" {
+    // A slice representing the i64 value 0x0102030405060708
+    const bytes_le = [_]u8{ 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
+    const bytes_be = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+
+    const slice_to_test = if (std.builtin.target.cpu.arch.endian() == .little) bytes_le[0..] else bytes_be[0..];
+    const expected_value: i64 = 0x0102030405060708;
+
+    const value = try sliceToValue(i64, slice_to_test);
+    try std.testing.expectEqual(expected_value, value);
+}
+
+test "sliceToValue - slice too small" {
+    const bytes = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }; // Needs 8 bytes for i64
+    const err = sliceToValue(i64, bytes[0..]);
+    try std.testing.expectEqual(err, error.SliceTooSmall);
+}
+
+test "roundtrip conversion (f32)" {
+    var dest = [_]u8{0} ** 8;
+    const original_value: f32 = 3.14159;
+    const expected_size = @sizeOf(f32);
+
+    // Value to Slice
+    const filled_slice = valueToSlice(f32, original_value, dest[0..]);
+    try std.testing.expectEqual(expected_size, filled_slice.len);
+
+    // Slice to Value
+    const decoded_value = try sliceToValue(f32, filled_slice);
+
+    // Due to the nature of floating point, comparing equality is fine for an exact byte-for-byte round trip.
+    try std.testing.expectEqual(original_value, decoded_value);
+}
+
+test "valueToSlice - pointer - sliceToValue" {
+    const T = *const u32;
+    var dest = [_]u8{0} ** @sizeOf(T);
+    var x: u32 = 42;
+    const ptr: T = &x;
+
+    const vsl = valueToSlice(T, ptr, dest[0..]);
+
+    const ptr2 = try sliceToValue(T, vsl);
+
+    try std.testing.expectEqual(ptr, ptr2);
+}

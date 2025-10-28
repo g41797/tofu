@@ -3,11 +3,13 @@
 
 pub const MchnGroup = @This();
 
-prnt: *Engine = undefined,
-id: u32 = undefined,
+pub const GroupId = ?u32;
+
+engine: *Engine = undefined,
+id: GroupId = null,
 allocator: Allocator = undefined,
 msgs: [2]MSGMailBox = undefined,
-cmpl: ResetEvent = undefined,
+cmpl: Semaphore = undefined,
 
 pub fn chnls(grp: *MchnGroup) Channels {
     const result: Channels = .{
@@ -21,28 +23,28 @@ pub fn chnls(grp: *MchnGroup) Channels {
     return result;
 }
 
-pub fn Create(prnt: *Engine, id: u32) AmpeError!*MchnGroup {
-    const grp = prnt.allocator.create(MchnGroup) catch {
+pub fn Create(engine: *Engine, id: ?u32) AmpeError!*MchnGroup {
+    const grp = engine.allocator.create(MchnGroup) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer prnt.allocator.destroy(grp);
-    grp.* = MchnGroup.init(prnt, id);
+    errdefer engine.allocator.destroy(grp);
+    grp.* = MchnGroup.init(engine, id);
     return grp;
 }
 
 pub fn Destroy(grp: *MchnGroup) void {
-    const gpa = grp.prnt.allocator;
+    const gpa = grp.engine.allocator;
     grp.deinit();
     gpa.destroy(grp);
 }
 
-fn init(prnt: *Engine, id: u32) MchnGroup {
+fn init(engine: *Engine, id: ?u32) MchnGroup {
     const grp: MchnGroup = .{
-        .prnt = prnt,
+        .engine = engine,
         .id = id,
-        .allocator = prnt.allocator,
+        .allocator = engine.allocator,
         .msgs = .{ .{}, .{} },
-        .cmpl = ResetEvent{},
+        .cmpl = Semaphore{},
     };
 
     return grp;
@@ -53,13 +55,13 @@ fn deinit(grp: *MchnGroup) void {
     return;
 }
 
-fn cleanMboxes(grp: *MchnGroup) void {
+pub fn cleanMboxes(grp: *MchnGroup) void {
     for (0..2) |i| {
         var mbx = grp.msgs[i];
         var allocated = mbx.close();
         while (allocated != null) {
             const next = allocated.?.next;
-            grp.prnt.pool.put(allocated.?);
+            grp.engine.pool.put(allocated.?);
             allocated = next;
         }
     }
@@ -81,27 +83,30 @@ pub fn sendToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     var newChannelWasCreated: bool = false;
 
     if (sendMsg.bhdr.channel_number != 0) {
-        try grp.prnt.acns.check(sendMsg.bhdr.channel_number, ptr);
+        try grp.engine.acns.check(sendMsg.bhdr.channel_number, ptr);
     } else {
         var proto = sendMsg.bhdr.proto;
         proto._internal = 0; // As sign of the "local" hello/welcome
 
-        const ach = grp.prnt.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, grp);
+        const ach = grp.engine.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, grp);
         sendMsg.bhdr.channel_number = ach.chn;
+        std.debug.assert(sendMsg.bhdr.channel_number != 0);
         newChannelWasCreated = true;
     }
 
-    grp.prnt.submitMsg(sendMsg, vc) catch |err| {
+    const ret: BinaryHeader = sendMsg.bhdr;
+
+    grp.engine.submitMsg(sendMsg, vc) catch |err| {
         if (newChannelWasCreated) {
             // Called on caller thread
-            grp.prnt.acns.removeChannel(sendMsg.bhdr.channel_number);
+            grp.engine.acns.removeChannel(sendMsg.bhdr.channel_number);
         }
         return err;
     };
 
     amsg.* = null;
 
-    return sendMsg.bhdr;
+    return ret;
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
@@ -117,6 +122,10 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
         }
     };
 
+    if (recvMsg.*.bhdr.status != tofu.status.status_to_raw(.waiter_update)) {
+        std.debug.assert(recvMsg.*.@"<ctx>" != null);
+    }
+
     recvMsg.*.@"<ctx>" = null;
     return recvMsg;
 }
@@ -125,9 +134,9 @@ pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
     if (msg.* == null) {
-        const updateSignal: *Message = grp.prnt.buildStatusSignal(.waiter_update);
+        const updateSignal: *Message = grp.engine.buildStatusSignal(.waiter_update);
         grp.msgs[1].send(updateSignal) catch {
-            grp.prnt.pool.put(updateSignal);
+            grp.engine.pool.put(updateSignal);
             return AmpeError.ShutdownStarted;
         };
         return;
@@ -145,13 +154,20 @@ pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     return;
 }
 
-pub fn setReleaseCompleted(grp: *MchnGroup) void {
-    grp.cmpl.set();
+pub inline fn setCmdCompleted(grp: *MchnGroup) void {
+    grp.cmpl.post();
     return;
 }
 
-pub fn waitReleaseCompleted(grp: *MchnGroup) void {
-    grp.cmpl.wait();
+pub inline fn waitCmdCompleted(grp: *MchnGroup) void {
+    grp.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT) catch {
+        // log.warn("waitCmdCompleted timeout group {*} gid {d}", .{ grp, grp.*.id.? });
+        return;
+    };
+    return;
+}
+
+pub inline fn resetCmdCompleted(_: *MchnGroup) void {
     return;
 }
 
@@ -201,5 +217,6 @@ const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
+const Semaphore = std.Thread.Semaphore;
 const ResetEvent = std.Thread.ResetEvent;
+const log = std.log;

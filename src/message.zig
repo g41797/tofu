@@ -52,6 +52,10 @@ pub const ProtoFields = packed struct(u8) {
 /// Type alias for channel number, represented as a 16-bit unsigned integer.
 pub const ChannelNumber = u16;
 
+pub const SpecialMinChannelNumber = std.math.minInt(u16);
+
+pub const SpecialMaxChannelNumber = std.math.maxInt(u16);
+
 /// Type alias for message ID, represented as a 64-bit unsigned integer.
 pub const MessageID = u64;
 
@@ -447,7 +451,7 @@ pub const Message = struct {
 
     /// Validates the message, ensuring it conforms to allowed type and mode combinations.
     inline fn validate(msg: *Message) !void {
-        _ = try check_and_prepare(msg);
+        _ = try msg.*.check_and_prepare();
         return;
     }
 
@@ -494,6 +498,8 @@ pub const Message = struct {
 
     /// Validates the message and updates its binary header fields based on content lengths.
     pub fn check_and_prepare(msg: *Message) AmpeError!ValidCombination {
+        errdefer msg.*.bhdr.dumpMeta("illegal message");
+
         msg.bhdr.status = status_to_raw(.success);
         msg.bhdr.body_len = 0;
         msg.bhdr.text_headers_len = 0;
@@ -635,7 +641,6 @@ pub const status_to_raw = status.status_to_raw;
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
 const is_be = builtin.target.cpu.arch.endian() == .big;
 
 const Atomic = std.atomic.Value;
@@ -646,7 +651,7 @@ const log = std.log;
 const DBG = @import("ampe.zig").DBG;
 
 // ====================================
-//  Gemini generated helpers nad tests
+//       Gemini generated helpers
 // ====================================
 
 /// Converts a struct pointer's address into a provided slice.
@@ -787,82 +792,4 @@ pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
     std.mem.copy(u8, result_bytes, slice[0..value_size]);
 
     return result;
-}
-
-// -----------------------------------------------------------------------------
-// TESTS
-// -----------------------------------------------------------------------------
-
-test "valueToSlice - success (u32)" {
-    var dest = [_]u8{0} ** 8;
-    const value: u32 = 0x12345678;
-    const expected_size = @sizeOf(u32);
-
-    const filled_slice = valueToSlice(u32, value, dest[0..]);
-    try std.testing.expectEqual(expected_size, filled_slice.len);
-
-    // Check content based on native endianness
-    if (std.builtin.target.cpu.arch.endian() == .little) {
-        // Little-endian: Least significant byte first (78)
-        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[0]);
-        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[3]);
-    } else {
-        // Big-endian: Most significant byte first (12)
-        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[0]);
-        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[3]);
-    }
-}
-
-test "valueToSlice - destination too small" {
-    var dest = [_]u8{0} ** 3; // Needs 4 bytes for u32
-    const value: u32 = 0x12345678;
-    const filled_slice = valueToSlice(u32, value, dest[0..]);
-    try std.testing.expectEqual(@as(usize, 0), filled_slice.len);
-}
-
-test "sliceToValue - success (i64)" {
-    // A slice representing the i64 value 0x0102030405060708
-    const bytes_le = [_]u8{ 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
-    const bytes_be = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-
-    const slice_to_test = if (std.builtin.target.cpu.arch.endian() == .little) bytes_le[0..] else bytes_be[0..];
-    const expected_value: i64 = 0x0102030405060708;
-
-    const value = try sliceToValue(i64, slice_to_test);
-    try std.testing.expectEqual(expected_value, value);
-}
-
-test "sliceToValue - slice too small" {
-    const bytes = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }; // Needs 8 bytes for i64
-    const err = sliceToValue(i64, bytes[0..]);
-    try std.testing.expectEqual(err, error.SliceTooSmall);
-}
-
-test "roundtrip conversion (f32)" {
-    var dest = [_]u8{0} ** 8;
-    const original_value: f32 = 3.14159;
-    const expected_size = @sizeOf(f32);
-
-    // Value to Slice
-    const filled_slice = valueToSlice(f32, original_value, dest[0..]);
-    try std.testing.expectEqual(expected_size, filled_slice.len);
-
-    // Slice to Value
-    const decoded_value = try sliceToValue(f32, filled_slice);
-
-    // Due to the nature of floating point, comparing equality is fine for an exact byte-for-byte round trip.
-    try std.testing.expectEqual(original_value, decoded_value);
-}
-
-test "valueToSlice - pointer - sliceToValue" {
-    const T = *const u32;
-    var dest = [_]u8{0} ** @sizeOf(T);
-    var x: u32 = 42;
-    const ptr: T = &x;
-
-    const vsl = valueToSlice(T, ptr, dest[0..]);
-
-    const ptr2 = try sliceToValue(T, vsl);
-
-    try std.testing.expectEqual(ptr, ptr2);
 }

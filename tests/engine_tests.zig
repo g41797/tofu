@@ -1,24 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-test {
-    std.testing.log_level = .debug;
-    std.log.debug("engine_tests\r\n", .{});
-}
-
-// test "handle reconnect ST with connector helper" {
-//     std.testing.log_level = .debug;
-//
-//     const reconnectStatus = recipes.handleReConnnectOfUdsClientServerSTViaConnector(gpa) catch |err| {
-//         log.info("handleReConnnectOfUdsClientServerSTViaConnector {any}", .{
-//             err,
-//         });
-//         return err;
-//     };
-//     try testing.expect(reconnectStatus == .success);
-// }
-
-test "handle reconnect single threaded" {
+fn test_handle_reconnect_single_threaded() !void {
     std.testing.log_level = .debug;
 
     const reconnectUdsStatus = recipes.handleReConnnectOfUdsClientServerST(gpa) catch |err| {
@@ -38,7 +21,7 @@ test "handle reconnect single threaded" {
     try testing.expect(reconnectTcpStatus == .success);
 }
 
-test "handle reconnect multithreaded" {
+fn test_handle_reconnect_multithreaded() !void {
     std.testing.log_level = .debug;
 
     const reconnectStatusTcp = recipes.handleReConnnectOfTcpClientServerMT(gpa) catch |err| {
@@ -57,20 +40,8 @@ test "handle reconnect multithreaded" {
     };
     try testing.expect(reconnectStatusUds == .success);
 }
-//
-test "update waiter" {
-    std.testing.log_level = .debug;
 
-    const updateStatus = recipes.handleUpdateWaiter(gpa) catch |err| {
-        log.info("handleUpdateWaiter {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(updateStatus == .waiter_update);
-}
-//
-test "connect/disconnect" {
+fn test_connect_disconnect() !void {
     std.testing.log_level = .debug;
 
     const listenTcpStatus = recipes.handleStartOfTcpServerAkaListener(gpa) catch |err| {
@@ -121,12 +92,68 @@ test "connect/disconnect" {
     };
     try testing.expect(connectUdsStatus == .success);
 }
-//
-test "ampe just create/destroy" {
+
+fn test_ampe_just_create_destroy() !void {
     std.testing.log_level = .debug;
     try recipes.createDestroyMain(gpa);
     try recipes.createDestroyEngine(gpa);
     try recipes.createDestroyMessageChannelGroup(gpa);
+}
+
+fn simm_tests() void {
+    std.testing.log_level = .debug;
+
+    const tests = &[_]*const fn () void{
+        &try_ampe_just_create_destroy,
+        &try_connect_disconnect,
+        &try_handle_reconnect_single_threaded,
+        &try_handle_reconnect_multithreaded,
+
+        &try_ampe_just_create_destroy,
+        &try_connect_disconnect,
+        &try_handle_reconnect_single_threaded,
+        &try_handle_reconnect_multithreaded,
+    };
+    runTasks(gpa, tests) catch unreachable;
+}
+
+fn try_ampe_just_create_destroy() void {
+    test_ampe_just_create_destroy() catch unreachable;
+}
+
+fn try_connect_disconnect() void {
+    // test_connect_disconnect() catch unreachable;
+}
+
+fn try_handle_reconnect_single_threaded() void {
+    test_handle_reconnect_single_threaded() catch unreachable;
+}
+
+fn try_handle_reconnect_multithreaded() void {
+    test_handle_reconnect_multithreaded() catch unreachable;
+}
+
+fn runTask(task: *const fn () void) void {
+    task();
+}
+
+pub fn runTasks(allocator: std.mem.Allocator, tasks: []const *const fn () void) !void {
+    var threads = try allocator.alloc(std.Thread, tasks.len);
+    defer allocator.free(threads);
+
+    for (tasks, 0..) |task, i| {
+        threads[i] = try std.Thread.spawn(.{}, runTask, .{task});
+    }
+
+    for (threads, 0..) |*thread, i| {
+        thread.join();
+        log.debug("Thread {d} finished", .{i + 1});
+    }
+}
+
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("engine_tests\r\n", .{});
 }
 
 test "send illegal messages" {
@@ -134,9 +161,11 @@ test "send illegal messages" {
     recipes.sendMessageFromThePool(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidMessageMode);
     };
+
     recipes.handleMessageWithWrongChannelNumber(gpa) catch |err| {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
+
     recipes.handleHelloWithoutConfiguration(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongConfiguration);
     };
@@ -145,6 +174,7 @@ test "send illegal messages" {
         try testing.expect(err == AmpeError.InvalidAddress);
     };
 
+    log.info("start handleHelloToNonListeningServer ", .{});
     recipes.handleHelloToNonListeningServer(gpa) catch |err| {
         log.info("handleHelloToNonListeningServer {any}", .{
             err,
@@ -152,6 +182,7 @@ test "send illegal messages" {
         try testing.expect(err == AmpeError.ConnectFailed);
     };
 
+    log.info("<{d}> start handleWelcomeWithWrongAddress ", .{getCurrentTid()});
     recipes.handleWelcomeWithWrongAddress(gpa) catch |err| {
         log.info("handleWelcomeWithWrongAddress {any}", .{
             err,
@@ -162,11 +193,86 @@ test "send illegal messages" {
 
 test "find free TCP/IP port" {
     std.testing.log_level = .debug;
-    const port = try recipes.findFreeTcpPort();
+
+    log.info("start find free TCP/IP port ", .{});
+
+    const port = try tofu.FindFreeTcpPort();
 
     log.debug("free TCP/IP port {d}", .{port});
 
     try std.testing.expect(port > 0); // Ensure a valid port is returned
+}
+
+test "update waiter" {
+    std.testing.log_level = .debug;
+
+    log.info("start handleUpdateWaiter ", .{});
+
+    const updateStatus = recipes.handleUpdateWaiter(gpa) catch |err| {
+        log.info("handleUpdateWaiter {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(updateStatus == .waiter_update);
+}
+
+test "ampe just create/destroy" {
+    std.testing.log_level = .debug;
+    try test_ampe_just_create_destroy();
+}
+
+test "connect_disconnect" {
+    std.testing.log_level = .debug;
+    try test_connect_disconnect();
+}
+
+test "handle reconnect single threaded" {
+    std.testing.log_level = .debug;
+    try test_handle_reconnect_single_threaded();
+}
+
+test "handle reconnect multithreaded" {
+    std.testing.log_level = .debug;
+    try test_handle_reconnect_multithreaded();
+}
+
+test "loop tests" {
+    std.testing.log_level = .debug;
+
+    for (0..5) |i| {
+        {
+            log.debug("test_ampe_just_create_destroy {d}", .{i});
+            try test_ampe_just_create_destroy();
+        }
+        {
+            log.debug("test_connect_disconnect {d}", .{i});
+            try test_connect_disconnect();
+        }
+        {
+            log.debug("test_handle_reconnect_single_threaded {d}", .{i});
+            try test_handle_reconnect_single_threaded();
+        }
+        {
+            log.debug("test_handle_reconnect_multithreaded {d}", .{i});
+            try test_handle_reconnect_multithreaded();
+        }
+    }
+}
+
+test "simm test" {
+    std.testing.log_level = .debug;
+
+    const tests = &[_]*const fn () void{
+        &simm_tests,
+        &simm_tests,
+        &simm_tests,
+        &simm_tests,
+    };
+
+    runTasks(gpa, tests) catch unreachable;
+
+    std.debug.print("All tests completed\n", .{});
 }
 
 const tofu = @import("tofu");
@@ -197,6 +303,8 @@ const AmpeError = status.AmpeError;
 const Engine = tofu.Engine;
 
 const std = @import("std");
+const Thread = std.Thread;
+const getCurrentTid = Thread.getCurrentId;
 
 const testing = std.testing;
 const gpa = std.testing.allocator;

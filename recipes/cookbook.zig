@@ -62,7 +62,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     const chnls = try ampe.create();
     defer destroyChannels(ampe, chnls);
 
-    var msg1 = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg1 = try ampe.get(tofu.AllocationStrategy.always);
 
     // If msg1 is not null, return it to the pool.
     // Pool is cleaned during eng.Destroy().
@@ -103,7 +103,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // Message from the pool is not ready for sending.
@@ -129,7 +129,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // Only MessageType.hello and MessageType.welcome can use channel number 0.
@@ -160,7 +160,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // A valid channel number is not enough.
@@ -191,7 +191,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     const chnls = try ampe.create();
     defer destroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.hello needs a valid, resolvable peer (server) address.
@@ -202,7 +202,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Example: TCP server address is "tofu.server.zig", port 3298.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("tofu.server.zig", try findFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -229,7 +229,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     const chnls = try ampe.create();
     defer destroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.hello needs a valid, resolvable peer (server) address.
@@ -240,7 +240,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // Example: TCP server address is "127.0.0.1", port 32987.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", try findFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -258,8 +258,8 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
 
 pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     const options: tofu.Options = .{
-        .initialPoolMsgs = 1, // Example value.
-        .maxPoolMsgs = 16, // Example value.
+        .initialPoolMsgs = 10, // Example value.
+        .maxPoolMsgs = 32, // Example value.
     };
 
     var eng = try Engine.Create(gpa, options);
@@ -269,7 +269,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     const chnls = try ampe.create();
     defer destroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.welcome needs the IP address and port of the listening server.
@@ -301,7 +301,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try findFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, false);
 }
@@ -331,7 +331,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !status.AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try findFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, true);
 }
@@ -407,7 +407,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
 pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    const port = try findFreeTcpPort();
+    const port = try tofu.FindFreeTcpPort();
 
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
@@ -515,8 +515,17 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Network/socket operations run on a dedicated thread.
     // sendToPeer and waitReceive work with internal message queues.
 
-    var helloRequestOnServerSide: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    var helloRequestOnServerSide: ?*Message = try chnls.waitReceive(tofu.waitReceive_SEC_TIMEOUT * 20);
+    // if (helloRequestOnServerSide == null) { // For the break
+    //
+    // log.debug("engine {*} channels {*}", .{ ampe.ptr, chnls.ptr });
+    // log.debug("waitReceive_SEC_TIMEOUT * 5", .{});
+    //
+    // std.time.sleep(1_000_000_000 * 60);
+    // }
     defer ampe.put(&helloRequestOnServerSide);
+
+    assert(helloRequestOnServerSide != null);
 
     st = helloRequestOnServerSide.?.bhdr.status;
     const chN: message.ChannelNumber = helloRequestOnServerSide.?.bhdr.channel_number;
@@ -662,7 +671,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
 
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    const port = try findFreeTcpPort();
+    const port = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
@@ -973,7 +982,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!status.AmpeStatus {
     // Both server and client are on localhost.
-    const port = try findFreeTcpPort();
+    const port = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
@@ -1008,7 +1017,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     var engB: *Engine = try Engine.Create(gpa, options);
     defer engB.Destroy();
-    const ampeB: Ampe = try engA.ampe();
+    const ampeB: Ampe = try engB.ampe();
 
     const TofuServer = struct {
         const Self = @This();
@@ -1066,7 +1075,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
             var initialBh = server.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
 
-            initialBh.dumpMeta("server send ");
+            initialBh.dumpMeta("listener send ");
 
             var welcomeResponse: ?*Message = server.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                 log.info("server - waitReceive error {s}", .{@errorName(err)});
@@ -1074,7 +1083,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             };
             defer server.ampe.put(&welcomeResponse);
 
-            welcomeResponse.?.bhdr.dumpMeta("server recv ");
+            welcomeResponse.?.bhdr.dumpMeta("listener recv ");
 
             if (welcomeResponse.?.bhdr.status == 0) {
                 return;
@@ -1218,6 +1227,8 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         client.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
                         client.*.helloBh = client.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
 
+                        assert(client.*.helloBh.channel_number != 0);
+
                         client.*.helloBh.dumpMeta("client send ");
 
                         buildAndSendHelloRequest = false;
@@ -1300,6 +1311,8 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn sendByeRequest(client: *Self) !void {
+            std.testing.log_level = .debug;
+
             if (!client.connected) {
                 return;
             }
@@ -1314,9 +1327,20 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             byeRequest.?.bhdr.proto.role = .request;
             byeRequest.?.bhdr.proto.origin = .application;
 
-            client.*.helloBh = client.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+            _ = byeRequest.?.check_and_prepare() catch |err| {
+                byeRequest.?.bhdr.dumpMeta("wrong message ");
+                return err;
+            };
 
-            client.*.helloBh.dumpMeta("client send ");
+            var brBhdr: BinaryHeader = client.*.chnls.?.sendToPeer(&byeRequest) catch |err| {
+                byeRequest.?.bhdr.dumpMeta("wrong message was send to peer");
+                return err;
+            };
+
+            brBhdr.dumpMeta("client send ");
+
+            // client.*.helloBh = client.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+            // client.*.helloBh.dumpMeta("client send ");
 
             return;
         }
@@ -1341,7 +1365,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                recvMsg.?.bhdr.dumpMeta("client recv");
+                if (client.helloBh.channel_number != recvMsg.?.bhdr.channel_number) {
+                    client.helloBh.dumpMeta("expected recv");
+                    recvMsg.?.bhdr.dumpMeta("actual recv");
+                } else {
+                    recvMsg.?.bhdr.dumpMeta("client recv");
+                }
 
                 assert(client.helloBh.channel_number == recvMsg.?.bhdr.channel_number);
 
@@ -1708,6 +1737,7 @@ pub const TofuEchoServer = struct {
     ampe: Ampe = undefined,
     chnls: ?tofu.Channels = undefined,
     cfg: Configurator = undefined,
+    listenerBh: message.BinaryHeader = undefined,
     helloBh: message.BinaryHeader = undefined,
     connected: bool = undefined,
 
@@ -1731,6 +1761,7 @@ pub const TofuEchoServer = struct {
             .ampe = engine,
             .cfg = cfg.*,
             .chnls = try engine.create(),
+            .listenerBh = .{},
             .helloBh = .{},
             .connected = false,
         };
@@ -1759,7 +1790,7 @@ pub const TofuEchoServer = struct {
 
         var initialBh = server.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
 
-        initialBh.dumpMeta("server send ");
+        initialBh.dumpMeta("listener send ");
 
         var welcomeResponse: ?*Message = server.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
             log.info("server - waitReceive error {s}", .{@errorName(err)});
@@ -1767,9 +1798,10 @@ pub const TofuEchoServer = struct {
         };
         defer server.ampe.put(&welcomeResponse);
 
-        welcomeResponse.?.bhdr.dumpMeta("server recv ");
+        welcomeResponse.?.bhdr.dumpMeta("listener recv ");
 
         if (welcomeResponse.?.bhdr.status == 0) {
+            server.*.listenerBh = initialBh;
             return;
         }
         status.raw_to_error(welcomeResponse.?.bhdr.status) catch |err| {
@@ -1857,30 +1889,4 @@ pub inline fn sleep1MlSec() void {
 
 pub inline fn sleep10MlSec() void {
     std.time.sleep(1_000_000_0);
-}
-
-/// Helper function for finding free TCP/IP port
-/// Because there is a problem with 'Address In Use'
-/// for repeating tests, it's better to get free TCP/IP socket
-/// and use it's port for the listener
-pub fn findFreeTcpPort() !u16 {
-    const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
-    defer posix.close(sockfd); // Ensure socket is closed immediately after use
-
-    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
-    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
-
-    // Set up sockaddr_in structure with port 0 (ephemeral port)
-    var addr: posix.sockaddr.in = .{
-        .family = posix.AF.INET,
-        .port = 0, // Let the system assign a free port
-        .addr = 0, // INADDR_ANY (0.0.0.0)
-    };
-
-    try posix.bind(sockfd, @ptrCast(&addr), @sizeOf(posix.sockaddr.in));
-
-    var addr_len: posix.socklen_t = @sizeOf(posix.sockaddr.in);
-    try posix.getsockname(sockfd, @ptrCast(&addr), &addr_len);
-
-    return std.mem.bigToNative(u16, addr.port);
 }

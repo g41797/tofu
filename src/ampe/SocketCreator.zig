@@ -40,7 +40,7 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     };
 
     const skt = createListenerSocket(&address) catch |er| {
-        log.info("createListenerSocket failed with error {s}", .{@errorName(er)});
+        log.info("<{d}> createListenerSocket failed with error {s}", .{ getCurrentTid(), @errorName(er) });
 
         switch (er) {
             error.AddressNotAvailable => return AmpeError.InvalidAddress,
@@ -170,4 +170,6 @@ const std = @import("std");
 const posix = std.posix;
 const Allocator = std.mem.Allocator;
 const Socket = std.posix.socket_t;
+const Thread = std.Thread;
+const getCurrentTid = Thread.getCurrentId;
 const log = std.log;

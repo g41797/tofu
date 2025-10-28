@@ -73,7 +73,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
             return AmpeError.UDSPathNotFound;
         },
         else => {
-            log.warn("connectPosix error {s}", .{@errorName(e)});
+            log.warn("<{d}> connectPosix error {s}", .{ getCurrentTid(), @errorName(e) });
             return AmpeError.PeerDisconnected;
         },
     };
@@ -114,7 +114,7 @@ pub fn disableNagle(skt: *Skt) !void {
 fn deleteUDSPath(skt: *Skt) void {
     if (skt.server) {
         switch (skt.address.any.family) {
-            std.posix.AF.UNIX => { // REUSEADDR and REUSEPORT are not supported for UDS
+            std.posix.AF.UNIX => {
                 const udsPath = skt.address.un.path[0..108];
                 const path_len = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.len;
                 if (path_len > 0) {
@@ -210,7 +210,7 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
             return connectError.FileNotFound;
         }
 
-        log.warn("posix.system.connect errno {s}", .{@tagName(erStat)});
+        log.warn("<{d}> posix.system.connect errno {s}", .{ getCurrentTid(), @tagName(erStat) });
 
         return error.Unexpected;
 
@@ -277,7 +277,8 @@ const wasi = std.os.wasi;
 const system = posix.system;
 const E = system.E;
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
 const Socket = std.posix.socket_t;
+const Thread = std.Thread;
+const getCurrentTid = Thread.getCurrentId;
 
 const log = std.log;

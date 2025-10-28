@@ -210,7 +210,7 @@ const NotificationTriggers: Triggers = .{
 pub const NotificationSkt = struct {
     socket: Socket = undefined,
 
-    pub fn init(socket: Socket) NotificationSkt { // prnt.ntfr.receiver
+    pub fn init(socket: Socket) NotificationSkt {
         return .{
             .socket = socket,
         };
@@ -241,7 +241,7 @@ const AcceptTriggers: Triggers = .{
 };
 
 pub const AcceptSkt = struct {
-    skt: Skt = undefined,
+    skt: Skt = .{},
 
     pub fn init(wlcm: *Message, sc: *SocketCreator) AmpeError!AcceptSkt {
         return .{
@@ -263,7 +263,7 @@ pub const AcceptSkt = struct {
     }
 
     pub fn deinit(askt: *AcceptSkt) void {
-        askt.skt.close();
+        askt.skt.deinit();
         return;
     }
 };
@@ -382,7 +382,10 @@ pub const IoSkt = struct {
     pub fn tryConnect(ioskt: *IoSkt) AmpeError!bool {
 
         // Now it's ok to connect to already connected socket
-        ioskt.connected = try ioskt.skt.connect();
+        ioskt.connected = ioskt.skt.connect() catch |err| {
+            // log.debug("<{d}> connect failed on channel {d} with error {any} ", .{ getCurrentTid(), ioskt.*.cn, err });
+            return err;
+        };
 
         if (ioskt.connected) {
             ioskt.postConnect();
@@ -437,6 +440,10 @@ pub const IoSkt = struct {
 
             // Replace "remote" channel_number with "local" one
             received.?.bhdr.channel_number = ioskt.cn;
+
+            if ((received.?.bhdr.proto.mtype == .hello) or (received.?.bhdr.proto.mtype == .bye)) {
+                received.?.bhdr.dumpMeta("<--rcv ");
+            }
 
             if ((received.?.bhdr.proto.mtype == .bye) and (received.?.bhdr.proto.role == .response)) {
                 ioskt.byeResponseReceived = true;
@@ -827,14 +834,6 @@ pub const MsgReceiver = struct {
         const ret = mr.msg;
         mr.msg = null;
 
-        if (ret != null) {
-            if (ret != null) {
-                if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
-                    ret.?.bhdr.dumpMeta("<--rcv ");
-                }
-            }
-        }
-
         return ret;
     }
 
@@ -892,6 +891,8 @@ const Notifier = @import("Notifier.zig");
 const Notification = Notifier.Notification;
 
 const std = @import("std");
+const Thread = std.Thread;
+const getCurrentTid = Thread.getCurrentId;
 const Socket = std.posix.socket_t;
 const log = std.log;
 const assert = std.debug.assert;

@@ -170,6 +170,9 @@ Backpressure explained — the resisted flow of data through software
 Zig's New Async I/O
     https://kristoff.it/blog/zig-new-async-io/
 
+Async I/O branch
+    https://github.com/ziglang/zig/tree/init-std.Io/lib/std
+
 TCP Server in Zig - Part 1 - Single Threaded
     https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/
 TCP Server in Zig - Part 5a - Poll
@@ -365,3 +368,16 @@ Import
 To obtain a list of sockets associated with a specific port
     ss -tulnpe | grep ":<port_number>"
     ss -tulnpe | grep ":32984"
+
+To count all open sockets (listening and established, TCP, UDP, and Unix domain sockets)
+    ss -a | wc -l
+
+GDB
+    handle SIGPIPE without stopping the debugger:
+        handle SIGPIPE nostop noprint pass
+
+    disable announcing "Switching to Thread..." messages:
+        set print thread-events off
+
+How To Write Better Software With Zig - Loris Cro
+    https://www.youtube.com/watch?v=AEybWzeAkho

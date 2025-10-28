@@ -147,6 +147,10 @@ pub const ActiveChannels = struct {
         while (true) {
             const rv = rand.int(ChannelNumber);
 
+            if ((rv == message.SpecialMinChannelNumber) or (rv == message.SpecialMaxChannelNumber)) {
+                continue;
+            }
+
             if (cns.active.contains(rv)) {
                 continue;
             }
@@ -317,17 +321,6 @@ pub const ActiveChannels = struct {
         }
 
         return;
-    }
-
-    fn printChannels(cns: *ActiveChannels, text: []const u8) void {
-        _ = cns;
-        _ = text;
-        // var it = cns.*.active.iterator();
-        // var indx: usize = 0;
-        // while (it.next()) |entry| {
-        //     indx += 1;
-        //     log.debug("{s} [{d}] channel {d} count {d}", .{ text, indx, entry.key_ptr.*, cns.*.active.count() });
-        // }
     }
 };
 
