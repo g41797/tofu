@@ -441,8 +441,10 @@ pub const IoSkt = struct {
             // Replace "remote" channel_number with "local" one
             received.?.bhdr.channel_number = ioskt.cn;
 
-            if ((received.?.bhdr.proto.mtype == .hello) or (received.?.bhdr.proto.mtype == .bye)) {
-                received.?.bhdr.dumpMeta("<--rcv ");
+            if (DBG) {
+                if ((received.?.bhdr.proto.mtype == .hello) or (received.?.bhdr.proto.mtype == .bye)) {
+                    received.?.bhdr.dumpMeta("<--rcv ");
+                }
             }
 
             if ((received.?.bhdr.proto.mtype == .bye) and (received.?.bhdr.proto.role == .response)) {
@@ -644,9 +646,11 @@ pub const MsgSender = struct {
                 const ret = ms.msg;
                 ms.msg = null;
 
-                if (ret != null) {
-                    if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
-                        ret.?.bhdr.dumpMeta("-->snd ");
+                if (DBG) {
+                    if (ret != null) {
+                        if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
+                            ret.?.bhdr.dumpMeta("-->snd ");
+                        }
                     }
                 }
 

@@ -20,6 +20,8 @@ pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const Message = message.Message;
 
+pub const MultiHomed = @import("MultiHomed.zig");
+
 pub fn createDestroyMain(gpa: Allocator) !void {
     var eng = try Engine.Create(gpa, DefaultOptions);
     defer eng.Destroy();
@@ -60,7 +62,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     const ampe = try eng.ampe();
 
     const chnls = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var msg1 = try ampe.get(tofu.AllocationStrategy.always);
 
@@ -189,7 +191,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     const ampe = try eng.ampe();
 
     const chnls = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
@@ -227,7 +229,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     const ampe = try eng.ampe();
 
     const chnls = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
@@ -267,7 +269,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     const ampe = try eng.ampe();
 
     const chnls = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
@@ -366,7 +368,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     const ampe: Ampe = try eng.ampe();
 
     const chnls: Channels = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
@@ -445,7 +447,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     const chnls: Channels = try ampe.create();
 
     // Channel closes during Channels destruction.
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var welcomeRequest: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
 
@@ -516,13 +518,6 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // sendToPeer and waitReceive work with internal message queues.
 
     var helloRequestOnServerSide: ?*Message = try chnls.waitReceive(tofu.waitReceive_SEC_TIMEOUT * 20);
-    // if (helloRequestOnServerSide == null) { // For the break
-    //
-    // log.debug("engine {*} channels {*}", .{ ampe.ptr, chnls.ptr });
-    // log.debug("waitReceive_SEC_TIMEOUT * 5", .{});
-    //
-    // std.time.sleep(1_000_000_000 * 60);
-    // }
     defer ampe.put(&helloRequestOnServerSide);
 
     assert(helloRequestOnServerSide != null);
@@ -632,7 +627,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
     const chnls: Channels = try ampe.create();
-    defer destroyChannels(ampe, chnls);
+    defer tofu.DestroyChannels(ampe, chnls);
 
     var attention: ?*Message = try chnls.waitReceive(100);
     defer ampe.put(&attention);
@@ -1444,7 +1439,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     var eng: *Engine = try Engine.Create(gpa, options);
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
-    defer destroyChannels(eng, ampe);
+    defer tofu.DestroyChannels(eng, ampe);
 
     // Helper object - for re-connect logic
     const ClientConnector = struct {
@@ -1575,7 +1570,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 
         pub fn init(engine: Ampe, cfg: *Configurator) !Self {
             const chnls: Channels = try engine.create();
-            errdefer destroyChannels(engine, chnls);
+            errdefer tofu.DestroyChannels(engine, chnls);
             const cc: ClientConnector = try ClientConnector.init(engine, chnls, cfg);
             errdefer cc.deinit();
 
@@ -1870,14 +1865,6 @@ pub const TofuEchoServer = struct {
         }
     }
 };
-
-// Helper function to destroy Channels using defer.
-// Suitable for tests and simple examples.
-// In production, Channels is long-lived, and destruction
-// should handle errors differently.
-pub fn destroyChannels(ampe: tofu.Ampe, chnls: tofu.Channels) void {
-    ampe.destroy(chnls) catch {};
-}
 
 pub inline fn sleepSec() void {
     std.time.sleep(1_000_000_000);

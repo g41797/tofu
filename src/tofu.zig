@@ -20,5 +20,5 @@ pub const Engine = @import("ampe/Engine.zig");
 // For test lovers
 pub const TempUdsPath = @import("ampe/testHelpers.zig").TempUdsPath;
 pub const FindFreeTcpPort = @import("ampe/testHelpers.zig").FindFreeTcpPort;
-
+pub const DestroyChannels = @import("ampe/testHelpers.zig").DestroyChannels;
 pub const @"internal usage" = @import("ampe/internal.zig");

@@ -57,6 +57,18 @@ pub fn FindFreeTcpPort() !u16 {
     return std.mem.bigToNative(u16, addr.port);
 }
 
+/// Helper function to destroy Channels using defer.
+/// Suitable for tests and simple examples.
+/// In production, Channels is long-lived, and destruction
+/// should handle errors differently.
+pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.Channels) void {
+    ampe.destroy(chnls) catch |err| {
+        log.info("DestroyChannels failed with error {any}", .{err});
+        return;
+    };
+}
+
+const tofu = @import("../tofu.zig");
 const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
@@ -65,3 +77,4 @@ const temp = @import("temp");
 const std = @import("std");
 const posix = std.posix;
 const Allocator = std.mem.Allocator;
+const log = std.log;
