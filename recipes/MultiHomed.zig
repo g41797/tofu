@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 <TBD>
+// SPDX-License-Identifier: <TBD>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //                 AI Overview
 //
@@ -64,3 +67,36 @@ pub const status = tofu.status;
 pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const Message = message.Message;
+
+pub const services = @import("services.zig");
+pub const Services = services.Services;
+
+ampe: Ampe = undefined,
+gpa: Allocator = undefined,
+chnls: Channels = undefined,
+srvcs: Services = undefined,
+
+/// Initiates multihomed tofu server (mhts)
+///   ampe - engine
+///   adrs - slice with addresses of TCP and/or UDS servers
+///   srvcs - caller supplied message processors
+///
+/// Upon successful initialisation server are ready for handling of several
+/// tofu clients connecting to any of 'homes' addresses.
+/// Server runs on the separated thread.
+///
+/// If it's impossible from any reason to run, corresponding error is returned.
+///
+/// Simplifications of example:
+///  during init stage any client connection will be rejected.
+pub fn run(mh: *MultiHomed, ampe: Ampe, adrs: []Configurator, srvcs: Services) !void {
+    _ = mh;
+    _ = ampe;
+    _ = adrs;
+    _ = srvcs;
+}
+
+/// Destroys  all channels, releases messages to the pool.
+pub fn stop(mh: *MultiHomed) void {
+    _ = mh;
+}

@@ -11,7 +11,7 @@ pub fn listen(skt: *Skt) !void {
     skt.server = true;
     skt.deleteUDSPath();
 
-    const kernel_backlog = 128;
+    const kernel_backlog = 1024;
     try skt.setREUSE();
     try posix.bind(skt.socket.?, &skt.address.any, skt.address.getOsSockLen());
     try posix.listen(skt.socket.?, kernel_backlog);

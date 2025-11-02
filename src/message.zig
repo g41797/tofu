@@ -324,12 +324,25 @@ pub const ValidCombination = enum(u4) {
 
 /// Structure representing a complete message, including binary header, text headers, and body.
 pub const Message = struct {
+    /// Used for intrusive containers
     prev: ?*Message = null,
     next: ?*Message = null,
+
+    /// 'Persistent' fields - means transferred between peers.
     bhdr: BinaryHeader = .{},
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
-    @"<ctx>": ?*anyopaque = null, // 2DO - Replace with Channels ID
+
+    /// 'Transient' fields - means does not transferred between peers.
+    /// Used by application. Engine does nothing with this field.
+    /// Actually it's void* -  use with caution.
+    /// One of the possible usages - transfer additional information
+    /// to the 'waiter' via 'updateWaiter()'.
+    @"<void*>": ?*anyopaque = null,
+
+    /// Used by engine for internal purposes.
+    /// Don't touch !!!
+    @"<ctx>": ?*anyopaque = null,
 
     const blen: u16 = 256;
     const tlen: u16 = 64;
@@ -419,6 +432,8 @@ pub const Message = struct {
     }
 
     /// Stores a struct pointer's address into body.
+    /// Another way to use message as container, but be careful -
+    /// don't send pointer to another process.
     pub fn ptrToBody(msg: *Message, comptime T: type, ptr: *T) []u8 {
         msg.body.change(@sizeOf(usize)) catch unreachable;
 
@@ -435,7 +450,7 @@ pub const Message = struct {
     }
 
     /// Converts a body content back to a struct pointer.
-    /// Returns an optional pointer which is null if the is empty.
+    /// Returns an optional pointer which is null if the body is empty.
     pub fn bodyToPtr(msg: *Message, comptime T: type) ?*T {
         const slice = msg.body.buffer.?[0..msg.body.actual_len];
 
@@ -692,7 +707,7 @@ pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
 pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
     const struct_size = @sizeOf(T);
     if (destination.len < struct_size) {
-        return &[_]u8{}; // Return an empty slice if destination is too small
+        return &[_]u8{}; // Return an empty slice if destination is too small ???
     }
     std.mem.copyForwards(u8, destination[0..struct_size], std.mem.asBytes(ptr));
     return destination[0..struct_size];

@@ -381,3 +381,9 @@ GDB
 
 How To Write Better Software With Zig - Loris Cro
     https://www.youtube.com/watch?v=AEybWzeAkho
+
+Binding Methods in Zig
+    https://renerocks.ai/blog/zig-bound-functions/
+
+Best pattern for callback parametrization
+    https://ziggit.dev/t/best-pattern-for-callback-parametrization/12086/1
