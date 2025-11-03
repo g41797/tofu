@@ -9,20 +9,13 @@ pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
 pub const Ampe = tofu.Ampe;
 pub const Channels = tofu.Channels;
-pub const Options = tofu.Options;
-pub const DefaultOptions = tofu.DefaultOptions;
-pub const configurator = tofu.configurator;
-pub const Configurator = configurator.Configurator;
 pub const status = tofu.status;
 pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const Message = message.Message;
 
-const mailbox = @import("mailbox");
-const MSGMailBox = mailbox.MailBoxIntrusive(Message);
-
 /// Defines the Services interface for async message processing.
-/// All methods of interfaces are called on the thread of the service.
+/// All methods of interfaces are called on the same thread of the caller(server).
 pub const Services = struct {
     ptr: ?*anyopaque,
     vtable: *const SRVCSVTable,
@@ -30,12 +23,12 @@ pub const Services = struct {
     /// Activate cooperative processing.
     ///  - ampe - the same engine used by the server, services can use it for pool
     ///         operations (get/put)
-    ///  - channels - channels created by the server for communication  with clients,
+    ///  - sendTo - channels created by the server for communication  with clients,
     ///             services can use sendToPeer method.
     ///             --- Don't call waitReceive - it's duty of the server.        ---
     ///             --- Don't destroy 'channels' - it's also duty of the server. ---
-    pub fn start(srvcs: Services, ampe: Ampe, channels: Channels) !void {
-        return srvcs.vtable.start(srvcs.ptr, ampe, channels);
+    pub fn start(srvcs: Services, ampe: Ampe, sendTo: Channels) !void {
+        return srvcs.vtable.start(srvcs.ptr, ampe, sendTo);
     }
 
     /// For any client or engine message (received via waitReceive) server calls onMessage
@@ -65,7 +58,7 @@ pub const Services = struct {
 };
 
 const SRVCSVTable = struct {
-    start: *const fn (ptr: ?*anyopaque, ampe: Ampe, channels: Channels) anyerror!void,
+    start: *const fn (ptr: ?*anyopaque, ampe: Ampe, sendTo: Channels) anyerror!void,
 
     stop: *const fn (ptr: ?*anyopaque) void,
 
@@ -116,7 +109,7 @@ pub const EchoService = struct {
             return false;
         }
 
-        if ((echo.*.engine == null) or (echo.*.sendTo == null)) {
+        if ((echo.*.engine == null) or (echo.*.sendTo == null)) { // before start or after stop
             echo.cancel.store(true, .monotonic);
             return false;
         }
@@ -138,7 +131,7 @@ pub const EchoService = struct {
 
         // In cookbook examples I was lazy enough to separate engine and application statuses,
         // but you definitely are  not...
-        // As excuse - I did not uses application statuses in examples.
+        // As excuse - I did not use application statuses in examples.
         if (msg.*.?.*.bhdr.proto.origin == .engine) {
             switch (sts) {
                 // For lack of free messages in the pool - add messages to the pool.
@@ -147,7 +140,7 @@ pub const EchoService = struct {
                 .pool_empty => return echo.addMessagesToPool(),
                 else => {
                     // Let's start to learn what are the list of possible error statuses.
-                    // On next stages we can add specific handling per status
+                    // Later you can add specific handling per status
                     log.info("received error status {s}", .{std.enums.tagName(status.AmpeStatus, sts)});
                     return true;
                 },
@@ -178,7 +171,7 @@ pub const EchoService = struct {
     }
 
     fn addMessagesToPool(echo: *EchoService) bool {
-        // Just one
+        // Just one as example
         const newMsg: ?*Message = Message.create(echo.allocator) catch {
             return false;
         };

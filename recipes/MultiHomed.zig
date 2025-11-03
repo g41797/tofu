@@ -71,10 +71,14 @@ pub const Message = message.Message;
 pub const services = @import("services.zig");
 pub const Services = services.Services;
 
-ampe: Ampe = undefined,
-gpa: Allocator = undefined,
-chnls: Channels = undefined,
+const mailbox = @import("mailbox");
+const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+
+ampe: ?Ampe = null,
+chnls: ?Channels = null,
 srvcs: Services = undefined,
+lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
+thread: ?std.Thread = null,
 
 /// Initiates multihomed tofu server (mhts)
 ///   ampe - engine
@@ -82,21 +86,82 @@ srvcs: Services = undefined,
 ///   srvcs - caller supplied message processors
 ///
 /// Upon successful initialisation server are ready for handling of several
-/// tofu clients connecting to any of 'homes' addresses.
+/// tofu clients connecting to any of 'adrs' addresses.
 /// Server runs on the separated thread.
 ///
 /// If it's impossible from any reason to run, corresponding error is returned.
 ///
 /// Simplifications of example:
 ///  during init stage any client connection will be rejected.
-pub fn run(mh: *MultiHomed, ampe: Ampe, adrs: []Configurator, srvcs: Services) !void {
-    _ = mh;
-    _ = ampe;
-    _ = adrs;
-    _ = srvcs;
+pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
+    if (adrs.len == 0) {
+        return error.EmptyConfiguration;
+    }
+
+    const gpa: Allocator = ampe.getAllocator();
+
+    var mh: *MultiHomed = try gpa.create(MultiHomed);
+    errdefer mh.*.stop();
+
+    mh.* = .{ // 2DO check default values
+        .ampe = ampe,
+        .chnls = try ampe.create(),
+        .srvcs = srvcs,
+        .lstnChnls = .init(gpa),
+    };
+
+    try mh.*.lstnChnls.?.ensureTotalCapacity(adrs.len);
+
+    return mh.init(adrs);
 }
 
-/// Destroys  all channels, releases messages to the pool.
+/// Stops the thread, destroys  all channels, releases messages to the pool,
+/// releases server object memory
 pub fn stop(mh: *MultiHomed) void {
     _ = mh;
+}
+
+fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
+    for (adrs) |cnfg| {
+        try mh.*.lstnChnls.?.put(try mh.*.startListener(cnfg), cnfg);
+    }
+
+    // usage of Mailbox (https://github.com/g41797/mailbox) for acknowledge
+    var ackMbox: MSGMailBox = .{};
+
+    mh.*.thread = try std.Thread.spawn(.{}, onThread, .{ mh, &ackMbox });
+
+    _ = ackMbox.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| switch (err) {
+        .Timeout => {}, // for compiler
+        .Closed => return error.StartServicesFailure,
+        .Interrupted => {}, // OK
+    };
+
+    return mh;
+}
+
+fn startListener(mh: *MultiHomed, cnfg: Configurator) !message.ChannelNumber {
+    _ = mh;
+    _ = cnfg;
+    return error.NotImplementedYet;
+}
+
+fn onThread(mh: *MultiHomed, ackMbox: *MSGMailBox) void {
+    mh.*.srvcs.start(mh.*.?.ampe, mh.*.?.sendTo) catch |err| {
+        log.warn("start services error {s}", .{@errorName(err)});
+        ackMbox.*.close(); // Inform about start failure
+        return;
+    };
+    defer mh.*.srvcs.stop();
+
+    try ackMbox.*.interrupt(); // Inform about successful start
+
+    mh.*.mainLoop();
+
+    return;
+}
+
+fn mainLoop(mh: *MultiHomed) void {
+    _ = mh;
+    return;
 }
