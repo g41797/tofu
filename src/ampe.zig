@@ -37,7 +37,9 @@ pub const Channels = struct {
     ///
     /// Use BinaryHeader of the received message to identify the message source.
     ///
-    /// Call this in a loop in the same thread for best results.
+    /// Any returned error is the sign that any further should be stopped.
+    ///
+    ///  Call this in a loop in the same thread.
     pub fn waitReceive(chnls: Channels, timeout_ns: u64) status.AmpeError!?*message.Message {
         return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
     }

@@ -68,11 +68,13 @@ const SRVCSVTable = struct {
 /// Simplest service - 'echo'
 /// For received request - send back the same message as response
 /// For received signal - send it back as-is
+/// Very lazy - stops after 1000 processed messages
 pub const EchoService = struct {
     engine: ?Ampe = null,
     sendTo: ?Channels = null,
     cancel: Atomic(bool) = .init(false),
     allocator: Allocator = undefined,
+    rest: u32 = 1000,
 
     pub fn services(echo: *EchoService) Services {
         return .{
@@ -105,7 +107,7 @@ pub const EchoService = struct {
     fn onMessage(ptr: ?*anyopaque, msg: *?*message.Message) bool {
         const echo: *EchoService = @alignCast(@ptrCast(ptr));
 
-        if (echo.*.cancel.load(.monotonic)) {
+        if (echo.*.wasCancelled()) {
             return false;
         }
 
@@ -122,6 +124,14 @@ pub const EchoService = struct {
             return true;
         }
 
+        if (echo.*.rest == 0) {
+            return false;
+        }
+
+        echo.*.rest -= 1;
+
+        msg.*.?.bhdr.dumpMeta("echo srvs received msg");
+
         const sts: status.AmpeStatus = status.raw_to_status(msg.*.?.*.bhdr.status);
 
         // Please pay attention - this code analyses only error statuses from engine.
@@ -130,7 +140,7 @@ pub const EchoService = struct {
         // application purposes.
 
         // In cookbook examples I was lazy enough to separate engine and application statuses,
-        // but you definitely are  not...
+        // but you definitely are not...
         // As excuse - I did not use application statuses in examples.
         if (msg.*.?.*.bhdr.proto.origin == .engine) {
             switch (sts) {
@@ -168,6 +178,10 @@ pub const EchoService = struct {
 
     pub inline fn setCancel(echo: *EchoService) void {
         echo.cancel.store(true, .monotonic);
+    }
+
+    pub inline fn wasCancelled(echo: *EchoService) bool {
+        echo.*.cancel.load(.monotonic);
     }
 
     fn addMessagesToPool(echo: *EchoService) bool {

@@ -75,10 +75,17 @@ const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 ampe: ?Ampe = null,
+allocator: ?Allocator = null,
 chnls: ?Channels = null,
 srvcs: Services = undefined,
 lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
 thread: ?std.Thread = null,
+msgq: message.MessageQueue = .{},
+
+// Use Mailbox (https://github.com/g41797/mailbox) for
+// receiving status from thread (via close() & interrupt()
+// without transfer any 'Letter'
+ackMbox: mailbox.MailBox(usize) = .{},
 
 /// Initiates multihomed tofu server (mhts)
 ///   ampe - engine
@@ -90,9 +97,6 @@ thread: ?std.Thread = null,
 /// Server runs on the separated thread.
 ///
 /// If it's impossible from any reason to run, corresponding error is returned.
-///
-/// Simplifications of example:
-///  during init stage any client connection will be rejected.
 pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
     if (adrs.len == 0) {
         return error.EmptyConfiguration;
@@ -105,6 +109,7 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
 
     mh.* = .{ // 2DO check default values
         .ampe = ampe,
+        .allocator = gpa,
         .chnls = try ampe.create(),
         .srvcs = srvcs,
         .lstnChnls = .init(gpa),
@@ -117,21 +122,50 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
 
 /// Stops the thread, destroys  all channels, releases messages to the pool,
 /// releases server object memory
-pub fn stop(mh: *MultiHomed) void {
-    _ = mh;
+pub fn stop(mh: *?*MultiHomed) void {
+    if (mh.* == null) {
+        return;
+    }
+
+    if (mh.*.?.allocator == null) {
+        return;
+    }
+
+    defer mh.* = null;
+    defer mh.*.?.allocator.?.destroy(mh.*.?);
+
+    if (mh.*.?.thread != null) {
+        var nullMsg: ?*message.Message = null;
+        mh.*.?.chnls.?.updateWaiter(&nullMsg) catch unreachable;
+        mh.*.?.thread.?.join();
+    }
+
+    if (mh.*.?.ampe != null) {
+        if (mh.*.chnls != null) {
+            // Closes all active channels - clients and listeners
+            mh.*.?.ampe.?.destroy(mh.*.?.chnls.?) catch unreachable;
+        }
+        if (mh.*.?.lstnChnls != null) {
+            mh.*.?.lstnChnls.?.deinit();
+        }
+
+        var next = mh.*.?.msgq.dequeue();
+        while (next != null) {
+            mh.*.?.ampe.?.put(&next);
+            next = mh.*.?.msgq.dequeue();
+        }
+    }
+    return;
 }
 
 fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     for (adrs) |cnfg| {
-        try mh.*.lstnChnls.?.put(try mh.*.startListener(cnfg), cnfg);
+        _ = try mh.startListener(cnfg);
     }
 
-    // usage of Mailbox (https://github.com/g41797/mailbox) for acknowledge
-    var ackMbox: MSGMailBox = .{};
+    mh.*.thread = try std.Thread.spawn(.{}, onThread, .{mh});
 
-    mh.*.thread = try std.Thread.spawn(.{}, onThread, .{ mh, &ackMbox });
-
-    _ = ackMbox.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| switch (err) {
+    _ = mh.*.ackMbox.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| switch (err) {
         .Timeout => {}, // for compiler
         .Closed => return error.StartServicesFailure,
         .Interrupted => {}, // OK
@@ -140,21 +174,80 @@ fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     return mh;
 }
 
-fn startListener(mh: *MultiHomed, cnfg: Configurator) !message.ChannelNumber {
-    _ = mh;
-    _ = cnfg;
-    return error.NotImplementedYet;
+fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
+    var welcomeRequest: ?*Message = mh.*.ampe.?.get(tofu.AllocationStrategy.always) catch unreachable;
+    defer mh.*.ampe.?.put(&welcomeRequest);
+
+    cnfg.prepareRequest(welcomeRequest.?) catch unreachable;
+
+    const wlcbh: BinaryHeader = try mh.*.chnls.?.sendToPeer(&welcomeRequest);
+
+    try mh.*.lstnChnls.?.put(wlcbh.channel_number, cnfg);
+
+    while (true) {
+        var receivedMsg: ?*Message = mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+            log.info("server - waitReceive error {s}", .{@errorName(err)});
+            return err;
+        };
+
+        if (!mh.*.lstnChnls.?.contains(receivedMsg.?.channel_number)) { // listener channel
+            mh.*.msgq.enqueue(receivedMsg.?); // Will be processed on the thread later
+            continue;
+        }
+
+        defer mh.*.ampe.?.put(&receivedMsg);
+
+        const sts: status.AmpeStatus = status.raw_to_status((receivedMsg.?.*.bhdr.status));
+
+        // As a rule you need to handle pool_empty status
+        // But welcome does not need any receive
+        assert(sts != .pool_empty);
+
+        switch (sts) {
+            .success => {
+                assert(receivedMsg.?.*.bhdr.proto.mtype == .welcome);
+                assert(receivedMsg.?.*.bhdr.proto.role == .response);
+
+                mh.*.lstnChnls.?.put(receivedMsg.?.*.channel_number, cnfg) catch unreachable;
+                return;
+            },
+
+            // .pool_empty => {
+            //     // receivedMsg will be returned to the pool via defer
+            //     // and used in recv
+            //     continue;
+            // },
+
+            else => {
+                log.info("server -status {s}", .{@tagName(sts)});
+                return status.raw_to_error(receivedMsg.?.*.bhdr.status);
+            },
+        }
+    }
 }
 
-fn onThread(mh: *MultiHomed, ackMbox: *MSGMailBox) void {
+fn onThread(mh: *MultiHomed) void {
+    defer mh.*.srvcs.stop();
+    defer mh.*.ackMbox.*.close(); // Inform server about finish
+
     mh.*.srvcs.start(mh.*.?.ampe, mh.*.?.sendTo) catch |err| {
         log.warn("start services error {s}", .{@errorName(err)});
-        ackMbox.*.close(); // Inform about start failure
         return;
     };
-    defer mh.*.srvcs.stop();
 
-    try ackMbox.*.interrupt(); // Inform about successful start
+    // process accumulated messages
+    var next: ?*Message = mh.*.msgq.dequeue();
+    while (next != null) {
+        const cont: bool = mh.*.srvcs.onMessage(&next);
+        mh.*.ampe.?.put(&next);
+        if (!cont) {
+            log.warn("onMessage returns false -  stop processing", .{});
+            return;
+        }
+        next = mh.*.msgq.dequeue();
+    }
+
+    mh.*.ackMbox.*.interrupt() catch unreachable; // Inform about successful start
 
     mh.*.mainLoop();
 
@@ -162,6 +255,31 @@ fn onThread(mh: *MultiHomed, ackMbox: *MSGMailBox) void {
 }
 
 fn mainLoop(mh: *MultiHomed) void {
-    _ = mh;
+    while (true) {
+        var receivedMsg: ?*Message = mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+            log.info("server - waitReceive error {s}", .{@errorName(err)});
+            return;
+        };
+        defer mh.*.ampe.?.put(&receivedMsg);
+
+        const sts: status.AmpeStatus = status.raw_to_status((receivedMsg.?.*.bhdr.status));
+
+        if (status.raw_to_status(sts) == .waiter_update) { // Stop command from the another thread
+            log.info("Stop command from the another thread", .{});
+            return;
+        }
+
+        if (mh.*.lstnChnls.?.contains(receivedMsg.?.channel_number)) {
+            // Message from one of the listeners - something wrong
+            log.info("listener failed with status {s}", .{@tagName(sts)});
+            return;
+        }
+
+        const cont: bool = mh.*.srvcs.onMessage(&receivedMsg);
+        if (!cont) {
+            log.warn("onMessage returns false -  stop processing", .{});
+            return;
+        }
+    }
     return;
 }

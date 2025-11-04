@@ -1146,22 +1146,22 @@ const TriggeredChannel = struct {
     st: ?AmpeStatus = undefined,
     firstRecvFinished: bool = undefined,
 
-    pub fn sendToCtx(tchn: *TriggeredChannel, storedMsg: *?*Message) void {
-        if (storedMsg.* == null) {
+    pub fn sendToCtx(tchn: *TriggeredChannel, msg: *?*Message) void {
+        if (msg.* == null) {
             return;
         }
 
-        defer tchn.engine.releaseToPool(storedMsg);
+        defer tchn.engine.releaseToPool(msg);
 
         if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
             return;
         }
 
-        if (storedMsg.*.?.@"<ctx>" == null) {
-            storedMsg.*.?.@"<ctx>" = tchn.acn.ctx;
+        if (msg.*.?.@"<ctx>" == null) {
+            msg.*.?.@"<ctx>" = tchn.acn.ctx;
         }
 
-        MchnGroup.sendToWaiter(tchn.acn.ctx.?, storedMsg) catch {};
+        MchnGroup.sendToWaiter(tchn.acn.ctx.?, msg) catch {};
 
         return;
     }
