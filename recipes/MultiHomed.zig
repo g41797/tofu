@@ -83,9 +83,9 @@ thread: ?std.Thread = null,
 msgq: message.MessageQueue = .{},
 
 // Use Mailbox (https://github.com/g41797/mailbox) for
-// receiving status from thread (via close() & interrupt()
-// without transfer any 'Letter'
-ackMbox: mailbox.MailBox(usize) = .{},
+// receiving status from thread (via close() for finish & interrupt() for ack)
+// without transfer any Message
+ackMbox: MSGMailBox = .{},
 
 /// Initiates multihomed tofu server (mhts)
 ///   ampe - engine
@@ -122,37 +122,34 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
 
 /// Stops the thread, destroys  all channels, releases messages to the pool,
 /// releases server object memory
-pub fn stop(mh: *?*MultiHomed) void {
-    if (mh.* == null) {
+pub fn stop(mh: *MultiHomed) void {
+    if (mh.*.allocator == null) {
         return;
     }
 
-    if (mh.*.?.allocator == null) {
-        return;
-    }
+    const allocator = mh.*.allocator.?;
 
-    defer mh.* = null;
-    defer mh.*.?.allocator.?.destroy(mh.*.?);
+    defer allocator.destroy(mh);
 
-    if (mh.*.?.thread != null) {
+    if (mh.*.thread != null) {
         var nullMsg: ?*message.Message = null;
-        mh.*.?.chnls.?.updateWaiter(&nullMsg) catch unreachable;
-        mh.*.?.thread.?.join();
+        mh.*.chnls.?.updateWaiter(&nullMsg) catch unreachable;
+        mh.*.thread.?.join();
     }
 
-    if (mh.*.?.ampe != null) {
+    if (mh.*.ampe != null) {
         if (mh.*.chnls != null) {
             // Closes all active channels - clients and listeners
-            mh.*.?.ampe.?.destroy(mh.*.?.chnls.?) catch unreachable;
+            mh.*.ampe.?.destroy(mh.*.chnls.?) catch unreachable;
         }
-        if (mh.*.?.lstnChnls != null) {
-            mh.*.?.lstnChnls.?.deinit();
+        if (mh.*.lstnChnls != null) {
+            mh.*.lstnChnls.?.deinit();
         }
 
-        var next = mh.*.?.msgq.dequeue();
+        var next = mh.*.msgq.dequeue();
         while (next != null) {
-            mh.*.?.ampe.?.put(&next);
-            next = mh.*.?.msgq.dequeue();
+            mh.*.ampe.?.put(&next);
+            next = mh.*.msgq.dequeue();
         }
     }
     return;

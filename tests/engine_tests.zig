@@ -275,6 +275,14 @@ test "simm test" {
     std.debug.print("All tests completed\n", .{});
 }
 
+// test "echo client/server test" {
+//     std.testing.log_level = .debug;
+//
+//     const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
+//
+//     try testing.expect(est == .success);
+// }
+
 const tofu = @import("tofu");
 
 const recipes = @import("recipes");

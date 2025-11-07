@@ -81,6 +81,7 @@ pub fn build(b: *std.Build) void {
     });
 
     recipesMod.addImport("tofu", tofuMod);
+    recipesMod.addImport("mailbox", mailbox.module("mailbox"));
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.

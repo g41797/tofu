@@ -20,7 +20,7 @@ pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const Message = message.Message;
 
-pub const MultiHomed = @import("MultiHomed.zig");
+pub const services = @import("services.zig");
 
 pub fn createDestroyMain(gpa: Allocator) !void {
     var eng = try Engine.Create(gpa, DefaultOptions);
@@ -359,7 +359,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     // Same code for TCP and UDS servers, only configuration differs.
 
     const options: tofu.Options = .{
-        .initialPoolMsgs = 16, // Example value.
+        .initialPoolMsgs = 2, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
 
@@ -433,7 +433,10 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Configurations must match (both TCP or both UDS).
 
     const options: tofu.Options = .{
-        .initialPoolMsgs = 16, // Example value.
+        // Set to relative high value in order to not handle
+        // pool_empty status.
+        // But be ready to handle it in the field
+        .initialPoolMsgs = 24, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
 
@@ -478,10 +481,11 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     status.raw_to_error(st) catch |err| {
         log.info(">><< welcomeResp error {s} ", .{@errorName(err)});
     };
-    assert(st == 0);
 
     // Received message should have the same channel number.
     assert(srvCorrInfo.channel_number == welcomeResp.?.bhdr.channel_number);
+
+    assert(st == 0); // Don't expect pool_empty in this recipe
 
     // Received message should have the same message ID.
     // If not set before sending, tofu assigns a sequential number.
@@ -1876,4 +1880,28 @@ pub inline fn sleep1MlSec() void {
 
 pub inline fn sleep10MlSec() void {
     std.time.sleep(1_000_000_0);
+}
+
+pub fn handleEchoClientServer(allocator: Allocator) !status.AmpeStatus {
+
+    // Prepare configurators: TCP client/server, UDS client/server
+    const tcpPort: u16 = try tofu.FindFreeTcpPort();
+
+    var tup: tofu.TempUdsPath = .{};
+    const udsPath: []u8 = try tup.buildPath(allocator);
+
+    var mhCnfg = [_]Configurator{
+        .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", tcpPort) },
+        .{ .uds_server = configurator.UDSServerConfigurator.init(udsPath) },
+    };
+
+    var clntCnfgs = [_]Configurator{
+        .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", tcpPort) },
+        .{ .uds_client = configurator.UDSClientConfigurator.init(udsPath) },
+    };
+
+    var echoClSrv: services.EchoClientServer = try .init(allocator, mhCnfg[0..], clntCnfgs[0..]);
+    defer echoClSrv.deinit();
+
+    return echoClSrv.run();
 }

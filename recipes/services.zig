@@ -9,10 +9,17 @@ pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
 pub const Ampe = tofu.Ampe;
 pub const Channels = tofu.Channels;
+pub const configurator = tofu.configurator;
+pub const Configurator = configurator.Configurator;
 pub const status = tofu.status;
 pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
 pub const Message = message.Message;
+
+const mailbox = @import("mailbox");
+const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+
+const MultiHomed = @import("MultiHomed.zig");
 
 /// Defines the Services interface for async message processing.
 /// All methods of interfaces are called on the same thread of the caller(server).
@@ -191,5 +198,240 @@ pub const EchoService = struct {
         };
         echo.*.engine.?.put(&newMsg);
         return true;
+    }
+};
+
+pub const EchoClient = struct {
+    const Self = EchoClient;
+    ampe: Ampe = undefined,
+    gpa: Allocator = undefined,
+    chnls: ?Channels = null,
+    cfg: Configurator = undefined,
+    ack: *MSGMailBox = undefined,
+    thread: ?std.Thread = null,
+    rest: u16 = 0,
+    sts: status.AmpeStatus = .processing_failed,
+
+    /// Init echo client and after successful connect immediately run it on the thread
+    /// Does not support re-connect
+    ///  cfg - server address configurator
+    ///  echoes - count of sends
+    ///  ack - mailbox for sending message with status of the processing
+    pub fn start(engine: Ampe, cfg: *Configurator, echoes: u16, ack: *MSGMailBox) !void {
+        const all: Allocator = engine.getAllocator();
+
+        const result: *Self = all.create(Self) catch {
+            return status.AmpeError.AllocationFailed;
+        };
+        errdefer result.*.destroy();
+
+        result.* = .{
+            .ampe = engine,
+            .gpa = all,
+            .cfg = cfg.*,
+            .chnls = engine.create() catch unreachable,
+            .ack = ack,
+            .rest = if (echoes == 0) 256 else echoes,
+        };
+
+        _ = try result.*.connect();
+
+        result.*.thread = try std.Thread.spawn(.{}, runOnThread, .{result});
+
+        return;
+    }
+
+    fn deinit(self: *Self) void {
+        if (self.*.chnls != null) {
+            self.*.ampe.destroy(self.chnls.?) catch {};
+            self.*.chnls = null;
+        }
+
+        if (self.*.thread != null) {
+            // Send status of processing
+            var msg: ?*Message = self.*.ampe.get(.always) catch unreachable;
+            msg.?.*.bhdr.status = self.*.sts;
+            self.*.ack.send(msg.?) catch {
+                self.*.ampe.put(&msg);
+            };
+        }
+
+        return;
+    }
+
+    pub fn destroy(self: *Self) void {
+        const allocator = self.gpa;
+        defer allocator.destroy(self);
+        self.deinit();
+        return;
+    }
+
+    fn runOnThread(self: *Self) void {
+        defer self.*.destroy();
+
+        _ = self.*.sendRecvEchoes() catch |err| {
+            // Store error status
+            // Error status will be send by destroy()
+            self.*.sts = status.errorToStatus(err);
+            return;
+        };
+
+        self.*.disconnect();
+
+        return;
+    }
+
+    fn connect(self: *Self) status.AmpeError!void {
+        _ = self;
+        return .NotImplementedYet;
+    }
+
+    fn sendRecvEchoes(self: *Self) status.AmpeError!void {
+        _ = self;
+        return .NotImplementedYet;
+    }
+
+    fn disconnect(self: *Self) void {
+        _ = self;
+        return;
+    }
+
+    fn backUp(self: *Self) void {
+        defer self.*.destroy();
+
+        _ = self.*.connect() catch |err| {
+            // Store error status
+            // Error status will be send by destroy()
+            self.*.sts = status.errorToStatus(err);
+            return;
+        };
+
+        while (true) {
+            var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+            defer self.*.ampe.put(&helloRequest);
+
+            self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+
+            _ = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+
+            var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+                log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
+                return;
+            };
+            defer self.ampe.put(&recvMsg);
+
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .connect_failed) {
+                // Connection failed - reconnect
+                continue;
+            }
+
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                log.info("Pool is empy - return message to the pool", .{});
+                continue;
+            }
+
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+                log.info("On client thread - exit required", .{});
+                return;
+            }
+
+            if (recvMsg.?.bhdr.proto.mtype == .hello) {
+                assert(recvMsg.?.bhdr.proto.role == .response);
+
+                // Connected to server
+                self.*.result = .success;
+
+                // Disconnect from server
+                recvMsg.?.bhdr.proto.mtype = .bye;
+                recvMsg.?.bhdr.proto.origin = .application;
+                recvMsg.?.bhdr.proto.role = .signal;
+                recvMsg.?.bhdr.proto.oob = .on;
+                _ = self.*.chnls.?.sendToPeer(&recvMsg) catch unreachable;
+                return;
+            }
+        }
+
+        while (true) {
+            var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT) catch |err| {
+                log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
+                return;
+            };
+            defer self.ampe.put(&recvMsg);
+
+            if (recvMsg == null) {
+                continue;
+            }
+
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                log.info("Pool is empy - return message to the pool", .{});
+                continue;
+            }
+
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+                log.info("On client thread - exit required", .{});
+                return;
+            }
+            if (recvMsg.?.bhdr.status != 0) {
+                status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                    log.info("On client thread - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
+                    continue;
+                };
+            }
+        }
+
+        return;
+    }
+};
+
+/// Example of echo client - server communication
+pub const EchoClientServer = struct {
+    gpa: Allocator = undefined,
+    engine: ?*Engine = null,
+    ampe: Ampe = undefined,
+    mh: ?*MultiHomed = null,
+    ack: MSGMailBox = .{},
+    echsrv: EchoService = .{},
+
+    pub fn init(allocator: Allocator, srvcfg: []Configurator, clncfg: []Configurator) !EchoClientServer {
+        _ = allocator;
+        _ = srvcfg;
+        _ = clncfg;
+        return status.AmpeError.NotImplementedYet;
+    }
+
+    pub fn run(ecs: *EchoClientServer) !status.AmpeStatus {
+        _ = ecs;
+        return status.AmpeError.NotImplementedYet;
+    }
+
+    pub fn deinit(ecs: *EchoClientServer) void {
+        if (ecs.*.mh != null) {
+            ecs.*.echsrv.setCancel();
+            ecs.*.mh.?.stop();
+            ecs.*.mh = null;
+        }
+
+        ecs.*.cleanMbox();
+
+        if (ecs.*.engine != null) {
+            ecs.*.engine.?.Destroy();
+            ecs.*.engine = null;
+        }
+
+        return;
+    }
+
+    fn cleanMbox(ecs: *EchoClientServer) void {
+        var allocated: ?*Message = ecs.*.ack.close();
+        while (allocated != null) {
+            const next: ?*Message = allocated.?.next;
+            if (ecs.*.engine != null) {
+                ecs.*.ampe.put(&allocated);
+            } else {
+                allocated.?.destroy();
+            }
+            allocated = next;
+        }
+        return;
     }
 };

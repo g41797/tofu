@@ -424,7 +424,7 @@ fn releaseToPool(eng: *Engine, storedMsg: *?*Message) void {
 }
 
 pub fn buildStatusSignal(eng: *Engine, stat: AmpeStatus) *Message {
-    var ret = eng.pool.get(.always) catch unreachable;
+    var ret = Message.create(eng.allocator) catch unreachable;
     ret.bhdr.status = status.status_to_raw(stat);
     ret.bhdr.proto.mtype = .regular;
     ret.bhdr.proto.origin = .engine;
@@ -684,6 +684,8 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
         if (trgrs.pool == .on) {
             while (true) {
                 const rcvmsg = eng.pool.get(.poolOnly) catch {
+                    // Pool still empty, update receiver
+                    tc.*.informPoolEmpty();
                     break;
                 };
 
@@ -1146,6 +1148,13 @@ const TriggeredChannel = struct {
     st: ?AmpeStatus = undefined,
     firstRecvFinished: bool = undefined,
 
+    pub fn informPoolEmpty(tchn: *TriggeredChannel) void {
+        var peSignal: ?*Message = tchn.*.engine.*.buildStatusSignal(.pool_empty);
+        log.debug(" ^^^^^^^^^^^^^^^^^ empty pool channel {d}", .{tchn.*.acn.chn});
+        tchn.*.sendToCtx(&peSignal);
+        return;
+    }
+
     pub fn sendToCtx(tchn: *TriggeredChannel, msg: *?*Message) void {
         if (msg.* == null) {
             return;
@@ -1160,6 +1169,8 @@ const TriggeredChannel = struct {
         if (msg.*.?.@"<ctx>" == null) {
             msg.*.?.@"<ctx>" = tchn.acn.ctx;
         }
+
+        msg.*.?.bhdr.channel_number = tchn.*.acn.chn;
 
         MchnGroup.sendToWaiter(tchn.acn.ctx.?, msg) catch {};
 

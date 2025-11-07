@@ -32,6 +32,7 @@ pub const AmpeStatus = enum(u8) {
     accept_failed,
     send_failed,
     recv_failed,
+    processing_failed, // You can use it as application status
     unknown_error,
 };
 
@@ -65,6 +66,7 @@ pub const AmpeError = error{
     AcceptFailed,
     SendFailed,
     RecvFailed,
+    ProcessingFailed, // You can use it as application error
     UnknownError,
 };
 
@@ -99,6 +101,7 @@ var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .send_failed = AmpeError.SendFailed,
     .recv_failed = AmpeError.RecvFailed,
     .shutdown_started = AmpeError.ShutdownStarted,
+    .processing_failed = AmpeError.ProcessingFailed,
 });
 
 pub fn errorToStatus(err: AmpeError) AmpeStatus {
