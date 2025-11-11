@@ -45,7 +45,10 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
             else => return AmpeError.CommunicationFailed,
         }
     };
+
     errdefer skt.close();
+
+    try skt.setLingerAbort();
 
     skt.address = addr;
 
@@ -96,6 +99,26 @@ pub fn setREUSE(skt: *Skt) !void {
         },
         else => return,
     }
+}
+
+// Represents the C 'struct linger'
+pub const Linger = extern struct {
+    l_onoff: c_int, // Option on/off
+    l_linger: c_int, // Linger time in seconds
+};
+
+// Sets SO_LINGER on a socket to enable immediate, abortive close.
+pub fn setLingerAbort(skt: *Skt) AmpeError!void {
+    const linger_config = Linger{
+        .l_onoff = 1, // Enable linger
+        .l_linger = 0, // Set timeout to 0 (immediate abort)
+    };
+
+    _ = std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.LINGER, &std.mem.toBytes(linger_config)) catch {
+        return AmpeError.SetsockoptFailed;
+    };
+
+    return;
 }
 
 pub fn disableNagle(skt: *Skt) !void {

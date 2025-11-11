@@ -132,8 +132,11 @@ pub fn stop(mh: *MultiHomed) void {
     defer allocator.destroy(mh);
 
     if (mh.*.thread != null) {
+        // Interrupt waitReceive on the thread
         var nullMsg: ?*message.Message = null;
         mh.*.chnls.?.updateWaiter(&nullMsg) catch unreachable;
+
+        // Wait finish of the thread
         mh.*.thread.?.join();
     }
 
@@ -163,9 +166,9 @@ fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     mh.*.thread = try std.Thread.spawn(.{}, onThread, .{mh});
 
     _ = mh.*.ackMbox.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| switch (err) {
-        .Timeout => {}, // for compiler
-        .Closed => return error.StartServicesFailure,
-        .Interrupted => {}, // OK
+        error.Timeout => {}, // for compiler
+        error.Closed => return error.StartServicesFailure,
+        error.Interrupted => {}, // OK
     };
 
     return mh;
@@ -179,6 +182,9 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
 
     const wlcbh: BinaryHeader = try mh.*.chnls.?.sendToPeer(&welcomeRequest);
 
+    const lstChannel: message.ChannelNumber = wlcbh.channel_number;
+    log.debug("listener channel {d}", .{lstChannel});
+
     try mh.*.lstnChnls.?.put(wlcbh.channel_number, cnfg);
 
     while (true) {
@@ -187,7 +193,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
             return err;
         };
 
-        if (!mh.*.lstnChnls.?.contains(receivedMsg.?.channel_number)) { // listener channel
+        if (!mh.*.lstnChnls.?.contains(receivedMsg.?.*.bhdr.channel_number)) { // listener channel
             mh.*.msgq.enqueue(receivedMsg.?); // Will be processed on the thread later
             continue;
         }
@@ -205,7 +211,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
                 assert(receivedMsg.?.*.bhdr.proto.mtype == .welcome);
                 assert(receivedMsg.?.*.bhdr.proto.role == .response);
 
-                mh.*.lstnChnls.?.put(receivedMsg.?.*.channel_number, cnfg) catch unreachable;
+                mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, cnfg) catch unreachable;
                 return;
             },
 
@@ -224,10 +230,12 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
 }
 
 fn onThread(mh: *MultiHomed) void {
+    defer mh.*.thread = null;
     defer mh.*.srvcs.stop();
-    defer mh.*.ackMbox.*.close(); // Inform server about finish
+    defer mh.*.closeChannels();
+    defer mh.*.closeMbox(); // Inform server about finish
 
-    mh.*.srvcs.start(mh.*.?.ampe, mh.*.?.sendTo) catch |err| {
+    mh.*.srvcs.start(mh.*.ampe.?, mh.*.chnls.?) catch |err| {
         log.warn("start services error {s}", .{@errorName(err)});
         return;
     };
@@ -244,7 +252,7 @@ fn onThread(mh: *MultiHomed) void {
         next = mh.*.msgq.dequeue();
     }
 
-    mh.*.ackMbox.*.interrupt() catch unreachable; // Inform about successful start
+    mh.*.ackMbox.interrupt() catch unreachable; // Inform about successful start
 
     mh.*.mainLoop();
 
@@ -261,12 +269,12 @@ fn mainLoop(mh: *MultiHomed) void {
 
         const sts: status.AmpeStatus = status.raw_to_status((receivedMsg.?.*.bhdr.status));
 
-        if (status.raw_to_status(sts) == .waiter_update) { // Stop command from the another thread
+        if (sts == .waiter_update) { // Stop command from the another thread
             log.info("Stop command from the another thread", .{});
             return;
         }
 
-        if (mh.*.lstnChnls.?.contains(receivedMsg.?.channel_number)) {
+        if (mh.*.lstnChnls.?.contains(receivedMsg.?.*.bhdr.channel_number)) {
             // Message from one of the listeners - something wrong
             log.info("listener failed with status {s}", .{@tagName(sts)});
             return;
@@ -280,3 +288,48 @@ fn mainLoop(mh: *MultiHomed) void {
     }
     return;
 }
+
+inline fn closeMbox(mh: *MultiHomed) void {
+    _ = mh.*.ackMbox.close(); // Nothing to clean
+}
+
+fn closeChannels(mh: *MultiHomed) void {
+    if (mh.*.chnls != null) {
+        mh.*.ampe.?.destroy(mh.*.chnls.?) catch unreachable;
+        mh.*.chnls = null;
+    }
+
+    return;
+}
+
+// fn closeListeners(mh: *MultiHomed) void {
+//     for (mh.*.lstnChnls.?.keys()) |key| {
+//         _ = mh.*.closeListener(key) catch |err| {
+//             log.info("server - closeListener error {s}", .{@errorName(err)});
+//         };
+//     }
+// }
+//
+// fn closeListener(mh: *MultiHomed, lstChannel: message.ChannelNumber) !void {
+//     var closeMsg: ?*Message = try mh.*.ampe.?.get(tofu.AllocationStrategy.always);
+//     defer mh.*.ampe.?.put(&closeMsg);
+//
+//     // Prepare ByeSignal for the listener channel.
+//     closeMsg.?.bhdr.proto.mtype = .bye;
+//     closeMsg.?.bhdr.proto.role = .signal;
+//     closeMsg.?.bhdr.proto.oob = .on;
+//
+//     // Set channel number to close this channel.
+//     closeMsg.?.bhdr.channel_number = lstChannel;
+//
+//     _ = try mh.*.chnls.?.sendToPeer(&closeMsg);
+//
+//     var closeListenerResp: ?*Message = try mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+//     defer mh.*.ampe.?.put(&closeListenerResp);
+//
+//     closeListenerResp.?.bhdr.dumpMeta("closeListener");
+//
+//     assert(closeListenerResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+//
+//     return;
+// }

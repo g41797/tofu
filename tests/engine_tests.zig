@@ -114,7 +114,7 @@ fn simm_tests() void {
         &try_handle_reconnect_single_threaded,
         &try_handle_reconnect_multithreaded,
     };
-    runTasks(gpa, tests) catch unreachable;
+    tofu.RunTasks(gpa, tests) catch unreachable;
 }
 
 fn try_ampe_just_create_destroy() void {
@@ -131,24 +131,6 @@ fn try_handle_reconnect_single_threaded() void {
 
 fn try_handle_reconnect_multithreaded() void {
     test_handle_reconnect_multithreaded() catch unreachable;
-}
-
-fn runTask(task: *const fn () void) void {
-    task();
-}
-
-pub fn runTasks(allocator: std.mem.Allocator, tasks: []const *const fn () void) !void {
-    var threads = try allocator.alloc(std.Thread, tasks.len);
-    defer allocator.free(threads);
-
-    for (tasks, 0..) |task, i| {
-        threads[i] = try std.Thread.spawn(.{}, runTask, .{task});
-    }
-
-    for (threads, 0..) |*thread, i| {
-        thread.join();
-        log.debug("Thread {d} finished", .{i + 1});
-    }
 }
 
 test {
@@ -270,18 +252,18 @@ test "simm test" {
         &simm_tests,
     };
 
-    runTasks(gpa, tests) catch unreachable;
+    tofu.RunTasks(gpa, tests) catch unreachable;
 
     std.debug.print("All tests completed\n", .{});
 }
 
-// test "echo client/server test" {
-//     std.testing.log_level = .debug;
-//
-//     const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
-//
-//     try testing.expect(est == .success);
-// }
+test "echo client/server test" {
+    std.testing.log_level = .debug;
+
+    const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
+
+    try testing.expect(est == .success);
+}
 
 const tofu = @import("tofu");
 

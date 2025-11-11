@@ -740,8 +740,6 @@ fn processTriggeredChannels(eng: *Engine, it: *Iterator) !void {
                 next = wereRecv.dequeue();
             }
         }
-
-        break;
     }
 
     return;
@@ -1150,7 +1148,9 @@ const TriggeredChannel = struct {
 
     pub fn informPoolEmpty(tchn: *TriggeredChannel) void {
         var peSignal: ?*Message = tchn.*.engine.*.buildStatusSignal(.pool_empty);
-        log.debug(" ^^^^^^^^^^^^^^^^^ empty pool channel {d}", .{tchn.*.acn.chn});
+
+        // log.debug(" ^^^^^^^^^^^^^^^^^ empty pool channel {d}", .{tchn.*.acn.chn});
+
         tchn.*.sendToCtx(&peSignal);
         return;
     }

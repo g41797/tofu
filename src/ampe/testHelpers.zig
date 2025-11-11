@@ -68,6 +68,28 @@ pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.Channels) void {
     };
 }
 
+/// Helper function for running tasks simultaneously.
+/// Every task runs on own thread.
+/// Function waits finish of all threads.
+/// Task is 'fn () void'
+pub fn RunTasks(allocator: std.mem.Allocator, tasks: []const *const fn () void) !void {
+    var threads = try allocator.alloc(std.Thread, tasks.len);
+    defer allocator.free(threads);
+
+    for (tasks, 0..) |task, i| {
+        threads[i] = try std.Thread.spawn(.{}, runTask, .{task});
+    }
+
+    for (threads, 0..) |*thread, i| {
+        thread.join();
+        log.debug("Thread {d} finished", .{i + 1});
+    }
+}
+
+inline fn runTask(task: *const fn () void) void {
+    task();
+}
+
 const tofu = @import("../tofu.zig");
 const status = @import("../status.zig");
 const AmpeError = status.AmpeError;

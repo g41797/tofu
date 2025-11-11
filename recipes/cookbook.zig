@@ -1900,8 +1900,7 @@ pub fn handleEchoClientServer(allocator: Allocator) !status.AmpeStatus {
         .{ .uds_client = configurator.UDSClientConfigurator.init(udsPath) },
     };
 
-    var echoClSrv: services.EchoClientServer = try .init(allocator, mhCnfg[0..], clntCnfgs[0..]);
-    defer echoClSrv.deinit();
+    var echoClSrv: services.EchoClientServer = try .init(allocator, mhCnfg[0..]);
 
-    return echoClSrv.run();
+    return echoClSrv.run(clntCnfgs[0..]);
 }

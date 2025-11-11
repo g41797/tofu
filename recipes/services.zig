@@ -75,13 +75,13 @@ const SRVCSVTable = struct {
 /// Simplest service - 'echo'
 /// For received request - send back the same message as response
 /// For received signal - send it back as-is
-/// Very lazy - stops after 1000 processed messages
+/// Very lazy - stops after 1000+ processed messages
 pub const EchoService = struct {
     engine: ?Ampe = null,
     sendTo: ?Channels = null,
     cancel: Atomic(bool) = .init(false),
     allocator: Allocator = undefined,
-    rest: u32 = 1000,
+    rest: u32 = 1000 + 100, // Added 100 messages, because non-graceful close
 
     pub fn services(echo: *EchoService) Services {
         return .{
@@ -103,7 +103,7 @@ pub const EchoService = struct {
         return;
     }
 
-    fn stop(ptr: ?*anyopaque) !void {
+    fn stop(ptr: ?*anyopaque) void {
         const echo: *EchoService = @alignCast(@ptrCast(ptr));
         echo.*.engine = null;
         echo.*.sendTo = null;
@@ -135,8 +135,6 @@ pub const EchoService = struct {
             return false;
         }
 
-        echo.*.rest -= 1;
-
         msg.*.?.bhdr.dumpMeta("echo srvs received msg");
 
         const sts: status.AmpeStatus = status.raw_to_status(msg.*.?.*.bhdr.status);
@@ -158,7 +156,8 @@ pub const EchoService = struct {
                 else => {
                     // Let's start to learn what are the list of possible error statuses.
                     // Later you can add specific handling per status
-                    log.info("received error status {s}", .{std.enums.tagName(status.AmpeStatus, sts)});
+                    log.debug("received error status {s}", .{std.enums.tagName(status.AmpeStatus, sts).?});
+                    // continue processing anyway
                     return true;
                 },
             }
@@ -170,9 +169,13 @@ pub const EchoService = struct {
             },
             .signal => {},
             else => {
-                log.warn("message role {s} is not supported", .{std.enums.tagName(message.MessageRole, msg.*.?.*.bhdr.proto.role)});
+                log.warn("message role {s} is not supported", .{std.enums.tagName(message.MessageRole, msg.*.?.*.bhdr.proto.role).?});
                 return false;
             },
+        }
+
+        if ((msg.*.?.*.bhdr.proto.mtype != .hello) and (msg.*.?.*.bhdr.proto.mtype != .bye)) {
+            echo.*.rest -= 1;
         }
 
         _ = echo.*.sendTo.?.sendToPeer(msg) catch |err| {
@@ -188,12 +191,12 @@ pub const EchoService = struct {
     }
 
     pub inline fn wasCancelled(echo: *EchoService) bool {
-        echo.*.cancel.load(.monotonic);
+        return echo.*.cancel.load(.monotonic);
     }
 
     fn addMessagesToPool(echo: *EchoService) bool {
         // Just one as example
-        const newMsg: ?*Message = Message.create(echo.allocator) catch {
+        var newMsg: ?*Message = Message.create(echo.allocator) catch {
             return false;
         };
         echo.*.engine.?.put(&newMsg);
@@ -203,21 +206,29 @@ pub const EchoService = struct {
 
 pub const EchoClient = struct {
     const Self = EchoClient;
+
+    // For usage as Letter in MailBoxIntrusive
+    prev: ?*Self = null,
+    next: ?*Self = null,
+
     ampe: Ampe = undefined,
     gpa: Allocator = undefined,
     chnls: ?Channels = null,
     cfg: Configurator = undefined,
-    ack: *MSGMailBox = undefined,
+    ack: *mailbox.MailBoxIntrusive(Self) = undefined,
     thread: ?std.Thread = null,
-    rest: u16 = 0,
+    count: u16 = 0, // number of successful echoes
+    echoes: u16 = 0,
     sts: status.AmpeStatus = .processing_failed,
+    connected: bool = false,
+    helloBh: BinaryHeader = .{},
 
     /// Init echo client and after successful connect immediately run it on the thread
     /// Does not support re-connect
     ///  cfg - server address configurator
     ///  echoes - count of sends
     ///  ack - mailbox for sending message with status of the processing
-    pub fn start(engine: Ampe, cfg: *Configurator, echoes: u16, ack: *MSGMailBox) !void {
+    pub fn start(engine: Ampe, cfg: Configurator, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
         const all: Allocator = engine.getAllocator();
 
         const result: *Self = all.create(Self) catch {
@@ -228,10 +239,10 @@ pub const EchoClient = struct {
         result.* = .{
             .ampe = engine,
             .gpa = all,
-            .cfg = cfg.*,
+            .cfg = cfg,
             .chnls = engine.create() catch unreachable,
             .ack = ack,
-            .rest = if (echoes == 0) 256 else echoes,
+            .echoes = if (echoes == 0) 256 else echoes,
         };
 
         _ = try result.*.connect();
@@ -246,16 +257,13 @@ pub const EchoClient = struct {
             self.*.ampe.destroy(self.chnls.?) catch {};
             self.*.chnls = null;
         }
+        return;
+    }
 
-        if (self.*.thread != null) {
-            // Send status of processing
-            var msg: ?*Message = self.*.ampe.get(.always) catch unreachable;
-            msg.?.*.bhdr.status = self.*.sts;
-            self.*.ack.send(msg.?) catch {
-                self.*.ampe.put(&msg);
-            };
-        }
-
+    fn release(self: *Self) void {
+        self.*.ack.*.send(self) catch {
+            self.*.destroy();
+        };
         return;
     }
 
@@ -267,7 +275,8 @@ pub const EchoClient = struct {
     }
 
     fn runOnThread(self: *Self) void {
-        defer self.*.destroy();
+        defer self.*.release();
+        defer self.*.disconnect();
 
         _ = self.*.sendRecvEchoes() catch |err| {
             // Store error status
@@ -276,23 +285,146 @@ pub const EchoClient = struct {
             return;
         };
 
-        self.*.disconnect();
-
         return;
     }
 
     fn connect(self: *Self) status.AmpeError!void {
-        _ = self;
-        return .NotImplementedYet;
+        var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+        defer self.*.ampe.put(&helloRequest);
+
+        self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+
+        self.*.helloBh = try self.*.chnls.?.sendToPeer(&helloRequest);
+
+        while (true) { // Re-connect is not supported
+            var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+                log.info("echo client - waitReceive error {s}", .{@errorName(err)});
+                return err;
+            };
+            defer self.*.ampe.put(&recvMsgOpt);
+
+            if (recvMsgOpt.?.*.bhdr.proto.origin == .engine) {
+                const sts: status.AmpeStatus = status.raw_to_status((recvMsgOpt.?.*.bhdr.status));
+
+                if (sts == .pool_empty) {
+                    continue; // defer above will put message to the pool
+                }
+
+                // Other statuses are failure
+                log.info("echo client connect failed with status {s}", .{@tagName(sts)});
+                return status.status_to_error(sts);
+            }
+
+            // Should be hello response
+            assert(recvMsgOpt.?.*.bhdr.proto.mtype == .hello);
+            assert(recvMsgOpt.?.*.bhdr.proto.role == .response);
+            self.*.connected = true;
+            break;
+        }
+
+        return;
     }
 
     fn sendRecvEchoes(self: *Self) status.AmpeError!void {
-        _ = self;
-        return .NotImplementedYet;
+        // Simular to connect, because connect is
+        //     - send hello request
+        //     - recv hello response
+
+        // For now echo messages are empty - only binary header
+        // is transferred
+
+        for (1..self.*.echoes + 1) |mn| {
+            var echoRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+            defer self.*.ampe.put(&echoRequest);
+
+            // Prepare request - don't forget channel number
+            echoRequest.?.*.bhdr.channel_number = self.*.helloBh.channel_number;
+
+            // !!! We can set own value of message id !!!
+            echoRequest.?.*.bhdr.message_id = mn;
+
+            echoRequest.?.*.bhdr.proto.mtype = .regular;
+            echoRequest.?.*.bhdr.proto.origin = .application;
+            echoRequest.?.*.bhdr.proto.role = .request;
+            echoRequest.?.*.bhdr.proto.oob = .off;
+
+            echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
+
+            _ = self.*.chnls.?.sendToPeer(&echoRequest) catch unreachable;
+
+            while (true) { //
+                var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+                    log.info("echo client - wait echo response waitReceive error {s}", .{@errorName(err)});
+                    return err;
+                };
+                defer self.*.ampe.put(&recvMsgOpt);
+
+                if (recvMsgOpt.?.*.bhdr.proto.origin == .engine) {
+                    const sts: status.AmpeStatus = status.raw_to_status((recvMsgOpt.?.*.bhdr.status));
+
+                    if (sts == .pool_empty) {
+                        continue; // defer above will put message to the pool
+                    }
+
+                    // Other statuses are failure
+                    log.info("echo client failed with status {s}", .{@tagName(sts)});
+                    return status.status_to_error(sts);
+                }
+
+                // Should be application response
+                assert(recvMsgOpt.?.*.bhdr.proto.mtype == .regular);
+                assert(recvMsgOpt.?.*.bhdr.proto.role == .response);
+
+                // And ofc the same message id
+                assert(recvMsgOpt.?.*.bhdr.message_id == mn);
+
+                recvMsgOpt.?.*.bhdr.dumpMeta("echoResponse ");
+
+                break;
+            }
+
+            self.*.count += 1;
+        }
+
+        return;
     }
 
     fn disconnect(self: *Self) void {
-        _ = self;
+        if (!self.*.connected) {
+            return;
+        }
+
+        if (self.*.count > 0) {
+            log.debug("transferred {d}", .{self.*.count});
+        }
+
+        // Disconnect from server
+        var byeRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
+        defer self.*.ampe.put(&byeRequest);
+
+        // Set channel number to assigned earlier (hello request/response)
+        byeRequest.?.bhdr.channel_number = self.*.helloBh.channel_number;
+
+        byeRequest.?.bhdr.proto.mtype = .bye;
+        byeRequest.?.bhdr.proto.origin = .application;
+        byeRequest.?.bhdr.proto.role = .signal;
+        byeRequest.?.bhdr.proto.oob = .on;
+
+        _ = self.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+
+        // Wait close of the channel
+        while (true) {
+            var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
+                log.info("echo client - waitReceive error during disconect {s}", .{@errorName(err)});
+                return;
+            };
+            defer self.*.ampe.put(&recvMsgOpt);
+
+            if (status.raw_to_status(recvMsgOpt.?.*.bhdr.status) == .channel_closed) {
+                return;
+            }
+        }
+
         return;
     }
 
@@ -312,7 +444,7 @@ pub const EchoClient = struct {
 
             self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
-            _ = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+            self.*.helloBh = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
 
             var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                 log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -389,26 +521,75 @@ pub const EchoClientServer = struct {
     engine: ?*Engine = null,
     ampe: Ampe = undefined,
     mh: ?*MultiHomed = null,
-    ack: MSGMailBox = .{},
-    echsrv: EchoService = .{},
+    ack: mailbox.MailBoxIntrusive(EchoClient) = .{},
+    echsrv: ?*EchoService = null,
+    clcCount: u16 = 0,
+    echoes: usize = 0,
 
-    pub fn init(allocator: Allocator, srvcfg: []Configurator, clncfg: []Configurator) !EchoClientServer {
-        _ = allocator;
-        _ = srvcfg;
-        _ = clncfg;
-        return status.AmpeError.NotImplementedYet;
+    pub fn init(allocator: Allocator, srvcfg: []Configurator) !EchoClientServer {
+        var ecs: EchoClientServer = .{
+            .gpa = allocator,
+        };
+        errdefer ecs.deinit();
+
+        // Because EchoService creates Services interface,
+        // it should be allocated on the heap.
+        // ptr: ?*anyopaque - needs to point to valid
+        // memory location is not changed during struct copy etc.
+        ecs.echsrv = try ecs.gpa.create(EchoService);
+        ecs.echsrv.?.* = .{};
+
+        ecs.engine = try Engine.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
+        ecs.ampe = try ecs.engine.?.*.ampe();
+
+        ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.*.services());
+
+        return ecs;
     }
 
-    pub fn run(ecs: *EchoClientServer) !status.AmpeStatus {
-        _ = ecs;
-        return status.AmpeError.NotImplementedYet;
+    pub fn run(ecs: *EchoClientServer, clncfg: []Configurator) !status.AmpeStatus {
+        defer ecs.deinit();
+
+        if (clncfg.len == 0) {
+            return error.EmptyConfiguration;
+        }
+
+        for (1..100) |_| {
+            for (clncfg) |clcnfg| {
+                _ = EchoClient.start(ecs.*.ampe, clcnfg, 100, &ecs.*.ack) catch |err| {
+                    log.info("start EchoClient error {s}", .{@errorName(err)});
+                    continue;
+                };
+                ecs.*.clcCount += 1;
+            }
+        }
+
+        assert(ecs.*.clcCount > 0);
+
+        // Wait finish of the clients
+        for (0..ecs.*.clcCount) |ncl| {
+            var finishedClient: *EchoClient = ecs.*.ack.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch {
+                // for any error - break wait
+                break;
+            };
+            defer finishedClient.destroy();
+            ecs.*.echoes += finishedClient.*.count;
+            log.debug("client {d} processed {d} sum {d}", .{ ncl + 1, finishedClient.*.count, ecs.*.echoes });
+        }
+
+        const echoSts: status.AmpeStatus = if (ecs.*.echoes >= 1000) .success else .processing_failed;
+
+        return echoSts;
     }
 
     pub fn deinit(ecs: *EchoClientServer) void {
         if (ecs.*.mh != null) {
-            ecs.*.echsrv.setCancel();
+            ecs.*.echsrv.?.*.setCancel();
+
             ecs.*.mh.?.stop();
             ecs.*.mh = null;
+
+            ecs.*.gpa.destroy(ecs.*.echsrv.?);
         }
 
         ecs.*.cleanMbox();
@@ -422,15 +603,14 @@ pub const EchoClientServer = struct {
     }
 
     fn cleanMbox(ecs: *EchoClientServer) void {
-        var allocated: ?*Message = ecs.*.ack.close();
-        while (allocated != null) {
-            const next: ?*Message = allocated.?.next;
-            if (ecs.*.engine != null) {
-                ecs.*.ampe.put(&allocated);
-            } else {
-                allocated.?.destroy();
-            }
-            allocated = next;
+        var client: ?*EchoClient = ecs.*.ack.close();
+        while (client != null) {
+            assert(ecs.*.clcCount > 0);
+            ecs.*.clcCount -= 1;
+            ecs.*.echoes += client.?.*.count;
+            client.?.*.destroy();
+            const next: ?*EchoClient = client.?.next;
+            client = next;
         }
         return;
     }
