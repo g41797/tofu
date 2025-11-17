@@ -207,7 +207,7 @@ fn _put(eng: *Engine, msg: *?*Message) void {
     return;
 }
 
-fn create(ptr: ?*anyopaque) AmpeError!Channels {
+fn create(ptr: ?*anyopaque) AmpeError!ChannelGroup {
     const eng: *Engine = @alignCast(@ptrCast(ptr));
     return eng.*._create();
 }
@@ -217,7 +217,7 @@ fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
     return eng._destroy(chnlsimpl);
 }
 
-inline fn _create(eng: *Engine) AmpeError!Channels {
+inline fn _create(eng: *Engine) AmpeError!ChannelGroup {
     eng.crtMtx.lock();
     defer eng.crtMtx.unlock();
 
@@ -227,11 +227,11 @@ inline fn _create(eng: *Engine) AmpeError!Channels {
 
     const grp = try MchnGroup.Create(eng, next_gid());
 
-    const channelsGroup: Channels = grp.chnls();
+    const channelGroup: ChannelGroup = grp.chnls();
 
-    try eng.*.send_create(channelsGroup.ptr);
+    try eng.*.send_create(channelGroup.ptr);
 
-    return channelsGroup;
+    return channelGroup;
 }
 
 inline fn send_create(eng: *Engine, chnlsimpl: ?*anyopaque) AmpeError!void {
@@ -791,7 +791,7 @@ fn processInternal(eng: *Engine) !void {
     assert(grpPtr.?.*.id.? == grp.id.?);
     _ = eng.chnlsGroup_map.orderedRemove(grp.id.?);
 
-    const chgr = eng.acns.channelsGroup(chnlsimpl) catch unreachable;
+    const chgr = eng.acns.channelGroup(chnlsimpl) catch unreachable;
     defer chgr.deinit();
     _ = eng.acns.removeChannels(chnlsimpl) catch unreachable;
     {
@@ -916,7 +916,7 @@ fn responseFailure(eng: *Engine, failure: AmpeStatus) void {
         return;
     }
 
-    // Try notify Channels directly
+    // Try notify ChannelGroup directly
     _ = MchnGroup.sendToWaiter(eng.currMsg.?.@"<ctx>", &eng.currMsg) catch {};
     return;
 }
@@ -1338,7 +1338,7 @@ const MessageQueue = message.MessageQueue;
 
 const Options = tofu.Options;
 const Ampe = tofu.Ampe;
-const Channels = tofu.Channels;
+const ChannelGroup = tofu.ChannelGroup;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;

@@ -270,7 +270,7 @@ const tofu = @import("tofu");
 const recipes = @import("recipes");
 
 const Ampe = tofu.Ampe;
-const Channels = tofu.Channels;
+const ChannelGroup = tofu.ChannelGroup;
 
 const message = tofu.message;
 const MessageType = message.MessageType;

@@ -8,7 +8,7 @@ const AtomicOrder = std.builtin.AtomicOrder;
 pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
 pub const Ampe = tofu.Ampe;
-pub const Channels = tofu.Channels;
+pub const ChannelGroup = tofu.ChannelGroup;
 pub const configurator = tofu.configurator;
 pub const Configurator = configurator.Configurator;
 pub const status = tofu.status;
@@ -34,7 +34,7 @@ pub const Services = struct {
     ///             services can use sendToPeer method.
     ///             --- Don't call waitReceive - it's duty of the server.        ---
     ///             --- Don't destroy 'channels' - it's also duty of the server. ---
-    pub fn start(srvcs: Services, ampe: Ampe, sendTo: Channels) !void {
+    pub fn start(srvcs: Services, ampe: Ampe, sendTo: ChannelGroup) !void {
         return srvcs.vtable.start(srvcs.ptr, ampe, sendTo);
     }
 
@@ -65,7 +65,7 @@ pub const Services = struct {
 };
 
 const SRVCSVTable = struct {
-    start: *const fn (ptr: ?*anyopaque, ampe: Ampe, sendTo: Channels) anyerror!void,
+    start: *const fn (ptr: ?*anyopaque, ampe: Ampe, sendTo: ChannelGroup) anyerror!void,
 
     stop: *const fn (ptr: ?*anyopaque) void,
 
@@ -78,7 +78,7 @@ const SRVCSVTable = struct {
 /// Very lazy - stops after 1000+ processed messages
 pub const EchoService = struct {
     engine: ?Ampe = null,
-    sendTo: ?Channels = null,
+    sendTo: ?ChannelGroup = null,
     cancel: Atomic(bool) = .init(false),
     allocator: Allocator = undefined,
     rest: u32 = 1000 + 100, // Added 100 messages, because non-graceful close
@@ -94,7 +94,7 @@ pub const EchoService = struct {
         };
     }
 
-    fn start(ptr: ?*anyopaque, ampe: Ampe, channels: Channels) !void {
+    fn start(ptr: ?*anyopaque, ampe: Ampe, channels: ChannelGroup) !void {
         const echo: *EchoService = @alignCast(@ptrCast(ptr));
         echo.*.engine = ampe;
         echo.*.sendTo = channels;
@@ -213,7 +213,7 @@ pub const EchoClient = struct {
 
     ampe: Ampe = undefined,
     gpa: Allocator = undefined,
-    chnls: ?Channels = null,
+    chnls: ?ChannelGroup = null,
     cfg: Configurator = undefined,
     ack: *mailbox.MailBoxIntrusive(Self) = undefined,
     thread: ?std.Thread = null,
@@ -350,7 +350,7 @@ pub const EchoClient = struct {
 
             echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
-            _ = self.*.chnls.?.sendToPeer(&echoRequest) catch unreachable;
+            _ = try self.*.chnls.?.sendToPeer(&echoRequest);
 
             while (true) { //
                 var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {

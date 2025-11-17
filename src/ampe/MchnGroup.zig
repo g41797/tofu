@@ -11,8 +11,8 @@ allocator: Allocator = undefined,
 msgs: [2]MSGMailBox = undefined,
 cmpl: Semaphore = undefined,
 
-pub fn chnls(grp: *MchnGroup) Channels {
-    const result: Channels = .{
+pub fn chnls(grp: *MchnGroup) ChannelGroup {
+    const result: ChannelGroup = .{
         .ptr = grp,
         .vtable = &.{
             .sendToPeer = sendToPeer,
@@ -203,7 +203,7 @@ pub const VC = message.ValidCombination;
 
 pub const Engine = tofu.Engine;
 
-const Channels = tofu.Channels;
+const ChannelGroup = tofu.ChannelGroup;
 const AllocationStrategy = tofu.AllocationStrategy;
 const AmpeError = tofu.status.AmpeError;
 const AmpeStatus = tofu.status.AmpeStatus;

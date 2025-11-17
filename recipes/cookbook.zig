@@ -9,7 +9,7 @@ const cookbook = @This();
 pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
 pub const Ampe = tofu.Ampe;
-pub const Channels = tofu.Channels;
+pub const ChannelGroup = tofu.ChannelGroup;
 pub const Options = tofu.Options;
 pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
@@ -45,7 +45,7 @@ pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
 
     const chnls = try ampe.create();
 
-    // Destroy Channels using ampe.
+    // Destroy ChannelGroup using ampe.
     try ampe.destroy(chnls);
 }
 
@@ -367,7 +367,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
 
-    const chnls: Channels = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
     var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
@@ -401,7 +401,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     }
 
     // Channel is not closed explicitly.
-    // It closes during Channels destruction (see defer above).
+    // It closes during ChannelGroup destruction (see defer above).
 
     // Convert status byte to AmpeStatus enum for convenience.
     return status.raw_to_status(st);
@@ -444,12 +444,12 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
 
-    // For simplicity, use the same Channels for client and server.
-    // In production, you can use separate Channels for each.
+    // For simplicity, use the same ChannelGroup for client and server.
+    // In production, you can use separate ChannelGroup for each.
 
-    const chnls: Channels = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
 
-    // Channel closes during Channels destruction.
+    // Channel closes during ChannelGroup destruction.
     defer tofu.DestroyChannels(ampe, chnls);
 
     var welcomeRequest: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
@@ -513,7 +513,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Client and server channels must be different.
     assert(cltCorrInfo.channel_number != srvCorrInfo.channel_number);
 
-    // Since Channels handles both client and server,
+    // Since ChannelGroup handles both client and server,
     // we receive a HelloRequest from the client side.
     // A successful HelloRequest involves:
     // - Connecting to the server.
@@ -630,7 +630,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
     var eng: *Engine = try Engine.Create(gpa, options);
     defer eng.Destroy();
     const ampe: Ampe = try eng.ampe();
-    const chnls: Channels = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
     var attention: ?*Message = try chnls.waitReceive(100);
@@ -702,7 +702,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         const Self = @This();
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = undefined,
+        chnls: ?tofu.ChannelGroup = undefined,
         cfg: Configurator = undefined,
         result: ?status.AmpeStatus = undefined,
 
@@ -819,7 +819,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         const Self = @This();
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = undefined,
+        chnls: ?tofu.ChannelGroup = undefined,
         cfg: Configurator = undefined,
         result: ?status.AmpeStatus = .unknown_error,
 
@@ -1021,7 +1021,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     const TofuServer = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = undefined,
+        chnls: ?tofu.ChannelGroup = undefined,
         cfg: Configurator = undefined,
         helloBh: message.BinaryHeader = undefined,
         connected: bool = undefined,
@@ -1168,7 +1168,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     const TofuClient = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = undefined,
+        chnls: ?tofu.ChannelGroup = undefined,
         cfg: Configurator = undefined,
         helloBh: message.BinaryHeader = undefined,
         connected: bool = undefined,
@@ -1449,12 +1449,12 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     const ClientConnector = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = undefined,
+        chnls: ?tofu.ChannelGroup = undefined,
         helloRequest: ?*Message = undefined,
         helloBh: ?message.BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn init(engine: Ampe, chnls: Channels, cfg: *Configurator) !Self {
+        pub fn init(engine: Ampe, chnls: ChannelGroup, cfg: *Configurator) !Self {
             var helloRequest: ?*Message = try engine.get(tofu.AllocationStrategy.always);
             errdefer engine.put(&helloRequest);
 
@@ -1552,7 +1552,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     const TofuClient = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.Channels = null,
+        chnls: ?tofu.ChannelGroup = null,
         cfg: Configurator = undefined,
         cc: ?ClientConnector = null,
         helloBh: message.BinaryHeader = undefined,
@@ -1573,7 +1573,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
         }
 
         pub fn init(engine: Ampe, cfg: *Configurator) !Self {
-            const chnls: Channels = try engine.create();
+            const chnls: ChannelGroup = try engine.create();
             errdefer tofu.DestroyChannels(engine, chnls);
             const cc: ClientConnector = try ClientConnector.init(engine, chnls, cfg);
             errdefer cc.deinit();
@@ -1734,7 +1734,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 pub const TofuEchoServer = struct {
     const Self = @This();
     ampe: Ampe = undefined,
-    chnls: ?tofu.Channels = undefined,
+    chnls: ?tofu.ChannelGroup = undefined,
     cfg: Configurator = undefined,
     listenerBh: message.BinaryHeader = undefined,
     helloBh: message.BinaryHeader = undefined,

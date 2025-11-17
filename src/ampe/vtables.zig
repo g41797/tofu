@@ -6,7 +6,7 @@ pub const AmpeVTable = struct {
 
     put: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) void,
 
-    create: *const fn (ptr: ?*anyopaque) AmpeError!Channels,
+    create: *const fn (ptr: ?*anyopaque) AmpeError!ChannelGroup,
 
     destroy: *const fn (ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void,
 
@@ -22,7 +22,7 @@ pub const CHNLSVTable = struct {
 };
 
 const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;
-const Channels = @import("../ampe.zig").Channels;
+const ChannelGroup = @import("../ampe.zig").ChannelGroup;
 const message = @import("../message.zig");
 const AmpeError = @import("../status.zig").AmpeError;
 

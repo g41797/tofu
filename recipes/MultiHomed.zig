@@ -58,7 +58,7 @@ const assert = std.debug.assert;
 pub const tofu = @import("tofu");
 pub const Engine = tofu.Engine;
 pub const Ampe = tofu.Ampe;
-pub const Channels = tofu.Channels;
+pub const ChannelGroup = tofu.ChannelGroup;
 pub const Options = tofu.Options;
 pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
@@ -76,7 +76,7 @@ const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 ampe: ?Ampe = null,
 allocator: ?Allocator = null,
-chnls: ?Channels = null,
+chnls: ?ChannelGroup = null,
 srvcs: Services = undefined,
 lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
 thread: ?std.Thread = null,

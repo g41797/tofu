@@ -290,7 +290,7 @@ pub const ActiveChannels = struct {
         return true;
     }
 
-    pub fn channelsGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
+    pub fn channelGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 

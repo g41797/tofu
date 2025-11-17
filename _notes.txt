@@ -5,6 +5,8 @@ Posts
 
     https://ziggit.dev/t/allocators-and-thread-safety-and-not-only
     https://ziggit.dev/t/new-linkedlist-api-footgun
+    https://ziggit.dev/t/future-prospects-of-web-development-with-zig/12917
+    https://ziggit.dev/t/how-to-write-better-software-with-zig-loris-cro/12942
 
     https://ziggit.dev/t/zig-ways-of-the-code-reusing/10452/4
     https://ziggit.dev/t/wanted-zig-based-multithreaded-projects/10420
@@ -293,55 +295,11 @@ Remove background
 What is a test in zig?
     https://ziggit.dev/t/what-is-a-test-in-zig/8885
 
-tofu GitHub pages
-    https://g41797.github.io/tofu/
-
-
-Learn Hugo theme
-    https://learn.netlify.app/
-
-    Grav Documentation: https://learn.getgrav.org/
-    Why: Grav’s documentation uses the Learn theme,
-    showcasing its tutorial-driven layout, clean design, a
-    nd hierarchical navigation, perfect for explaining async messaging in Zig.
-
-
-    Hugo Learn Theme Demo: https://learn.netlify.app/en/
-
-    Why: While a demo, this site illustrates the Learn theme’s s
-    implicity and Markdown-driven structure, suitable for straightforward software docs.
-
-Add ananke
-     hugo new site docs
-     cd docs
-     ls -la
-     git submodule add https://github.com/theNewDynamic/gohugo-theme-ananke.git themes/ananke
-
-
-
-Relearn
-    https://mcshelby.github.io/hugo-theme-relearn/introduction/quickstart/
-    cd docs
-    git submodule add --depth 1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
-
 SIGPIPE when trying to serve file in an HTTP server with sendFile
     https://discord.com/channels/605571803288698900/1412812874178363519/1412812874178363519
 
 Working with writer = stream.writer(&w_buf).interface
     https://discord.com/channels/605571803288698900/1422544826339037245/1422760119049126002
-
-Kraiklyn hugo theme
-    https://themes.gohugo.io/themes/kraiklyn/
-
-    cd docs
-    git submodule add --depth 1 https://github.com/jsnjack/kraiklyn.git themes/kraiklyn
-
-mkdocs-sample
-    https://github.com/yriahi/mkdocs-sample
-    https://yriahi.github.io/mkdocs-sample/
-
-Mkdocs Material theme
-    https://github.com/squidfunk/mkdocs-material
 
  How to wait all threads?
     https://ziggit.dev/t/how-to-wait-all-threads/3094
@@ -387,3 +345,30 @@ Binding Methods in Zig
 
 Best pattern for callback parametrization
     https://ziggit.dev/t/best-pattern-for-callback-parametrization/12086/1
+
+Packages, Modules, Dependencies - Zig Build System Basics
+    https://youtu.be/jy7w_7JZYyw
+
+Turn off formatter
+    // zig fmt: off
+    pub const Square = enum(u6) {
+            a1, b1, c1, d1, e1, f1, g1, h1,
+            a2, b2, c2, d2, e2, f2, g2, h2,
+            a3, b3, c3, d3, e3, f3, g3, h3,
+            a4, b4, c4, d4, e4, f4, g4, h4,
+            a5, b5, c5, d5, e5, f5, g5, h5,
+            a6, b6, c6, d6, e6, f6, g6, h6,
+            a7, b7, c7, d7, e7, f7, g7, h7,
+            a8, b8, c8, d8, e8, f8, g8, h8,
+    };
+    // zig fmt: on
+
+Zigbook
+    https://www.zigbook.net/
+
+Zig-jwt
+    https://github.com/deatil/
+
+Zero-web-framework
+    https://ziggit.dev/t/zero-web-framework-introduction/13077/1
+

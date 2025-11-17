@@ -57,11 +57,11 @@ pub fn FindFreeTcpPort() !u16 {
     return std.mem.bigToNative(u16, addr.port);
 }
 
-/// Helper function to destroy Channels using defer.
+/// Helper function to destroy ChannelGroup using defer.
 /// Suitable for tests and simple examples.
-/// In production, Channels is long-lived, and destruction
+/// In production, ChannelGroup is long-lived, and destruction
 /// should handle errors differently.
-pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.Channels) void {
+pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.ChannelGroup) void {
     ampe.destroy(chnls) catch |err| {
         log.info("DestroyChannels failed with error {any}", .{err});
         return;

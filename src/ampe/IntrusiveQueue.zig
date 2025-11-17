@@ -15,7 +15,7 @@ pub fn IntrusiveQueue(comptime T: type) type {
         first: ?*T = null,
         last: ?*T = null,
 
-        /// Adds a item to the end of the queue.
+        /// Adds an item to the end of the queue.
         pub fn enqueue(fifo: *Self, msg: *T) void {
             msg.prev = null;
             msg.next = null;
@@ -28,6 +28,27 @@ pub fn IntrusiveQueue(comptime T: type) type {
             }
 
             fifo.last = msg;
+
+            return;
+        }
+
+        /// Adds an item to the front (head) of the queue.
+        pub fn pushFront(fifo: *Self, msg: *T) void {
+            msg.prev = null;
+            msg.next = null;
+
+            if (fifo.first) |first| {
+                // The current first item's previous pointer must point to the new message.
+                first.prev = msg;
+                // The new message's next pointer must point to the current first item.
+                msg.next = first;
+            } else {
+                // If the queue is empty, the new message is also the last item.
+                fifo.last = msg;
+            }
+
+            // The new message is now the first item.
+            fifo.first = msg;
 
             return;
         }

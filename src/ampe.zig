@@ -7,9 +7,9 @@
 /// They send and receive messages based on application logic.
 ///////////////////////////////////////////////////////////////////////////
 
-/// Defines the Channels interface for async message passing.
+/// Defines the ChannelGroup interface for async message passing.
 /// Supports two-way message exchange.
-pub const Channels = struct {
+pub const ChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.CHNLSVTable,
 
@@ -22,7 +22,7 @@ pub const Channels = struct {
     ///     - Returns an error.
     ///
     /// Safe for use in multiple threads.
-    pub fn sendToPeer(chnls: Channels, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
+    pub fn sendToPeer(chnls: ChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
         return chnls.vtable.sendToPeer(chnls.ptr, msg);
     }
 
@@ -40,11 +40,11 @@ pub const Channels = struct {
     /// Any returned error is the sign that any further should be stopped.
     ///
     ///  Call this in a loop in the same thread.
-    pub fn waitReceive(chnls: Channels, timeout_ns: u64) status.AmpeError!?*message.Message {
+    pub fn waitReceive(chnls: ChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
         return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
     }
 
-    /// Sends a message to the Channels' internal queue for processing after waitReceive.
+    /// Sends a message to the ChannelGroup' internal queue for processing after waitReceive.
     /// If msg.* is not null, the engine sets the message status to 'waiter_update'.
     /// After a successful send, sets msg.* to null to prevent reuse.
     /// No need to provide channel_number or similar details for this internal message.
@@ -52,7 +52,7 @@ pub const Channels = struct {
     /// If msg.* is null, creates a Signal with 'waiter_update' status and sends it.
     ///
     ///
-    /// Returns an error if Channels or engine is shutting down.
+    /// Returns an error if ChannelGroup or engine is shutting down.
     ///
     /// Use this from a different thread to:
     /// - Signal attention (msg.* is null).
@@ -62,7 +62,7 @@ pub const Channels = struct {
     /// The system does not support priority queues.
     ///
     /// Safe for use in multiple threads.
-    pub fn updateWaiter(chnls: Channels, update: *?*message.Message) status.AmpeError!void {
+    pub fn updateWaiter(chnls: ChannelGroup, update: *?*message.Message) status.AmpeError!void {
         return chnls.vtable.updateWaiter(chnls.ptr, update);
     }
 };
@@ -100,19 +100,19 @@ pub const Ampe = struct {
         ampe.vtable.put(ampe.ptr, msg);
     }
 
-    /// Creates new Channels.
+    /// Creates new ChannelGroup.
     ///
     /// Call destroy on the result to stop communication and free memory.
     ///
     /// Safe for use in multiple threads.
-    pub fn create(ampe: Ampe) status.AmpeError!Channels {
+    pub fn create(ampe: Ampe) status.AmpeError!ChannelGroup {
         return ampe.vtable.create(ampe.ptr);
     }
 
-    /// Destroys Channels, stops communication, and frees memory.
+    /// Destroys ChannelGroup, stops communication, and frees memory.
     ///
     /// Safe for use in multiple threads.
-    pub fn destroy(ampe: Ampe, chnls: Channels) status.AmpeError!void {
+    pub fn destroy(ampe: Ampe, chnls: ChannelGroup) status.AmpeError!void {
         return ampe.vtable.destroy(ampe.ptr, chnls.ptr);
     }
 

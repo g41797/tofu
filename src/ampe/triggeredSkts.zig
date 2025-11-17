@@ -371,7 +371,12 @@ pub const IoSkt = struct {
     }
 
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
-        ioskt.sendQ.enqueue(sndmsg);
+        // 2DO - oob messages should be place in the head of the queue
+        if (sndmsg.bhdr.proto.oob == .on) {
+            ioskt.sendQ.pushFront(sndmsg);
+        } else {
+            ioskt.sendQ.enqueue(sndmsg);
+        }
         return;
     }
 

@@ -18,6 +18,7 @@ Well, let’s say at least several kilograms for Zig.
 And then it hit me — **tofu**!
 
 Tofu is a simple product with almost no flavor. You can
+
 - eat it plain 
 - add a little spice and make something slightly better
 - or go all the way and create culinary masterpieces.
@@ -25,10 +26,26 @@ Tofu is a simple product with almost no flavor. You can
 And what I especially like:
 >[tofu is as good as you are a cook](https://www.reddit.com/r/vegan/comments/hguwpc/tofu_is_as_good_as_you_are_a_cook/)
 
-You'll use the tofu library in a similar way: 
+You'll use the tofu library in a similar way:
+
 - from minimal setups 
 - to more complex flows
 - and eventually distributed applications.
+
+## Features
+ 
+- **Message-Based**: Uses discrete messages for communication.
+- **Asynchronous**: Enables non-blocking message exchanges.
+- **Duplex**: Supports two-way communication.
+- **Peer-to-Peer**: Allows equal roles after connection establishment.
+- **Stream oriented transport** - TCP/IP and **U**nix **D**omain **S**ockets
+- **Multithread-friendly** - All APIs are safe for concurrent access.
+- **Memory management for messages** - internal message pool
+- **Backpressure management** - allows to control receive of messages
+- **Customizable application flows** - allows to build various application flows not restricted to request/response or pub/sub
+- **Simplest API** - you don't have to bother with or know the "guts" of socket interfaces
+
+
 
 ## A bit of history
 
@@ -36,7 +53,8 @@ You'll use the tofu library in a similar way:
 
 I started developing a similar system back in 2008, maintained it, and kept it running for years.
 
-That system powered all data transfer in a serious distributed environment 
+That system powered all data transfer in a serious distributed environment
+
 - from basic IPC 
 - to communication in a proprietary distributed file system.
 
@@ -45,9 +63,10 @@ We parted ways a few years ago, but I haven't heard any complaints yet.
 Corporate lawyers can relax — from that system I only took the _smell_
 ([precedent case about paying for smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html))
 
-By '_smell_' I mean the idea itself: 
-- message as the data and API
-- the philosophy of gradual evolution 
+By '_smell_' I mean the idea itself:
+
+- message as the _**data**_ and _**API**_
+- the philosophy of _**gradual evolution**_ 
   - starting from something simple 
   - and steadily growing into more advanced and powerful systems.
 
@@ -78,7 +97,7 @@ A link will be added when the project is ready for release.
   - [Zig on Discourse](https://ziggit.dev/)
 
 ## Last but not least
-⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu)!
+⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu) !
 
 
 
