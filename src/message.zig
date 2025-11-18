@@ -65,8 +65,14 @@ pub const BinaryHeader = packed struct {
     proto: ProtoFields = .{},
     status: u8 = 0,
     message_id: MessageID = 0,
-    text_headers_len: u16 = 0,
-    body_len: u16 = 0,
+
+    /// Used by engine for internal purposes.
+    /// Don't touch !!!
+    @"<thl>": u16 = 0,
+
+    /// Used by engine for internal purposes.
+    /// Don't touch !!!
+    @"<bl>": u16 = 0,
 
     /// Constant representing the size of the BinaryHeader in bytes (16 bytes).
     pub const BHSIZE = @sizeOf(BinaryHeader);
@@ -89,8 +95,8 @@ pub const BinaryHeader = packed struct {
                 .proto = self.proto, // ProtoFields are single byte, no endianness needed
                 .status = self.status, // Single byte, no endianness needed
                 .message_id = std.mem.nativeToBig(u64, self.message_id),
-                .text_headers_len = std.mem.nativeToBig(u16, self.text_headers_len),
-                .body_len = std.mem.nativeToBig(u16, self.body_len),
+                .@"<thl>" = std.mem.nativeToBig(u16, self.@"<thl>"),
+                .@"<bl>" = std.mem.nativeToBig(u16, self.@"<bl>"),
             };
             const src_le: *[BHSIZE]u8 = @ptrCast(&be_header);
             @memcpy(buf, src_le);
@@ -107,8 +113,8 @@ pub const BinaryHeader = packed struct {
         if (!is_be) {
             self.channel_number = std.mem.bigToNative(u16, self.channel_number);
             self.message_id = std.mem.bigToNative(u64, self.message_id);
-            self.text_headers_len = std.mem.bigToNative(u16, self.text_headers_len);
-            self.body_len = std.mem.bigToNative(u16, self.body_len);
+            self.@"<thl>" = std.mem.bigToNative(u16, self.@"<thl>");
+            self.@"<bl>" = std.mem.bigToNative(u16, self.@"<bl>");
         }
 
         return;
@@ -122,7 +128,7 @@ pub const BinaryHeader = packed struct {
 
         const tn = std.enums.tagName(MessageType, self.*.proto.mtype).?;
 
-        log.debug("{s} {s} chn {d} mid {d} thl {d} bl  {d}", .{ txt, tn, self.channel_number, self.message_id, self.text_headers_len, self.body_len });
+        log.debug("{s} {s} chn {d} mid {d} thl {d} bl  {d}", .{ txt, tn, self.channel_number, self.message_id, self.@"<thl>", self.@"<bl>" });
 
         return;
     }
@@ -333,13 +339,14 @@ pub const Message = struct {
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
 
-    /// 'Transient' fields - means does not transferred between peers.
+    /// 'Transient' field - means does not transferred between peers.
     /// Used by application. Engine does nothing with this field.
     /// Actually it's void* -  use with caution.
     /// One of the possible usages - transfer additional information
     /// to the 'waiter' via 'updateWaiter()'.
     @"<void*>": ?*anyopaque = null,
 
+    /// 'Transient' field - means does not transferred between peers.
     /// Used by engine for internal purposes.
     /// Don't touch !!!
     @"<ctx>": ?*anyopaque = null,
@@ -369,7 +376,8 @@ pub const Message = struct {
         return msg;
     }
 
-    /// Creates a deep copy of the Message, including its headers and body, except @"<ctx>".
+    /// Creates a deep copy of the Message, including its headers and body,
+    /// except @"<ctx>".  Dealing with @"<void*>" - on application.
     pub fn clone(self: *Message) !*Message {
         const alc = self.body.allocator;
         var msg = try alc.create(Message);
@@ -392,11 +400,14 @@ pub const Message = struct {
         return msg;
     }
 
-    /// Resets the message to its initial state, clearing headers and body.
+    /// Resets the message to its initial state,
+    /// clearing headers , body and transient fields.
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.reset();
         msg.body.reset();
+        msg.@"<void*>" = null;
+        msg.@"<ctx>" = null;
         return;
     }
 
@@ -516,8 +527,8 @@ pub const Message = struct {
         errdefer msg.*.bhdr.dumpMeta("illegal message");
 
         msg.bhdr.status = status_to_raw(.success);
-        msg.bhdr.body_len = 0;
-        msg.bhdr.text_headers_len = 0;
+        msg.bhdr.@"<bl>" = 0;
+        msg.bhdr.@"<thl>" = 0;
 
         const bhdr: BinaryHeader = msg.bhdr;
         const mtype = bhdr.proto.mtype;
@@ -595,9 +606,9 @@ pub const Message = struct {
             msg.bhdr.status = status_to_raw(.invalid_headers_len);
             return AmpeError.InvalidHeadersLen;
         }
-        msg.bhdr.text_headers_len = @intCast(actualHeadersLen);
+        msg.bhdr.@"<thl>" = @intCast(actualHeadersLen);
 
-        if ((msg.bhdr.text_headers_len == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
+        if ((msg.bhdr.@"<thl>" == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
             msg.bhdr.status = status_to_raw(.wrong_configuration);
             return AmpeError.WrongConfiguration;
         }
@@ -607,7 +618,7 @@ pub const Message = struct {
             msg.bhdr.status = status_to_raw(.invalid_body_len);
             return AmpeError.InvalidBodyLen;
         }
-        msg.bhdr.body_len = @intCast(actualBodyLen);
+        msg.bhdr.@"<bl>" = @intCast(actualBodyLen);
 
         if (msg.bhdr.message_id == 0) {
             msg.bhdr.message_id = next_mid();

@@ -372,3 +372,9 @@ Zig-jwt
 Zero-web-framework
     https://ziggit.dev/t/zero-web-framework-introduction/13077/1
 
+Sockets 101 : From a Beginners POV
+    https://mrinalxdev.github.io/mrinalxblogs/blogs/sockets.html
+
+Chilli CLI framework
+    https://github.com/CogitatorTech/chilli
+

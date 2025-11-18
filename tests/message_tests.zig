@@ -24,8 +24,8 @@ test "BinaryHeader marshalling and demarshalling" {
         },
         .status = 0xFF,
         .message_id = 0xAABBCCDDEEFF0011,
-        .text_headers_len = 0x5678,
-        .body_len = 0x9ABC,
+        .@"<thl>" = 0x5678,
+        .@"<bl>" = 0x9ABC,
     };
 
     var buf: [message.BinaryHeader.BHSIZE]u8 = undefined;
@@ -39,8 +39,8 @@ test "BinaryHeader marshalling and demarshalling" {
     try std.testing.expectEqual(header.proto.role, demarshaled.proto.role);
     try std.testing.expectEqual(header.status, demarshaled.status);
     try std.testing.expectEqual(header.message_id, demarshaled.message_id);
-    try std.testing.expectEqual(header.text_headers_len, demarshaled.text_headers_len);
-    try std.testing.expectEqual(header.body_len, demarshaled.body_len);
+    try std.testing.expectEqual(header.@"<thl>", demarshaled.@"<thl>");
+    try std.testing.expectEqual(header.@"<bl>", demarshaled.@"<bl>");
 }
 
 test "TextHeaderIterator no CRLF" {

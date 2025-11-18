@@ -579,8 +579,8 @@ pub const MsgSender = struct {
         const hlen = ms.msg.?.actual_headers_len();
         const blen = ms.msg.?.actual_body_len();
 
-        ms.msg.?.bhdr.body_len = @intCast(blen);
-        ms.msg.?.bhdr.text_headers_len = @intCast(hlen);
+        ms.msg.?.bhdr.@"<bl>" = @intCast(blen);
+        ms.msg.?.bhdr.@"<thl>" = @intCast(hlen);
 
         @memset(&ms.bh, ' ');
 
@@ -819,8 +819,8 @@ pub const MsgReceiver = struct {
 
             if (mr.vind == 0) {
                 mr.msg.?.bhdr.fromBytes(&mr.bh);
-                if (mr.msg.?.bhdr.text_headers_len > 0) {
-                    mr.iov[1].len = mr.msg.?.bhdr.text_headers_len;
+                if (mr.msg.?.bhdr.@"<thl>" > 0) {
+                    mr.iov[1].len = mr.msg.?.bhdr.@"<thl>";
 
                     // Allow direct receive to the buffer of appendable without copy
                     mr.msg.?.thdrs.buffer.alloc(mr.iov[1].len) catch {
@@ -828,8 +828,8 @@ pub const MsgReceiver = struct {
                     };
                     mr.msg.?.thdrs.buffer.change(mr.iov[1].len) catch unreachable;
                 }
-                if (mr.msg.?.bhdr.body_len > 0) {
-                    mr.iov[2].len = mr.msg.?.bhdr.body_len;
+                if (mr.msg.?.bhdr.@"<bl>" > 0) {
+                    mr.iov[2].len = mr.msg.?.bhdr.@"<bl>";
 
                     // Allow direct receive to the buffer of appendable without copy
                     mr.msg.?.body.alloc(mr.iov[2].len) catch {

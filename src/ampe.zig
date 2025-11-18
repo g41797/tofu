@@ -97,6 +97,15 @@ pub const Ampe = struct {
     ///
     /// Safe for use in multiple threads.
     pub fn put(ampe: Ampe, msg: *?*message.Message) void {
+        if (msg.* == null) {
+            return;
+        }
+
+        // Increase probability of failure if message is used in another thread
+        msg.*.?.reset();
+        msg.*.?.prev = null;
+        msg.*.?.next = null;
+
         ampe.vtable.put(ampe.ptr, msg);
     }
 
