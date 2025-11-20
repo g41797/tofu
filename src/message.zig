@@ -627,6 +627,42 @@ pub const Message = struct {
         return vc;
     }
 
+    /// For debugging - 0 is wrong channel number
+    /// Usually it's sign of simultaneous usage of Message
+    pub inline fn assert(msg: *Message) void {
+        if ((msg.*.bhdr.proto.origin == .application) and (msg.bhdr.channel_number == message.SpecialMinChannelNumber)) {
+            var bh: ?BinaryHeader = msg.bhVal();
+            if (bh != null) {
+                bh.?.dumpMeta(" !!!!! former header ?????");
+            }
+            std.debug.assert(msg.bhdr.channel_number != message.SpecialMinChannelNumber);
+        }
+        return;
+    }
+
+    // For debugging - save binary header within body
+    pub fn copyBh2Body(msg: *Message) void {
+        _ = message.structToSlice(message.BinaryHeader, &msg.*.bhdr, msg.*.body.buffer.?);
+        msg.*.body.change(@sizeOf(message.BinaryHeader)) catch unreachable;
+        return;
+    }
+
+    // For debugging - return binary header from body
+    // Returns null if body does not contains binary header (compare lengths)
+    pub fn bhVal(msg: *Message) ?message.BinaryHeader {
+        if (msg.*.actual_body_len() != @sizeOf(message.BinaryHeader)) {
+            return null;
+        }
+
+        var ret: message.BinaryHeader = .{};
+
+        if (!structFromSlice(message.BinaryHeader, msg.*.body.body().?, &ret)) {
+            return null;
+        }
+
+        return ret;
+    }
+
     /// Generates the next unique message ID using an atomic counter.
     pub fn next_mid() MessageID {
         return uid.fetchAdd(1, .monotonic);

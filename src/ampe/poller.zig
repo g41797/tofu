@@ -83,6 +83,8 @@ pub const Poll = struct {
     }
 
     fn buildFds(pl: *Poll) !usize {
+        var notifActivated: bool = false;
+
         pl.pollfdVtor.items.len = 0;
 
         var tcptr = pl.it.?.next();
@@ -109,6 +111,8 @@ pub const Poll = struct {
                 // const chN = tc.acn.chn;
 
                 if (tc.exp.notify == .on) {
+                    assert(tc.*.acn.chn == message.SpecialMaxChannelNumber);
+                    notifActivated = true;
                     events |= std.posix.POLL.IN;
                 }
                 if (tc.exp.send == .on) {
@@ -135,6 +139,10 @@ pub const Poll = struct {
             pl.pollfdVtor.append(.{ .fd = tc.getSocket(), .events = events, .revents = 0 }) catch {
                 return AmpeError.AllocationFailed;
             };
+        }
+
+        if (!notifActivated) {
+            return AmpeError.NotificationDisabled;
         }
 
         return pl.pollfdVtor.items.len;
@@ -239,6 +247,7 @@ pub const AmpeError = tofu.status.AmpeError;
 
 pub const ChannelNumber = tofu.message.ChannelNumber;
 pub const MessageID = tofu.message.MessageID;
+const message = tofu.message;
 
 const internal = @import("internal.zig");
 const Skt = internal.Skt;

@@ -180,6 +180,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
 
     cnfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
+    welcomeRequest.?.copyBh2Body();
     const wlcbh: BinaryHeader = try mh.*.chnls.?.sendToPeer(&welcomeRequest);
 
     const lstChannel: message.ChannelNumber = wlcbh.channel_number;

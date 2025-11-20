@@ -171,11 +171,21 @@ pub const TriggeredSkt = union(enum) {
     }
 
     pub fn addToSend(tsk: *TriggeredSkt, sndmsg: *Message) !void {
+        sndmsg.assert();
+
         return switch (tsk.*) {
             .io => tsk.*.io.addToSend(sndmsg),
             // Any attempt to send to listener is interpreted as close
-            .accept => return AmpeError.ChannelClosed,
-            inline else => return AmpeError.NotAllowed,
+            .accept => {
+                sndmsg.*.bhdr.dumpMeta("addToSend ChannelClosed");
+                assert(false);
+                return AmpeError.ChannelClosed;
+            },
+            inline else => {
+                sndmsg.*.bhdr.dumpMeta("addToSend NotAllowed");
+                assert(false);
+                return AmpeError.NotAllowed;
+            },
         };
     }
 
@@ -315,6 +325,8 @@ pub const IoSkt = struct {
         ios.byeWasSend = false;
         ios.alreadySend = null;
 
+        hello.assert();
+
         errdefer ios.skt.deinit();
 
         ios.addToSend(hello) catch unreachable;
@@ -371,7 +383,8 @@ pub const IoSkt = struct {
     }
 
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
-        // 2DO - oob messages should be place in the head of the queue
+        sndmsg.assert();
+
         if (sndmsg.bhdr.proto.oob == .on) {
             ioskt.sendQ.pushFront(sndmsg);
         } else {
@@ -569,6 +582,8 @@ pub const MsgSender = struct {
             m.destroy();
         }
 
+        msg.assert();
+
         ms.msg = msg;
         ms.iovPrepared = false;
 
@@ -588,6 +603,7 @@ pub const MsgSender = struct {
         ms.vind = 0;
 
         assert(ms.bh.len == message.BinaryHeader.BHSIZE);
+        ms.msg.?.assert();
 
         ms.iov[0] = .{ .base = &ms.bh, .len = ms.bh.len };
         ms.sndlen = ms.bh.len;
@@ -629,6 +645,8 @@ pub const MsgSender = struct {
         if (ms.msg == null) {
             return AmpeError.NotAllowed; // to  prevent bug
         }
+
+        ms.msg.?.assert();
 
         if (!ms.iovPrepared) {
             ms.prepare();

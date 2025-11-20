@@ -178,6 +178,7 @@ pub const EchoService = struct {
             echo.*.rest -= 1;
         }
 
+        msg.*.?.copyBh2Body();
         _ = echo.*.sendTo.?.sendToPeer(msg) catch |err| {
             log.warn("sendToPeer error {s}", .{@errorName(err)});
             return false;
@@ -294,6 +295,7 @@ pub const EchoClient = struct {
 
         self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
+        helloRequest.?.copyBh2Body();
         self.*.helloBh = try self.*.chnls.?.sendToPeer(&helloRequest);
 
         while (true) { // Re-connect is not supported
@@ -350,6 +352,7 @@ pub const EchoClient = struct {
 
             echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
+            echoRequest.?.copyBh2Body();
             _ = try self.*.chnls.?.sendToPeer(&echoRequest);
 
             while (true) { //
@@ -410,6 +413,7 @@ pub const EchoClient = struct {
         byeRequest.?.bhdr.proto.role = .signal;
         byeRequest.?.bhdr.proto.oob = .on;
 
+        byeRequest.?.copyBh2Body();
         _ = self.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
 
         // Wait close of the channel
@@ -444,6 +448,7 @@ pub const EchoClient = struct {
 
             self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
+            helloRequest.?.copyBh2Body();
             self.*.helloBh = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
 
             var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -478,6 +483,8 @@ pub const EchoClient = struct {
                 recvMsg.?.bhdr.proto.origin = .application;
                 recvMsg.?.bhdr.proto.role = .signal;
                 recvMsg.?.bhdr.proto.oob = .on;
+
+                recvMsg.?.copyBh2Body();
                 _ = self.*.chnls.?.sendToPeer(&recvMsg) catch unreachable;
                 return;
             }

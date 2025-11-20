@@ -378,3 +378,25 @@ Sockets 101 : From a Beginners POV
 Chilli CLI framework
     https://github.com/CogitatorTech/chilli
 
+Check state of UDS
+    ss -x | grep tofu - for all
+    ss -x | grep ntfr - for notifier
+
+    u_str ESTAB 70     0  /tmp/tofuYFJ1MWuUSjA.port 423037  * 423036
+
+    70 bytes of unread data waiting for its next read() or recv() call.
+
+    u_str ESTAB 0      0  /tmp/tofuPl6Yk9jlRnk.ntfr 490053  * 493831
+
+    The line describes a reliable, bi-directional local connection:
+
+        It's a Unix Stream Socket (u_str).
+
+        The connection is active and exchanging data (ESTAB).
+
+        The server is bound to the filesystem path /tmp/tofuYFJ1MWuUSjA.port.
+
+        The local receiving process has 70 bytes of data waiting for it in the buffer (Recv-Q).
+
+        There is no data waiting in the local send buffer to be delivered to the peer (Send-Q is 0).
+

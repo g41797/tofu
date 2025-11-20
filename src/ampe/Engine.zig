@@ -147,6 +147,8 @@ pub fn Destroy(eng: *Engine) void {
         eng.crtMtx.lock();
         defer eng.crtMtx.unlock();
 
+        log.warn("!!! engine will be destroyed !!!", .{});
+
         var waitEnabled: bool = true;
 
         eng._sendAlert(.shutdownStarted) catch {
@@ -213,6 +215,7 @@ fn create(ptr: ?*anyopaque) AmpeError!ChannelGroup {
 }
 
 fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
+    log.warn("!!! channel group will be destroyed !!!", .{});
     const eng: *Engine = @alignCast(@ptrCast(ptr));
     return eng._destroy(chnlsimpl);
 }
@@ -278,6 +281,7 @@ fn send_channels_cmd(eng: *Engine, chnlsimpl: ?*anyopaque, st: AmpeStatus) AmpeE
     errdefer eng._put(&msg);
 
     var cmd = msg.?;
+    cmd.bhdr.channel_number = message.SpecialMaxChannelNumber;
     cmd.bhdr.proto.mtype = .regular;
     cmd.bhdr.proto.role = .signal;
     cmd.bhdr.proto.origin = .engine;
@@ -357,6 +361,7 @@ fn _sendAlert(eng: *Engine, alrt: Notifier.Alert) AmpeError!void {
 
 fn createNotificationChannel(eng: *Engine) !void {
     var ntcn = eng.createDumbChannel();
+    ntcn.acn.chn = message.SpecialMaxChannelNumber;
     ntcn.resp2ac = true;
     ntcn.tskt = .{
         .notification = internal.triggeredSkts.NotificationSkt.init(eng.ntfr.receiver),
@@ -477,6 +482,12 @@ fn loop(eng: *Engine) void {
     var timeOut: i32 = 0;
 
     while (true) {
+        { // Section for delay during debug session
+            // 1_000_000_000    1 sec
+            // 1_000_000        1 mlsec
+            // std.time.sleep(50_000_000);
+        }
+
         eng.zchns();
 
         if (sendAckDone) {
@@ -572,20 +583,20 @@ fn validateChannels(eng: *Engine) void {
     }
 }
 
-fn processWaitTriggersFailure(eng: *Engine) void {
+inline fn processWaitTriggersFailure(eng: *Engine) void {
     // 2DO - Add failure processing
     _ = eng;
     return;
 }
 
-fn processTimeOut(eng: *Engine) void {
+inline fn processTimeOut(eng: *Engine) void {
     // Placeholder for idle processing
     _ = eng;
     return;
 }
 
 fn processNotify(eng: *Engine) !void {
-    const notfTrChnOpt = eng.trgrd_map.getPtr(0);
+    const notfTrChnOpt = eng.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
     assert(notfTrChnOpt != null);
     const notfTrChn = notfTrChnOpt.?;
     assert(notfTrChn.act.notify == .on);
@@ -644,7 +655,7 @@ fn storeMessageFromChannels(eng: *Engine) !void {
 
     eng.currMsg = currMsg;
     eng.currBhdr = currMsg.bhdr;
-
+    currMsg.assert();
     return;
 }
 
@@ -758,6 +769,8 @@ fn processMessageFromChannels(eng: *Engine) !void {
 
     const hint = eng.currNtfc.hint;
 
+    eng.currMsg.?.assert();
+
     switch (hint) {
         .HelloRequest => return eng.sendHelloRequest(),
         .WelcomeRequest => return eng.sendWelcomeRequest(),
@@ -773,6 +786,8 @@ fn processMessageFromChannels(eng: *Engine) !void {
 }
 
 fn processInternal(eng: *Engine) !void {
+    eng.currMsg.?.assert();
+
     var cmsg = eng.currMsg.?;
     const chnlsimpl: ?*MchnGroup = cmsg.bodyToPtr(MchnGroup);
     const grp = chnlsimpl.?;
@@ -839,6 +854,8 @@ fn processMarkedForDelete(eng: *Engine) !bool {
 }
 
 fn sendHelloRequest(eng: *Engine) !void {
+    eng.currMsg.?.assert();
+
     eng.createIoClientChannel() catch |err| {
         assert(eng.currMsg != null);
         eng.currMsg.?.bhdr.proto.role = .response;
@@ -852,6 +869,8 @@ fn sendHelloRequest(eng: *Engine) !void {
 }
 
 fn sendWelcomeRequest(eng: *Engine) !void {
+    eng.currMsg.?.assert();
+
     eng.createListenerChannel() catch |err| {
         log.info("createListenerChannel {d} failed with error {any}", .{ eng.currMsg.?.bhdr.channel_number, err });
 
@@ -866,6 +885,8 @@ fn sendWelcomeRequest(eng: *Engine) !void {
 }
 
 fn sendBye(eng: *Engine) !void {
+    eng.currMsg.?.assert();
+
     const bye: *Message = eng.currMsg.?;
 
     if ((bye.bhdr.proto.role == .signal) and (bye.bhdr.proto.oob == .on)) {
@@ -878,6 +899,8 @@ fn sendBye(eng: *Engine) !void {
 }
 
 fn sendToPeer(eng: *Engine) !void {
+    eng.currMsg.?.assert();
+
     const sendMsg: *Message = eng.currMsg.?;
     const chN = sendMsg.bhdr.channel_number;
 
@@ -898,6 +921,8 @@ fn sendToPeer(eng: *Engine) !void {
 }
 
 fn responseFailure(eng: *Engine, failure: AmpeStatus) void {
+    eng.currMsg.?.assert();
+
     defer eng.releaseToPool(&eng.currMsg);
 
     eng.currMsg.?.bhdr.status = status.status_to_raw(failure);
@@ -943,6 +968,8 @@ fn createDumbChannel(eng: *Engine) TriggeredChannel {
 }
 
 fn createIoClientChannel(eng: *Engine) AmpeError!void {
+    eng.currMsg.?.assert();
+
     const hello: *Message = eng.currMsg.?;
     const chN = hello.bhdr.channel_number;
     var tc = createDumbChannel(eng);
@@ -1021,6 +1048,8 @@ fn createIoServerChannel(eng: *Engine, lstchn: *TriggeredChannel) AmpeError!void
 }
 
 fn createListenerChannel(eng: *Engine) AmpeError!void {
+    eng.currMsg.?.assert();
+
     const welcome: *Message = eng.currMsg.?;
     const chN = welcome.bhdr.channel_number;
 
@@ -1105,6 +1134,10 @@ inline fn zchns(eng: *Engine) void {
         log.warn(" !!!! zero triggered channels !!!!", .{});
         std.time.sleep(1_000_000_000); // For breakpoint
     }
+
+    const notfTrChnOpt = eng.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
+    assert(notfTrChnOpt != null);
+
     return;
 }
 
@@ -1308,6 +1341,8 @@ const TriggeredChannel = struct {
     }
 
     pub inline fn addToSend(tchn: *TriggeredChannel, sndmsg: *Message) !void {
+        sndmsg.assert();
+
         return tchn.tskt.addToSend(sndmsg);
     }
 

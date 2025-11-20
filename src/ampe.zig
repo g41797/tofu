@@ -18,9 +18,10 @@ pub const ChannelGroup = struct {
     /// If the send starts successfully:
     ///     - Sets msg.* to null to prevent reuse.
     ///     - Returns a BinaryHeader for tracking.
-    /// If the message is invalid:
+    /// Otherwise
     ///     - Returns an error.
-    ///
+    ///     - If it isn't allowed to use message (e.g. failure during internal communication),
+    ///     also  sets msg.* to null
     /// Safe for use in multiple threads.
     pub fn sendToPeer(chnls: ChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
         return chnls.vtable.sendToPeer(chnls.ptr, msg);

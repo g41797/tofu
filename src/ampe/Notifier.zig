@@ -66,7 +66,21 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 pub fn init(allocator: Allocator) !Notifier {
     var tup: TempUdsPath = .{};
 
-    const socket_file = try tup.buildPath(allocator);
+    var socket_file = try tup.buildPath(allocator);
+
+    // "regular" uds path looks like:
+    // /tmp/tofuYFJ1MWuUSjA.port
+    //
+    // for notifier it will be:
+    // /tmp/tofuYFJ1MWuUSjA.ntfr
+    //
+    // Get status of notifier UDS on linux
+    // ss -x| grep tofu| grep ntfr
+    const original_sub: []const u8 = "port";
+    const replacement: []const u8 = "ntfr";
+    const index_opt = std.mem.indexOf(u8, socket_file, original_sub);
+    const target_slice: []u8 = socket_file[index_opt.? .. index_opt.? + replacement.len];
+    std.mem.copyForwards(u8, target_slice, replacement);
 
     var listSkt = try SCreator.createUdsListener(allocator, socket_file);
     defer listSkt.deinit();
@@ -82,6 +96,8 @@ pub fn init(allocator: Allocator) !Notifier {
     // Accept a sender connection - create receiver socket
     const receiver_fd = try posix.accept(listSkt.socket.?, null, null, posix.SOCK.NONBLOCK);
     errdefer posix.close(receiver_fd);
+
+    log.info(" notifier sender {d} receiver {d}", .{ senderSkt.socket.?, receiver_fd });
 
     return .{
         .sender = senderSkt.socket.?,
@@ -118,7 +134,9 @@ pub fn _isReadyToRecv(receiver: socket_t) bool {
 }
 
 pub fn isReadyToSend(ntfr: *Notifier) bool {
-    return _isReadyToSend(ntfr.sender);
+    _ = ntfr;
+    // temporary for debugging return _isReadyToSend(ntfr.sender);
+    return true;
 }
 
 pub fn _isReadyToSend(sender: socket_t) bool {
@@ -130,7 +148,8 @@ pub fn _isReadyToSend(sender: socket_t) bool {
         },
     };
 
-    const pollstatus = posix.poll(&spoll, poll_SEC_TIMEOUT) catch {
+    const pollstatus = posix.poll(&spoll, poll_SEC_TIMEOUT * 2) catch |err| {
+        log.warn(" !!! notifier {d} poll error {s}", .{ spoll[0].fd, @errorName(err) });
         return false;
     };
 
@@ -139,6 +158,7 @@ pub fn _isReadyToSend(sender: socket_t) bool {
     }
 
     if (spoll[0].revents & std.posix.POLL.HUP != 0) {
+        log.warn(" !!! notifier socket {d} error HUP", .{spoll[0].fd});
         return false;
     }
 
@@ -210,7 +230,8 @@ pub fn send_notification(sender: socket_t, notif: Notification) !void {
 
 pub inline fn sendByte(sender: socket_t, notif: u8) AmpeError!void {
     var byte_array = [_]u8{notif};
-    _ = std.posix.send(sender, &byte_array, 0) catch {
+    _ = std.posix.send(sender, &byte_array, 0) catch |err| {
+        log.warn(" !!! notifier {d} send error {s}", .{ sender, @errorName(err) });
         return AmpeError.NotificationFailed;
     };
     return;
@@ -236,6 +257,8 @@ pub fn recvAck(ntfr: *Notifier) !u8 {
 }
 
 pub fn deinit(ntfr: *Notifier) void {
+    log.warn("!!! notifiers will be destroyed !!!", .{});
+
     posix.close(ntfr.sender);
     posix.close(ntfr.receiver);
 }

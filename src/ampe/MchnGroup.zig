@@ -101,6 +101,11 @@ pub fn sendToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
             // Called on caller thread
             grp.engine.acns.removeChannel(sendMsg.bhdr.channel_number);
         }
+
+        if (err == AmpeError.NotificationFailed) {
+            amsg.* = null;
+        }
+
         return err;
     };
 
