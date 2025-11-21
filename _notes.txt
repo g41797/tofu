@@ -400,3 +400,8 @@ Check state of UDS
 
         There is no data waiting in the local send buffer to be delivered to the peer (Send-Q is 0).
 
+        # Check the default send buffer size
+        $ sysctl net.core.wmem_default
+
+        # Check the default receive buffer size
+        $ sysctl net.core.rmem_default

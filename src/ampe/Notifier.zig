@@ -64,6 +64,10 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 }
 
 pub fn init(allocator: Allocator) !Notifier {
+    return initTCP(allocator);
+}
+
+fn initUDS(allocator: Allocator) !Notifier {
     var tup: TempUdsPath = .{};
 
     var socket_file = try tup.buildPath(allocator);
@@ -81,6 +85,9 @@ pub fn init(allocator: Allocator) !Notifier {
     const index_opt = std.mem.indexOf(u8, socket_file, original_sub);
     const target_slice: []u8 = socket_file[index_opt.? .. index_opt.? + replacement.len];
     std.mem.copyForwards(u8, target_slice, replacement);
+
+    // Set as 'abstract socket' - linux only
+    socket_file[0] = 0;
 
     var listSkt = try SCreator.createUdsListener(allocator, socket_file);
     defer listSkt.deinit();
@@ -134,9 +141,9 @@ pub fn _isReadyToRecv(receiver: socket_t) bool {
 }
 
 pub fn isReadyToSend(ntfr: *Notifier) bool {
-    _ = ntfr;
-    // temporary for debugging return _isReadyToSend(ntfr.sender);
-    return true;
+    // _ = ntfr;
+    // return true;
+    return _isReadyToSend(ntfr.sender);
 }
 
 pub fn _isReadyToSend(sender: socket_t) bool {
@@ -263,6 +270,40 @@ pub fn deinit(ntfr: *Notifier) void {
     posix.close(ntfr.receiver);
 }
 
+fn initTCP(allocator: Allocator) !Notifier {
+    // Both server and client are on localhost.
+    const port = try tofu.FindFreeTcpPort();
+
+    const srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
+    const cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
+
+    var sc: SCreator.SocketCreator = SCreator.init(allocator);
+    sc.cnfgr = srvCfg;
+
+    var listSkt = try sc.createTcpServer();
+    defer listSkt.deinit();
+
+    // Create sender(client) socket
+    sc.cnfgr = cltCfg;
+    var senderSkt = try sc.createTcpClient();
+    errdefer senderSkt.deinit();
+
+    _ = try waitConnect(senderSkt.socket.?);
+
+    _ = try senderSkt.connect();
+
+    // Accept a sender connection - create receiver socket
+    const receiver_fd = try posix.accept(listSkt.socket.?, null, null, posix.SOCK.NONBLOCK);
+    errdefer posix.close(receiver_fd);
+
+    log.info(" notifier sender {d} receiver {d}", .{ senderSkt.socket.?, receiver_fd });
+
+    return .{
+        .sender = senderSkt.socket.?,
+        .receiver = receiver_fd,
+    };
+}
+
 const tofu = @import("../tofu.zig");
 
 const internal = @import("internal.zig");
@@ -279,6 +320,9 @@ const ValidCombination = message.ValidCombination;
 const status = tofu.status;
 const AmpeError = status.AmpeError;
 
+pub const configurator = tofu.configurator;
+pub const Configurator = configurator.Configurator;
+
 const Skt = internal.Skt;
 const SCreator = internal.SocketCreator;
 
@@ -294,7 +338,10 @@ const POLL = system.POLL;
 const Allocator = std.mem.Allocator;
 
 // Get list of connected uds
-// ss -x|grep yaaamp
+// ss -x|grep tofu
+
+// Get list of connected notifiers
+// ss -x|grep ntfr
 
 // 2DO  Add Windows implementation: TCP 127.0.0.1:0 instead of UDS
 

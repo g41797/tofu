@@ -488,7 +488,7 @@ fn loop(eng: *Engine) void {
             // std.time.sleep(50_000_000);
         }
 
-        eng.zchns();
+        eng.vchns();
 
         if (sendAckDone) {
             timeOut = poll_SEC_TIMEOUT * 3; // was poll_INFINITE_TIMEOUT;
@@ -1129,14 +1129,16 @@ fn cleanMboxes(eng: *Engine) void {
 }
 
 // Run-time validators
-inline fn zchns(eng: *Engine) void {
+inline fn vchns(eng: *Engine) void {
     if (eng.trgrd_map.count() == 0) {
         log.warn(" !!!! zero triggered channels !!!!", .{});
         std.time.sleep(1_000_000_000); // For breakpoint
     }
 
-    const notfTrChnOpt = eng.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
+    const notfTrChnOpt: ?*TriggeredChannel = eng.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
     assert(notfTrChnOpt != null);
+
+    assert(notfTrChnOpt.?.*.tskt.notification.getSocket() == eng.*.ntfr.receiver);
 
     return;
 }
