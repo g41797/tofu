@@ -1,47 +1,83 @@
-const std = @import("std");
-const posix = std.posix;
-const Allocator = std.mem.Allocator;
-const log = std.log;
-const assert = std.debug.assert;
-
 const cookbook = @This();
 
+const std = @import("std");
+const log = std.log;
+const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
+
+const testing = std.testing;
+const alctr = std.testing.allocator;
+
+// Import of module 'tofu'
 pub const tofu = @import("tofu");
-pub const Engine = tofu.Engine;
+
+// Reactor: The single-threaded, event-driven implementation
+// of the Ampe interface. It utilizes the Reactor pattern to multiplex
+// non-blocking socket I/O via an internal poll-style loop.
+pub const Reactor = tofu.Reactor;
+
 pub const Ampe = tofu.Ampe;
-pub const ChannelGroup = tofu.ChannelGroup;
+
+// Contains settings for the internal message pool.
 pub const Options = tofu.Options;
+
+// The default configuration options for the pool.
 pub const DefaultOptions = tofu.DefaultOptions;
+
+// A grouping mechanism for managing a collection of related channels.
+pub const ChannelGroup = tofu.ChannelGroup;
+
+pub const message = tofu.message;
+
+// The core Message structure processed by the engine.
+pub const Message = tofu.Message;
+
+// Meta-data for the Message.
+// Used internally by the engine for routing and by the application for context.
+pub const BinaryHeader = message.BinaryHeader;
+
+pub const status = tofu.status;
+// An enum representation of the status byte
+// (part of BinaryHeader) for clear status tracking.
+pub const AmpeStatus = status.AmpeStatus;
+// An error type corresponding to the status above,
+// used for conveying failure states.
+pub const AmpeError = status.AmpeError;
+
+// Helpers - for convenient injection of socket addresses
+// to the message.
 pub const configurator = tofu.configurator;
 pub const Configurator = configurator.Configurator;
-pub const TCPClientConfigurator = configurator.TCPClientConfigurator;
-pub const status = tofu.status;
-pub const message = tofu.message;
-pub const BinaryHeader = message.BinaryHeader;
-pub const Message = message.Message;
 
 pub const services = @import("services.zig");
 
 pub fn createDestroyMain(gpa: Allocator) !void {
-    var eng = try Engine.Create(gpa, DefaultOptions);
-    defer eng.Destroy();
+    var rtr = try Reactor.Create(gpa, DefaultOptions);
+    defer rtr.Destroy();
 }
 
-pub fn createDestroyEngine(gpa: Allocator) !void {
-    var eng = try Engine.Create(gpa, DefaultOptions);
-    defer eng.Destroy();
+pub fn createDestroyAmpe(gpa: Allocator) !void {
+    // Create engine implementation object
+    var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
 
-    const ampe = try eng.ampe();
+    // Destroy it after return or on error
+    defer rtr.*.Destroy();
 
-    // No need to destroy ampe. It is an interface provided by Engine.
+    // Create ampe interface
+    const ampe: Ampe = try rtr.ampe();
+
     _ = ampe;
+
+    // No need to destroy ampe itself.
+    // It is an interface provided by Reactor.
+    // It will be destroyed via  rtr.*.Destroy().
 }
 
 pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
-    var eng = try Engine.Create(gpa, DefaultOptions);
-    defer eng.Destroy();
+    var rtr = try Reactor.Create(gpa, DefaultOptions);
+    defer rtr.Destroy();
 
-    const ampe = try eng.ampe();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
 
@@ -57,9 +93,9 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -67,7 +103,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     var msg1 = try ampe.get(tofu.AllocationStrategy.always);
 
     // If msg1 is not null, return it to the pool.
-    // Pool is cleaned during eng.Destroy().
+    // Pool is cleaned during rtr.Destroy().
     defer ampe.put(&msg1);
 
     if (msg1 == null) {
@@ -96,16 +132,16 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    const rtr: *tofu.Reactor = try tofu.Reactor.Create(gpa, options);
+    defer rtr.*.Destroy();
+    const ampe = try rtr.*.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer ampe.destroy(chnls) catch {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*tofu.Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // Message from the pool is not ready for sending.
@@ -122,9 +158,9 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer ampe.destroy(chnls) catch {
@@ -153,9 +189,9 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer ampe.destroy(chnls) catch {
@@ -186,9 +222,9 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -204,7 +240,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Example: TCP server address is "tofu.server.zig", port 3298.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -224,9 +260,9 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
         .maxPoolMsgs = 64, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -242,7 +278,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // Example: TCP server address is "127.0.0.1", port 32987.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Configurator = .{ .tcp_client = TCPClientConfigurator.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
+    var cnfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
@@ -264,9 +300,9 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe = try eng.ampe();
+    var rtr = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe = try rtr.ampe();
 
     const chnls = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -295,7 +331,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     return status.raw_to_error(st);
 }
 
-pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
+pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
     // Configuration is a TextHeader added to the message's TextHeaders.
@@ -308,7 +344,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, false);
 }
 
-pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
+pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
     // UDS (Unix Domain Socket) uses a file path for communication on the same machine,
     // unlike network sockets that use IP addresses and ports.
 
@@ -325,7 +361,7 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !status.AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, false);
 }
 
-pub fn handleStartOfTcpListeners(gpa: Allocator) !status.AmpeStatus {
+pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
     // Configuration is a TextHeader added to the message's TextHeaders.
@@ -338,7 +374,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !status.AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, true);
 }
 
-pub fn handleStartOfUdsListeners(gpa: Allocator) !status.AmpeStatus {
+pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
     // UDS (Unix Domain Socket) uses a file path for communication on the same machine,
     // unlike network sockets that use IP addresses and ports.
 
@@ -355,7 +391,7 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !status.AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, true);
 }
 
-pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bool) !status.AmpeStatus {
+pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bool) !AmpeStatus {
     // Same code for TCP and UDS servers, only configuration differs.
 
     const options: tofu.Options = .{
@@ -363,9 +399,9 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -396,7 +432,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
     // Run of the same listener should fail with status TBD
     if (runTheSame) {
-        const lst: status.AmpeStatus = try handleStartOfListener(gpa, cnfg, false);
+        const lst: AmpeStatus = try handleStartOfListener(gpa, cnfg, false);
         return lst;
     }
 
@@ -407,7 +443,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     return status.raw_to_status(st);
 }
 
-pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port = try tofu.FindFreeTcpPort();
 
@@ -417,7 +453,7 @@ pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!status.AmpeStatu
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
     const filePath = try tup.buildPath(gpa);
@@ -428,7 +464,7 @@ pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!status.AmpeStatu
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
 
@@ -440,9 +476,9 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe: Ampe = try rtr.ampe();
 
     // For simplicity, use the same ChannelGroup for client and server.
     // In production, you can use separate ChannelGroup for each.
@@ -456,7 +492,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     // If pool is empty, poolOnly strategy returns null.
     if (welcomeRequest == null) {
-        // Create a message directly using the same allocator as Engine.Create.
+        // Create a message directly using the same allocator as Reactor.Create.
         welcomeRequest = Message.create(gpa) catch unreachable;
     }
 
@@ -588,7 +624,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     var closeListenerResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
     defer ampe.put(&closeListenerResp);
 
-    assert(closeListenerResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+    assert(closeListenerResp.?.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
 
     // Close one of the client channels.
     var closeClient: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
@@ -608,7 +644,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     for (0..2) |_| {
         var closeClientResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
         defer ampe.put(&closeClientResp);
-        assert(closeClientResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+        assert(closeClientResp.?.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
     }
 
     // Tofu programming mainly involves setting message data.
@@ -621,15 +657,15 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     return status.raw_to_status(st);
 }
 
-pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
     const options: tofu.Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe: Ampe = try rtr.ampe();
     const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
@@ -668,7 +704,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!status.AmpeStatus {
     return status.raw_to_status(attention.?.bhdr.status);
 }
 
-pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
@@ -677,7 +713,7 @@ pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!status.AmpeS
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
     const filePath = try tup.buildPath(gpa);
@@ -688,23 +724,23 @@ pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!status.AmpeS
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     const options: tofu.Options = .{
         .initialPoolMsgs = 1024, // Example value.
         .maxPoolMsgs = 1024, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe: Ampe = try rtr.ampe();
 
     const TofuClient = struct {
         const Self = @This();
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = undefined,
+        chnls: ?ChannelGroup = undefined,
         cfg: Configurator = undefined,
-        result: ?status.AmpeStatus = undefined,
+        result: ?AmpeStatus = undefined,
 
         fn runOnThread(self: *Self) void {
             while (true) {
@@ -785,7 +821,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
         pub fn Create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
             const result: *Self = allocator.create(Self) catch {
-                return status.AmpeError.AllocationFailed;
+                return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
@@ -794,7 +830,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 .ampe = engine,
                 .cfg = cfg.*,
                 .chnls = try engine.create(),
-                .result = status.AmpeStatus.success,
+                .result = AmpeStatus.success,
             };
             return result;
         }
@@ -819,9 +855,9 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         const Self = @This();
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = undefined,
+        chnls: ?ChannelGroup = undefined,
         cfg: Configurator = undefined,
-        result: ?status.AmpeStatus = .unknown_error,
+        result: ?AmpeStatus = .unknown_error,
 
         fn runOnThread(self: *Self) void {
             while (true) { // Create listener
@@ -908,7 +944,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
         pub fn Create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
             const result: *Self = allocator.create(Self) catch {
-                return status.AmpeError.AllocationFailed;
+                return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
@@ -917,7 +953,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 .ampe = engine,
                 .cfg = cfg.*,
                 .chnls = try engine.create(),
-                .result = status.AmpeStatus.unknown_error,
+                .result = AmpeStatus.unknown_error,
             };
 
             result.* = srv;
@@ -979,7 +1015,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     return .success;
 }
 
-pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
@@ -988,7 +1024,7 @@ pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!status.AmpeS
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
     const filePath = try tup.buildPath(gpa);
@@ -999,7 +1035,7 @@ pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!status.AmpeS
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
 
@@ -1010,26 +1046,26 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     // Just for example - let's create two engines :-)
 
-    var engA: *Engine = try Engine.Create(gpa, options);
+    var engA: *Reactor = try Reactor.Create(gpa, options);
     defer engA.Destroy();
     const ampeA: Ampe = try engA.ampe();
 
-    var engB: *Engine = try Engine.Create(gpa, options);
+    var engB: *Reactor = try Reactor.Create(gpa, options);
     defer engB.Destroy();
     const ampeB: Ampe = try engB.ampe();
 
     const TofuServer = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = undefined,
+        chnls: ?ChannelGroup = undefined,
         cfg: Configurator = undefined,
-        helloBh: message.BinaryHeader = undefined,
+        helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
             const allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
-                return status.AmpeError.AllocationFailed;
+                return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
@@ -1168,15 +1204,15 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     const TofuClient = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = undefined,
+        chnls: ?ChannelGroup = undefined,
         cfg: Configurator = undefined,
-        helloBh: message.BinaryHeader = undefined,
+        helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
             const allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
-                return status.AmpeError.AllocationFailed;
+                return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
@@ -1280,12 +1316,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         },
 
                         .invalid_address => {
-                            return status.AmpeError.InvalidAddress;
+                            return AmpeError.InvalidAddress;
                         },
 
                         .uds_path_not_found => { // Up to developer, possibly uds listener was not started
                             break; // connect should be repeated - my decision for the test
-                            // or return status.AmpeError.UdsPathNotFound
+                            // or return AmpeError.UdsPathNotFound
                         },
 
                         .channel_closed => { // ????
@@ -1417,13 +1453,13 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     // wait ByeRequest on server and ByeResponse on client
     if ((try tSr.recvByeRequest_sendByeResponse(std.time.ns_per_ms * 100)) and (try tCl.recvByeResponse(std.time.ns_per_ms * 100))) {
-        return status.AmpeStatus.success;
+        return AmpeStatus.success;
     }
 
-    return status.AmpeStatus.communication_failed;
+    return AmpeStatus.communication_failed;
 }
 
-pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!status.AmpeStatus {
+pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
     const filePath = try tup.buildPath(gpa);
@@ -1434,24 +1470,24 @@ pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!
     return handleReConnectViaConnector(gpa, &srvCfg, &cltCfg);
 }
 
-pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!status.AmpeStatus {
+pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     const options: tofu.Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var eng: *Engine = try Engine.Create(gpa, options);
-    defer eng.Destroy();
-    const ampe: Ampe = try eng.ampe();
-    defer tofu.DestroyChannels(eng, ampe);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
+    defer rtr.Destroy();
+    const ampe: Ampe = try rtr.ampe();
+    defer tofu.DestroyChannels(rtr, ampe);
 
     // Helper object - for re-connect logic
     const ClientConnector = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = undefined,
+        chnls: ?ChannelGroup = undefined,
         helloRequest: ?*Message = undefined,
-        helloBh: ?message.BinaryHeader = undefined,
+        helloBh: ?BinaryHeader = undefined,
         connected: bool = undefined,
 
         pub fn init(engine: Ampe, chnls: ChannelGroup, cfg: *Configurator) !Self {
@@ -1514,8 +1550,8 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             }
 
             switch (status.raw_to_status(recvd.*.?.bhdr.status)) {
-                .invalid_address => return status.AmpeError.InvalidAddress,
-                .uds_path_not_found => return status.AmpeError.UDSPathNotFound,
+                .invalid_address => return AmpeError.InvalidAddress,
+                .uds_path_not_found => return AmpeError.UDSPathNotFound,
                 .recv_failed, .send_failed => {
                     cc.*.helloBh = null;
                     return false;
@@ -1552,16 +1588,16 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     const TofuClient = struct {
         const Self = @This();
         ampe: Ampe = undefined,
-        chnls: ?tofu.ChannelGroup = null,
+        chnls: ?ChannelGroup = null,
         cfg: Configurator = undefined,
         cc: ?ClientConnector = null,
-        helloBh: message.BinaryHeader = undefined,
+        helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
             const allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
-                return status.AmpeError.AllocationFailed;
+                return AmpeError.AllocationFailed;
             };
             result.* = .{};
 
@@ -1725,25 +1761,25 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 
     // wait ByeRequest on server and ByeResponse on client
     if ((try tSr.recvByeRequest_sendByeResponse(std.time.ns_per_ms * 100)) and (try tCl.recvByeResponse(std.time.ns_per_ms * 100))) {
-        return status.AmpeStatus.success;
+        return AmpeStatus.success;
     }
 
-    return status.AmpeStatus.communication_failed;
+    return AmpeStatus.communication_failed;
 }
 
 pub const TofuEchoServer = struct {
     const Self = @This();
     ampe: Ampe = undefined,
-    chnls: ?tofu.ChannelGroup = undefined,
+    chnls: ?ChannelGroup = undefined,
     cfg: Configurator = undefined,
-    listenerBh: message.BinaryHeader = undefined,
-    helloBh: message.BinaryHeader = undefined,
+    listenerBh: BinaryHeader = undefined,
+    helloBh: BinaryHeader = undefined,
     connected: bool = undefined,
 
     pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
         const allocator = engine.getAllocator();
         const result: *Self = allocator.create(Self) catch {
-            return status.AmpeError.AllocationFailed;
+            return AmpeError.AllocationFailed;
         };
         errdefer allocator.destroy(result);
 
@@ -1882,7 +1918,7 @@ pub inline fn sleep10MlSec() void {
     std.time.sleep(1_000_000_0);
 }
 
-pub fn handleEchoClientServer(allocator: Allocator) !status.AmpeStatus {
+pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
 
     // Prepare configurators: TCP client/server, UDS client/server
     const tcpPort: u16 = try tofu.FindFreeTcpPort();

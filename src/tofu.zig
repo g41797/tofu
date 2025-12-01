@@ -13,9 +13,16 @@ pub const waitReceive_SEC_TIMEOUT = @import("ampe.zig").waitReceive_SEC_TIMEOUT;
 pub const DBG = @import("ampe.zig").DBG;
 
 pub const configurator = @import("configurator.zig");
+
 pub const message = @import("message.zig");
+pub const Message = message.Message;
+pub const BinaryHeader = message.BinaryHeader;
+
 pub const status = @import("status.zig");
-pub const Engine = @import("ampe/Engine.zig");
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
+
+pub const Reactor = @import("ampe/Reactor.zig");
 
 // For test lovers
 pub const TempUdsPath = @import("ampe/testHelpers.zig").TempUdsPath;

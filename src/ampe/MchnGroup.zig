@@ -5,7 +5,7 @@ pub const MchnGroup = @This();
 
 pub const GroupId = ?u32;
 
-engine: *Engine = undefined,
+engine: *Reactor = undefined,
 id: GroupId = null,
 allocator: Allocator = undefined,
 msgs: [2]MSGMailBox = undefined,
@@ -23,7 +23,7 @@ pub fn chnls(grp: *MchnGroup) ChannelGroup {
     return result;
 }
 
-pub fn Create(engine: *Engine, id: ?u32) AmpeError!*MchnGroup {
+pub fn Create(engine: *Reactor, id: ?u32) AmpeError!*MchnGroup {
     const grp = engine.allocator.create(MchnGroup) catch {
         return AmpeError.AllocationFailed;
     };
@@ -38,7 +38,7 @@ pub fn Destroy(grp: *MchnGroup) void {
     gpa.destroy(grp);
 }
 
-fn init(engine: *Engine, id: ?u32) MchnGroup {
+fn init(engine: *Reactor, id: ?u32) MchnGroup {
     const grp: MchnGroup = .{
         .engine = engine,
         .id = id,
@@ -206,7 +206,7 @@ pub const Message = message.Message;
 pub const MessageID = message.MessageID;
 pub const VC = message.ValidCombination;
 
-pub const Engine = tofu.Engine;
+pub const Reactor = tofu.Reactor;
 
 const ChannelGroup = tofu.ChannelGroup;
 const AllocationStrategy = tofu.AllocationStrategy;

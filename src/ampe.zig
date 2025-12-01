@@ -34,7 +34,7 @@ pub const ChannelGroup = struct {
     /// Messages can come from three sources:
     /// - Peer (via sendToPeer from the other side).
     /// - Application (via updateWaiter on the same channels).
-    /// - Engine (sends status messages to the internal queue).
+    /// - Ampe (sends status messages to the internal queue).
     ///
     /// Use BinaryHeader of the received message to identify the message source.
     ///

@@ -139,7 +139,7 @@ pub const ActiveChannels = struct {
         cns.active.deinit();
     }
 
-    // Called on both caller and Engine threads
+    // Called on both caller and Reactor threads
     pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) ActiveChannel {
         cns.mutex.lock();
         defer cns.mutex.unlock();
@@ -228,7 +228,7 @@ pub const ActiveChannels = struct {
         return;
     }
 
-    // Called only on Engine thread
+    // Called only on Reactor thread
     pub fn removeChannels(cns: *ActiveChannels, ptr: ?*anyopaque) !usize {
         cns.mutex.lock();
         defer cns.mutex.unlock();

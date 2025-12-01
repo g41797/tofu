@@ -96,7 +96,7 @@ fn test_connect_disconnect() !void {
 fn test_ampe_just_create_destroy() !void {
     std.testing.log_level = .debug;
     try recipes.createDestroyMain(gpa);
-    try recipes.createDestroyEngine(gpa);
+    try recipes.createDestroyAmpe(gpa);
     try recipes.createDestroyMessageChannelGroup(gpa);
 }
 
@@ -290,7 +290,7 @@ const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
 const AmpeError = status.AmpeError;
 
-const Engine = tofu.Engine;
+const Reactor = tofu.Reactor;
 
 const std = @import("std");
 const Thread = std.Thread;

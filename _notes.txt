@@ -405,3 +405,6 @@ Check state of UDS
 
         # Check the default receive buffer size
         $ sysctl net.core.rmem_default
+
+    Static Website Server Generator in Zig
+        https://github.com/Mariuspersen/Ztatic/tree/multiwebsitehosting

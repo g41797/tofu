@@ -177,7 +177,7 @@ pub const Exchanger = struct {
     }
 
     pub fn waitConnectClient(exc: *Exchanger) !void {
-        var it = Engine.Iterator.init(&exc.tcm.?);
+        var it = Reactor.Iterator.init(&exc.tcm.?);
 
         var trgrs: internal.triggeredSkts.Triggers = .{};
 
@@ -230,7 +230,7 @@ pub const Exchanger = struct {
 
                     try exc.tcm.?.put(exc.srvCN, srv);
 
-                    it = Engine.Iterator.init(&exc.tcm.?);
+                    it = Reactor.Iterator.init(&exc.tcm.?);
 
                     serverReady = true;
                     log.debug("wait connected client - server ready", .{});
@@ -321,7 +321,7 @@ pub const Exchanger = struct {
             return;
         }
 
-        const it = Engine.Iterator.init(&exc.tcm.?);
+        const it = Reactor.Iterator.init(&exc.tcm.?);
 
         var loop: usize = 1;
 
@@ -389,7 +389,7 @@ pub const Exchanger = struct {
     }
 
     fn closeChannels(exc: *Exchanger) void {
-        var it = Engine.Iterator.init(&exc.tcm.?);
+        var it = Reactor.Iterator.init(&exc.tcm.?);
 
         var next = it.next();
 
@@ -515,7 +515,7 @@ const MessageID = message.MessageID;
 const VC = message.ValidCombination;
 const CN = message.ChannelNumber;
 
-const Engine = tofu.Engine;
+const Reactor = tofu.Reactor;
 const TCM = internal.TriggeredChannelsMap;
 const TC = internal.TriggeredChannel;
 

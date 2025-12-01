@@ -8,7 +8,7 @@ pub const Poller = union(enum) {
     poll: Poll,
 
     // it == null means iterator was not changed since previous call, use saved
-    pub fn waitTriggers(self: *Poller, it: ?Engine.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(self: *Poller, it: ?Reactor.Iterator, timeout: i32) AmpeError!Triggers {
         const ret = switch (self.*) {
             .poll => try self.*.poll.waitTriggers(it, timeout),
         };
@@ -32,7 +32,7 @@ pub const Poller = union(enum) {
 pub const Poll = struct {
     allocator: Allocator = undefined,
     pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
-    it: ?Engine.Iterator = null,
+    it: ?Reactor.Iterator = null,
 
     pub fn init(allocator: Allocator) !Poll {
         var ret: Poll = .{
@@ -52,7 +52,7 @@ pub const Poll = struct {
         return;
     }
 
-    pub fn waitTriggers(pl: *Poll, it: ?Engine.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(pl: *Poll, it: ?Reactor.Iterator, timeout: i32) AmpeError!Triggers {
         // const pl: *Poll = @alignCast(@ptrCast(ptr));
 
         if ((pl.it == null) and (it == null)) {
@@ -257,9 +257,9 @@ const TriggeredSkt = internal.TriggeredSkt;
 
 const ActiveChannel = @import("channels.zig").ActiveChannel;
 
-const Engine = tofu.Engine;
-const TriggeredChannel = Engine.TriggeredChannel;
-const TriggeredChannelsMap = Engine.TriggeredChannelsMap;
+const Reactor = tofu.Reactor;
+const TriggeredChannel = Reactor.TriggeredChannel;
+const TriggeredChannelsMap = Reactor.TriggeredChannelsMap;
 
 const std = @import("std");
 const assert = std.debug.assert;

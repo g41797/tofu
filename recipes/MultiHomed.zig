@@ -56,7 +56,7 @@ const log = std.log;
 const assert = std.debug.assert;
 
 pub const tofu = @import("tofu");
-pub const Engine = tofu.Engine;
+pub const Reactor = tofu.Reactor;
 pub const Ampe = tofu.Ampe;
 pub const ChannelGroup = tofu.ChannelGroup;
 pub const Options = tofu.Options;

@@ -6,7 +6,7 @@ const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;
 
 pub const tofu = @import("tofu");
-pub const Engine = tofu.Engine;
+pub const Reactor = tofu.Reactor;
 pub const Ampe = tofu.Ampe;
 pub const ChannelGroup = tofu.ChannelGroup;
 pub const configurator = tofu.configurator;
@@ -525,7 +525,7 @@ pub const EchoClient = struct {
 /// Example of echo client - server communication
 pub const EchoClientServer = struct {
     gpa: Allocator = undefined,
-    engine: ?*Engine = null,
+    engine: ?*Reactor = null,
     ampe: Ampe = undefined,
     mh: ?*MultiHomed = null,
     ack: mailbox.MailBoxIntrusive(EchoClient) = .{},
@@ -546,7 +546,7 @@ pub const EchoClientServer = struct {
         ecs.echsrv = try ecs.gpa.create(EchoService);
         ecs.echsrv.?.* = .{};
 
-        ecs.engine = try Engine.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
+        ecs.engine = try Reactor.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
         ecs.ampe = try ecs.engine.?.*.ampe();
 
         ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.*.services());
