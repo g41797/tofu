@@ -100,7 +100,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     const chnls = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
-    var msg1 = try ampe.get(tofu.AllocationStrategy.always);
+    var msg1: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // If msg1 is not null, return it to the pool.
     // Pool is cleaned during rtr.Destroy().

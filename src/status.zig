@@ -3,9 +3,9 @@
 
 pub const AmpeStatus = enum(u8) {
     success = 0,
+    not_implemented_yet,
     wrong_configuration,
     not_allowed,
-    not_implemented_yet,
     null_message,
     invalid_message,
     invalid_message_type,
@@ -33,7 +33,7 @@ pub const AmpeStatus = enum(u8) {
     send_failed,
     recv_failed,
     setsockopt_failed,
-    processing_failed, // You can use it as application status
+    processing_failed,
     unknown_error,
 };
 
@@ -68,7 +68,7 @@ pub const AmpeError = error{
     SendFailed,
     RecvFailed,
     SetsockoptFailed,
-    ProcessingFailed, // You can use it as application error
+    ProcessingFailed,
     UnknownError,
 };
 
