@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-///////////////////////////////////////////////////////////////////////////
+// 2DO - Define error set(s) for errors returned by ChannelGroup and Ampe
+
+// ///////////////////////////////////////////////////////////////////////
 /// Client and server terms are used only for the initial handshake.
 /// After the handshake, both sides (called peers) are equal.
 /// They send and receive messages based on application logic.
