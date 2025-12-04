@@ -1,75 +1,199 @@
-/* Standardized button sizes */
+/* ============================================
+   FONT SIZE CONFIGURATION - LARGE SIZES
+   ============================================ */
+
+/* Base font size - affects all body text */
+:root {
+    font-size: 18px !important;  /* Increase base font size */
+}
+
+/* Increase paragraph and general text size */
+.md-typeset {
+    font-size: 1.25rem !important;  /* Much larger body text */
+    line-height: 1.8 !important;
+}
+
+/* Code blocks (fenced code) - LARGE */
+.md-typeset pre {
+    font-size: 1.2rem !important;
+    overflow-x: auto !important;        /* Enable horizontal scrolling */
+    max-width: 100% !important;         /* Don't exceed container width */
+}
+
+.md-typeset pre > code {
+    font-size: 1.0rem !important;        /* Large code block text */
+    line-height: 1.7 !important;         /* Better readability */
+    display: block !important;           /* Ensure proper display */
+    white-space: pre !important;         /* Preserve formatting and allow scrolling */
+    word-wrap: normal !important;        /* Don't wrap long lines */
+    overflow-x: visible !important;      /* Show all content */
+}
+
+/* Inline code - LARGE */
+.md-typeset code {
+    font-size: 1.15rem !important;
+    padding: 0.15em 0.5em !important;
+}
+
+/* Headers scaling - LARGE */
+.md-typeset h1 {
+    font-size: 2.8rem !important;
+    margin-top: 1.5rem !important;
+}
+.md-typeset h2 {
+    font-size: 2.2rem !important;
+    margin-top: 1.3rem !important;
+}
+.md-typeset h3 {
+    font-size: 1.8rem !important;
+    margin-top: 1.1rem !important;
+}
+.md-typeset h4 {
+    font-size: 1.5rem !important;
+}
+
+/* Lists - LARGE */
+.md-typeset ul, .md-typeset ol {
+    font-size: 1.25rem !important;
+}
+
+/* Tables - LARGE */
+.md-typeset table {
+    font-size: 1.15rem !important;
+}
+
+/* Navigation menu font size - LARGE */
+.md-nav {
+    font-size: 1.1rem !important;
+}
+
+.md-nav__link {
+    font-size: 1.1rem !important;
+}
+
+/* Header navigation tabs - LARGE */
+.md-tabs__link {
+    font-size: 1.3rem !important;  /* Increase tab titles */
+    font-weight: 500 !important;   /* Make them slightly bolder */
+}
+
+/* Header title (site name) - LARGE */
+.md-header__title {
+    font-size: 1.4rem !important;
+}
+
+/* Admonitions (note boxes) - LARGE */
+.md-typeset .admonition,
+.md-typeset details {
+    font-size: 1.2rem !important;
+}
+
+.md-typeset .admonition-title {
+    font-size: 1.25rem !important;
+}
+
+/* Tabs - LARGE */
+.md-typeset .tabbed-labels > label {
+    font-size: 1.1rem !important;
+}
+
+/* Code block line numbers - LARGE */
+.md-typeset .linenodiv,
+.md-typeset .linenos {
+    font-size: 1.1rem !important;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
 
 /* Small Button */
 .md-button--small {
-    font-size: 0.8rem;   /* Smaller text */
+    font-size: 0.8rem;
     padding: 4px 10px !important;
     border-radius: 6px !important;
 }
 
 /* Medium Button (default) */
 .md-button--medium {
-    font-size: 1rem;     /* Default text size */
-    padding: 8px 16px;   /* Default padding */
+    font-size: 1rem;
+    padding: 8px 16px;
 }
 
 /* Large Button */
 .md-button--large {
-    font-size: 1.2rem;   /* Larger text */
-    padding: 12px 20px;  /* Spacious padding */
-    border-radius: 6px;  /* Slightly rounded corners */
+    font-size: 1.2rem;
+    padding: 12px 20px;
+    border-radius: 6px;
 }
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
 
 @media print {
     @page {
-        margin: 0.5in 0.1in 0.5in 0.1in; /* Adjust margins for header/footer space */
+        margin: 0.5in 0.1in 0.5in 0.1in;
     }
 
-
-    /* Hide the print button when printing */
     .print-button {
         display: none;
     }
-  }
-
+}
 
 .print-button {
-    float: right; /* Moves the button to the right */
-    margin-left: 1em; /* Adds spacing from the content */
-    padding: 0.5em 1em; /* Padding for better aesthetics */
-    border: none; /* Remove border */
-    border-radius: 4px; /* Rounded corners */
-    cursor: pointer; /* Change cursor on hover */
+    float: right;
+    margin-left: 1em;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
-/* Increase base font size */
-:root {
-    --md-font-size: 18px;
-    --md-typeset-font-size: 1.8rem;
-    /* You can also adjust the code block font size if needed */
-    --md-code-font-size: 1.8rem;
+/* ============================================
+   COLOR SCHEMES - CLEAR LIGHT/DARK DISTINCTION
+   ============================================ */
 
-    --md-nav-font-size:  1.8rem;
-}
-
-/* Light mode */
+/* Light mode - Clean and bright */
 [data-md-color-scheme="default"] {
-    --md-primary-fg-color:        #6366f1;  /* Indigo-500 */
-    --md-primary-fg-color--light: #818cf8;  /* Indigo-400 */
-    --md-primary-fg-color--dark:  #3730a3;  /* Indigo-800 */
+    --md-primary-fg-color:        #1976d2;  /* Blue-700 */
+    --md-primary-fg-color--light: #42a5f5;  /* Blue-400 */
+    --md-primary-fg-color--dark:  #0d47a1;  /* Blue-900 */
+    --md-accent-fg-color:         #e91e63;  /* Pink-600 */
+    --md-accent-fg-color--light:  #f48fb1;  /* Pink-300 */
 
-    --md-accent-fg-color:         #ec4899;  /* Pink-500 */
-    --md-accent-fg-color--light:  #f472b6;
+    /* Light mode background colors */
+    --md-default-bg-color:        #ffffff;  /* White background */
+    --md-default-fg-color:        #000000;  /* Black text */
+    --md-code-bg-color:           #f5f5f5;  /* Light gray code blocks */
+    --md-code-fg-color:           #37474f;  /* Dark gray code text */
 }
 
-/* Dark mode */
+/* Dark mode - Rich and contrasty */
 [data-md-color-scheme="slate"] {
-    --md-primary-fg-color:        #8b5cf6;  /* Violet-500 */
-    --md-primary-fg-color--dark:  #3f6212;  /* Lime-800 */
-    --md-accent-fg-color:         #f59e0b;  /* Amber-500 */
+    --md-primary-fg-color:        #82b1ff;  /* Light Blue */
+    --md-primary-fg-color--light: #b6d7ff;  /* Lighter Blue */
+    --md-primary-fg-color--dark:  #4d82cb;  /* Darker Blue */
+    --md-accent-fg-color:         #ff4081;  /* Bright Pink */
+    --md-accent-fg-color--light:  #ff79b0;  /* Light Pink */
+
+    /* Dark mode background colors */
+    --md-default-bg-color:        #1e1e1e;  /* Very dark gray background */
+    --md-default-fg-color:        #e0e0e0;  /* Light gray text */
+    --md-code-bg-color:           #2d2d2d;  /* Darker code blocks */
+    --md-code-fg-color:           #b0bec5;  /* Light blue-gray code text */
+
+    /* Header in dark mode */
+    --md-header-bg-color:         #121212;  /* Almost black header */
 }
 
-.md-typeset .admonition,
-.md-typeset details {
-    font-size: 20px; /* Adjust this value as needed */
+/** Ensure the repository icon's container is always displayed *!*/
+.md-header__source {
+    display: block !important;
+}
+
+/* Ensure the icon itself is rendered */
+.md-header__button.md-source {
+    visibility: visible !important;
+    display: inline-flex !important;
 }

@@ -3,73 +3,6 @@
 
 // 2DO - Define error set(s) for errors returned by ChannelGroup and Ampe
 
-// ///////////////////////////////////////////////////////////////////////
-/// Client and server terms are used only for the initial handshake.
-/// After the handshake, both sides (called peers) are equal.
-/// They send and receive messages based on application logic.
-///////////////////////////////////////////////////////////////////////////
-
-/// Defines the ChannelGroup interface for async message passing.
-/// Supports two-way message exchange.
-pub const ChannelGroup = struct {
-    ptr: ?*anyopaque,
-    vtable: *const vtables.CHNLSVTable,
-
-    /// Sends a message to a peer asynchronously.
-    ///
-    /// If the send starts successfully:
-    ///     - Sets msg.* to null to prevent reuse.
-    ///     - Returns a BinaryHeader for tracking.
-    /// Otherwise
-    ///     - Returns an error.
-    ///     - If it isn't allowed to use message (e.g. failure during internal communication),
-    ///     also  sets msg.* to null
-    /// Safe for use in multiple threads.
-    pub fn sendToPeer(chnls: ChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
-        return chnls.vtable.sendToPeer(chnls.ptr, msg);
-    }
-
-    /// Waits for a message from the internal queue.
-    ///
-    /// Returns null if no message arrives within the timeout (in nanoseconds).
-    ///
-    /// Messages can come from three sources:
-    /// - Peer (via sendToPeer from the other side).
-    /// - Application (via updateWaiter on the same channels).
-    /// - Ampe (sends status messages to the internal queue).
-    ///
-    /// Use BinaryHeader of the received message to identify the message source.
-    ///
-    /// Any returned error is the sign that any further should be stopped.
-    ///
-    ///  Call this in a loop in the same thread.
-    pub fn waitReceive(chnls: ChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
-        return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
-    }
-
-    /// Sends a message to the ChannelGroup' internal queue for processing after waitReceive.
-    /// If msg.* is not null, the engine sets the message status to 'waiter_update'.
-    /// After a successful send, sets msg.* to null to prevent reuse.
-    /// No need to provide channel_number or similar details for this internal message.
-    ///
-    /// If msg.* is null, creates a Signal with 'waiter_update' status and sends it.
-    ///
-    ///
-    /// Returns an error if ChannelGroup or engine is shutting down.
-    ///
-    /// Use this from a different thread to:
-    /// - Signal attention (msg.* is null).
-    /// - Send extra info, commands, or notifications to the waiter.
-    ///
-    /// Note: Messages are added to the end of the queue and processed in order.
-    /// The system does not support priority queues.
-    ///
-    /// Safe for use in multiple threads.
-    pub fn updateWaiter(chnls: ChannelGroup, update: *?*message.Message) status.AmpeError!void {
-        return chnls.vtable.updateWaiter(chnls.ptr, update);
-    }
-};
-
 /// Defines the async message passing engine (ampe) interface.
 /// In this system, ampe and engine mean the same thing.
 ///
@@ -142,6 +75,73 @@ pub const AllocationStrategy = enum {
     poolOnly,
     /// Gets a message from the pool or creates a new one if the pool is empty.
     always,
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// Client and server terms are used only for the initial handshake.
+/// After the handshake, both sides (called peers) are equal.
+/// They send and receive messages based on application logic.
+///////////////////////////////////////////////////////////////////////////
+
+/// Defines the ChannelGroup interface for async message passing.
+/// Supports two-way message exchange.
+pub const ChannelGroup = struct {
+    ptr: ?*anyopaque,
+    vtable: *const vtables.CHNLSVTable,
+
+    /// Sends a message to a peer asynchronously.
+    ///
+    /// If the send starts successfully:
+    ///     - Sets msg.* to null to prevent reuse.
+    ///     - Returns a BinaryHeader for tracking.
+    /// Otherwise
+    ///     - Returns an error.
+    ///     - If it isn't allowed to use message (e.g. failure during internal communication),
+    ///     also  sets msg.* to null
+    /// Safe for use in multiple threads.
+    pub fn sendToPeer(chnls: ChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader {
+        return chnls.vtable.sendToPeer(chnls.ptr, msg);
+    }
+
+    /// Waits for a message from the internal queue.
+    ///
+    /// Returns null if no message arrives within the timeout (in nanoseconds).
+    ///
+    /// Messages can come from three sources:
+    /// - Peer (via sendToPeer from the other side).
+    /// - Application (via updateWaiter on the same channels).
+    /// - Ampe (sends status messages to the internal queue).
+    ///
+    /// Use BinaryHeader of the received message to identify the message source.
+    ///
+    /// Any returned error is the sign that any further should be stopped.
+    ///
+    ///  Call this in a loop in the same thread.
+    pub fn waitReceive(chnls: ChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message {
+        return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
+    }
+
+    /// Sends a message to the ChannelGroup' internal queue for processing after waitReceive.
+    /// If msg.* is not null, the engine sets the message status to 'waiter_update'.
+    /// After a successful send, sets msg.* to null to prevent reuse.
+    /// No need to provide channel_number or similar details for this internal message.
+    ///
+    /// If msg.* is null, creates a Signal with 'waiter_update' status and sends it.
+    ///
+    ///
+    /// Returns an error if ChannelGroup or engine is shutting down.
+    ///
+    /// Use this from a different thread to:
+    /// - Signal attention (msg.* is null).
+    /// - Send extra info, commands, or notifications to the waiter.
+    ///
+    /// Note: Messages are added to the end of the queue and processed in order.
+    /// The system does not support priority queues.
+    ///
+    /// Safe for use in multiple threads.
+    pub fn updateWaiter(chnls: ChannelGroup, update: *?*message.Message) status.AmpeError!void {
+        return chnls.vtable.updateWaiter(chnls.ptr, update);
+    }
 };
 
 /// Holds configuration options for the message passing engine.
