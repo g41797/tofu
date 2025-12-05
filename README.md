@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Linux](https://github.com/g41797/yaaamp/actions/workflows/linux.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/linux.yml)
 <!-- [![MacOS](https://github.com/g41797/yaaamp/actions/workflows/mac.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/mac.yml) -->
+
+---
+
 ##
 
 What does **tofu** have to do with a library for 
@@ -32,6 +35,9 @@ You'll use the tofu library in a similar way:
 - to more complex flows
 - and eventually distributed applications.
 
+---
+
+
 ## Features
  
 - **Message-Based**: Uses discrete messages for communication.
@@ -44,6 +50,9 @@ You'll use the tofu library in a similar way:
 - **Backpressure management** - allows to control receive of messages
 - **Customizable application flows** - allows to build various application flows not restricted to request/response or pub/sub
 - **Simplest API** - you don't have to bother with or know the "guts" of socket interfaces
+
+
+---
 
 
 
@@ -69,6 +78,9 @@ By '_smell_' I mean the idea itself:
 - the philosophy of _**gradual evolution**_ 
   - starting from something simple 
   - and steadily growing into more advanced and powerful systems.
+
+---
+
 
 ## API
 
@@ -190,12 +202,17 @@ pub const ChannelGroup = struct {
 
 Documentation and examples are available on the [Tofu documentation site](https://g41797.github.io/tofu/) (**_work in progress_**).
 
+---
+
+
 ## NAQ or **N**ever **A**sked **Q**uestions
 
 <details><summary><i>Why not use another library?</i></summary>
-  Why not? — Go ahead and use it.
+  Why not? Go ahead and use it.
 </details>
 
+
+---
 
 
 
@@ -208,6 +225,9 @@ Documentation and examples are available on the [Tofu documentation site](https:
   - [Zig on Reddit](https://www.reddit.com/r/Zig/)
   - [Zig on Discord](https://discord.com/invite/zig)
   - [Zig on Discourse](https://ziggit.dev/)
+
+---
+
 
 ## Last but not least
 ⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu) !
