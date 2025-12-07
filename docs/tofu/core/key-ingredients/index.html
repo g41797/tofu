@@ -735,6 +735,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -911,7 +939,11 @@ empowering the caller to control the allocation strategy at every level of the p
 <p>"Customers can have any color they want, so long as it is black."</p>
 </blockquote>
 <p>Similarly, allocators for Tofu can be anything, provided they are '<strong>GPA</strong> compatible'.</p>
-<p>Currently, the <strong>GPA</strong> (General Purpose Allocator) is named something else and may change its name several times in the future, but it is expected that the name GPA will persist in common use.</p>
+<p>Allocator names in Zig change often. This reminds me of an old Unix joke:</p>
+<blockquote>
+<p>"Unix is an operating system where nobody knows what the print command is called today"</p>
+</blockquote>
+<p>I'll use <strong>GPA</strong> (General Purpose Allocator) because I expect that the name GPA will persist in common use.</p>
 <p>'<strong>GPA</strong> compatible' means:</p>
 <ul>
 <li>It is <strong>thread-safe</strong>.</li>
@@ -919,6 +951,7 @@ empowering the caller to control the allocation strategy at every level of the p
 <li>The memory it <strong>releases</strong> truly allows for further reuse of that released memory.</li>
 </ul>
 <p>For example, <code>std.heap.c_allocator</code> satisfies these requirements, but <code>std.heap.ArenaAllocator</code> does not.</p>
+<p>How many unnecessary memories one Allocator brings back <img alt="😞" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/1f61e.svg" title=":disappointed:" /> ...</p>
 <hr />
 <h2 id="separation-of-concerns">Separation of Concerns</h2>
 <h3 id="logical-separation">Logical Separation</h3>

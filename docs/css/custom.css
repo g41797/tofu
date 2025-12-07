@@ -92,15 +92,15 @@
     font-size: 1.25rem !important;
 }
 
-/* Tabs - LARGE */
+/* Tabs  */
 .md-typeset .tabbed-labels > label {
-    font-size: 1.1rem !important;
+    font-size: 1.0rem !important;
 }
 
-/* Code block line numbers - LARGE */
+/* Code block line numbers  */
 .md-typeset .linenodiv,
 .md-typeset .linenos {
-    font-size: 1.1rem !important;
+    font-size: 1.0rem !important;
 }
 
 /* ============================================

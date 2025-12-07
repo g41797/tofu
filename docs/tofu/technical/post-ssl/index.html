@@ -616,6 +616,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -757,10 +785,9 @@
 </li>
 <li>
 <p>Transfer you certificate to the Docker container
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1">1</a></span>
-<span class="normal"><a href="#__codelineno-0-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1"></a>docker<span class="w"> </span>cp<span class="w"> </span>&lt;your_certificate_directory&gt;/cert.pem<span class="w"> </span>traefik:/etc/certs/cert.pem
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2"></a>docker<span class="w"> </span>cp<span class="w"> </span>&lt;your_certificate_directory&gt;/key.pem<span class="w"> </span>traefik:/etc/certs/key.pem
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>cp<span class="w"> </span>&lt;your_certificate_directory&gt;/cert.pem<span class="w"> </span>traefik:/etc/certs/cert.pem
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>cp<span class="w"> </span>&lt;your_certificate_directory&gt;/key.pem<span class="w"> </span>traefik:/etc/certs/key.pem
+</span></code></pre></div></p>
 </li>
 </ol>
 <p><strong>Final Administrator Note</strong>: Certificates must be transferred to the Docker container with each renewal</p>
@@ -771,15 +798,14 @@
 </li>
 <li>
 <p>Create a new self signed certificate
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-1-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1"></a>mkcert<span class="w"> </span>-key-file<span class="w"> </span>./certs/key.pem<span class="w"> </span>-cert-file<span class="w"> </span>./certs/cert.pem<span class="w"> </span><span class="s1">&#39;&lt;server_name&gt;&#39;</span>
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mkcert<span class="w"> </span>-key-file<span class="w"> </span>./certs/key.pem<span class="w"> </span>-cert-file<span class="w"> </span>./certs/cert.pem<span class="w"> </span><span class="s1">&#39;&lt;server_name&gt;&#39;</span>
+</span></code></pre></div></p>
 </li>
 <li>
 <p>Transfer you certificate to the Docker container
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-2-1">1</a></span>
-<span class="normal"><a href="#__codelineno-2-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1"></a>docker<span class="w"> </span>cp<span class="w"> </span>./certs/cert.pem<span class="w"> </span>traefik:/etc/certs/cert.pem
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2"></a>docker<span class="w"> </span>cp<span class="w"> </span>./certs/key.pem<span class="w"> </span>traefik:/etc/certs/key.pem
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>cp<span class="w"> </span>./certs/cert.pem<span class="w"> </span>traefik:/etc/certs/cert.pem
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>cp<span class="w"> </span>./certs/key.pem<span class="w"> </span>traefik:/etc/certs/key.pem
+</span></code></pre></div></p>
 </li>
 </ol>
 <p><strong>Final Administrator Note</strong>: After updating both files, it is required to restart the Traefik service to apply the new settings.</p>

@@ -616,6 +616,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -867,13 +895,13 @@
 <ul>
 <li>
 <p>Enter the <strong>Repository URL</strong>: 
-  <div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1"></a>https://github.com/fblettner/liberty-public
-</span></code></pre></div></td></tr></table></div></p>
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>https://github.com/fblettner/liberty-public
+</span></code></pre></div></p>
 </li>
 <li>
 <p>In the <strong>Compose path</strong> field, specify:
-  <div class="language-text highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-1-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1"></a>release/latest/liberty-framework.yml
-</span></code></pre></div></td></tr></table></div></p>
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>release/latest/liberty-framework.yml
+</span></code></pre></div></p>
 </li>
 </ul>
 </li>
@@ -898,24 +926,19 @@
 <ol>
 <li>
 <p>Open a terminal and log in to the custom registry:</p>
-<div class="language-sh highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-2-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1"></a>docker<span class="w"> </span>login<span class="w"> </span>ghcr.io
-</span></code></pre></div></td></tr></table></div>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>login<span class="w"> </span>ghcr.io
+</span></code></pre></div>
 <p>When prompted, enter your username and password (token).</p>
 </li>
 <li>
 <p>Pull the required Docker images manually:</p>
-<div class="language-sh highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-3-1">1</a></span>
-<span class="normal"><a href="#__codelineno-3-2">2</a></span>
-<span class="normal"><a href="#__codelineno-3-3">3</a></span>
-<span class="normal"><a href="#__codelineno-3-4">4</a></span>
-<span class="normal"><a href="#__codelineno-3-5">5</a></span>
-<span class="normal"><a href="#__codelineno-3-6">6</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-node:latest
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-pg:latest
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-pgadmin:latest
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-rundeck:latest
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-keycloak:latest
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-filebrowser:latest
-</span></code></pre></div></td></tr></table></div>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-node:latest
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-pg:latest
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-pgadmin:latest
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-rundeck:latest
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-keycloak:latest
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/fblettner/tofu-filebrowser:latest
+</span></code></pre></div>
 </li>
 </ol>
 <h2 id="steps-for-aws-users">Steps for AWS Users</h2>
@@ -923,14 +946,14 @@
 <ol>
 <li>
 <p>Configure your AWS CLI:</p>
-<div class="language-sh highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-4-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1"></a>aws<span class="w"> </span>configure
-</span></code></pre></div></td></tr></table></div>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>aws<span class="w"> </span>configure
+</span></code></pre></div>
 <p>Follow the prompts to enter your AWS Access Key, Secret Access Key, default region name, and output format.</p>
 </li>
 <li>
 <p>Log in to the AWS Elastic Container Registry (ECR):</p>
-<div class="language-sh highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-5-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1"></a>aws<span class="w"> </span>ecr<span class="w"> </span>get-login-password<span class="w"> </span>--region<span class="w"> </span>eu-west-1<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>login<span class="w"> </span>--username<span class="w"> </span>AWS<span class="w"> </span>--password-stdin<span class="w"> </span>&lt;your-aws-account-id&gt;.dkr.ecr.eu-west-1.amazonaws.com
-</span></code></pre></div></td></tr></table></div>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>aws<span class="w"> </span>ecr<span class="w"> </span>get-login-password<span class="w"> </span>--region<span class="w"> </span>eu-west-1<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>login<span class="w"> </span>--username<span class="w"> </span>AWS<span class="w"> </span>--password-stdin<span class="w"> </span>&lt;your-aws-account-id&gt;.dkr.ecr.eu-west-1.amazonaws.com
+</span></code></pre></div>
 <p>Replace <code>&lt;your-aws-account-id&gt;</code> with your actual AWS account ID.</p>
 </li>
 </ol>

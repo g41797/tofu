@@ -517,6 +517,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Imports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#big-endian-imports-vs-little-endian-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Big-endian imports vs Little-endian imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#credits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -729,6 +757,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -840,6 +896,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Imports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#big-endian-imports-vs-little-endian-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Big-endian imports vs Little-endian imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#credits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -889,14 +973,10 @@
 
   <h1>Overview</h1>
 
-<p><strong>tofu</strong> is an innovative, <strong>Zig-based library and communication protocol</strong> 
-designed for the <strong>convenient creation</strong> of <strong>various message-oriented communication flows</strong> 
-between applications.</p>
-<p>It provides a peer-to-peer system that gives you the freedom to <strong><em>build custom, 
-non-blocking messaging</em></strong> patterns.</p>
-<p>Crucially, tofu is a completely new development written natively in Zig.</p>
-<p>It is <strong>not</strong> a port of existing code, nor is it a wrapper around any 
-established C library. </p>
+<p><strong>tofu</strong> is an asynchronous <strong>Zig messaging library</strong> for building custom, non-blocking, 
+peer-to-peer communication flows between applications.</p>
+<p>tofu is <strong>not</strong> a port of existing code, nor is it a wrapper around any
+established C library. It is a completely new development.</p>
 <p>The core functionality of tofu is based <strong>only</strong> on the standard Zig library.</p>
 <hr />
 <h2 id="why-on-earth-is-it-called-tofu">Why on earth is it called tofu?</h2>
@@ -930,10 +1010,12 @@ established C library. </p>
 <li><strong>Peer-to-Peer</strong>: Allows equal roles after connection establishment.</li>
 <li><strong>Stream oriented transport</strong> - TCP/IP and <strong>U</strong>nix <strong>D</strong>omain <strong>S</strong>ockets</li>
 <li><strong>Multithread-friendly</strong> - All APIs are safe for concurrent access.</li>
-<li><strong>Memory management for messages</strong> - internal message pool</li>
-<li><strong>Backpressure management</strong> - allows to control receive of messages</li>
-<li><strong>Customizable application flows</strong> - allows to build various application flows not restricted to request/response or pub/sub</li>
-<li><strong>Simplest API</strong> - you don't have to bother with or know the "guts" of socket interfaces</li>
+<li><strong>Memory management for messages</strong> - Internal message pool</li>
+<li><strong>Backpressure management</strong> - Allows to control receive of messages</li>
+<li><strong>Customizable application flows</strong> - Allows to build various application flows not restricted to request/response or pub/sub</li>
+<li><strong>Simplest API</strong> - You don't have to bother with or know the "guts" of socket interfaces</li>
+<li><strong>DIY</strong> - No enforced authentication or serialization; provides features to design and implement your own.</li>
+<li><strong>Callback enabled</strong> - This will be explained later. </li>
 </ul>
 <hr />
 <h2 id="a-bit-of-history">A bit of history</h2>
@@ -969,6 +1051,82 @@ I ask myself. I answer myself. You didn't ask. <strong><em>Not even about NAQ</e
 </div>
 <p>You will see '<strong><em>NAQ</em></strong>' sections in different places throughout this documentation. 
 I hope they will help clarify the content of the documentation.</p>
+<details class="question">
+<summary>NAQ: How do I install tofu?</summary>
+<p>We'll discuss that later, when you understand whether you need to do it at all.</p>
+</details>
+<h2 id="imports">Imports</h2>
+<p>All examples assume that the snippet below is added to your code.</p>
+<div class="language-zig highlight"><span class="filename">Add this snippet to your code</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">std</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">@import</span><span class="p">(</span><span class="s">&quot;std&quot;</span><span class="p">);</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kr">const</span><span class="w"> </span><span class="n">log</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">log</span><span class="p">;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kr">const</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">mem</span><span class="p">.</span><span class="n">Allocator</span><span class="p">;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kr">const</span><span class="w"> </span><span class="n">assert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">debug</span><span class="p">.</span><span class="n">assert</span><span class="p">;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="kr">const</span><span class="w"> </span><span class="n">testing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">testing</span><span class="p">;</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">// Import of module &#39;tofu&#39;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">tofu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">@import</span><span class="p">(</span><span class="s">&quot;tofu&quot;</span><span class="p">);</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1">// Reactor: The single-threaded, event-driven implementation</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1">// of the Ampe interface. It utilizes the Reactor pattern to multiplex</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1">// non-blocking socket I/O via an internal poll-style loop.</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Reactor</span><span class="p">;</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Ampe</span><span class="p">;</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="c1">// Contains settings for the internal message pool.</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Options</span><span class="p">;</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="c1">// The default configuration options for the pool.</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">DefaultOptions</span><span class="p">;</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="c1">// A grouping mechanism for managing a collection of related channels.</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">ChannelGroup</span><span class="p">;</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">message</span><span class="p">;</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="c1">// The core Message structure processed by the engine.</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Message</span><span class="p">;</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1">// Meta-data for the Message.</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="c1">// Used internally by the engine for routing and by the application for context.</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">BinaryHeader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">message</span><span class="p">.</span><span class="n">BinaryHeader</span><span class="p">;</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">status</span><span class="p">;</span>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="c1">// An enum representation of the status byte</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="c1">// (part of BinaryHeader) for clear status tracking.</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeStatus</span><span class="p">;</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="c1">// An error type corresponding to the status above,</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="c1">// used for conveying failure states.</span>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="p">;</span>
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="c1">// Helpers - for convenient injection of socket addresses</span>
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="c1">// to the message.</span>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">configurator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">configurator</span><span class="p">;</span>
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Configurator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">configurator</span><span class="p">.</span><span class="n">Configurator</span><span class="p">;</span>
+</span></code></pre></div>
+<p>And don't forget to assign suitable allocator, e.g.:
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">dbalctr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">heap</span><span class="p">.</span><span class="n">DebugAllocator</span><span class="p">(.{}).</span><span class="n">init</span><span class="p">;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="kr">const</span><span class="w"> </span><span class="n">deinit_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dbalctr</span><span class="p">.</span><span class="n">deinit</span><span class="p">();</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="c1">// fail test; can&#39;t try in defer as defer is executed after we return</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">deinit_status</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="p">.</span><span class="n">leak</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">            </span><span class="n">std</span><span class="p">.</span><span class="n">log</span><span class="p">.</span><span class="n">err</span><span class="p">(</span><span class="s">&quot;memory leak detected&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">.{});</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dbalctr</span><span class="p">.</span><span class="n">allocator</span><span class="p">();</span>
+</span></code></pre></div></p>
+<h3 id="big-endian-imports-vs-little-endian-imports">Big-endian imports vs Little-endian imports</h3>
+<p>There are two "parties" in Zig about where imports should be placed.</p>
+<p><strong>Big-endian</strong> - imports are placed at the top of the file, before the code.</p>
+<p><strong>Little-endian</strong> - imports are placed at the bottom of the file, after the code.</p>
+<p>I belong to the LE party. At least, tofu sources use LE imports.</p>
+<p>But in examples, I am using BE just for your convenience.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This naming comes from <a href="https://en.wikipedia.org/wiki/Endianness#Etymology">Gulliver's Travels</a>.</p>
+</div>
 <hr />
 <h2 id="credits">Credits</h2>
 <ul>

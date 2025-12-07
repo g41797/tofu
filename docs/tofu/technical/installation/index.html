@@ -616,6 +616,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -975,51 +1003,46 @@
 </ul>
 <h3 id="step-1-update-system-packages">Step 1: Update System Packages</h3>
 <p>Before starting the installation, update your system to ensure all packages are up-to-date.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>update<span class="w"> </span>-y
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>update<span class="w"> </span>-y
+</span></code></pre></div>
 <p>if Podman is installed, remove all packages, artifacts and containers storage</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-1-1">1</a></span>
-<span class="normal"><a href="#__codelineno-1-2">2</a></span>
-<span class="normal"><a href="#__codelineno-1-3">3</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1"></a>yum<span class="w"> </span>remove<span class="w"> </span>buildah<span class="w"> </span>skopeo<span class="w"> </span>podman<span class="w"> </span>containers-common<span class="w"> </span>atomic-registries<span class="w"> </span>docker<span class="w"> </span>container-tools
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/etc/containers/*<span class="w"> </span>/var/lib/containers/*<span class="w"> </span>/etc/docker<span class="w"> </span>/etc/subuid*<span class="w"> </span>/etc/subgid*
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="nb">cd</span><span class="w"> </span>~<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/.local/share/containers/
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>yum<span class="w"> </span>remove<span class="w"> </span>buildah<span class="w"> </span>skopeo<span class="w"> </span>podman<span class="w"> </span>containers-common<span class="w"> </span>atomic-registries<span class="w"> </span>docker<span class="w"> </span>container-tools
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/etc/containers/*<span class="w"> </span>/var/lib/containers/*<span class="w"> </span>/etc/docker<span class="w"> </span>/etc/subuid*<span class="w"> </span>/etc/subgid*
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">cd</span><span class="w"> </span>~<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/.local/share/containers/
+</span></code></pre></div>
 <h3 id="step-2-install-required-dependencies">Step 2: Install Required Dependencies</h3>
 <p>Install the necessary packages required to set up the Docker repository.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-2-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>yum-utils<span class="w"> </span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>yum-utils<span class="w"> </span>
+</span></code></pre></div>
 <h3 id="step-3-set-up-the-docker-repository">Step 3: Set Up the Docker Repository</h3>
 <p>Add the Docker repository to your CentOS system.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-3-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1"></a>sudo<span class="w"> </span>yum-config-manager<span class="w"> </span>--add-repo<span class="w"> </span>https://download.docker.com/linux/centos/docker-ce.repo
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sudo<span class="w"> </span>yum-config-manager<span class="w"> </span>--add-repo<span class="w"> </span>https://download.docker.com/linux/centos/docker-ce.repo
+</span></code></pre></div>
 <h3 id="step-4-install-docker">Step 4: Install Docker</h3>
 <p>Install Docker Reactor, CLI, and Containerd.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-4-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>docker-ce<span class="w"> </span>docker-ce-cli<span class="w"> </span>containerd.io<span class="w"> </span>docker-buildx-plugin<span class="w"> </span>docker-compose-plugin
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>docker-ce<span class="w"> </span>docker-ce-cli<span class="w"> </span>containerd.io<span class="w"> </span>docker-buildx-plugin<span class="w"> </span>docker-compose-plugin
+</span></code></pre></div>
 <h3 id="step-5-start-and-enable-docker">Step 5: Start and Enable Docker</h3>
 <p>Start the Docker service and enable it to start on boot.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-5-1">1</a></span>
-<span class="normal"><a href="#__codelineno-5-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>docker
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>docker
+</span></code></pre></div>
 <h3 id="step-6-verify-docker-installation">Step 6: Verify Docker Installation</h3>
 <p>Verify the installation by running a test Docker container.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-6-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1"></a>sudo<span class="w"> </span>docker<span class="w"> </span>run<span class="w"> </span>hello-world
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sudo<span class="w"> </span>docker<span class="w"> </span>run<span class="w"> </span>hello-world
+</span></code></pre></div>
 <p>If the container runs and displays a welcome message, Docker is installed correctly.</p>
 <h3 id="step-7-adding-your-user-to-the-docker-group-optional">Step 7: Adding Your User to the Docker Group (Optional)</h3>
 <p>To run Docker commands without <code>sudo</code>, add your user to the Docker group.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-7-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
+</span></code></pre></div>
 <p>Log out and log back in to apply the group changes.</p>
 <h3 id="uninstall-docker">Uninstall Docker</h3>
 <p>To remove Docker, the CLI, Containerd, and Docker Compose, use the following commands:</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-8-1">1</a></span>
-<span class="normal"><a href="#__codelineno-8-2">2</a></span>
-<span class="normal"><a href="#__codelineno-8-3">3</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>remove<span class="w"> </span>docker-ce<span class="w"> </span>docker-ce-cli<span class="w"> </span>containerd.io<span class="w"> </span>docker-buildx-plugin<span class="w"> </span>docker-compose-plugin<span class="w"> </span>docker-ce-rootless-extras
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/docker
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/containerd
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>remove<span class="w"> </span>docker-ce<span class="w"> </span>docker-ce-cli<span class="w"> </span>containerd.io<span class="w"> </span>docker-buildx-plugin<span class="w"> </span>docker-compose-plugin<span class="w"> </span>docker-ce-rootless-extras
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/docker
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/containerd
+</span></code></pre></div>
 <h2 id="docker-installation-for-amazon-linux-os">Docker Installation for Amazon Linux OS</h2>
 <h3 id="prerequisites_1">Prerequisites</h3>
 <ul>
@@ -1029,93 +1052,71 @@
 </ul>
 <h3 id="step-1-update-system-packages_1">Step 1: Update System Packages</h3>
 <p>Before starting the installation, update your system to ensure all packages are up-to-date.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-9-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>update<span class="w"> </span>-y
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>update<span class="w"> </span>-y
+</span></code></pre></div>
 <h3 id="step-2-install-docker">Step 2: Install Docker</h3>
 <p>Install Docker using the Amazon Linux Extras &amp; yum package manager.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-10-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1"></a>sudo<span class="w"> </span>amazon-linux-extras<span class="w"> </span>install<span class="w"> </span>docker<span class="w"> </span>-y
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>sudo<span class="w"> </span>amazon-linux-extras<span class="w"> </span>install<span class="w"> </span>docker<span class="w"> </span>-y
+</span></code></pre></div>
 <h3 id="step-3-start-and-enable-docker">Step 3: Start and Enable Docker</h3>
 <p>Start the Docker service and enable it to start on boot.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-11-1">1</a></span>
-<span class="normal"><a href="#__codelineno-11-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>docker
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>docker
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>docker
+</span></code></pre></div>
 <h3 id="step-4-verify-docker-installation">Step 4: Verify Docker Installation</h3>
 <p>Verify the installation by running a test Docker container.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-12-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1"></a>sudo<span class="w"> </span>docker<span class="w"> </span>run<span class="w"> </span>hello-world
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sudo<span class="w"> </span>docker<span class="w"> </span>run<span class="w"> </span>hello-world
+</span></code></pre></div>
 <p>If the container runs and displays a welcome message, Docker is installed correctly.</p>
 <h3 id="step-5-install-docker-compose">Step 5: Install Docker Compose</h3>
 <p>Download the current stable release of Docker Compose:</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-13-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1"></a>sudo<span class="w"> </span>curl<span class="w"> </span>-L<span class="w"> </span><span class="s2">&quot;https://github.com/docker/compose/releases/download/</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/docker/compose/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-Po<span class="w"> </span><span class="s1">&#39;&quot;tag_name&quot;: &quot;\K.*?(?=&quot;)&#39;</span><span class="k">)</span><span class="s2">/docker-compose-</span><span class="k">$(</span>uname<span class="w"> </span>-s<span class="k">)</span><span class="s2">-</span><span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>-o<span class="w"> </span>/usr/local/bin/docker-compose
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>sudo<span class="w"> </span>curl<span class="w"> </span>-L<span class="w"> </span><span class="s2">&quot;https://github.com/docker/compose/releases/download/</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/docker/compose/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-Po<span class="w"> </span><span class="s1">&#39;&quot;tag_name&quot;: &quot;\K.*?(?=&quot;)&#39;</span><span class="k">)</span><span class="s2">/docker-compose-</span><span class="k">$(</span>uname<span class="w"> </span>-s<span class="k">)</span><span class="s2">-</span><span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>-o<span class="w"> </span>/usr/local/bin/docker-compose
+</span></code></pre></div>
 <p>Apply executable permissions to the binary:</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-14-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1"></a>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/docker-compose
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/docker-compose
+</span></code></pre></div>
 <p>Verify that the installation was successful:</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-15-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1"></a>docker-compose<span class="w"> </span>--version
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker-compose<span class="w"> </span>--version
+</span></code></pre></div>
 <h3 id="step-6-adding-your-user-to-the-docker-group-optional">Step 6: Adding Your User to the Docker Group (Optional)</h3>
 <p>To run Docker commands without <code>sudo</code>, add your user to the Docker group.</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-16-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span>
+</span></code></pre></div>
 <p>Log out and log back in to apply the group changes.</p>
 <h3 id="uninstall-docker_1">Uninstall Docker</h3>
 <p>To remove Docker, the CLI, Containerd, and Docker Compose, use the following commands:</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-17-1">1</a></span>
-<span class="normal"><a href="#__codelineno-17-2">2</a></span>
-<span class="normal"><a href="#__codelineno-17-3">3</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>remove<span class="w"> </span>docker
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/docker
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3"></a>sudo<span class="w"> </span>rm<span class="w"> </span>/usr/local/bin/docker-compose
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>sudo<span class="w"> </span>yum<span class="w"> </span>remove<span class="w"> </span>docker
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/docker
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>sudo<span class="w"> </span>rm<span class="w"> </span>/usr/local/bin/docker-compose
+</span></code></pre></div>
 <h2 id="post-installation-tasks">Post installation Tasks</h2>
 <p>If you want to set a custom directory for docker and if you are running behind a proxy, the docker service must be modified</p>
 <p>Edit the service: /lib/systemd/system/docker.service</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-18-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-18-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-18-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-18-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-18-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-18-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-18-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-18-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-18-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-18-10">10</a></span>
-<span class="normal"><a href="#__codelineno-18-11">11</a></span>
-<span class="normal"><a href="#__codelineno-18-12">12</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1"></a><span class="o">[</span>Service<span class="o">]</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2"></a><span class="nv">Type</span><span class="o">=</span>notify
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3"></a><span class="c1"># the default is not to use systemd for cgroups because the delegate issues still</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4"></a><span class="c1"># exists and systemd currently does not support the cgroup feature set required</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5"></a><span class="c1"># for containers run by docker</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6"></a><span class="nv">ExecStart</span><span class="o">=</span>/usr/bin/dockerd<span class="w"> </span>--data-root<span class="w"> </span>&lt;CUSTOM_DIRECTORY&gt;<span class="w"> </span>-H<span class="w"> </span>fd://<span class="w"> </span>--containerd<span class="o">=</span>/run/containerd/containerd.sock
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7"></a><span class="nv">ExecReload</span><span class="o">=</span>/bin/kill<span class="w"> </span>-s<span class="w"> </span>HUP<span class="w"> </span><span class="nv">$MAINPID</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8"></a><span class="nv">TimeoutStartSec</span><span class="o">=</span><span class="m">0</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9"></a><span class="nv">RestartSec</span><span class="o">=</span><span class="m">2</span>
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10"></a><span class="nv">Restart</span><span class="o">=</span>always
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11"></a><span class="nv">Environment</span><span class="o">=</span><span class="s2">&quot;HTTP_PROXY=&lt;PROXY_URL&gt;&quot;</span>
-</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12"></a><span class="nv">Environment</span><span class="o">=</span><span class="s2">&quot;HTTPS_PROXY=&lt;PROXY_URL&gt;&quot;</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="o">[</span>Service<span class="o">]</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nv">Type</span><span class="o">=</span>notify
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># the default is not to use systemd for cgroups because the delegate issues still</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># exists and systemd currently does not support the cgroup feature set required</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="c1"># for containers run by docker</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="nv">ExecStart</span><span class="o">=</span>/usr/bin/dockerd<span class="w"> </span>--data-root<span class="w"> </span>&lt;CUSTOM_DIRECTORY&gt;<span class="w"> </span>-H<span class="w"> </span>fd://<span class="w"> </span>--containerd<span class="o">=</span>/run/containerd/containerd.sock
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="nv">ExecReload</span><span class="o">=</span>/bin/kill<span class="w"> </span>-s<span class="w"> </span>HUP<span class="w"> </span><span class="nv">$MAINPID</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="nv">TimeoutStartSec</span><span class="o">=</span><span class="m">0</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="nv">RestartSec</span><span class="o">=</span><span class="m">2</span>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="nv">Restart</span><span class="o">=</span>always
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="nv">Environment</span><span class="o">=</span><span class="s2">&quot;HTTP_PROXY=&lt;PROXY_URL&gt;&quot;</span>
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="nv">Environment</span><span class="o">=</span><span class="s2">&quot;HTTPS_PROXY=&lt;PROXY_URL&gt;&quot;</span>
+</span></code></pre></div>
 <p>If you want to change the default IP range (172.17.x.x) for docker
 Edit the file: /etc/docker/daemon.json</p>
-<div class="language-bash highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-19-1">1</a></span>
-<span class="normal"><a href="#__codelineno-19-2">2</a></span>
-<span class="normal"><a href="#__codelineno-19-3">3</a></span>
-<span class="normal"><a href="#__codelineno-19-4">4</a></span>
-<span class="normal"><a href="#__codelineno-19-5">5</a></span>
-<span class="normal"><a href="#__codelineno-19-6">6</a></span>
-<span class="normal"><a href="#__codelineno-19-7">7</a></span>
-<span class="normal"><a href="#__codelineno-19-8">8</a></span>
-<span class="normal"><a href="#__codelineno-19-9">9</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1"></a><span class="c1"># Set the ip range according to your requirements</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2"></a><span class="c1"># bip is for the internal interface</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3"></a><span class="c1"># default-address-pools is for all new networks</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4"></a><span class="o">{</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5"></a><span class="w">  </span><span class="s2">&quot;bip&quot;</span>:<span class="w"> </span><span class="s2">&quot;172.26.0.1/16&quot;</span>,
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6"></a><span class="w">  </span><span class="s2">&quot;default-address-pools&quot;</span>:<span class="w"> </span><span class="o">[</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7"></a><span class="w">    </span><span class="o">{</span><span class="w"> </span><span class="s2">&quot;base&quot;</span>:<span class="w"> </span><span class="s2">&quot;172.27.0.0/16&quot;</span>,<span class="w"> </span><span class="s2">&quot;size&quot;</span>:<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="o">}</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8"></a><span class="w">  </span><span class="o">]</span>
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9"></a><span class="o">}</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Set the ip range according to your requirements</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># bip is for the internal interface</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="c1"># default-address-pools is for all new networks</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="o">{</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="s2">&quot;bip&quot;</span>:<span class="w"> </span><span class="s2">&quot;172.26.0.1/16&quot;</span>,
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span><span class="s2">&quot;default-address-pools&quot;</span>:<span class="w"> </span><span class="o">[</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="o">{</span><span class="w"> </span><span class="s2">&quot;base&quot;</span>:<span class="w"> </span><span class="s2">&quot;172.27.0.0/16&quot;</span>,<span class="w"> </span><span class="s2">&quot;size&quot;</span>:<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="o">}</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="o">]</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="o">}</span>
+</span></code></pre></div>
 <h2 id="conclusion">Conclusion</h2>
 <p>You have successfully installed Docker and Docker Compose on your CentOS or Amazon Linux OS system. You can now begin deploying and managing your Docker containers for Liberty Framework.</p>
 <h2 id="references">References</h2>

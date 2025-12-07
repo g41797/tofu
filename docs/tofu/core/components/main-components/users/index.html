@@ -616,6 +616,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../services/channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -848,42 +876,25 @@ This component is integrated within the <code>AppProvider</code> and can be over
 </tbody>
 </table>
 <h2 id="example-usage">Example Usage</h2>
-<div class="language-tsx highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-0-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-0-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-0-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-0-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-0-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-0-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-0-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-0-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-0-10">10</a></span>
-<span class="normal"><a href="#__codelineno-0-11">11</a></span>
-<span class="normal"><a href="#__codelineno-0-12">12</a></span>
-<span class="normal"><a href="#__codelineno-0-13">13</a></span>
-<span class="normal"><a href="#__codelineno-0-14">14</a></span>
-<span class="normal"><a href="#__codelineno-0-15">15</a></span>
-<span class="normal"><a href="#__codelineno-0-16">16</a></span>
-<span class="normal"><a href="#__codelineno-0-17">17</a></span>
-<span class="normal"><a href="#__codelineno-0-18">18</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="k">import</span><span class="w"> </span><span class="nx">React</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useState</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;react&quot;</span><span class="p">;</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">AppsUser</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@nomana-it/tofu-core&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Button</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@ly_common/Button&quot;</span><span class="p">;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">UserSettingsDialogExample</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">isUserDialogOpen</span><span class="p">,</span><span class="w"> </span><span class="nx">setUserDialogOpen</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9"></a><span class="w">    </span><span class="p">&lt;&gt;</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10"></a><span class="w">      </span><span class="p">&lt;</span><span class="nt">Button</span><span class="w"> </span><span class="na">onClick</span><span class="o">=</span><span class="p">{()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">setUserDialogOpen</span><span class="p">(</span><span class="kc">true</span><span class="p">)}&gt;</span><span class="nx">Open</span><span class="w"> </span><span class="nx">User</span><span class="w"> </span><span class="nx">Settings</span><span class="p">&lt;/</span><span class="nt">Button</span><span class="p">&gt;</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11"></a><span class="w">      </span><span class="p">&lt;</span><span class="nt">AppsUser</span><span class="w"> </span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12"></a><span class="w">        </span><span class="na">openDialog</span><span class="o">=</span><span class="p">{</span><span class="nx">isUserDialogOpen</span><span class="p">}</span><span class="w"> </span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13"></a><span class="w">        </span><span class="na">setOpenDialog</span><span class="o">=</span><span class="p">{</span><span class="nx">setUserDialogOpen</span><span class="p">}</span><span class="w"> </span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14"></a><span class="w">        </span><span class="na">onToggleDarkMode</span><span class="o">=</span><span class="p">{()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Dark mode toggled&quot;</span><span class="p">)}</span><span class="w"> </span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15"></a><span class="w">      </span><span class="p">/&gt;</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16"></a><span class="w">    </span><span class="p">&lt;/&gt;</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17"></a><span class="w">  </span><span class="p">);</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-tsx highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">import</span><span class="w"> </span><span class="nx">React</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useState</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;react&quot;</span><span class="p">;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">AppsUser</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@nomana-it/tofu-core&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Button</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@ly_common/Button&quot;</span><span class="p">;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">UserSettingsDialogExample</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">isUserDialogOpen</span><span class="p">,</span><span class="w"> </span><span class="nx">setUserDialogOpen</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="p">&lt;&gt;</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="p">&lt;</span><span class="nt">Button</span><span class="w"> </span><span class="na">onClick</span><span class="o">=</span><span class="p">{()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">setUserDialogOpen</span><span class="p">(</span><span class="kc">true</span><span class="p">)}&gt;</span><span class="nx">Open</span><span class="w"> </span><span class="nx">User</span><span class="w"> </span><span class="nx">Settings</span><span class="p">&lt;/</span><span class="nt">Button</span><span class="p">&gt;</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="p">&lt;</span><span class="nt">AppsUser</span><span class="w"> </span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="na">openDialog</span><span class="o">=</span><span class="p">{</span><span class="nx">isUserDialogOpen</span><span class="p">}</span><span class="w"> </span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="na">setOpenDialog</span><span class="o">=</span><span class="p">{</span><span class="nx">setUserDialogOpen</span><span class="p">}</span><span class="w"> </span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="na">onToggleDarkMode</span><span class="o">=</span><span class="p">{()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Dark mode toggled&quot;</span><span class="p">)}</span><span class="w"> </span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">      </span><span class="p">/&gt;</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="p">&lt;/&gt;</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">  </span><span class="p">);</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">};</span>
+</span></code></pre></div>
 <h3 id="how-it-works"><strong>How It Works</strong></h3>
 <ol>
 <li>Clicking the <strong>"Open User Settings"</strong> button opens the <strong>AppsUser</strong> dialog.</li>
@@ -894,146 +905,79 @@ This component is integrated within the <code>AppProvider</code> and can be over
 <h2 id="overriding-user-data"><strong>Overriding User Data</strong></h2>
 <p>By default, <strong>AppsUser</strong> retrieves user settings internally. However, you can override the <strong>user retrieval logic</strong> with a custom <code>getUser</code> function.</p>
 <h3 id="example-user-data"><strong>Example User Data</strong></h3>
-<div class="language-tsx highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-1-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-1-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-1-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-1-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-1-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-1-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-1-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-1-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-1-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-1-10">10</a></span>
-<span class="normal"><a href="#__codelineno-1-11">11</a></span>
-<span class="normal"><a href="#__codelineno-1-12">12</a></span>
-<span class="normal"><a href="#__codelineno-1-13">13</a></span>
-<span class="normal"><a href="#__codelineno-1-14">14</a></span>
-<span class="normal"><a href="#__codelineno-1-15">15</a></span>
-<span class="normal"><a href="#__codelineno-1-16">16</a></span>
-<span class="normal"><a href="#__codelineno-1-17">17</a></span>
-<span class="normal"><a href="#__codelineno-1-18">18</a></span>
-<span class="normal"><a href="#__codelineno-1-19">19</a></span>
-<span class="normal"><a href="#__codelineno-1-20">20</a></span>
-<span class="normal"><a href="#__codelineno-1-21">21</a></span>
-<span class="normal"><a href="#__codelineno-1-22">22</a></span>
-<span class="normal"><a href="#__codelineno-1-23">23</a></span>
-<span class="normal"><a href="#__codelineno-1-24">24</a></span>
-<span class="normal"><a href="#__codelineno-1-25">25</a></span>
-<span class="normal"><a href="#__codelineno-1-26">26</a></span>
-<span class="normal"><a href="#__codelineno-1-27">27</a></span>
-<span class="normal"><a href="#__codelineno-1-28">28</a></span>
-<span class="normal"><a href="#__codelineno-1-29">29</a></span>
-<span class="normal"><a href="#__codelineno-1-30">30</a></span>
-<span class="normal"><a href="#__codelineno-1-31">31</a></span>
-<span class="normal"><a href="#__codelineno-1-32">32</a></span>
-<span class="normal"><a href="#__codelineno-1-33">33</a></span>
-<span class="normal"><a href="#__codelineno-1-34">34</a></span>
-<span class="normal"><a href="#__codelineno-1-35">35</a></span>
-<span class="normal"><a href="#__codelineno-1-36">36</a></span>
-<span class="normal"><a href="#__codelineno-1-37">37</a></span>
-<span class="normal"><a href="#__codelineno-1-38">38</a></span>
-<span class="normal"><a href="#__codelineno-1-39">39</a></span>
-<span class="normal"><a href="#__codelineno-1-40">40</a></span>
-<span class="normal"><a href="#__codelineno-1-41">41</a></span>
-<span class="normal"><a href="#__codelineno-1-42">42</a></span>
-<span class="normal"><a href="#__codelineno-1-43">43</a></span>
-<span class="normal"><a href="#__codelineno-1-44">44</a></span>
-<span class="normal"><a href="#__codelineno-1-45">45</a></span>
-<span class="normal"><a href="#__codelineno-1-46">46</a></span>
-<span class="normal"><a href="#__codelineno-1-47">47</a></span>
-<span class="normal"><a href="#__codelineno-1-48">48</a></span>
-<span class="normal"><a href="#__codelineno-1-49">49</a></span>
-<span class="normal"><a href="#__codelineno-1-50">50</a></span>
-<span class="normal"><a href="#__codelineno-1-51">51</a></span>
-<span class="normal"><a href="#__codelineno-1-52">52</a></span>
-<span class="normal"><a href="#__codelineno-1-53">53</a></span>
-<span class="normal"><a href="#__codelineno-1-54">54</a></span>
-<span class="normal"><a href="#__codelineno-1-55">55</a></span>
-<span class="normal"><a href="#__codelineno-1-56">56</a></span>
-<span class="normal"><a href="#__codelineno-1-57">57</a></span>
-<span class="normal"><a href="#__codelineno-1-58">58</a></span>
-<span class="normal"><a href="#__codelineno-1-59">59</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">EUsers</span><span class="p">,</span><span class="w"> </span><span class="nx">IUsersProps</span><span class="p">,</span><span class="w"> </span><span class="nx">UIDisplayMode</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@nomana-it/tofu-core&quot;</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5"></a><span class="w">        </span><span class="s2">&quot;USR_ID&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6"></a><span class="w">        </span><span class="s2">&quot;USR_PASSWORD&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7"></a><span class="w">        </span><span class="s2">&quot;USR_NAME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Administrator&quot;</span><span class="p">,</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8"></a><span class="w">        </span><span class="s2">&quot;USR_EMAIL&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin@tofu.fr&quot;</span><span class="p">,</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9"></a><span class="w">        </span><span class="s2">&quot;USR_STATUS&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10"></a><span class="w">        </span><span class="s2">&quot;USR_ADMIN&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11"></a><span class="w">        </span><span class="s2">&quot;USR_LANGUAGE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12"></a><span class="w">        </span><span class="s2">&quot;USR_MODE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;dark&quot;</span><span class="p">,</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13"></a><span class="w">        </span><span class="s2">&quot;USR_READONLY&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14"></a><span class="w">        </span><span class="s2">&quot;USR_DASHBOARD&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15"></a><span class="w">        </span><span class="s2">&quot;USR_THEME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18"></a><span class="w">        </span><span class="s2">&quot;USR_ID&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19"></a><span class="w">        </span><span class="s2">&quot;USR_PASSWORD&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20"></a><span class="w">        </span><span class="s2">&quot;USR_NAME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Demo User&quot;</span><span class="p">,</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21"></a><span class="w">        </span><span class="s2">&quot;USR_EMAIL&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo@tofu.fr&quot;</span><span class="p">,</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22"></a><span class="w">        </span><span class="s2">&quot;USR_STATUS&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23"></a><span class="w">        </span><span class="s2">&quot;USR_ADMIN&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24"></a><span class="w">        </span><span class="s2">&quot;USR_LANGUAGE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25"></a><span class="w">        </span><span class="s2">&quot;USR_MODE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;dark&quot;</span><span class="p">,</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26"></a><span class="w">        </span><span class="s2">&quot;USR_READONLY&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27"></a><span class="w">        </span><span class="s2">&quot;USR_DASHBOARD&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28"></a><span class="w">        </span><span class="s2">&quot;USR_THEME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30"></a><span class="p">];</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31"></a>
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">getUser</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">user_id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">current_user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">user</span><span class="p">.</span><span class="nx">find</span><span class="p">((</span><span class="nx">user</span><span class="o">:</span><span class="w"> </span><span class="kt">any</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">user</span><span class="p">.</span><span class="nx">USR_ID</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">user_id</span><span class="p">);</span>
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">current_user</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36"></a><span class="w">            </span><span class="s2">&quot;items&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[],</span>
-</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37"></a><span class="w">            </span><span class="s2">&quot;status&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;failed&quot;</span><span class="p">,</span>
-</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38"></a><span class="w">        </span><span class="p">};</span>
-</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41"></a><span class="w">        </span><span class="s2">&quot;items&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">current_user</span><span class="p">],</span>
-</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42"></a><span class="w">        </span><span class="s2">&quot;status&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;success&quot;</span><span class="p">,</span>
-</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43"></a><span class="w">    </span><span class="p">};</span>
-</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44"></a><span class="p">};</span>
-</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45"></a>
-</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">currentUser</span><span class="o">:</span><span class="w"> </span><span class="kt">IUsersProps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">status</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">id</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
-</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">name</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Demo User&quot;</span><span class="p">,</span>
-</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">email</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo@tofu.fr&quot;</span><span class="p">,</span>
-</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">password</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">admin</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
-</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">language</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
-</span><span id="__span-1-54"><a id="__codelineno-1-54" name="__codelineno-1-54"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">displayMode</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">UIDisplayMode</span><span class="p">.</span><span class="nx">dark</span><span class="p">,</span>
-</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">darkMode</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="k">readonly</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
-</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">dashboard</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span>
-</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">theme</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
-</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-tsx highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">EUsers</span><span class="p">,</span><span class="w"> </span><span class="nx">IUsersProps</span><span class="p">,</span><span class="w"> </span><span class="nx">UIDisplayMode</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@nomana-it/tofu-core&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="s2">&quot;USR_ID&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="s2">&quot;USR_PASSWORD&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="s2">&quot;USR_NAME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Administrator&quot;</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="s2">&quot;USR_EMAIL&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;admin@tofu.fr&quot;</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="s2">&quot;USR_STATUS&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="s2">&quot;USR_ADMIN&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="s2">&quot;USR_LANGUAGE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="s2">&quot;USR_MODE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;dark&quot;</span><span class="p">,</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="s2">&quot;USR_READONLY&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="s2">&quot;USR_DASHBOARD&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">        </span><span class="s2">&quot;USR_THEME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">        </span><span class="s2">&quot;USR_ID&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">        </span><span class="s2">&quot;USR_PASSWORD&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">        </span><span class="s2">&quot;USR_NAME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Demo User&quot;</span><span class="p">,</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">        </span><span class="s2">&quot;USR_EMAIL&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo@tofu.fr&quot;</span><span class="p">,</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">        </span><span class="s2">&quot;USR_STATUS&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">        </span><span class="s2">&quot;USR_ADMIN&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">        </span><span class="s2">&quot;USR_LANGUAGE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">        </span><span class="s2">&quot;USR_MODE&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;dark&quot;</span><span class="p">,</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">        </span><span class="s2">&quot;USR_READONLY&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">        </span><span class="s2">&quot;USR_DASHBOARD&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">        </span><span class="s2">&quot;USR_THEME&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="p">];</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">getUser</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">user_id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">current_user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">user</span><span class="p">.</span><span class="nx">find</span><span class="p">((</span><span class="nx">user</span><span class="o">:</span><span class="w"> </span><span class="kt">any</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">user</span><span class="p">.</span><span class="nx">USR_ID</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">user_id</span><span class="p">);</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">current_user</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">            </span><span class="s2">&quot;items&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="w">            </span><span class="s2">&quot;status&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;failed&quot;</span><span class="p">,</span>
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="w">        </span><span class="p">};</span>
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="w">        </span><span class="s2">&quot;items&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">current_user</span><span class="p">],</span>
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a><span class="w">        </span><span class="s2">&quot;status&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;success&quot;</span><span class="p">,</span>
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="w">    </span><span class="p">};</span>
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="p">};</span>
+</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>
+</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">currentUser</span><span class="o">:</span><span class="w"> </span><span class="kt">IUsersProps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">status</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">id</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo&quot;</span><span class="p">,</span>
+</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">name</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Demo User&quot;</span><span class="p">,</span>
+</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">email</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;demo@tofu.fr&quot;</span><span class="p">,</span>
+</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">password</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">admin</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">language</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
+</span><span id="__span-1-54"><a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">displayMode</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="nx">UIDisplayMode</span><span class="p">.</span><span class="nx">dark</span><span class="p">,</span>
+</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">darkMode</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="k">readonly</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;N&quot;</span><span class="p">,</span>
+</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">dashboard</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span>
+</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a><span class="w">    </span><span class="p">[</span><span class="nx">EUsers</span><span class="p">.</span><span class="nx">theme</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;tofu&quot;</span>
+</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a><span class="p">};</span>
+</span></code></pre></div>
 <h3 id="how-to-override-in-appprovider"><strong>How to Override in <code>AppProvider</code></strong></h3>
 <p>To override the default user data, pass the function when setting up <code>AppProvider</code>:</p>
-<div class="language-tsx highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-2-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-2-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-2-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-2-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-2-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-2-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-2-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-2-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-2-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-2-10">10</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="p">&lt;</span><span class="nt">AppProvider</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2"></a><span class="w">    </span><span class="na">getModules</span><span class="o">=</span><span class="p">{</span><span class="nx">getModules</span><span class="p">}</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3"></a><span class="w">    </span><span class="na">getApplications</span><span class="o">=</span><span class="p">{</span><span class="nx">getApplications</span><span class="p">}</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4"></a><span class="w">    </span><span class="na">getToken</span><span class="o">=</span><span class="p">{</span><span class="nx">getToken</span><span class="p">}</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5"></a><span class="w">    </span><span class="na">getUser</span><span class="o">=</span><span class="p">{</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">getUser</span><span class="p">}</span><span class="w">  </span><span class="err">//</span><span class="w"> </span><span class="na">Override</span><span class="w"> </span><span class="na">default</span><span class="w"> </span><span class="na">user</span><span class="w"> </span><span class="na">retrieval</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6"></a><span class="w">    </span><span class="na">getMenus</span><span class="o">=</span><span class="p">{</span><span class="nx">getMenus</span><span class="p">}</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7"></a><span class="w">    </span><span class="na">getDashboard</span><span class="o">=</span><span class="p">{</span><span class="nx">getDashboard</span><span class="p">}</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8"></a><span class="p">&gt;</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9"></a><span class="w">    </span><span class="p">&lt;</span><span class="nt">AppsContent</span><span class="w"> </span><span class="p">/&gt;</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10"></a><span class="p">&lt;/</span><span class="nt">AppProvider</span><span class="p">&gt;</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-tsx highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">&lt;</span><span class="nt">AppProvider</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="na">getModules</span><span class="o">=</span><span class="p">{</span><span class="nx">getModules</span><span class="p">}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="na">getApplications</span><span class="o">=</span><span class="p">{</span><span class="nx">getApplications</span><span class="p">}</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="na">getToken</span><span class="o">=</span><span class="p">{</span><span class="nx">getToken</span><span class="p">}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="na">getUser</span><span class="o">=</span><span class="p">{</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">getUser</span><span class="p">}</span><span class="w">  </span><span class="err">//</span><span class="w"> </span><span class="na">Override</span><span class="w"> </span><span class="na">default</span><span class="w"> </span><span class="na">user</span><span class="w"> </span><span class="na">retrieval</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="na">getMenus</span><span class="o">=</span><span class="p">{</span><span class="nx">getMenus</span><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="na">getDashboard</span><span class="o">=</span><span class="p">{</span><span class="nx">getDashboard</span><span class="p">}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">&gt;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="p">&lt;</span><span class="nt">AppsContent</span><span class="w"> </span><span class="p">/&gt;</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">&lt;/</span><span class="nt">AppProvider</span><span class="p">&gt;</span>
+</span></code></pre></div>
 <p>By overriding <code>getUser</code>, you can:
 - <strong>Customize authentication logic</strong> (e.g., external APIs, LDAP, etc.).
 - <strong>Implement different role-based configurations.</strong>

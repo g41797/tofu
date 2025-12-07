@@ -14,7 +14,7 @@
         <link rel="prev" href="../../key-ingredients/">
       
       
-        <link rel="next" href="../../../api/tofu-api/">
+        <link rel="next" href="../channel-group/">
       
       
         
@@ -733,6 +733,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../channel-group/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChannelGroup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -931,109 +959,6 @@
 
   <h1>Ampe</h1>
 
-<details class="question">
-<summary>How do I install tofu?</summary>
-<p>We'll discuss that later, when you understand whether you need to do it at all. For now, simply use snippet below:</p>
-</details>
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Add this snippet to your code</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-0-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-0-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-0-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-0-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-0-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-0-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-0-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-0-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-0-10">10</a></span>
-<span class="normal"><a href="#__codelineno-0-11">11</a></span>
-<span class="normal"><a href="#__codelineno-0-12">12</a></span>
-<span class="normal"><a href="#__codelineno-0-13">13</a></span>
-<span class="normal"><a href="#__codelineno-0-14">14</a></span>
-<span class="normal"><a href="#__codelineno-0-15">15</a></span>
-<span class="normal"><a href="#__codelineno-0-16">16</a></span>
-<span class="normal"><a href="#__codelineno-0-17">17</a></span>
-<span class="normal"><a href="#__codelineno-0-18">18</a></span>
-<span class="normal"><a href="#__codelineno-0-19">19</a></span>
-<span class="normal"><a href="#__codelineno-0-20">20</a></span>
-<span class="normal"><a href="#__codelineno-0-21">21</a></span>
-<span class="normal"><a href="#__codelineno-0-22">22</a></span>
-<span class="normal"><a href="#__codelineno-0-23">23</a></span>
-<span class="normal"><a href="#__codelineno-0-24">24</a></span>
-<span class="normal"><a href="#__codelineno-0-25">25</a></span>
-<span class="normal"><a href="#__codelineno-0-26">26</a></span>
-<span class="normal"><a href="#__codelineno-0-27">27</a></span>
-<span class="normal"><a href="#__codelineno-0-28">28</a></span>
-<span class="normal"><a href="#__codelineno-0-29">29</a></span>
-<span class="normal"><a href="#__codelineno-0-30">30</a></span>
-<span class="normal"><a href="#__codelineno-0-31">31</a></span>
-<span class="normal"><a href="#__codelineno-0-32">32</a></span>
-<span class="normal"><a href="#__codelineno-0-33">33</a></span>
-<span class="normal"><a href="#__codelineno-0-34">34</a></span>
-<span class="normal"><a href="#__codelineno-0-35">35</a></span>
-<span class="normal"><a href="#__codelineno-0-36">36</a></span>
-<span class="normal"><a href="#__codelineno-0-37">37</a></span>
-<span class="normal"><a href="#__codelineno-0-38">38</a></span>
-<span class="normal"><a href="#__codelineno-0-39">39</a></span>
-<span class="normal"><a href="#__codelineno-0-40">40</a></span>
-<span class="normal"><a href="#__codelineno-0-41">41</a></span>
-<span class="normal"><a href="#__codelineno-0-42">42</a></span>
-<span class="normal"><a href="#__codelineno-0-43">43</a></span>
-<span class="normal"><a href="#__codelineno-0-44">44</a></span>
-<span class="normal"><a href="#__codelineno-0-45">45</a></span>
-<span class="normal"><a href="#__codelineno-0-46">46</a></span>
-<span class="normal"><a href="#__codelineno-0-47">47</a></span>
-<span class="normal"><a href="#__codelineno-0-48">48</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">std</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">@import</span><span class="p">(</span><span class="s">&quot;std&quot;</span><span class="p">);</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2"></a><span class="kr">const</span><span class="w"> </span><span class="n">log</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">log</span><span class="p">;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3"></a><span class="kr">const</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">mem</span><span class="p">.</span><span class="n">Allocator</span><span class="p">;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4"></a><span class="kr">const</span><span class="w"> </span><span class="n">assert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">debug</span><span class="p">.</span><span class="n">assert</span><span class="p">;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6"></a><span class="kr">const</span><span class="w"> </span><span class="n">testing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">testing</span><span class="p">;</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7"></a><span class="kr">const</span><span class="w"> </span><span class="n">alctr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">.</span><span class="n">testing</span><span class="p">.</span><span class="n">allocator</span><span class="p">;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9"></a><span class="c1">// Import of module &#39;tofu&#39;</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">tofu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">@import</span><span class="p">(</span><span class="s">&quot;tofu&quot;</span><span class="p">);</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12"></a><span class="c1">// Reactor: The single-threaded, event-driven implementation</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13"></a><span class="c1">// of the Ampe interface. It utilizes the Reactor pattern to multiplex</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14"></a><span class="c1">// non-blocking socket I/O via an internal poll-style loop.</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Reactor</span><span class="p">;</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16"></a>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Ampe</span><span class="p">;</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18"></a>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19"></a><span class="c1">// Contains settings for the internal message pool.</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Options</span><span class="p">;</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21"></a>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="c1">// The default configuration options for the pool.</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">DefaultOptions</span><span class="p">;</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24"></a>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="c1">// A grouping mechanism for managing a collection of related channels.</span>
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">ChannelGroup</span><span class="p">;</span>
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27"></a>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">message</span><span class="p">;</span>
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29"></a>
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30"></a><span class="c1">// The core Message structure processed by the engine.</span>
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">Message</span><span class="p">;</span>
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32"></a>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="c1">// Meta-data for the Message.</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34"></a><span class="c1">// Used internally by the engine for routing and by the application for context.</span>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">BinaryHeader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">message</span><span class="p">.</span><span class="n">BinaryHeader</span><span class="p">;</span>
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36"></a>
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">status</span><span class="p">;</span>
-</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="c1">// An enum representation of the status byte</span>
-</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="c1">// (part of BinaryHeader) for clear status tracking.</span>
-</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeStatus</span><span class="p">;</span>
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="c1">// An error type corresponding to the status above,</span>
-</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="c1">// used for conveying failure states.</span>
-</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="p">;</span>
-</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a>
-</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="c1">// Helpers - for convenient injection of socket addresses</span>
-</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="c1">// to the message.</span>
-</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">configurator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">configurator</span><span class="p">;</span>
-</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Configurator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">configurator</span><span class="p">.</span><span class="n">Configurator</span><span class="p">;</span>
-</span></code></pre></div></td></tr></table></div>
-<p>And don't forget to assign suitable allocator, e.g.:
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-1-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">alctr</span><span class="p">;</span>
-</span></code></pre></div></td></tr></table></div></p>
 <p><strong><em>Ampe</em></strong> or simply the <strong><em>engine</em></strong> is the "holder" (owner) and allocator of all tofu resources:</p>
 <ul>
 <li>ChannelGroup(s)</li>
@@ -1042,59 +967,39 @@
 <p>Consider it the GPA of tofu. </p>
 <hr />
 <h2 id="ampe-creation">Ampe creation</h2>
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Example of Ampe creation</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-2-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-2-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-2-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-2-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-2-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-2-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-2-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-2-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-2-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-2-10">10</a></span>
-<span class="normal"><a href="#__codelineno-2-11">11</a></span>
-<span class="normal"><a href="#__codelineno-2-12">12</a></span>
-<span class="normal"><a href="#__codelineno-2-13">13</a></span>
-<span class="normal"><a href="#__codelineno-2-14">14</a></span>
-<span class="normal"><a href="#__codelineno-2-15">15</a></span>
-<span class="normal"><a href="#__codelineno-2-16">16</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">createDestroyAmpe</span><span class="p">(</span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="p">)</span><span class="w"> </span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2"></a><span class="w">    </span><span class="c1">// Create engine implementation object</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5"></a><span class="w">    </span><span class="c1">// Destroy it after return or on error</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="o">*</span><span class="p">.</span><span class="n">Destroy</span><span class="p">();</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8"></a><span class="w">    </span><span class="c1">// Create ampe interface</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="n">ampe</span><span class="p">();</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11"></a><span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ampe</span><span class="p">;</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13"></a><span class="w">    </span><span class="c1">// No need to destroy ampe itself.</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14"></a><span class="w">    </span><span class="c1">// It is an interface provided by Reactor.</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15"></a><span class="w">    </span><span class="c1">// It will be destroyed via  rtr.*.Destroy().</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16"></a><span class="p">}</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="admonition note inline end">
+<p class="admonition-title">Note</p>
+<p>You can create multiple engines per process.</p>
+</div>
+<div class="language-zig highlight"><span class="filename">Example of Ampe creation</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">createDestroyAmpe</span><span class="p">(</span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="p">)</span><span class="w"> </span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="c1">// Create engine implementation object</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="c1">// Destroy it after return or on error</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="o">*</span><span class="p">.</span><span class="n">Destroy</span><span class="p">();</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="c1">// Create ampe interface</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="o">*</span><span class="p">.</span><span class="n">ampe</span><span class="p">();</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ampe</span><span class="p">;</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="c1">// No need to destroy ampe itself.</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="c1">// It is an interface provided by Reactor.</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// It will be destroyed via  rtr.*.Destroy().</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">}</span>
+</span></code></pre></div>
 <hr />
 <h2 id="interface">Interface</h2>
-<p>Ampe is represented by the following interface: 
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-3-1">1</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1"></a><span class="w">    </span><span class="n">tofu</span><span class="p">.</span><span class="n">Ampe</span>
-</span></code></pre></div></td></tr></table></div></p>
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Brief version of the Interface</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-4-1">1</a></span>
-<span class="normal"><a href="#__codelineno-4-2">2</a></span>
-<span class="normal"><a href="#__codelineno-4-3">3</a></span>
-<span class="normal"><a href="#__codelineno-4-4">4</a></span>
-<span class="normal"><a href="#__codelineno-4-5">5</a></span>
-<span class="normal"><a href="#__codelineno-4-6">6</a></span>
-<span class="normal"><a href="#__codelineno-4-7">7</a></span>
-<span class="normal"><a href="#__codelineno-4-8">8</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">create</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="n">ChannelGroup</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">destroy</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">get</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">strategy</span><span class="o">:</span><span class="w"> </span><span class="n">AllocationStrategy</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">put</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="o">:</span><span class="w"> </span><span class="o">*?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="p">)</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7"></a>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">getAllocator</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">)</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="p">{...}</span>
-</span></code></pre></div></td></tr></table></div>
+<p>Ampe is represented by the following interface: </p>
+<div class="language-zig highlight"><span class="filename">Brief version of the Interface</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">create</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="n">ChannelGroup</span><span class="w"> </span><span class="p">{...}</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">destroy</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">get</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">strategy</span><span class="o">:</span><span class="w"> </span><span class="n">AllocationStrategy</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="w"> </span><span class="p">{...}</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">put</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="o">:</span><span class="w"> </span><span class="o">*?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="p">)</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">getAllocator</span><span class="p">(</span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="p">)</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="p">{...}</span>
+</span></code></pre></div>
 <p>Just a reminder: all methods are thread-safe.</p>
 <p>The first two methods, create/destroy, manage a ChannelGroup. You don't need to know what that is yet; just make a note of it.</p>
 <p>The next two methods require additional explanation, so let's move on to the <em>Message Pool</em>.</p>
@@ -1103,14 +1008,11 @@
 <p>Ampe supports a Message Pool mechanism to improve system performance.</p>
 <p>The <strong><em>get</em></strong> operation retrieves an existing message from the pool or creates a new one. 
 The choice is determined by the <em>strategy: AllocationStrategy</em> parameter:
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-5-1">1</a></span>
-<span class="normal"><a href="#__codelineno-5-2">2</a></span>
-<span class="normal"><a href="#__codelineno-5-3">3</a></span>
-<span class="normal"><a href="#__codelineno-5-4">4</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AllocationStrategy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2"></a><span class="w">    </span><span class="n">poolOnly</span><span class="p">,</span><span class="w"> </span><span class="c1">// Tries to get a message from the pool. Returns null if the pool is empty.</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3"></a><span class="w">    </span><span class="n">always</span><span class="p">,</span><span class="w">   </span><span class="c1">// Gets a message from the pool or creates a new one if the pool is empty.</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AllocationStrategy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">poolOnly</span><span class="p">,</span><span class="w"> </span><span class="c1">// Tries to get a message from the pool. Returns null if the pool is empty.</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">always</span><span class="p">,</span><span class="w">   </span><span class="c1">// Gets a message from the pool or creates a new one if the pool is empty.</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">};</span>
+</span></code></pre></div></p>
 <div class="admonition warn">
 <p class="admonition-title">null isn't error</p>
 <p>Returned by get null is absolutely valid value, <em>null</em> returned if the <em>pool is empty</em> and the strategy is <em>poolOnly</em>. </p>
@@ -1123,14 +1025,13 @@ The choice is determined by the <em>strategy: AllocationStrategy</em> parameter:
 <p>Opposite <strong><em>put</em></strong> operation returns message to the pool and sets it's value to <em>null</em>.
 If engine performs shutdown or <strong><em>pool is full</em></strong>, message will be destroyed, means
 all allocated memory silently will be released.</p>
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-6-1">1</a></span>
-<span class="normal"><a href="#__codelineno-6-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="o">:</span><span class="w"> </span><span class="o">?*</span><span class="n">Message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">tofu</span><span class="p">.</span><span class="n">AllocationStrategy</span><span class="p">.</span><span class="n">poolOnly</span><span class="p">);</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="o">:</span><span class="w"> </span><span class="o">?*</span><span class="n">Message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">tofu</span><span class="p">.</span><span class="n">AllocationStrategy</span><span class="p">.</span><span class="n">poolOnly</span><span class="p">);</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span></code></pre></div>
 <p>Because null returned by <strong><em>get</em></strong> is valid value , it's also valid value for <strong><em>put</em></strong>:
 if msg == null, put does nothing.</p>
 <div class="admonition question">
-<p class="admonition-title">*?*message.Message - WTH???</p>
+<p class="admonition-title">NAQ: *?*message.Message - WTH???</p>
 <p>*?* (address of nullable pointer) idiom allows to prevent
 reusing of released or moved to other thread objects(structs).
 In our case - Messages.</p>
@@ -1148,14 +1049,11 @@ In our case - Messages.</p>
 <p>You will see usage of <strong><em>*?</em></strong>* in different places during our journey.</p>
 <h3 id="pool-configuration">Pool configuration</h3>
 <p>Pool configuration is determined by 
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-7-1">1</a></span>
-<span class="normal"><a href="#__codelineno-7-2">2</a></span>
-<span class="normal"><a href="#__codelineno-7-3">3</a></span>
-<span class="normal"><a href="#__codelineno-7-4">4</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2"></a><span class="w">    </span><span class="n">initialPoolMsgs</span><span class="o">:</span><span class="w"> </span><span class="o">?</span><span class="kt">u16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3"></a><span class="w">    </span><span class="n">maxPoolMsgs</span><span class="o">:</span><span class="w"> </span><span class="o">?</span><span class="kt">u16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">initialPoolMsgs</span><span class="o">:</span><span class="w"> </span><span class="o">?</span><span class="kt">u16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">maxPoolMsgs</span><span class="o">:</span><span class="w"> </span><span class="o">?</span><span class="kt">u16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">};</span>
+</span></code></pre></div>
 <strong><em>initialPoolMsgs</em></strong> - is the number of messages in the pool created during initialization of engine</p>
 <p><strong><em>maxPoolMsgs</em></strong> - is the maximal number of the messages </p>
 <p>Do you remember ? </p>
@@ -1164,86 +1062,62 @@ In our case - Messages.</p>
 </blockquote>
 <p>means if number of the messages in the pool == maxPoolMsgs, message will be destroyed.</p>
 <p>Tofu provides default pool configuration:
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Just example of configuration, it isn't recommendation</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-8-1">1</a></span>
-<span class="normal"><a href="#__codelineno-8-2">2</a></span>
-<span class="normal"><a href="#__codelineno-8-3">3</a></span>
-<span class="normal"><a href="#__codelineno-8-4">4</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="o">:</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2"></a><span class="w">        </span><span class="p">.</span><span class="n">initialPoolMsgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3"></a><span class="w">        </span><span class="p">.</span><span class="n">maxPoolMsgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4"></a><span class="w">    </span><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-zig highlight"><span class="filename">Just example of configuration, it isn't recommendation</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="o">:</span><span class="w"> </span><span class="n">Options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">        </span><span class="p">.</span><span class="n">initialPoolMsgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="p">.</span><span class="n">maxPoolMsgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p">};</span>
+</span></code></pre></div></p>
 <p>Pool configuration is used during creation of engine:
-<div class="language-zig highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-9-1">1</a></span>
-<span class="normal"><a href="#__codelineno-9-2">2</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1"></a><span class="w">    </span><span class="c1">// Create engine implementation object with default pool configuration </span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="w">    </span><span class="c1">// Create engine implementation object with default pool configuration </span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
+</span></code></pre></div></p>
 <p>Just clarification - you don't deal with pool destroy, it will be destroyed during destroy of engine. </p>
 <hr />
 <h2 id="errors-and-statuses">Errors and Statuses</h2>
 <p>Tofu defines own error set:
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Partial tofu error set</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-10-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-10-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-10-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-10-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-10-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-10-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-10-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-10-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-10-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-10-10">10</a></span>
-<span class="normal"><a href="#__codelineno-10-11">11</a></span>
-<span class="normal"><a href="#__codelineno-10-12">12</a></span>
-<span class="normal"><a href="#__codelineno-10-13">13</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">error</span><span class="p">{</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2"></a><span class="w">    </span><span class="n">NotImplementedYet</span><span class="p">,</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3"></a><span class="w">    </span><span class="n">WrongConfiguration</span><span class="p">,</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4"></a><span class="w">    </span><span class="n">NotAllowed</span><span class="p">,</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5"></a><span class="w">    </span><span class="n">NullMessage</span><span class="p">,</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6"></a><span class="w">    </span><span class="p">............</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7"></a><span class="w">    </span><span class="n">PoolEmpty</span><span class="p">,</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8"></a><span class="w">    </span><span class="n">AllocationFailed</span><span class="p">,</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9"></a><span class="w">    </span><span class="p">............</span>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10"></a><span class="w">    </span><span class="n">ShutdownStarted</span><span class="p">,</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11"></a><span class="w">    </span><span class="n">ProcessingFailed</span><span class="p">,</span><span class="w"> </span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12"></a><span class="w">    </span><span class="n">UnknownError</span><span class="p">,</span>
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div>
+<div class="language-zig highlight"><span class="filename">Partial tofu error set</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">error</span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">NotImplementedYet</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="n">WrongConfiguration</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="n">NotAllowed</span><span class="p">,</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="n">NullMessage</span><span class="p">,</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p">............</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="n">PoolEmpty</span><span class="p">,</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="n">AllocationFailed</span><span class="p">,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="p">............</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="n">ShutdownStarted</span><span class="p">,</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="n">ProcessingFailed</span><span class="p">,</span><span class="w"> </span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">    </span><span class="n">UnknownError</span><span class="p">,</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="p">};</span>
+</span></code></pre></div>
 There is also enumerator for statuses:
-<div class="language-zig highlight"><table class="highlighttable"><tr><th colspan="2" class="filename"><span class="filename">Partial tofu statuses</span></th></tr><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-11-1"> 1</a></span>
-<span class="normal"><a href="#__codelineno-11-2"> 2</a></span>
-<span class="normal"><a href="#__codelineno-11-3"> 3</a></span>
-<span class="normal"><a href="#__codelineno-11-4"> 4</a></span>
-<span class="normal"><a href="#__codelineno-11-5"> 5</a></span>
-<span class="normal"><a href="#__codelineno-11-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-11-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-11-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-11-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-11-10">10</a></span>
-<span class="normal"><a href="#__codelineno-11-11">11</a></span>
-<span class="normal"><a href="#__codelineno-11-12">12</a></span>
-<span class="normal"><a href="#__codelineno-11-13">13</a></span>
-<span class="normal"><a href="#__codelineno-11-14">14</a></span>
-<span class="normal"><a href="#__codelineno-11-15">15</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="p">(</span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2"></a><span class="w">    </span><span class="n">success</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3"></a><span class="w">    </span><span class="n">not_implemented_yet</span><span class="p">,</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4"></a><span class="w">    </span><span class="n">wrong_configuration</span><span class="p">,</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5"></a><span class="w">    </span><span class="n">not_allowed</span><span class="p">,</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6"></a><span class="w">    </span><span class="n">null_message</span><span class="p">,</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7"></a><span class="w">    </span><span class="p">............</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8"></a><span class="w">    </span><span class="n">pool_empty</span><span class="p">,</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9"></a><span class="w">    </span><span class="n">allocation_failed</span><span class="p">,</span>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10"></a><span class="w">    </span><span class="p">............</span>
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11"></a><span class="w">    </span><span class="n">shutdown_started</span><span class="p">,</span>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12"></a><span class="w">    </span><span class="p">............</span>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13"></a><span class="w">    </span><span class="n">processing_failed</span><span class="p">,</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14"></a><span class="w">    </span><span class="n">unknown_error</span><span class="p">,</span>
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15"></a><span class="p">};</span>
-</span></code></pre></div></td></tr></table></div></p>
+<div class="language-zig highlight"><span class="filename">Partial tofu statuses</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">AmpeStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="p">(</span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">success</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="n">not_implemented_yet</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="n">wrong_configuration</span><span class="p">,</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="n">not_allowed</span><span class="p">,</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="n">null_message</span><span class="p">,</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="p">............</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="n">pool_empty</span><span class="p">,</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="n">allocation_failed</span><span class="p">,</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="p">............</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="n">shutdown_started</span><span class="p">,</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="p">............</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="n">processing_failed</span><span class="p">,</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="n">unknown_error</span><span class="p">,</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">};</span>
+</span></code></pre></div></p>
 <p>Every <em>AmpeError</em> has corresponding <em>AmpeStatus</em> enumerator (except 'success').</p>
 <p>Errors and Statuses have self-described names which I hope means I don’t have to describe each one separately.</p>
 <p>To jump ahead a bit, this system allows errors to be transmitted as part of Message, 
 using just 1 byte (u8).</p>
 <p>You can use helper function <code class="language-zig highlight"><span class="n">status</span><span class="p">.</span><span class="n">raw_to_error</span><span class="p">(</span><span class="n">rs</span><span class="o">:</span><span class="w"> </span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="n">AmpeError</span><span class="o">!</span><span class="kt">void</span></code> in order
 to convert byte to corresponding error.</p>
+<p>Not every non-zero status means an error right away. It depends on the situation.<br />
+For example, '<em>channel_closed</em>'</p>
+<ul>
+<li>is not an error if you requested to close the channel  </li>
+<li>it is an error if it happens in the middle of communication</li>
+</ul>
 
 
 
@@ -1290,13 +1164,13 @@ to convert byte to corresponding error.</p>
         
         
           
-          <a href="../../../api/tofu-api/" class="md-footer__link md-footer__link--next" aria-label="Next: API Documentation">
+          <a href="../channel-group/" class="md-footer__link md-footer__link--next" aria-label="Next: ChannelGroup">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                API Documentation
+                ChannelGroup
               </div>
             </div>
             <div class="md-footer__button md-icon">

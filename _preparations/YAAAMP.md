@@ -199,7 +199,7 @@ YAAAMP supports future extensions via **Text Headers**: Flexible key-value pairs
 
 ## DIY (Do It Yourself)
 
-YAAAMP provides flexibility for developers to customize features via its extensible design:
+tofu provides flexibility for developers to customize features via its extensible design:
 - Supports custom features, such as:
     - Authentication using credentials or tokens in `hello` message text headers.
     - Body compression by specifying a compression type (e.g., `Content-Encoding: gzip`) in text headers.
@@ -207,8 +207,6 @@ YAAAMP provides flexibility for developers to customize features via its extensi
 - Allows freedom in data serialization:
     - No enforced marshalling scheme.
     - Developers can choose formats like JSON or Protobuf.
-- Enables tailoring YAAAMP to application needs while the protocol:
-    - Focuses on efficient and reliable message transmission.
 
 ## Message Flow Diagrams
 
