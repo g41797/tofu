@@ -29,7 +29,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
     var addr: std.net.Address = undefined;
     var addr_len = askt.address.getOsSockLen();
 
-    skt.socket = std.posix.accept(
+    skt.socket = acceptPosix(
         askt.socket.?,
         &addr.any,
         &addr_len,
@@ -265,6 +265,94 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
         //     else =>  |err| return posix.unexpectedErrno(@enumFromInt(err)),
         // }
     }
+}
+
+/// Doctored version of std.posix.accept - fix for Linux only
+/// Accept a connection on a socket.
+/// If `sockfd` is opened in non blocking mode, the function will
+/// return error.WouldBlock when EAGAIN is received.
+pub fn acceptPosix(
+    /// This argument is a socket that has been created with `socket`, bound to a local address
+    /// with `bind`, and is listening for connections after a `listen`.
+    sock: posix.socket_t,
+    /// This argument is a pointer to a sockaddr structure.  This structure is filled in with  the
+    /// address  of  the  peer  socket, as known to the communications layer.  The exact format of the
+    /// address returned addr is determined by the socket's address  family  (see  `socket`  and  the
+    /// respective  protocol  man  pages).
+    addr: ?*posix.sockaddr,
+    /// This argument is a value-result argument: the caller must initialize it to contain  the
+    /// size (in bytes) of the structure pointed to by addr; on return it will contain the actual size
+    /// of the peer address.
+    ///
+    /// The returned address is truncated if the buffer provided is too small; in this  case,  `addr_size`
+    /// will return a value greater than was supplied to the call.
+    addr_size: ?*posix.socklen_t,
+    /// The following values can be bitwise ORed in flags to obtain different behavior:
+    /// * `SOCK.NONBLOCK` - Set the `NONBLOCK` file status flag on the open file description (see `open`)
+    ///   referred  to by the new file descriptor.  Using this flag saves extra calls to `fcntl` to achieve
+    ///   the same result.
+    /// * `SOCK.CLOEXEC`  - Set the close-on-exec (`FD_CLOEXEC`) flag on the new file descriptor.   See  the
+    ///   description  of the `CLOEXEC` flag in `open` for reasons why this may be useful.
+    flags: u32,
+) posix.AcceptError!posix.socket_t {
+    const have_accept4 = !(builtin.target.os.tag.isDarwin() or native_os == .windows or native_os == .haiku);
+    std.debug.assert(0 == (flags & ~@as(u32, posix.SOCK.NONBLOCK | posix.SOCK.CLOEXEC))); // Unsupported flag(s)
+
+    const accepted_sock: posix.socket_t = while (true) {
+        const rc = if (have_accept4)
+            system.accept4(sock, addr, addr_size, flags)
+        else if (native_os == .windows)
+            windows.accept(sock, addr, addr_size)
+        else
+            system.accept(sock, addr, addr_size);
+
+        if (native_os == .windows) {
+            if (rc == windows.ws2_32.INVALID_SOCKET) {
+                switch (windows.ws2_32.WSAGetLastError()) {
+                    .WSANOTINITIALISED => unreachable, // not initialized WSA
+                    .WSAECONNRESET => return error.ConnectionResetByPeer,
+                    .WSAEFAULT => unreachable,
+                    .WSAEINVAL => return error.SocketNotListening,
+                    .WSAEMFILE => return error.ProcessFdQuotaExceeded,
+                    .WSAENETDOWN => return error.NetworkSubsystemFailed,
+                    .WSAENOBUFS => return error.FileDescriptorNotASocket,
+                    .WSAEOPNOTSUPP => return error.OperationNotSupported,
+                    .WSAEWOULDBLOCK => return error.WouldBlock,
+                    else => |err| return windows.unexpectedWSAError(err),
+                }
+            } else {
+                break rc;
+            }
+        } else {
+            switch (posix.errno(rc)) {
+                .SUCCESS => break @intCast(rc),
+                .INTR => continue,
+                .AGAIN => return error.WouldBlock,
+                // .BADF => unreachable, // always a race condition
+                .CONNABORTED => return error.ConnectionAborted,
+                // .FAULT => unreachable,
+                .INVAL => return error.SocketNotListening,
+                // .NOTSOCK => unreachable,
+                .MFILE => return error.ProcessFdQuotaExceeded,
+                .NFILE => return error.SystemFdQuotaExceeded,
+                .NOBUFS => return error.SystemResources,
+                .NOMEM => return error.SystemResources,
+                // .OPNOTSUPP => unreachable,
+                .PROTO => return error.ProtocolFailure,
+                .PERM => return error.BlockedByFirewall,
+                else => |err| return posix.unexpectedErrno(err),
+            }
+        }
+    };
+
+    errdefer switch (native_os) {
+        .windows => windows.closesocket(accepted_sock) catch unreachable,
+        else => close(accepted_sock),
+    };
+    if (!have_accept4) {
+        try posix.setSockFlags(accepted_sock, flags);
+    }
+    return accepted_sock;
 }
 
 pub const connectError = error{

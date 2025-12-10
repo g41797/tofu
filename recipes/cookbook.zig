@@ -58,13 +58,13 @@ pub fn createDestroyMain(gpa: Allocator) !void {
 
 pub fn createDestroyAmpe(gpa: Allocator) !void {
     // Create engine implementation object
-    var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
+    const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
 
     // Destroy it after return or on error
     defer rtr.*.Destroy();
 
     // Create ampe interface
-    const ampe: Ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.*.ampe();
 
     _ = ampe;
 
@@ -73,16 +73,19 @@ pub fn createDestroyAmpe(gpa: Allocator) !void {
     // It will be destroyed via  rtr.*.Destroy().
 }
 
-pub fn createDestroyMessageChannelGroup(gpa: Allocator) !void {
-    var rtr = try Reactor.Create(gpa, DefaultOptions);
-    defer rtr.Destroy();
+pub fn createDestroyChannelGroup(gpa: Allocator) !void {
+    const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
+    defer rtr.*.Destroy();
 
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.*.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
 
-    // Destroy ChannelGroup using ampe.
-    try ampe.destroy(chnls);
+    defer {
+        _ = ampe.destroy(chnls) catch |err| {
+            std.log.err("destroy channel group failed with error {any}", .{err});
+        };
+    }
 }
 
 pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {

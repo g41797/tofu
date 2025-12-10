@@ -97,7 +97,7 @@ fn test_ampe_just_create_destroy() !void {
     std.testing.log_level = .debug;
     try recipes.createDestroyMain(gpa);
     try recipes.createDestroyAmpe(gpa);
-    try recipes.createDestroyMessageChannelGroup(gpa);
+    try recipes.createDestroyChannelGroup(gpa);
 }
 
 fn simm_tests() void {

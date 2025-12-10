@@ -73,7 +73,7 @@ pub fn build(b: *std.Build) void {
     // running `zig build`).
     b.installArtifact(lib);
 
-    const recipesMod = b.addModule("recipes/", .{
+    const recipesMod = b.addModule("recipes", .{
         .root_source_file = b.path("recipes/cookbook.zig"),
         .target = target,
         .optimize = optimize,
