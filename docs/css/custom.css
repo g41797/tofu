@@ -1,128 +1,122 @@
 /* ============================================
-   FONT SIZE CONFIGURATION - LARGE SIZES
+   FONT SIZE CONFIGURATION - REDUCED ~20%
    ============================================ */
 
 /* Base font size - affects all body text */
 :root {
-    font-size: 18px !important;  /* Increase base font size */
+    font-size: 14.4px !important;  /* 18px → 14.4px (~20% smaller) */
 }
 
-/* Increase paragraph and general text size */
+/* Paragraph and general text size */
 .md-typeset {
-    font-size: 1.25rem !important;  /* Much larger body text */
+    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
     line-height: 1.8 !important;
 }
 
-/* Code blocks (fenced code) - LARGE */
+/* Code blocks (fenced code) - General PRE styles */
 .md-typeset pre {
-    font-size: 1.2rem !important;
-    overflow-x: auto !important;        /* Enable horizontal scrolling */
-    max-width: 100% !important;         /* Don't exceed container width */
+    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
+    max-width: 100% !important;
 }
 
+/* Code element inside PRE */
 .md-typeset pre > code {
-    font-size: 1.0rem !important;        /* Large code block text */
-    line-height: 1.7 !important;         /* Better readability */
-    display: block !important;           /* Ensure proper display */
-    white-space: pre !important;         /* Preserve formatting and allow scrolling */
-    word-wrap: normal !important;        /* Don't wrap long lines */
-    overflow-x: visible !important;      /* Show all content */
+    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
+    line-height: 1.7 !important;
 }
 
-/* Inline code - LARGE */
+/* Inline code */
 .md-typeset code {
-    font-size: 1.15rem !important;
+    font-size: 0.92rem !important;   /* 1.15rem → 0.92rem */
     padding: 0.15em 0.5em !important;
 }
 
-/* Headers scaling - LARGE */
+/* Headers scaling */
 .md-typeset h1 {
-    font-size: 2.8rem !important;
+    font-size: 2.24rem !important;   /* 2.8rem → 2.24rem */
     margin-top: 1.5rem !important;
 }
 .md-typeset h2 {
-    font-size: 2.2rem !important;
+    font-size: 1.76rem !important;   /* 2.2rem → 1.76rem */
     margin-top: 1.3rem !important;
 }
 .md-typeset h3 {
-    font-size: 1.8rem !important;
+    font-size: 1.44rem !important;   /* 1.8rem → 1.44rem */
     margin-top: 1.1rem !important;
 }
 .md-typeset h4 {
-    font-size: 1.5rem !important;
+    font-size: 1.2rem !important;    /* 1.5rem → 1.2rem */
 }
 
-/* Lists - LARGE */
-.md-typeset ul, .md-typeset ol {
-    font-size: 1.25rem !important;
+/* Lists */
+.md-typeset ul,
+.md-typeset ol {
+    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
 }
 
-/* Tables - LARGE */
+/* Tables */
 .md-typeset table {
-    font-size: 1.15rem !important;
+    font-size: 0.92rem !important;   /* 1.15rem → 0.92rem */
 }
 
-/* Navigation menu font size - LARGE */
-.md-nav {
-    font-size: 1.1rem !important;
-}
-
+/* Navigation menu font size */
+.md-nav,
 .md-nav__link {
-    font-size: 1.1rem !important;
+    font-size: 0.88rem !important;   /* 1.1rem → 0.88rem */
 }
 
-/* Header navigation tabs - LARGE */
+/* Header navigation tabs */
 .md-tabs__link {
-    font-size: 1.3rem !important;  /* Increase tab titles */
-    font-weight: 500 !important;   /* Make them slightly bolder */
+    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
+    font-weight: 500 !important;
 }
 
-/* Header title (site name) - LARGE */
+/* Header title (site name) */
 .md-header__title {
-    font-size: 1.4rem !important;
+    font-size: 1.12rem !important;   /* 1.4rem → 1.12rem */
 }
 
-/* Admonitions (note boxes) - LARGE */
+/* Admonitions (note boxes) */
 .md-typeset .admonition,
 .md-typeset details {
-    font-size: 1.2rem !important;
+    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
 }
 
 .md-typeset .admonition-title {
-    font-size: 1.25rem !important;
+    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
 }
 
-/* Tabs  */
+/* Tabs */
 .md-typeset .tabbed-labels > label {
-    font-size: 1.0rem !important;
+    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
 }
 
-/* Code block line numbers  */
+/* Code block line numbers */
 .md-typeset .linenodiv,
 .md-typeset .linenos {
-    font-size: 1.0rem !important;
+    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
 }
 
 /* ============================================
-   BUTTON STYLES
+   BUTTON STYLES (also reduced ~20%)
    ============================================ */
 
 /* Small Button */
 .md-button--small {
-    font-size: 0.8rem;
+    font-size: 0.64rem !important;   /* 0.8rem → 0.64rem */
     padding: 4px 10px !important;
     border-radius: 6px !important;
 }
 
 /* Medium Button (default) */
 .md-button--medium {
-    font-size: 1rem;
+    font-size: 0.8rem !important;    /* 1rem → 0.8rem */
     padding: 8px 16px;
 }
 
 /* Large Button */
 .md-button--large {
-    font-size: 1.2rem;
+    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
     padding: 12px 20px;
     border-radius: 6px;
 }
@@ -151,49 +145,133 @@
 }
 
 /* ============================================
-   COLOR SCHEMES - CLEAR LIGHT/DARK DISTINCTION
+   COLOR SCHEMES - DRAMATIC LIGHT/DARK CONTRAST
    ============================================ */
 
-/* Light mode - Clean and bright */
+/* LIGHT MODE: Subtle mint (gentle, less saturated) */
 [data-md-color-scheme="default"] {
-    --md-primary-fg-color:        #1976d2;  /* Blue-700 */
-    --md-primary-fg-color--light: #42a5f5;  /* Blue-400 */
-    --md-primary-fg-color--dark:  #0d47a1;  /* Blue-900 */
-    --md-accent-fg-color:         #e91e63;  /* Pink-600 */
-    --md-accent-fg-color--light:  #f48fb1;  /* Pink-300 */
+    --md-primary-fg-color:        #388e3c;       /* Muted green */
+    --md-primary-fg-color--light: #66bb6a;       /* Soft green */
+    --md-primary-fg-color--dark:  #2e7d32;       /* Slightly darker green */
+    --md-accent-fg-color:         #ffeb3b;       /* Sunny yellow */
+    --md-accent-fg-color--light:  #fff176;       /* Light yellow */
 
-    /* Light mode background colors */
-    --md-default-bg-color:        #ffffff;  /* White background */
-    --md-default-fg-color:        #000000;  /* Black text */
-    --md-code-bg-color:           #f5f5f5;  /* Light gray code blocks */
-    --md-code-fg-color:           #37474f;  /* Dark gray code text */
+    --md-default-bg-color:        #f5f5f5;       /* Neutral light gray */
+    --md-default-fg-color:        #1a1a1a;       /* Dark gray */
+
+    --md-code-bg-color:           #fafafa;       /* Very subtle gray */
+    --md-code-fg-color:           #2d2d2d;       /* Dark gray */
+
+    --md-hue:                     120;           /* Keep green hue but muted */
 }
 
-/* Dark mode - Rich and contrasty */
+/* DARK MODE: Deep purple + electric green (bold, futuristic) */
 [data-md-color-scheme="slate"] {
-    --md-primary-fg-color:        #82b1ff;  /* Light Blue */
-    --md-primary-fg-color--light: #b6d7ff;  /* Lighter Blue */
-    --md-primary-fg-color--dark:  #4d82cb;  /* Darker Blue */
-    --md-accent-fg-color:         #ff4081;  /* Bright Pink */
-    --md-accent-fg-color--light:  #ff79b0;  /* Light Pink */
+    --md-primary-fg-color:        #8b5cf6;       /* Electric purple */
+    --md-primary-fg-color--light: #c084fc;      /* Light purple */
+    --md-primary-fg-color--dark:  #5b21b6;      /* Deep purple */
+    --md-accent-fg-color:         #10b981;       /* Emerald green */
+    --md-accent-fg-color--light:  #34d399;      /* Bright green */
 
-    /* Dark mode background colors */
-    --md-default-bg-color:        #1e1e1e;  /* Very dark gray background */
-    --md-default-fg-color:        #e0e0e0;  /* Light gray text */
-    --md-code-bg-color:           #2d2d2d;  /* Darker code blocks */
-    --md-code-fg-color:           #b0bec5;  /* Light blue-gray code text */
+    --md-default-bg-color:        #0f0f23;       /* Deep navy */
+    --md-default-fg-color:        #e2e8f0;       /* Light gray */
 
-    /* Header in dark mode */
-    --md-header-bg-color:         #121212;  /* Almost black header */
+    --md-code-bg-color:           #1a1b2e;       /* Dark purple-gray */
+    --md-code-fg-color:           #a78bfa;       /* Light purple */
+
+    --md-hue:                     270;           /* Purple hue */
+
+    /* Dark mode header/background */
+    --md-header-bg-color:         #0a0a14;       /* Almost black */
 }
 
-/** Ensure the repository icon's container is always displayed *!*/
+/** Ensure the repository icon's container is always displayed **/
 .md-header__source {
     display: block !important;
 }
 
-/* Ensure the icon itself is rendered */
 .md-header__button.md-source {
     visibility: visible !important;
     display: inline-flex !important;
+}
+
+/* ============================================
+   REAL TOP SCROLLBAR FOR CODE BLOCKS
+   ============================================ */
+
+/* PRE: container for code + top scrollbar */
+.md-typeset pre {
+    position: relative;
+    padding-top: 20px;        /* room for top bar */
+    margin: 0;
+    background: var(--md-code-bg-color);
+    border-radius: 8px;
+}
+
+/* Top scrollbar bar */
+.md-typeset pre .code-top-scrollbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 16px;
+
+    background: var(--md-code-bg-color);
+}
+
+/* Inner filler to define scrollWidth */
+.md-typeset pre .code-top-scrollbar-inner {
+    height: 1px;
+}
+
+/* Top scrollbar styling (WebKit) */
+.md-typeset pre .code-top-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+.md-typeset pre .code-top-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--md-accent-fg-color) !important;
+    border-radius: 4px;
+}
+
+/* CODE: keep native bottom scrollbar */
+.md-typeset pre > code {
+    display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: pre;
+}
+
+/* Bottom scrollbar styling */
+.md-typeset pre > code::-webkit-scrollbar {
+    height: 10px;
+}
+.md-typeset pre > code::-webkit-scrollbar-track {
+    background: var(--md-code-bg-color);
+}
+.md-typeset pre > code::-webkit-scrollbar-thumb {
+    background: var(--md-accent-fg-color--light) !important;
+    border-radius: 5px;
+}
+
+/* ============================================
+   HIDE LOGO FLASH DURING NAVIGATION - AGGRESSIVE
+   ============================================ */
+
+/* Completely hide logo image by default */
+.md-header__button.md-logo img {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: none !important;
+}
+
+/* Show ONLY when fully loaded and stable */
+.md-content[data-md-state="done"] .md-header__button.md-logo img,
+body:not([data-md-toggle]) .md-header__button.md-logo img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transition: opacity 0.2s ease-in;
 }

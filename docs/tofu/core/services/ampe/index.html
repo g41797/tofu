@@ -160,11 +160,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-header__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
@@ -389,11 +419,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-nav__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     tofu documentation - Work In Progress
   </label>
@@ -959,7 +1019,7 @@
 
   <h1>Ampe</h1>
 
-<p><strong><em>Ampe</em></strong> or simply the <strong><em>engine</em></strong> is the "holder" (owner) and allocator of all tofu resources:</p>
+<p>Async message passing engine(<strong><em>Ampe</em></strong>) or simply the <strong><em>engine</em></strong> is the "holder" (owner) and allocator of all tofu resources:</p>
 <ul>
 <li>ChannelGroup(s)</li>
 <li>Message(s))</li>
@@ -967,10 +1027,6 @@
 <p>Consider it the GPA of tofu. </p>
 <hr />
 <h2 id="ampe-creation">Ampe creation</h2>
-<div class="admonition note inline end">
-<p class="admonition-title">Note</p>
-<p>You can create multiple engines per process.</p>
-</div>
 <div class="language-zig highlight"><span class="filename">Example of Ampe creation</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">createDestroyAmpe</span><span class="p">(</span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="p">)</span><span class="w"> </span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="c1">// Create engine implementation object</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
@@ -988,6 +1044,10 @@
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// It will be destroyed via  rtr.*.Destroy().</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">}</span>
 </span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can create <em>multiple engines</em> per process.</p>
+</div>
 <hr />
 <h2 id="interface">Interface</h2>
 <p>Ampe is represented by the following interface: </p>
@@ -1211,6 +1271,8 @@ For example, '<em>channel_closed</em>'</p>
     
     
       <script src="../../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../../../../js/scroll-sync.js"></script>
       
     
   </body>

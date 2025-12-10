@@ -160,11 +160,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-header__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
@@ -389,11 +419,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-nav__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     tofu documentation - Work In Progress
   </label>
@@ -596,10 +656,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-client-operation-connect" class="md-nav__link">
+  <a href="#2-client-connect" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Client Operation: Connect
+        2. Client: Connect
       
     </span>
   </a>
@@ -607,10 +667,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-server-operations-listen-and-accept" class="md-nav__link">
+  <a href="#3-server-listen-and-accept" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Server Operations: Listen and Accept
+        3. Server: Listen and Accept
       
     </span>
   </a>
@@ -681,14 +741,36 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Addresses - Unix Domain Sockets (UDS)">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-linux-tracks-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Linux Tracks Sockets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Linux Tracks Sockets">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#path-used-for-both" class="md-nav__link">
+  <a href="#file-descriptor-fd-socket-handle" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Path Used for Both
+        File Descriptor (FD) = Socket Handle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fd-is-unique-only-inside-one-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FD is unique only inside one process
       
     </span>
   </a>
@@ -701,22 +783,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-the-os-linux-keeps-track-of-sockets" class="md-nav__link">
+  <a href="#socket-tuning-with-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How the OS (Linux) Keeps Track of Sockets
+        Socket tuning with options
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How the OS (Linux) Keeps Track of Sockets">
+    <nav class="md-nav" aria-label="Socket tuning with options">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#file-descriptor-fd-socket-id-handle" class="md-nav__link">
+  <a href="#reuse-port-quickly-so_reuseaddr-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Descriptor (FD) = Socket ID / Handle
+        Reuse Port Quickly - SO_REUSEADDR option
       
     </span>
   </a>
@@ -724,49 +806,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#important-fd-is-unique-only-inside-one-process" class="md-nav__link">
+  <a href="#socket-closing-modes-so_linger-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Important: FD is unique only inside one process
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tuning-sockets-setsockopt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tuning Sockets (setsockopt)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tuning Sockets (setsockopt)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#so_reuseaddr-reuse-the-same-port-quickly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SO_REUSEADDR (Reuse the Same Port Quickly)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#so_linger-linger-option" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SO_LINGER (Linger Option)
+        Socket closing modes - SO_LINGER option
       
     </span>
   </a>
@@ -1129,10 +1172,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-client-operation-connect" class="md-nav__link">
+  <a href="#2-client-connect" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Client Operation: Connect
+        2. Client: Connect
       
     </span>
   </a>
@@ -1140,10 +1183,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-server-operations-listen-and-accept" class="md-nav__link">
+  <a href="#3-server-listen-and-accept" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Server Operations: Listen and Accept
+        3. Server: Listen and Accept
       
     </span>
   </a>
@@ -1214,14 +1257,36 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Addresses - Unix Domain Sockets (UDS)">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-linux-tracks-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Linux Tracks Sockets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Linux Tracks Sockets">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#path-used-for-both" class="md-nav__link">
+  <a href="#file-descriptor-fd-socket-handle" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Path Used for Both
+        File Descriptor (FD) = Socket Handle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fd-is-unique-only-inside-one-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FD is unique only inside one process
       
     </span>
   </a>
@@ -1234,22 +1299,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-the-os-linux-keeps-track-of-sockets" class="md-nav__link">
+  <a href="#socket-tuning-with-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How the OS (Linux) Keeps Track of Sockets
+        Socket tuning with options
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How the OS (Linux) Keeps Track of Sockets">
+    <nav class="md-nav" aria-label="Socket tuning with options">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#file-descriptor-fd-socket-id-handle" class="md-nav__link">
+  <a href="#reuse-port-quickly-so_reuseaddr-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Descriptor (FD) = Socket ID / Handle
+        Reuse Port Quickly - SO_REUSEADDR option
       
     </span>
   </a>
@@ -1257,49 +1322,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#important-fd-is-unique-only-inside-one-process" class="md-nav__link">
+  <a href="#socket-closing-modes-so_linger-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Important: FD is unique only inside one process
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tuning-sockets-setsockopt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tuning Sockets (setsockopt)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tuning Sockets (setsockopt)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#so_reuseaddr-reuse-the-same-port-quickly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SO_REUSEADDR (Reuse the Same Port Quickly)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#so_linger-linger-option" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SO_LINGER (Linger Option)
+        Socket closing modes - SO_LINGER option
       
     </span>
   </a>
@@ -1338,184 +1364,117 @@
 
 
 <h1 id="sockets-101">Sockets 101</h1>
-<div class="admonition question">
-<p class="admonition-title">But you said earlier that we don't need to know anything about sockets?</p>
-<p>tofu uses the same terms (like connect, etc.), you still need to understand the address scheme and the correct order of socket's creation, difference between client and server side.
-I asked <em>Gemini</em> to provide <strong><em>ABSOLUTE MINIMUM</em></strong></p>
-</div>
+<p>Because tofu uses sockets under the hood, you still need to understand:</p>
+<ul>
+<li>the addressing scheme</li>
+<li>the correct order of creating sockets</li>
+<li>the difference between client and server sides</li>
+<li>socket tuning</li>
+</ul>
 <h2 id="what-is-a-socket">What is a Socket?</h2>
-<p>A <strong>socket</strong> is a software endpoint.
-It allows two programs to communicate.
-Communication can be on the same computer.
-It can also be across a network.</p>
+<p>A socket is a software endpoint.
+It lets two programs communicate.
+This can be on the same computer or across a network.</p>
 <h3 id="stream-oriented-sockets">Stream-Oriented Sockets</h3>
-<p>These sockets use a reliable, ordered, and connection-based protocol.
-<strong>TCP (Transmission Control Protocol)</strong> is the main example.
+<p>These use a reliable, ordered, connection-based protocol.
+TCP (Transmission Control Protocol) is the main example.
 Data is sent as a continuous stream of bytes.
-It guarantees that all data arrives correctly.</p>
-<hr />
+It guarantees all data arrives correctly.</p>
 <h2 id="socket-families-protocols">Socket Families (Protocols)</h2>
 <p>Sockets use different communication protocol families.</p>
 <h3 id="1-tcpip-sockets">1. TCP/IP Sockets</h3>
-<p>This family is for network communication.
-It uses <strong>IP addresses</strong> to identify machines.
-<strong>TCP/IP</strong> is the foundation of the internet.</p>
+<p>For network communication.
+Uses IP addresses to identify machines.
+TCP/IP is the foundation of the internet.</p>
 <h3 id="2-unix-domain-sockets-uds">2. Unix Domain Sockets (UDS)</h3>
-<p>This family is for local communication only.
-It works only on the <strong>same computer</strong>.
-UDS does not use network hardware.
-It is often faster than TCP/IP for local processes.</p>
-<hr />
+<p>For local communication only.
+Works on the same computer.
+No network hardware needed.
+Often faster than TCP/IP for local processes.</p>
 <h2 id="socket-operations">Socket Operations</h2>
-<p>Sockets follow a set lifecycle for communication.</p>
+<p>Sockets follow this lifecycle.</p>
 <h3 id="1-create">1. Create</h3>
-<p>The first step is to <strong>create</strong> the socket.
+<p>First step: create the socket.
 This reserves system resources.
-It gives you a handle (file descriptor) for later use.</p>
-<h3 id="2-client-operation-connect">2. Client Operation: Connect</h3>
-<p>A <strong>client</strong> uses the <code>connect()</code> operation.
-It tries to link its socket to the server's address.
-If successful, the communication stream is open.</p>
-<h3 id="3-server-operations-listen-and-accept">3. Server Operations: Listen and Accept</h3>
-<p>A <strong>server</strong> must wait for client connections.</p>
+Gives you a handle (file descriptor) for later use.</p>
+<h3 id="2-client-connect">2. Client: Connect</h3>
+<p>Client uses connect().
+Links its socket to the server's address.
+If successful, communication stream opens.</p>
+<h3 id="3-server-listen-and-accept">3. Server: Listen and Accept</h3>
+<p>Server waits for client connections.</p>
 <ul>
-<li><strong>Bind:</strong> The server attaches the socket to a specific local address.</li>
-<li><strong>Listen:</strong> The server waits for incoming connection requests.</li>
-<li><strong>Accept:</strong> When a client connects, the <code>accept()</code> call returns.<ul>
-<li>The <code>accept()</code> operation creates a <strong>second, new socket</strong>.</li>
-<li>The <strong>original socket</strong> remains the <strong>listener socket</strong>. It keeps waiting for new clients.</li>
-<li>The <strong>newly accepted socket</strong> is used for data transfer with the specific connected client.</li>
-<li>This is why the server needs two sockets for one connection.</li>
+<li>Bind: Attach socket to specific local address.</li>
+<li>Listen: Wait for incoming connection requests.</li>
+<li>Accept: When client connects, accept() returns.<ul>
+<li>Creates a <strong>second</strong>, <strong>new socket</strong>.</li>
+<li>Original socket stays as listener.</li>
+<li>New socket handles data with that client.</li>
 </ul>
 </li>
 </ul>
 <h3 id="4-disconnect-close">4. Disconnect (Close)</h3>
-<p>Communication ends when the socket is closed.</p>
+<p>Communication ends when socket closes.</p>
 <ul>
-<li><strong>Graceful Close:</strong> One side signals it is done sending data. The other side receives the remaining data. This is a clean shutdown.</li>
-<li><strong>Non-Graceful Close:</strong> A sudden close, like a program crash. Data that is currently being sent may be lost.</li>
+<li>Graceful close: Clean shutdown, data sent completely.</li>
+<li>Non-graceful close: Sudden close, data may be lost.</li>
 </ul>
-<hr />
 <h2 id="addresses-tcpip">Addresses - TCP/IP</h2>
-<p>TCP/IP addresses are a combination of an <strong>IP address</strong> and a <strong>port number</strong>.</p>
+<p>TCP/IP addresses combine IP address + port number.</p>
 <h3 id="server-address-bind">Server Address (Bind)</h3>
-<p>The server binds to its local <strong>IP address</strong>.
-It uses a well-known, fixed <strong>port number</strong> (e.g., 22, 80, 443).</p>
-<p><strong>Listening on a Specific Adapter</strong>
-A web server binds to the address <strong>192.168.1.10:80</strong>.
-* <strong>192.168.1.10</strong> is the specific IP address of one network card (adapter).
-* The server will only accept connections arriving at that specific IP.</p>
-<p><strong>Listening on All Adapters (Wildcard Address)</strong>
-To accept connections from any network card on the machine, the server uses a special address: <strong>0.0.0.0</strong>.
-<strong>Example:</strong> A server binds to <strong>0.0.0.0:8080</strong>.
-* <strong>0.0.0.0</strong> is the <strong>wildcard address</strong>.
-* This tells the operating system to listen on <strong>all available network adapters</strong> for connections on port <strong>8080</strong>. This is very common for public servers.</p>
+<p>Server binds to local IP address.
+Uses fixed port number (22, 80, 443).</p>
+<p><strong>Specific Adapter:</strong> 192.168.1.10:80
+- Only accepts connections to that IP.</p>
+<p><strong>All Adapters (Wildcard):</strong> 0.0.0.0:8080
+- Listens on all network cards on port 8080.</p>
 <h3 id="client-address-connect">Client Address (Connect)</h3>
-<p>The client uses the server's <strong>host name</strong> or <strong>IP address</strong>.
-It uses the server's fixed <strong>port number</strong>.
-The client's own socket is given a temporary <strong>ephemeral port</strong>.
-The operating system automatically assigns this temporary port.
-It is released when the connection closes.</p>
-<p><strong>Example:</strong> A client connects to the web server using the address <strong>192.168.1.10:80</strong>. The client's own socket might automatically be assigned the address <strong>10.0.0.5:54321</strong>, where <strong>54321</strong> is the ephemeral port.</p>
-<hr />
+<p>Client uses server's IP or hostname + port.
+Client gets temporary ephemeral port automatically.</p>
+<p>Example: Client connects to 192.168.1.10:80
+Client local: 10.0.0.5:54321 (ephemeral port)</p>
 <h2 id="addresses-unix-domain-sockets-uds">Addresses - Unix Domain Sockets (UDS)</h2>
-<p>UDS does not use IP addresses or port numbers.</p>
-<h3 id="path-used-for-both">Path Used for Both</h3>
-<p>UDS uses a <strong>file system path</strong> instead.
-The server must <strong>bind</strong> its socket to this path (e.g., <code>/tmp/service.sock</code>).
-The client must use this exact path to <strong>connect</strong>.
-This path acts as a local address for inter-process communication.</p>
-<p><strong>Example:</strong> A server binds to the path <strong>/var/run/myservice.sock</strong>. A client connects using the exact same path: <strong>/var/run/myservice.sock</strong>.</p>
-<div class="admonition question">
-<p class="admonition-title">Where are '<em>send</em>' and 'receive'?</p>
-<p>I already told you – this is <strong><em>ABSOLUTE MINIMUM</em></strong></p>
-</div>
-<hr />
-<h2 id="how-the-os-linux-keeps-track-of-sockets">How the OS (Linux) Keeps Track of Sockets</h2>
-<p>When your program creates a socket, the operating system must remember it and give the program a way to use it.</p>
-<h3 id="file-descriptor-fd-socket-id-handle">File Descriptor (FD) = Socket ID / Handle</h3>
+<p>No IP addresses or ports.</p>
+<p>Uses file system path instead.
+Example: /tmp/service.sock</p>
+<p>Server binds to path.
+Client connects to same path.</p>
+<h2 id="how-linux-tracks-sockets">How Linux Tracks Sockets</h2>
+<h3 id="file-descriptor-fd-socket-handle">File Descriptor (FD) = Socket Handle</h3>
+<p>Every socket gets a small number (FD).
+Like an ID for your program.
+Example: socket_fd = 5</p>
+<p>Use it to read/write/close: send(5, ...), close(5)</p>
+<h3 id="fd-is-unique-only-inside-one-process">FD is unique only inside one process</h3>
+<p>Process A: FD=3
+Process B: FD=3 (different socket)
+OS uses (PID + FD) to identify real socket.</p>
+<h2 id="socket-tuning-with-options">Socket tuning with options</h2>
+<h3 id="reuse-port-quickly-so_reuseaddr-option">Reuse Port Quickly - SO_REUSEADDR option</h3>
+<p>When TCP connection closes, socket enters TIME_WAIT state.
+Lasts 1-4 minutes.</p>
+<p>During TIME_WAIT:
+- System blocks new program from using same port.</p>
+<p>Problems:
+- Cannot restart server fast.
+- Testing slow (start/stop many times).</p>
+<p>SO_REUSEADDR fixes this.</p>
+<p>tofu sets SO_REUSEADDR on all listening sockets.</p>
+<p>Result: Every new tofu TCP server uses same port immediately.</p>
+<h3 id="socket-closing-modes-so_linger-option">Socket closing modes - SO_LINGER option</h3>
+<p>Normal socket close:</p>
 <ul>
-<li>In Linux, every socket has a small number called a <strong>File Descriptor</strong> (FD).</li>
-<li>This number works like a "handle" or "ID".</li>
-<li>Your program uses this number to read from the socket, write to it, or close it.</li>
-<li>Example: socket_fd = 5 → you write <code>send(5, ...)</code> or <code>close(5)</code>.</li>
+<li>close() returns right away</li>
+<li>System sends remaining data in background (graceful close)</li>
 </ul>
-<h3 id="important-fd-is-unique-only-inside-one-process">Important: FD is unique only inside one process</h3>
+<p>SO_LINGER changes this.</p>
+<p>tofu uses only non-graceful (hard) close:</p>
 <ul>
-<li>Process A can have a socket with FD = 3.</li>
-<li>Process B can also have its own socket with FD = 3 (no problem!).</li>
-<li>The same FD number can be used by many different programs at the same time.</li>
-<li>The operating system knows the real socket because it looks at <strong>both</strong>:<ul>
-<li>the Process ID (PID) and</li>
-<li>the File Descriptor number together.</li>
+<li>close() returns immediately</li>
+<li>Connection closes instantly (reset)</li>
+<li>All unsent data discarded</li>
 </ul>
-</li>
-<li>So <strong>(PID + FD)</strong> is what is truly unique on the whole computer.</li>
-</ul>
-<hr />
-<h2 id="tuning-sockets-setsockopt">Tuning Sockets (setsockopt)</h2>
-<p>The <code>setsockopt</code> function allows a program to tune socket behavior.</p>
-<h3 id="so_reuseaddr-reuse-the-same-port-quickly">SO_REUSEADDR (Reuse the Same Port Quickly)</h3>
-<p>When a TCP connection closes, the socket often goes into a state called <strong>TIME_WAIT</strong>.
-This state can last 1–4 minutes (depending on the system).</p>
-<p>While a socket is in TIME_WAIT:
-- The operating system normally does <strong>not allow</strong> a new program to bind (listen) on the exact same local address and port.</p>
-<p>This can be a problem when:
-- You want to restart your server quickly (after a crash or normal stop).
-- You are testing and starting/stopping the server many times.</p>
-<div class="admonition note inline end">
-<p class="admonition-title">Note</p>
-<p>tofu uses <strong>SO_REUSEADDR</strong> for every listening socket</p>
-</div>
-<p><strong>SO_REUSEADDR</strong> fixes this problem:
-- When you turn on SO_REUSEADDR before calling bind(),
-- A new server can immediately use the same port again, even if old connections are still in TIME_WAIT.</p>
-<p>Important safe notes:
-- It is almost always safe to use SO_REUSEADDR on servers.
-- You should usually enable it when writing server programs that need to restart fast.</p>
-<h3 id="so_linger-linger-option">SO_LINGER (Linger Option)</h3>
-<p>Normally when you close a socket:
-- The close() function returns immediately.
-- If there is still unsent data, the operating system tries to send it in the background (this is called graceful close).</p>
-<p>The SO_LINGER option lets you change this default behavior.</p>
-<p>There are three possible settings:</p>
-<ul>
-<li><strong>Linger OFF (this is the default)</strong><ul>
-<li>close() returns immediately.</li>
-<li>The OS tries to send any remaining data in the background (graceful close).</li>
-</ul>
-</li>
-</ul>
-<div class="admonition warn inline end">
-<p class="admonition-title">tofu Non-Graceful Close</p>
-<p>tofu uses <strong>THIS SETTING</strong> in order to achieve <strong>NON-GRACEFUL CLOSE</strong>  </p>
-</div>
-<ul>
-<li>
-<p><strong>Linger ON with timeout = 0</strong></p>
-<ul>
-<li>close() returns immediately.</li>
-<li>The connection is closed forcefully right away (hard close / reset).</li>
-<li>All unsent data is thrown away.</li>
-<li>This is the fastest way to close a socket when you don’t care about unsent data.</li>
-</ul>
-</li>
-<li>
-<p><strong>Linger ON with timeout &gt; 0</strong> (for example, 5 seconds)</p>
-<ul>
-<li>close() will wait (block) up to the timeout value.</li>
-<li>It waits for all remaining data to be sent and acknowledged.</li>
-<li>If everything is sent before the timeout → graceful close.</li>
-<li>If the timeout runs out → the socket is closed forcefully, unsent data is lost.</li>
-</ul>
-</li>
-</ul>
-<p>Summary:</p>
-<ul>
-<li>Default (linger off) → close fast, OS tries to be nice.</li>
-<li>Linger on + timeout 0 → close fast and rude (reset).</li>
-<li>Linger on + timeout &gt; 0 → wait a little to be nice, but give up after timeout.</li>
-</ul>
+<p>Get graceful close using other tofu features instead.</p>
 
 
 
@@ -1609,6 +1568,8 @@ This state can last 1–4 minutes (depending on the system).</p>
     
     
       <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../../js/scroll-sync.js"></script>
       
     
   </body>

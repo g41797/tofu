@@ -158,11 +158,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-header__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
@@ -387,11 +417,41 @@
     <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-nav__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
       
 
-<a href="../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress">
+<a href="../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
     
-    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
+
+<script>
+    // Universal fix - works in ALL browsers instantly
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+
+        // Hide immediately
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+
+        // Show with browser-safe timing (50ms works everywhere)
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 50);
+
+        // Re-apply on every content change (instant nav)
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
     </a>
     tofu documentation - Work In Progress
   </label>
@@ -745,7 +805,7 @@
 
 
 <h1 id="tofu-api">Tofu API</h1>
-<div class="language-zig highlight"><span class="filename">Stripped Interface Definitions</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">/// Defines the async message passing engine (ampe) interface.</span>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">/// Defines the async message passing engine (ampe) interface.</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1">/// In this system, ampe and engine mean the same thing.</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">///</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">/// Provides methods to:</span>
@@ -934,6 +994,8 @@
     
     
       <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../../../js/scroll-sync.js"></script>
       
     
   </body>
