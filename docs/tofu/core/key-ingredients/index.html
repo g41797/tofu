@@ -682,10 +682,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#physical-separation-architectural-overview" class="md-nav__link">
+  <a href="#physical-separation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Physical Separation (Architectural Overview)
+        Physical Separation
       
     </span>
   </a>
@@ -823,9 +823,151 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/message/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helpers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Helpers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/coding-style/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -926,10 +1068,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#physical-separation-architectural-overview" class="md-nav__link">
+  <a href="#physical-separation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Physical Separation (Architectural Overview)
+        Physical Separation
       
     </span>
   </a>
@@ -979,13 +1121,16 @@
 
 
 <h1 id="key-ingredients">Key Ingredients</h1>
-<p>There are only three core ingredients:</p>
+<p>Tofu has only three main ingredients:</p>
 <ul>
-<li><strong>Ampe</strong> (Async Message Passing Engine, or simply the '<em>engine</em>').</li>
+<li><strong>Ampe</strong> — the Async Message Passing Engine (we call it the <em>engine</em>).</li>
 <li><strong>ChannelGroup</strong></li>
 <li><strong>Message</strong></li>
 </ul>
-<p>But first, we'll start with something that isn't on this list.</p>
+<p>Each ingredient depends on the others, so it’s hard to explain one without understanding the rest.<br />
+Because of that, the short descriptions below give only the basic idea.</p>
+<p>The examples later will help you understand how tofu really works.</p>
+<p>But first, let’s look at something that is not on this list — yet is just as important.</p>
 <hr />
 <h2 id="allocator">Allocator</h2>
 <p>Zig takes pride in its allocators; they are its "signature feature," or, as one might say, the <strong>"spice of life"</strong>.</p>
@@ -1015,31 +1160,35 @@ empowering the caller to control the allocation strategy at every level of the p
 <hr />
 <h2 id="separation-of-concerns">Separation of Concerns</h2>
 <h3 id="logical-separation">Logical Separation</h3>
-<p>The <strong><em>Engine</em></strong> is the owner of all resources within the Tofu-based software. It is responsible for containing, allocating, and destroying <strong>Message(s)</strong> and <strong>ChannelGroup(s)</strong>.</p>
-<p>The <strong><em>ChannelGroup</em></strong> supports asynchronous, full-duplex exchange of <strong>Messages</strong>.</p>
-<p>The <strong><em>Message</em></strong> has dual functionality:</p>
+<p>The <strong><em>Engine</em></strong> owns all resources in Tofu software.<br />
+It allocates and destroys <strong>Message(s)</strong> and <strong>ChannelGroup(s)</strong>.</p>
+<p>The <strong><em>ChannelGroup</em></strong> handles async, two-way exchange of <strong>Messages</strong>.</p>
+<p>The <strong><em>Message</em></strong> does two things:</p>
 <ul>
-<li>It is a container for both business data and metadata.</li>
-<li>It acts as a command for the Tofu software.</li>
+<li>Holds business data and metadata.</li>
+<li>Works as a command for Tofu.</li>
 </ul>
-<h3 id="physical-separation-architectural-overview">Physical Separation (Architectural Overview)</h3>
-<p>The term <strong><em>Engine</em></strong> better reflects the <strong>implementation</strong> of Tofu because the engine actually performs almost all of the required work. Every engine runs an <strong><em>internal thread</em></strong>. 
-This thread contains a <strong>poll loop</strong> that manages all socket operations. The conceptual <strong><em>Engine</em></strong> functionality (or the Ampe interface) is realized by the concrete <strong><em>Reactor</em></strong> structure.</p>
-<p>An <strong>additional internal socket</strong> is used for internal communication, specifically for receiving <strong>Messages</strong> from the <strong>ChannelGroups</strong>.</p>
-<p>The <strong>ChannelGroup</strong> is a thin gate (or layer) responsible for retransmitting messages to the engine's thread. Every <strong>ChannelGroup</strong> has an internal queue for messages that are either received by the engine or sent by the application.</p>
+<h3 id="physical-separation">Physical Separation</h3>
+<p>The <strong><em>Engine</em></strong> name shows the real work it does.<br />
+Every engine runs one <strong><em>internal thread</em></strong> with a <strong>poll loop</strong>.<br />
+This loop handles all socket operations.</p>
+<p>The <strong><em>Ampe interface</em></strong> is implemented by the <strong><em>Reactor</em></strong> structure.</p>
+<p>All <strong>ChannelGroups</strong> share <strong>one internal socket</strong> to talk to the engine thread.</p>
+<p>Each <strong>ChannelGroup</strong> uses an <strong>internal queue</strong> for messages (from engine or application).</p>
+<p>The <strong>ChannelGroup</strong> is a thin layer.<br />
+It forwards messages between application and engine thread.</p>
 <hr />
 <h2 id="tofu-based-communication-flow">Tofu-based Communication Flow</h2>
-<p>The following steps outline the basic communication process for each network participant, which we refer to as a <strong>peer</strong>:</p>
+<p>The steps below show how communication works between network participants, called <strong>peers</strong>:</p>
 <ul>
-<li><strong>Initialization:</strong> The peer must first <strong>create the Reactor</strong> implementation to obtain the core <strong>Ampe interface</strong>.</li>
-<li><strong>Channel Setup:</strong> The peer then acquires a <strong>ChannelGroup</strong> for managing <em>channels</em> (connections) to remote peers.</li>
-<li><strong>Core Loop Operation:</strong> Within the application's main processing loop, the peer performs these actions:<ul>
-<li><strong>Sending:</strong> It gets new <strong>Messages</strong> from the Ampe interface, populates the data fields, and dispatches the message to the peer via the ChannelGroup.</li>
-<li><strong>Receiving:</strong> It continuously receives and processes incoming messages arriving from the remote peer.</li>
+<li><strong>Initialization:</strong> The peer creates a <strong>Reactor</strong> to get the <strong>Ampe interface</strong>.</li>
+<li><strong>Channel Setup:</strong> The peer creates a <strong>ChannelGroup</strong> to manage <em>channels</em> (connections to other peers).</li>
+<li><strong>Core Loop:</strong> In the main application loop, the peer:</li>
+<li><strong>Sends:</strong> Gets <strong>Messages</strong> from Ampe, fills data, <strong>enqueues</strong> via ChannelGroup.</li>
+<li><strong>Receives:</strong> Gets and processes incoming messages from other peers.</li>
 </ul>
-</li>
-</ul>
-<p>This description presents a highly <strong>simplified flow</strong> for initial understanding. We will dive deeper into the full framework logic and message lifecycle later.</p>
+<p>This is a <strong>simple overview</strong>.<br />
+Later sections show full logic and message lifecycle.</p>
 
 
 

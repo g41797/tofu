@@ -574,23 +574,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#big-endian-imports-vs-little-endian-imports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Big-endian imports vs Little-endian imports
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -845,9 +828,151 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/services/message/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helpers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Helpers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/services/helpers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helpers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/services/coding-style/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -952,23 +1077,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#big-endian-imports-vs-little-endian-imports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Big-endian imports vs Little-endian imports
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1174,12 +1282,6 @@ established C library. It is a completely new development.</p>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">gpa</span><span class="o">:</span><span class="w"> </span><span class="n">Allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dbalctr</span><span class="p">.</span><span class="n">allocator</span><span class="p">();</span>
 </span></code></pre></div></p>
-<h3 id="big-endian-imports-vs-little-endian-imports">Big-endian imports vs Little-endian imports</h3>
-<p>There are two "parties" in Zig about where imports should be placed.</p>
-<p><strong>Big-endian</strong> - imports are placed at the top of the file, before the code.</p>
-<p><strong>Little-endian</strong> - imports are placed at the bottom of the file, after the code.</p>
-<p>I belong to the LE party. At least, tofu sources use LE imports.</p>
-<p>But in examples, I am using BE just for your convenience.</p>
 <hr />
 <h2 id="credits">Credits</h2>
 <ul>
