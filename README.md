@@ -1,4 +1,4 @@
-[](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
+![](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
 # tofu - _Async messaging for Zig._
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
