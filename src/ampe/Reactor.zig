@@ -777,7 +777,7 @@ fn processMessageFromChannels(rtr: *Reactor) !void {
         .ByeRequest, .ByeSignal => return rtr.sendBye(),
         .ByeResponse => return rtr.sendByeResponse(),
 
-        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return rtr.sendToPeer(),
+        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return rtr.enqueueToPeer(),
 
         else => return AmpeError.InvalidMessage,
     }
@@ -829,9 +829,9 @@ fn processInternal(rtr: *Reactor) !void {
 }
 
 fn sendByeResponse(rtr: *Reactor) !void {
-    // For now - nothing special, just sendToPeer
+    // For now - nothing special, just enqueueToPeer
     // In the future - possibly to disable further sends
-    return rtr.sendToPeer();
+    return rtr.enqueueToPeer();
 }
 
 fn processMarkedForDelete(rtr: *Reactor) !bool {
@@ -895,10 +895,10 @@ fn sendBye(rtr: *Reactor) !void {
         return;
     }
 
-    return rtr.sendToPeer();
+    return rtr.enqueueToPeer();
 }
 
-fn sendToPeer(rtr: *Reactor) !void {
+fn enqueueToPeer(rtr: *Reactor) !void {
     rtr.currMsg.?.assert();
 
     const sendMsg: *Message = rtr.currMsg.?;

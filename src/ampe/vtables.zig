@@ -14,7 +14,7 @@ pub const AmpeVTable = struct {
 };
 
 pub const CHNLSVTable = struct {
-    sendToPeer: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
+    enqueueToPeer: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!message.BinaryHeader,
 
     waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*message.Message,
 

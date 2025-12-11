@@ -1,4 +1,4 @@
-![](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
+[](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
 # tofu - _Async messaging for Zig._
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -86,50 +86,63 @@ By '_smell_' I mean the idea itself:
 
 **_Stripped Interface Definitions_**:
 
-```zig title="Stripped Interface Definitions"
-/// Defines the async message passing engine (ampe) interface.
-/// In this system, ampe and engine mean the same thing.
+```zig 
+/// Defines the async message passing engine interface.
+/// "Ampe" and "engine" mean the same thing.
 ///
 /// Provides methods to:
-/// - Manage the message pool.
-/// - Create and destroy communication channels.
-/// - Access to shared allocator used for memory management
-/// within engine.
+/// - Get/return messages from the internal pool.
+/// - Create/destroy ChannelGroups.
+/// - Access the shared allocator for memory management.
 pub const Ampe = struct {
 
-    /// Gets a message from the internal pool based on the allocation strategy.
+    /// Gets a message from the internal pool.
     ///
-    /// Returns null if the pool is empty and the strategy is poolOnly.
+    /// Uses the given `strategy` to decide how to allocate.
+    /// Returns `null` if pool is empty and `strategy` is `poolOnly`.
     ///
-    /// Returns an error if the engine is shutting down or allocation fails.
+    /// Returns error if engine is shutting down or allocation fails.
     ///
-    /// Safe for use in multiple threads.
-    pub fn get(ampe: Ampe, strategy: AllocationStrategy) status.AmpeError!?*message.Message {...}
+    /// Thread-safe.
+    pub fn get(
+        ampe: Ampe,
+        strategy: AllocationStrategy,
+    ) status.AmpeError!?*message.Message {...}
 
     /// Returns a message to the internal pool.
-    /// If the pool is closed, destroys the message.
+    /// If pool is closed, destroys the message instead.
     ///
-    /// Sets msg.* to null to prevent reuse.
+    /// Always sets `msg.*` to `null` to prevent reuse.
     ///
-    /// Safe for use in multiple threads.
-    pub fn put(ampe: Ampe, msg: *?*message.Message) void {...}
+    /// Thread-safe.
+    pub fn put(
+        ampe: Ampe,
+        msg: *?*message.Message,
+    ) void {...}
 
-    /// Creates new ChannelGroup.
+    /// Creates a new `ChannelGroup`.
     ///
-    /// Call destroy on the result to stop communication and free memory.
+    /// Call `destroy` on result to stop communication and free memory.
     ///
-    /// Safe for use in multiple threads.
-    pub fn create(ampe: Ampe) status.AmpeError!ChannelGroup {...}
+    /// Thread-safe.
+    pub fn create(
+        ampe: Ampe,
+    ) status.AmpeError!ChannelGroup {...}
 
-    /// Destroys ChannelGroup, stops communication, and frees memory.
+    /// Destroys `ChannelGroup`, stops communication, frees memory.
     ///
-    /// Safe for use in multiple threads.
-    pub fn destroy(ampe: Ampe, chnls: ChannelGroup) status.AmpeError!void  {...}
+    /// Thread-safe.
+    pub fn destroy(
+        ampe: Ampe,
+        chnls: ChannelGroup,
+    ) status.AmpeError!void {...}
 
-    /// Gets allocator used by engine for all memory management.
+    /// Returns the allocator used by the engine for all memory.
     ///
-    /// Safe for use in multiple threads.
-    pub fn getAllocator(ampe: Ampe) Allocator {...}
+    /// Thread-safe.
+    pub fn getAllocator(
+        ampe: Ampe,
+    ) Allocator {...}
 };
 
 /// Defines how messages are allocated from the pool.
@@ -141,62 +154,74 @@ pub const AllocationStrategy = enum {
 };
 
 //////////////////////////////////////////////////////////////////////////
-/// Client and server terms are used only for the initial handshake.
-/// After the handshake, both sides (called peers) are equal.
-/// They send and receive messages based on application logic.
-///////////////////////////////////////////////////////////////////////////
+// Client and server terms are used only during the initial handshake.
+// After the handshake, both sides are equal. We call them **peers**.
+// They send and receive messages based on application logic.
+//////////////////////////////////////////////////////////////////////////
 
 /// Defines the ChannelGroup interface for async message passing.
-/// Supports two-way message exchange.
+/// Supports two-way message exchange between peers.
 pub const ChannelGroup = struct {
 
-    /// Sends a message to a peer asynchronously.
+    /// Submits a message to the engine for async delivery to a peer.
     ///
-    /// If the send starts successfully:
-    ///     - Sets msg.* to null to prevent reuse.
-    ///     - Returns a BinaryHeader for tracking.
-    /// Otherwise
-    ///     - Returns an error.
-    ///     - If it isn't allowed to use message (e.g. failure during internal communication),
-    ///     also  sets msg.* to null
-    /// Safe for use in multiple threads.
-    pub fn sendToPeer(chnls: ChannelGroup, msg: *?*message.Message) status.AmpeError!message.BinaryHeader  {...}
+    /// On success:
+    /// - Sets `msg.*` to null (prevents reuse).
+    /// - Returns `BinaryHeader` for tracking.
+    ///
+    /// On error:
+    /// - Returns an error.
+    /// - If the engine cannot use the message (internal failure),
+    ///   also sets `msg.*` to null.
+    ///
+    /// Thread-safe.
+    pub fn enqueueToPeer(
+        chnls: ChannelGroup,
+        msg: *?*message.Message,
+    ) status.AmpeError!message.BinaryHeader {...}
 
-    /// Waits for a message from the internal queue.
+    /// Waits for the next message from the internal queue.
     ///
-    /// Returns null if no message arrives within the timeout (in nanoseconds).
+    /// Timeout is in nanoseconds. Returns `null` if no message arrives in time.
     ///
-    /// Messages can come from three sources:
-    /// - Peer (via sendToPeer from the other side).
-    /// - Application (via updateWaiter on the same channels).
-    /// - Ampe (sends status messages to the internal queue).
+    /// Message sources:
+    /// - Remote peer (via `enqueueToPeer` on their side).
+    /// - Application (via `updateWaiter` on this ChannelGroup).
+    /// - Ampe (status/control messages).
     ///
-    /// Use BinaryHeader of the received message to identify the message source.
+    /// Check `BinaryHeader` to identify the source.
     ///
-    /// Any returned error is the sign that any further should be stopped.
+    /// On error: stop using this ChannelGroup.
     ///
-    ///  Call this in a loop in the same thread.
-    pub fn waitReceive(chnls: ChannelGroup, timeout_ns: u64) status.AmpeError!?*message.Message  {...}
+    /// Call in a loop from **one thread only**.
+    pub fn waitReceive(
+        chnls: ChannelGroup,
+        timeout_ns: u64,
+    ) status.AmpeError!?*message.Message {...}
 
-    /// Sends a message to the ChannelGroup' internal queue for processing after waitReceive.
-    /// If msg.* is not null, the engine sets the message status to 'waiter_update'.
-    /// After a successful send, sets msg.* to null to prevent reuse.
-    /// No need to provide channel_number or similar details for this internal message.
+    /// Adds a message to the internal queue for `waitReceive`.
     ///
-    /// If msg.* is null, creates a Signal with 'waiter_update' status and sends it.
+    /// If `msg.*` is not null:
+    /// - Engine sets status to `'waiter_update'`.
+    /// - Sets `msg.*` to null after success.
+    /// - No need for `channel_number` or similar fields.
     ///
+    /// If `msg.*` is null:
+    /// - Creates a `'waiter_update'` Signal and adds it.
     ///
-    /// Returns an error if ChannelGroup or engine is shutting down.
+    /// Returns error if shutting down.
     ///
-    /// Use this from a different thread to:
-    /// - Signal attention (msg.* is null).
-    /// - Send extra info, commands, or notifications to the waiter.
+    /// Use from another thread to:
+    /// - Wake the waiter (`msg.*` = null).
+    /// - Send info/commands/notifications.
     ///
-    /// Note: Messages are added to the end of the queue and processed in order.
-    /// The system does not support priority queues.
+    /// FIFO order only. No priority queues.
     ///
-    /// Safe for use in multiple threads.
-    pub fn updateWaiter(chnls: ChannelGroup, update: *?*message.Message) status.AmpeError!void {...}
+    /// Thread-safe.
+    pub fn updateWaiter(
+        chnls: ChannelGroup,
+        update: *?*message.Message,
+    ) status.AmpeError!void {...}
 };
 ```
 
@@ -213,7 +238,6 @@ Documentation and examples are available on the [Tofu documentation site](https:
 
 
 ---
-
 
 
 ## Credits

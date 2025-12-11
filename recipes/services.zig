@@ -31,7 +31,7 @@ pub const Services = struct {
     ///  - ampe - the same engine used by the server, services can use it for pool
     ///         operations (get/put)
     ///  - sendTo - channels created by the server for communication  with clients,
-    ///             services can use sendToPeer method.
+    ///             services can use enqueueToPeer method.
     ///             --- Don't call waitReceive - it's duty of the server.        ---
     ///             --- Don't destroy 'channels' - it's also duty of the server. ---
     pub fn start(srvcs: Services, ampe: Ampe, sendTo: ChannelGroup) !void {
@@ -49,7 +49,7 @@ pub const Services = struct {
     ///
     /// For simple processing it may be good enough to process message within onMessage.
     /// But it's better to redistribute processing between pool of threads or similar mechanism.
-    /// Remember - you can use 'sendToPeer' from multiple threads.
+    /// Remember - you can use 'enqueueToPeer' from multiple threads.
     ///
     /// Returns
     ///    true  - continue to receive messages and call onMessage
@@ -179,8 +179,8 @@ pub const EchoService = struct {
         }
 
         msg.*.?.copyBh2Body();
-        _ = echo.*.sendTo.?.sendToPeer(msg) catch |err| {
-            log.warn("sendToPeer error {s}", .{@errorName(err)});
+        _ = echo.*.sendTo.?.enqueueToPeer(msg) catch |err| {
+            log.warn("enqueueToPeer error {s}", .{@errorName(err)});
             return false;
         };
 
@@ -296,7 +296,7 @@ pub const EchoClient = struct {
         self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
         helloRequest.?.copyBh2Body();
-        self.*.helloBh = try self.*.chnls.?.sendToPeer(&helloRequest);
+        self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
 
         while (true) { // Re-connect is not supported
             var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -353,7 +353,7 @@ pub const EchoClient = struct {
             echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
             echoRequest.?.copyBh2Body();
-            _ = try self.*.chnls.?.sendToPeer(&echoRequest);
+            _ = try self.*.chnls.?.enqueueToPeer(&echoRequest);
 
             while (true) { //
                 var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -414,7 +414,7 @@ pub const EchoClient = struct {
         byeRequest.?.bhdr.proto.oob = .on;
 
         byeRequest.?.copyBh2Body();
-        _ = self.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+        _ = self.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
 
         // Wait close of the channel
         while (true) {
@@ -449,7 +449,7 @@ pub const EchoClient = struct {
             self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
             helloRequest.?.copyBh2Body();
-            self.*.helloBh = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+            self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
             var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                 log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -485,7 +485,7 @@ pub const EchoClient = struct {
                 recvMsg.?.bhdr.proto.oob = .on;
 
                 recvMsg.?.copyBh2Body();
-                _ = self.*.chnls.?.sendToPeer(&recvMsg) catch unreachable;
+                _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
                 return;
             }
         }

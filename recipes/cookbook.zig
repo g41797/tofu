@@ -150,7 +150,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     // Message from the pool is not ready for sending.
     // It needs setup first.
     // It will be returned to the pool by defer.
-    _ = try chnls.sendToPeer(&msg);
+    _ = try chnls.enqueueToPeer(&msg);
 
     return;
 }
@@ -181,7 +181,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     bhdr.proto.mtype = .bye;
     bhdr.proto.role = .request;
 
-    _ = try chnls.sendToPeer(&msg);
+    _ = try chnls.enqueueToPeer(&msg);
 
     return;
 }
@@ -214,7 +214,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     bhdr.proto.mtype = .hello;
     bhdr.proto.role = .request;
 
-    _ = try chnls.sendToPeer(&msg);
+    _ = try chnls.enqueueToPeer(&msg);
 
     return;
 }
@@ -248,7 +248,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
 
-    _ = try chnls.sendToPeer(&msg);
+    _ = try chnls.enqueueToPeer(&msg);
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -287,7 +287,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     try cnfg.prepareRequest(msg.?);
 
     // Store information for further processing.
-    const bhdr = try chnls.sendToPeer(&msg);
+    const bhdr = try chnls.enqueueToPeer(&msg);
     _ = bhdr;
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
@@ -325,7 +325,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
 
-    _ = try chnls.sendToPeer(&msg);
+    _ = try chnls.enqueueToPeer(&msg);
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -415,7 +415,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     // Adds configuration to the message's TextHeaders.
     try cnfg.prepareRequest(msg.?);
 
-    const corrInfo: BinaryHeader = try chnls.sendToPeer(&msg);
+    const corrInfo: BinaryHeader = try chnls.enqueueToPeer(&msg);
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -507,7 +507,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Add configuration to the message's TextHeaders.
     try srvCfg.prepareRequest(welcomeRequest.?);
 
-    const srvCorrInfo: BinaryHeader = try chnls.sendToPeer(&welcomeRequest);
+    const srvCorrInfo: BinaryHeader = try chnls.enqueueToPeer(&welcomeRequest);
 
     var welcomeResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
@@ -547,7 +547,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Add configuration to the message's TextHeaders.
     try cltCfg.prepareRequest(helloRequest.?);
 
-    const cltCorrInfo: BinaryHeader = try chnls.sendToPeer(&helloRequest);
+    const cltCorrInfo: BinaryHeader = try chnls.enqueueToPeer(&helloRequest);
 
     // Client and server channels must be different.
     assert(cltCorrInfo.channel_number != srvCorrInfo.channel_number);
@@ -558,7 +558,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // - Connecting to the server.
     // - Sending the HelloRequest message.
     // Network/socket operations run on a dedicated thread.
-    // sendToPeer and waitReceive work with internal message queues.
+    // enqueueToPeer and waitReceive work with internal message queues.
 
     var helloRequestOnServerSide: ?*Message = try chnls.waitReceive(tofu.waitReceive_SEC_TIMEOUT * 20);
     defer ampe.put(&helloRequestOnServerSide);
@@ -590,7 +590,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Use the same message to send HelloResponse back.
     // Set role to .response for HelloResponse.
     helloRequestOnServerSide.?.bhdr.proto.role = .response;
-    _ = try chnls.sendToPeer(&helloRequestOnServerSide);
+    _ = try chnls.enqueueToPeer(&helloRequestOnServerSide);
 
     // On the client side:
     var helloResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
@@ -622,7 +622,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Set channel number to close this channel.
     closeListener.?.bhdr.channel_number = srvCorrInfo.channel_number;
 
-    _ = try chnls.sendToPeer(&closeListener);
+    _ = try chnls.enqueueToPeer(&closeListener);
 
     var closeListenerResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
     defer ampe.put(&closeListenerResp);
@@ -640,7 +640,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Set channel number to close this channel.
     closeClient.?.bhdr.channel_number = cltCorrInfo.channel_number; // Client channel on client side.
 
-    _ = try chnls.sendToPeer(&closeClient);
+    _ = try chnls.enqueueToPeer(&closeClient);
 
     // Expect two messages with status, as closing one socket
     // also closes the corresponding server-side socket.
@@ -653,7 +653,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Tofu programming mainly involves setting message data.
     // Only three communication APIs exist.
     // Two are used here:
-    // - sendToPeer
+    // - enqueueToPeer
     // - waitReceive
 
     // Convert status byte to AmpeStatus enum for convenience.
@@ -752,7 +752,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
                 self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
-                _ = self.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+                _ = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
                 var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                     log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -786,7 +786,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     recvMsg.?.bhdr.proto.origin = .application;
                     recvMsg.?.bhdr.proto.role = .signal;
                     recvMsg.?.bhdr.proto.oob = .on;
-                    _ = self.*.chnls.?.sendToPeer(&recvMsg) catch unreachable;
+                    _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
                     return;
                 }
             }
@@ -870,7 +870,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
                 self.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-                _ = self.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
+                _ = self.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
                 var welcomeResponse: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                     log.info("On server thread - waitReceive error {s}", .{@errorName(err)});
@@ -936,8 +936,8 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 recvMsg.?.bhdr.proto.role = .response;
                 recvMsg.?.bhdr.proto.origin = .application; // For sure
 
-                _ = self.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
-                    log.info("On server thread - sendToPeer error {s}", .{@errorName(err)});
+                _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
+                    log.info("On server thread - enqueueToPeer error {s}", .{@errorName(err)});
                     return;
                 };
             }
@@ -1111,7 +1111,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
             server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-            var initialBh = server.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
+            var initialBh = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
             initialBh.dumpMeta("listener send ");
 
@@ -1184,8 +1184,8 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 recvMsg.?.bhdr.proto.role = .response;
                 recvMsg.?.bhdr.proto.origin = .application; // For sure
 
-                _ = server.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
-                    log.info("server - sendToPeer error {s}", .{@errorName(err)});
+                _ = server.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
+                    log.info("server - enqueueToPeer error {s}", .{@errorName(err)});
                     return err;
                 };
 
@@ -1263,7 +1263,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         var helloRequest: ?*Message = client.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                         defer client.*.ampe.put(&helloRequest);
                         client.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
-                        client.*.helloBh = client.*.chnls.?.sendToPeer(&helloRequest) catch unreachable;
+                        client.*.helloBh = client.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
                         assert(client.*.helloBh.channel_number != 0);
 
@@ -1370,14 +1370,14 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 return err;
             };
 
-            var brBhdr: BinaryHeader = client.*.chnls.?.sendToPeer(&byeRequest) catch |err| {
+            var brBhdr: BinaryHeader = client.*.chnls.?.enqueueToPeer(&byeRequest) catch |err| {
                 byeRequest.?.bhdr.dumpMeta("wrong message was send to peer");
                 return err;
             };
 
             brBhdr.dumpMeta("client send ");
 
-            // client.*.helloBh = client.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+            // client.*.helloBh = client.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
             // client.*.helloBh.dumpMeta("client send ");
 
             return;
@@ -1528,7 +1528,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 
             if (cc.helloBh == null) { // Send helloRequest
                 var helloClone: ?*Message = try cc.*.helloRequest.?.clone();
-                cc.*.helloBh = cc.*.chnls.?.sendToPeer(&helloClone) catch |err| {
+                cc.*.helloBh = cc.*.chnls.?.enqueueToPeer(&helloClone) catch |err| {
                     cc.*.ampe.put(&helloClone);
                     return err;
                 };
@@ -1699,7 +1699,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             byeRequest.?.bhdr.proto.role = .request;
             byeRequest.?.bhdr.proto.origin = .application;
 
-            client.*.helloBh = client.*.chnls.?.sendToPeer(&byeRequest) catch unreachable;
+            client.*.helloBh = client.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
 
             client.*.helloBh.dumpMeta("client send ");
 
@@ -1826,7 +1826,7 @@ pub const TofuEchoServer = struct {
 
         server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-        var initialBh = server.*.chnls.?.sendToPeer(&welcomeRequest) catch unreachable;
+        var initialBh = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
         initialBh.dumpMeta("listener send ");
 
@@ -1899,8 +1899,8 @@ pub const TofuEchoServer = struct {
             recvMsg.?.bhdr.proto.role = .response;
             recvMsg.?.bhdr.proto.origin = .application; // For sure
 
-            _ = server.*.chnls.?.sendToPeer(&recvMsg) catch |err| {
-                log.info("server - sendToPeer error {s}", .{@errorName(err)});
+            _ = server.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
+                log.info("server - enqueueToPeer error {s}", .{@errorName(err)});
                 return err;
             };
 
