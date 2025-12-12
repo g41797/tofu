@@ -86,7 +86,7 @@ By '_smell_' I mean the idea itself:
 
 **_Stripped Interface Definitions_**:
 
-```zig 
+```zig
 /// Defines the async message passing engine interface.
 /// "Ampe" and "engine" mean the same thing.
 ///
@@ -163,7 +163,9 @@ pub const AllocationStrategy = enum {
 /// Supports two-way message exchange between peers.
 pub const ChannelGroup = struct {
 
-    /// Submits a message to the engine for async delivery to a peer.
+    /// Submits a message for async processing:
+    /// - most cases: send to peer
+    /// - others: internal network related processing
     ///
     /// On success:
     /// - Sets `msg.*` to null (prevents reuse).

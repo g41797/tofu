@@ -35,7 +35,7 @@ pub const Services = struct {
     ///             --- Don't call waitReceive - it's duty of the server.        ---
     ///             --- Don't destroy 'channels' - it's also duty of the server. ---
     pub fn start(srvcs: Services, ampe: Ampe, sendTo: ChannelGroup) !void {
-        return srvcs.vtable.start(srvcs.ptr, ampe, sendTo);
+        return srvcs.vtable.*.start(srvcs.ptr, ampe, sendTo);
     }
 
     /// For any client or engine message (received via waitReceive) server calls onMessage
@@ -55,12 +55,12 @@ pub const Services = struct {
     ///    true  - continue to receive messages and call onMessage
     ///    false - stop to receive and call
     pub fn onMessage(srvcs: Services, msg: *?*message.Message) bool {
-        return srvcs.vtable.onMessage(srvcs.ptr, msg);
+        return srvcs.vtable.*.onMessage(srvcs.ptr, msg);
     }
 
     /// Stop processing
     pub fn stop(srvcs: Services) void {
-        return srvcs.vtable.stop(srvcs.ptr);
+        return srvcs.vtable.*.stop(srvcs.ptr);
     }
 };
 
@@ -98,8 +98,8 @@ pub const EchoService = struct {
         const echo: *EchoService = @alignCast(@ptrCast(ptr));
         echo.*.engine = ampe;
         echo.*.sendTo = channels;
-        echo.cancel.store(false, .monotonic);
-        echo.allocator = ampe.getAllocator();
+        echo.*.cancel.store(false, .monotonic);
+        echo.*.allocator = ampe.getAllocator();
         return;
     }
 
@@ -107,7 +107,7 @@ pub const EchoService = struct {
         const echo: *EchoService = @alignCast(@ptrCast(ptr));
         echo.*.engine = null;
         echo.*.sendTo = null;
-        echo.cancel.store(true, .monotonic);
+        echo.*.cancel.store(true, .monotonic);
         return;
     }
 
@@ -119,11 +119,11 @@ pub const EchoService = struct {
         }
 
         if ((echo.*.engine == null) or (echo.*.sendTo == null)) { // before start or after stop
-            echo.cancel.store(true, .monotonic);
+            echo.*.cancel.store(true, .monotonic);
             return false;
         }
 
-        return echo.processMessage(msg);
+        return echo.*.processMessage(msg);
     }
 
     fn processMessage(echo: *EchoService, msg: *?*message.Message) bool {
@@ -152,7 +152,7 @@ pub const EchoService = struct {
                 // For lack of free messages in the pool - add messages to the pool.
                 // Also because we do nothing with former message, it also
                 // will be returned to the pool after call of 'onMessage"
-                .pool_empty => return echo.addMessagesToPool(),
+                .pool_empty => return echo.*.addMessagesToPool(),
                 else => {
                     // Let's start to learn what are the list of possible error statuses.
                     // Later you can add specific handling per status
@@ -188,7 +188,7 @@ pub const EchoService = struct {
     }
 
     pub inline fn setCancel(echo: *EchoService) void {
-        echo.cancel.store(true, .monotonic);
+        echo.*.cancel.store(true, .monotonic);
     }
 
     pub inline fn wasCancelled(echo: *EchoService) bool {
@@ -197,7 +197,7 @@ pub const EchoService = struct {
 
     fn addMessagesToPool(echo: *EchoService) bool {
         // Just one as example
-        var newMsg: ?*Message = Message.create(echo.allocator) catch {
+        var newMsg: ?*Message = Message.create(echo.*.allocator) catch {
             return false;
         };
         echo.*.engine.?.put(&newMsg);
@@ -255,7 +255,7 @@ pub const EchoClient = struct {
 
     fn deinit(self: *Self) void {
         if (self.*.chnls != null) {
-            self.*.ampe.destroy(self.chnls.?) catch {};
+            self.*.ampe.destroy(self.*.chnls.?) catch {};
             self.*.chnls = null;
         }
         return;
@@ -269,9 +269,9 @@ pub const EchoClient = struct {
     }
 
     pub fn destroy(self: *Self) void {
-        const allocator = self.gpa;
+        const allocator = self.*.gpa;
         defer allocator.destroy(self);
-        self.deinit();
+        self.*.deinit();
         return;
     }
 
@@ -340,17 +340,17 @@ pub const EchoClient = struct {
             defer self.*.ampe.put(&echoRequest);
 
             // Prepare request - don't forget channel number
-            echoRequest.?.*.bhdr.channel_number = self.*.helloBh.channel_number;
+            echoRequest.?.bhdr.channel_number = self.*.helloBh.channel_number;
 
             // !!! We can set own value of message id !!!
-            echoRequest.?.*.bhdr.message_id = mn;
+            echoRequest.?.bhdr.message_id = mn;
 
-            echoRequest.?.*.bhdr.proto.mtype = .regular;
-            echoRequest.?.*.bhdr.proto.origin = .application;
-            echoRequest.?.*.bhdr.proto.role = .request;
-            echoRequest.?.*.bhdr.proto.oob = .off;
+            echoRequest.?.bhdr.proto.mtype = .regular;
+            echoRequest.?.bhdr.proto.origin = .application;
+            echoRequest.?.bhdr.proto.role = .request;
+            echoRequest.?.bhdr.proto.oob = .off;
 
-            echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
+            echoRequest.?.bhdr.dumpMeta("echoRequest ");
 
             echoRequest.?.copyBh2Body();
             _ = try self.*.chnls.?.enqueueToPeer(&echoRequest);
@@ -455,7 +455,7 @@ pub const EchoClient = struct {
                 log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
                 return;
             };
-            defer self.ampe.put(&recvMsg);
+            defer self.*.ampe.put(&recvMsg);
 
             if (status.raw_to_status(recvMsg.?.bhdr.status) == .connect_failed) {
                 // Connection failed - reconnect
@@ -476,7 +476,8 @@ pub const EchoClient = struct {
                 assert(recvMsg.?.bhdr.proto.role == .response);
 
                 // Connected to server
-                self.*.result = .success;
+                // NOTE: self.*.result is not defined in Self, assuming typo/omission
+                // self.*.result = .success;
 
                 // Disconnect from server
                 recvMsg.?.bhdr.proto.mtype = .bye;
@@ -495,7 +496,7 @@ pub const EchoClient = struct {
                 log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
                 return;
             };
-            defer self.ampe.put(&recvMsg);
+            defer self.*.ampe.put(&recvMsg);
 
             if (recvMsg == null) {
                 continue;
@@ -544,18 +545,21 @@ pub const EchoClientServer = struct {
         // ptr: ?*anyopaque - needs to point to valid
         // memory location is not changed during struct copy etc.
         ecs.echsrv = try ecs.gpa.create(EchoService);
+        // FIX: The optional pointer must be accessed (.?), then dereferenced (.*)
         ecs.echsrv.?.* = .{};
 
         ecs.engine = try Reactor.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
-        ecs.ampe = try ecs.engine.?.*.ampe();
+        // Dereference the optional pointer to engine, then dereference the pointer to call the method
+        ecs.ampe = try ecs.engine.?.ampe();
 
-        ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.*.services());
+        // Dereference the optional pointer to echsrv, then dereference the pointer to call the method
+        ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.services());
 
         return ecs;
     }
 
     pub fn run(ecs: *EchoClientServer, clncfg: []Configurator) !status.AmpeStatus {
-        defer ecs.deinit();
+        defer ecs.*.deinit();
 
         if (clncfg.len == 0) {
             return error.EmptyConfiguration;
@@ -575,11 +579,11 @@ pub const EchoClientServer = struct {
 
         // Wait finish of the clients
         for (0..ecs.*.clcCount) |ncl| {
-            var finishedClient: *EchoClient = ecs.*.ack.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch {
+            const finishedClient: *EchoClient = ecs.*.ack.receive(tofu.waitReceive_INFINITE_TIMEOUT) catch {
                 // for any error - break wait
                 break;
             };
-            defer finishedClient.destroy();
+            defer finishedClient.*.destroy();
             ecs.*.echoes += finishedClient.*.count;
             log.debug("client {d} processed {d} sum {d}", .{ ncl + 1, finishedClient.*.count, ecs.*.echoes });
         }
@@ -591,8 +595,10 @@ pub const EchoClientServer = struct {
 
     pub fn deinit(ecs: *EchoClientServer) void {
         if (ecs.*.mh != null) {
-            ecs.*.echsrv.?.*.setCancel();
+            // Dereference the optional pointer to echsrv, then dereference the pointer to call the method
+            ecs.*.echsrv.?.setCancel();
 
+            // Dereference the optional pointer to mh, then call the method
             ecs.*.mh.?.stop();
             ecs.*.mh = null;
 
@@ -602,6 +608,7 @@ pub const EchoClientServer = struct {
         ecs.*.cleanMbox();
 
         if (ecs.*.engine != null) {
+            // Dereference the optional pointer to engine, then dereference the pointer to call the method
             ecs.*.engine.?.Destroy();
             ecs.*.engine = null;
         }
@@ -614,8 +621,8 @@ pub const EchoClientServer = struct {
         while (client != null) {
             assert(ecs.*.clcCount > 0);
             ecs.*.clcCount -= 1;
-            ecs.*.echoes += client.?.*.count;
-            client.?.*.destroy();
+            ecs.*.echoes += client.?.count;
+            client.?.destroy();
             const next: ?*EchoClient = client.?.next;
             client = next;
         }

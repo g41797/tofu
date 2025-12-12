@@ -102,7 +102,9 @@ pub const ChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.CHNLSVTable,
 
-    /// Submits a message to the engine for async delivery to a peer.
+    /// Submits a message for async processing:
+    /// - most cases: send to peer
+    /// - others: internal network related processing
     ///
     /// On success:
     /// - Sets `msg.*` to null (prevents reuse).

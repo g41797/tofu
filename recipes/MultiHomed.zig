@@ -104,7 +104,7 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
 
     const gpa: Allocator = ampe.getAllocator();
 
-    var mh: *MultiHomed = try gpa.create(MultiHomed);
+    const mh: *MultiHomed = try gpa.create(MultiHomed);
     errdefer mh.*.stop();
 
     mh.* = .{ // 2DO check default values
@@ -117,7 +117,7 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
 
     try mh.*.lstnChnls.?.ensureTotalCapacity(adrs.len);
 
-    return mh.init(adrs);
+    return mh.*.init(adrs);
 }
 
 /// Stops the thread, destroys  all channels, releases messages to the pool,
@@ -160,7 +160,7 @@ pub fn stop(mh: *MultiHomed) void {
 
 fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     for (adrs) |cnfg| {
-        _ = try mh.startListener(cnfg);
+        _ = try mh.*.startListener(cnfg);
     }
 
     mh.*.thread = try std.Thread.spawn(.{}, onThread, .{mh});
@@ -212,7 +212,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
                 assert(receivedMsg.?.*.bhdr.proto.mtype == .welcome);
                 assert(receivedMsg.?.*.bhdr.proto.role == .response);
 
-                mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, cnfg) catch unreachable;
+                try mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, cnfg);
                 return;
             },
 
