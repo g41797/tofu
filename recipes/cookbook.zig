@@ -177,9 +177,8 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     // Other messages need a valid, non-zero channel number.
 
     // Invalid Bye Request.
-    var bhdr = &msg.?.bhdr;
-    bhdr.proto.mtype = .bye;
-    bhdr.proto.role = .request;
+    msg.?.*.bhdr.proto.mtype = .bye;
+    msg.?.*.bhdr.proto.role = .request;
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -208,11 +207,9 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     // MessageType.hello needs the peer (server) address.
     // MessageType.welcome needs the server address for listening.
 
-    var bhdr = &msg.?.bhdr;
-
     // Hello Request without server address (configuration).
-    bhdr.proto.mtype = .hello;
-    bhdr.proto.role = .request;
+    msg.?.*.bhdr.proto.mtype = .hello;
+    msg.?.*.bhdr.proto.role = .request;
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -252,7 +249,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.bhdr.status;
+    const st = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -292,7 +289,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.bhdr.status;
+    const st = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -329,7 +326,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 
     var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.bhdr.status;
+    const st = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -422,16 +419,16 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     // Return message to the pool.
     defer ampe.put(&recvMsg);
 
-    const st = recvMsg.?.bhdr.status;
+    const st = recvMsg.?.*.bhdr.status;
 
     // Received message should have the same channel number.
-    assert(corrInfo.channel_number == recvMsg.?.bhdr.channel_number);
+    assert(corrInfo.channel_number == recvMsg.?.*.bhdr.channel_number);
 
     // Since we sent a WelcomeRequest, the received message should be a WelcomeResponse
     // with the listen status (success or failure).
     // A WelcomeSignal would return a Signal with an error status for failed listen.
-    assert(recvMsg.?.bhdr.proto.mtype == .welcome);
-    assert(recvMsg.?.bhdr.proto.role == .response);
+    assert(recvMsg.?.*.bhdr.proto.mtype == .welcome);
+    assert(recvMsg.?.*.bhdr.proto.role == .response);
 
     // Run of the same listener should fail with status TBD
     if (runTheSame) {
@@ -514,7 +511,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Return message to the pool.
     defer ampe.put(&welcomeResp);
 
-    var st: u8 = welcomeResp.?.bhdr.status;
+    var st: u8 = welcomeResp.?.*.bhdr.status;
 
     // Convert u8 status to AmpeError.
     status.raw_to_error(st) catch |err| {
@@ -522,19 +519,19 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     };
 
     // Received message should have the same channel number.
-    assert(srvCorrInfo.channel_number == welcomeResp.?.bhdr.channel_number);
+    assert(srvCorrInfo.channel_number == welcomeResp.?.*.bhdr.channel_number);
 
     assert(st == 0); // Don't expect pool_empty in this recipe
 
     // Received message should have the same message ID.
     // If not set before sending, tofu assigns a sequential number.
-    assert(srvCorrInfo.message_id == welcomeResp.?.bhdr.message_id);
+    assert(srvCorrInfo.message_id == welcomeResp.?.*.bhdr.message_id);
 
     // Since we sent a WelcomeRequest, the received message should be a WelcomeResponse
     // with listen status (success or failure).
     // A WelcomeSignal would return a Signal with an error status for failed listen.
-    assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
-    assert(welcomeResp.?.bhdr.proto.role == .response);
+    assert(welcomeResp.?.*.bhdr.proto.mtype == .welcome);
+    assert(welcomeResp.?.*.bhdr.proto.role == .response);
 
     // Listener is started before connect for simplicity.
     // In production, check connect status and retry if needed.
@@ -565,15 +562,15 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     assert(helloRequestOnServerSide != null);
 
-    st = helloRequestOnServerSide.?.bhdr.status;
-    const chN: message.ChannelNumber = helloRequestOnServerSide.?.bhdr.channel_number;
+    st = helloRequestOnServerSide.?.*.bhdr.status;
+    const chN: message.ChannelNumber = helloRequestOnServerSide.?.*.bhdr.channel_number;
     status.raw_to_error(st) catch |err| {
         log.info(">><< helloRequestOnServerSide channel {d} error {s} ", .{ chN, @errorName(err) });
     };
     assert(st == 0);
 
     // Store info about the connected client.
-    const connectedClientInfo: BinaryHeader = helloRequestOnServerSide.?.bhdr;
+    const connectedClientInfo: BinaryHeader = helloRequestOnServerSide.?.*.bhdr;
 
     // Three different channels exist:
     // - Listener channel (srvCorrInfo.channel_number).
@@ -589,7 +586,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     // Use the same message to send HelloResponse back.
     // Set role to .response for HelloResponse.
-    helloRequestOnServerSide.?.bhdr.proto.role = .response;
+    helloRequestOnServerSide.?.*.bhdr.proto.role = .response;
     _ = try chnls.enqueueToPeer(&helloRequestOnServerSide);
 
     // On the client side:
@@ -598,47 +595,47 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Return message to the pool.
     defer ampe.put(&helloResp);
 
-    st = helloResp.?.bhdr.status;
+    st = helloResp.?.*.bhdr.status;
 
     // Received message should have the same channel number and message ID.
-    assert(cltCorrInfo.channel_number == helloResp.?.bhdr.channel_number);
-    assert(cltCorrInfo.message_id == helloResp.?.bhdr.message_id);
+    assert(cltCorrInfo.channel_number == helloResp.?.*.bhdr.channel_number);
+    assert(cltCorrInfo.message_id == helloResp.?.*.bhdr.message_id);
 
     // Since we sent a HelloRequest, the received message should be a HelloResponse
     // - From engine with error status if failed.
     // - From server if connect and HelloRequest succeeded.
     // A HelloSignal would return a Signal with an error status for failed connect.
-    assert(welcomeResp.?.bhdr.proto.mtype == .welcome);
-    assert(welcomeResp.?.bhdr.proto.role == .response);
+    assert(welcomeResp.?.*.bhdr.proto.mtype == .welcome);
+    assert(welcomeResp.?.*.bhdr.proto.role == .response);
 
     // Close all three channels in 'force' mode using ByeSignal with oob = on.
     var closeListener: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // Prepare ByeSignal for the listener channel.
-    closeListener.?.bhdr.proto.mtype = .bye;
-    closeListener.?.bhdr.proto.role = .signal;
-    closeListener.?.bhdr.proto.oob = .on;
+    closeListener.?.*.bhdr.proto.mtype = .bye;
+    closeListener.?.*.bhdr.proto.role = .signal;
+    closeListener.?.*.bhdr.proto.oob = .on;
 
     // Set channel number to close this channel.
-    closeListener.?.bhdr.channel_number = srvCorrInfo.channel_number;
+    closeListener.?.*.bhdr.channel_number = srvCorrInfo.channel_number;
 
     _ = try chnls.enqueueToPeer(&closeListener);
 
     var closeListenerResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
     defer ampe.put(&closeListenerResp);
 
-    assert(closeListenerResp.?.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
+    assert(closeListenerResp.?.*.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
 
     // Close one of the client channels.
     var closeClient: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // Prepare ByeSignal for the client channel.
-    closeClient.?.bhdr.proto.mtype = .bye;
-    closeClient.?.bhdr.proto.role = .signal;
-    closeClient.?.bhdr.proto.oob = .on;
+    closeClient.?.*.bhdr.proto.mtype = .bye;
+    closeClient.?.*.bhdr.proto.role = .signal;
+    closeClient.?.*.bhdr.proto.oob = .on;
 
     // Set channel number to close this channel.
-    closeClient.?.bhdr.channel_number = cltCorrInfo.channel_number; // Client channel on client side.
+    closeClient.?.*.bhdr.channel_number = cltCorrInfo.channel_number; // Client channel on client side.
 
     _ = try chnls.enqueueToPeer(&closeClient);
 
@@ -647,7 +644,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     for (0..2) |_| {
         var closeClientResp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
         defer ampe.put(&closeClientResp);
-        assert(closeClientResp.?.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
+        assert(closeClientResp.?.*.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
     }
 
     // Tofu programming mainly involves setting message data.
@@ -683,28 +680,28 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
 
     attention = try chnls.waitReceive(100);
 
-    assert(attention.?.bhdr.message_id == 0);
-    assert(attention.?.bhdr.channel_number == 0);
-    assert(attention.?.bhdr.proto.origin == .engine);
-    assert(attention.?.bhdr.proto.role == .signal);
-    assert(status.raw_to_status(attention.?.bhdr.status) == .waiter_update);
+    assert(attention.?.*.bhdr.message_id == 0);
+    assert(attention.?.*.bhdr.channel_number == 0);
+    assert(attention.?.*.bhdr.proto.origin == .engine);
+    assert(attention.?.*.bhdr.proto.role == .signal);
+    assert(status.raw_to_status(attention.?.*.bhdr.status) == .waiter_update);
 
     // Create update message from existing signal.
-    attention.?.bhdr.proto.role = .request;
-    attention.?.bhdr.status = 0;
-    attention.?.bhdr.message_id = 1;
+    attention.?.*.bhdr.proto.role = .request;
+    attention.?.*.bhdr.status = 0;
+    attention.?.*.bhdr.message_id = 1;
 
     try chnls.updateWaiter(&attention);
 
     attention = try chnls.waitReceive(100);
 
-    assert(attention.?.bhdr.message_id == 1);
-    assert(attention.?.bhdr.channel_number == 0);
-    assert(attention.?.bhdr.proto.origin == .application);
-    assert(attention.?.bhdr.proto.role == .request);
-    assert(status.raw_to_status(attention.?.bhdr.status) == .waiter_update);
+    assert(attention.?.*.bhdr.message_id == 1);
+    assert(attention.?.*.bhdr.channel_number == 0);
+    assert(attention.?.*.bhdr.proto.origin == .application);
+    assert(attention.?.*.bhdr.proto.role == .request);
+    assert(status.raw_to_status(attention.?.*.bhdr.status) == .waiter_update);
 
-    return status.raw_to_status(attention.?.bhdr.status);
+    return status.raw_to_status(attention.?.*.bhdr.status);
 }
 
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
@@ -760,32 +757,32 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 };
                 defer self.ampe.put(&recvMsg);
 
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .connect_failed) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .connect_failed) {
                     // Connection failed - reconnect
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                     log.info("Pool is empy - return message to the pool", .{});
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
                     log.info("On client thread - exit required", .{});
                     return;
                 }
 
-                if (recvMsg.?.bhdr.proto.mtype == .hello) {
-                    assert(recvMsg.?.bhdr.proto.role == .response);
+                if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
+                    assert(recvMsg.?.*.bhdr.proto.role == .response);
 
                     // Connected to server
                     self.*.result = .success;
 
                     // Disconnect from server
-                    recvMsg.?.bhdr.proto.mtype = .bye;
-                    recvMsg.?.bhdr.proto.origin = .application;
-                    recvMsg.?.bhdr.proto.role = .signal;
-                    recvMsg.?.bhdr.proto.oob = .on;
+                    recvMsg.?.*.bhdr.proto.mtype = .bye;
+                    recvMsg.?.*.bhdr.proto.origin = .application;
+                    recvMsg.?.*.bhdr.proto.role = .signal;
+                    recvMsg.?.*.bhdr.proto.oob = .on;
                     _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
                     return;
                 }
@@ -802,17 +799,17 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                     log.info("Pool is empy - return message to the pool", .{});
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
                     log.info("On client thread - exit required", .{});
                     return;
                 }
-                if (recvMsg.?.bhdr.status != 0) {
-                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                if (recvMsg.?.*.bhdr.status != 0) {
+                    status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                         log.info("On client thread - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         continue;
                     };
@@ -878,17 +875,17 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 };
                 defer self.ampe.put(&welcomeResponse);
 
-                if (welcomeResponse.?.bhdr.status != 0) {
-                    if (status.raw_to_status(welcomeResponse.?.bhdr.status) == .pool_empty) {
+                if (welcomeResponse.?.*.bhdr.status != 0) {
+                    if (status.raw_to_status(welcomeResponse.?.*.bhdr.status) == .pool_empty) {
                         log.info("Pool is empy - return message to the pool", .{});
                         continue;
                     }
-                    if (status.raw_to_status(welcomeResponse.?.bhdr.status) == .channel_closed) {
-                        log.info("On server thread - closed channel {d}", .{welcomeResponse.?.bhdr.channel_number});
+                    if (status.raw_to_status(welcomeResponse.?.*.bhdr.status) == .channel_closed) {
+                        log.info("On server thread - closed channel {d}", .{welcomeResponse.?.*.bhdr.channel_number});
                         continue;
                     }
 
-                    status.raw_to_error(welcomeResponse.?.bhdr.status) catch |err| {
+                    status.raw_to_error(welcomeResponse.?.*.bhdr.status) catch |err| {
                         log.info("On server thread - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         return;
                     };
@@ -906,35 +903,35 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 if (recvMsg == null) {
                     continue;
                 }
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
                     log.info("On server thread - exit required", .{});
                     return;
                 }
-                if (recvMsg.?.bhdr.status != 0) {
-                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (recvMsg.?.*.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                         log.info("On server thread - Pool is empy - return message to the pool", .{});
                         continue;
                     }
 
-                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .channel_closed) {
-                        log.info("On server thread - closed channel {d}", .{recvMsg.?.bhdr.channel_number});
+                    if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .channel_closed) {
+                        log.info("On server thread - closed channel {d}", .{recvMsg.?.*.bhdr.channel_number});
                         continue;
                     }
 
-                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                    status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                         log.info("On server thread - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         return;
                     };
                 }
 
-                assert(recvMsg.?.bhdr.proto.role == .request);
+                assert(recvMsg.?.*.bhdr.proto.role == .request);
 
-                if (recvMsg.?.bhdr.proto.mtype == .hello) {
+                if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
                     self.*.result = .success;
                 }
                 // Echo
-                recvMsg.?.bhdr.proto.role = .response;
-                recvMsg.?.bhdr.proto.origin = .application; // For sure
+                recvMsg.?.*.bhdr.proto.role = .response;
+                recvMsg.?.*.bhdr.proto.origin = .application; // For sure
 
                 _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
                     log.info("On server thread - enqueueToPeer error {s}", .{@errorName(err)});
@@ -1121,12 +1118,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             };
             defer server.ampe.put(&welcomeResponse);
 
-            welcomeResponse.?.bhdr.dumpMeta("listener recv ");
+            welcomeResponse.?.*.bhdr.dumpMeta("listener recv ");
 
-            if (welcomeResponse.?.bhdr.status == 0) {
+            if (welcomeResponse.?.*.bhdr.status == 0) {
                 return;
             }
-            status.raw_to_error(welcomeResponse.?.bhdr.status) catch |err| {
+            status.raw_to_error(welcomeResponse.?.*.bhdr.status) catch |err| {
                 log.info("server - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                 return err;
             };
@@ -1161,28 +1158,28 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                server.helloBh = recvMsg.?.bhdr;
+                server.helloBh = (recvMsg.?).*.bhdr;
 
                 server.helloBh.dumpMeta("server recv");
 
-                if (recvMsg.?.bhdr.status != 0) {
-                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (recvMsg.?.*.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                         log.info("server - Pool is empy - add messages to the pool", .{});
                         try server.*.addMessagesToPool(2);
                         continue;
                     }
 
-                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                    status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                         log.info("server -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         return err;
                     };
                 }
 
-                assert(recvMsg.?.bhdr.proto.role == .request);
-                assert(recvMsg.?.bhdr.proto.mtype == mtype);
+                assert(recvMsg.?.*.bhdr.proto.role == .request);
+                assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
 
-                recvMsg.?.bhdr.proto.role = .response;
-                recvMsg.?.bhdr.proto.origin = .application; // For sure
+                recvMsg.?.*.bhdr.proto.role = .response;
+                recvMsg.?.*.bhdr.proto.origin = .application; // For sure
 
                 _ = server.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
                     log.info("server - enqueueToPeer error {s}", .{@errorName(err)});
@@ -1291,14 +1288,14 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         break;
                     }
 
-                    recvMsg.?.bhdr.dumpMeta("client recv");
+                    recvMsg.?.*.bhdr.dumpMeta("client recv");
 
                     // Ignore messages for already closed channel
-                    if ((status.raw_to_status(recvMsg.?.bhdr.status) == .channel_closed) and (recvMsg.?.bhdr.channel_number != client.helloBh.channel_number)) {
+                    if ((status.raw_to_status(recvMsg.?.*.bhdr.status) == .channel_closed) and (recvMsg.?.*.bhdr.channel_number != client.helloBh.channel_number)) {
                         continue;
                     }
 
-                    switch (status.raw_to_status(recvMsg.?.bhdr.status)) {
+                    switch (status.raw_to_status(recvMsg.?.*.bhdr.status)) {
                         .success => {
                             // Client connected
                             client.connected = true;
@@ -1332,7 +1329,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                             continue;
                         },
                         else => {
-                            status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                            status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                                 // For other errors - propagate up
                                 log.info("Client - recived message with non expected error {s}", .{@errorName(err)});
                                 return err;
@@ -1360,18 +1357,18 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             defer client.*.ampe.put(&byeRequest);
 
             // Don't forget set the same channel # returned after send HelloRequest
-            byeRequest.?.bhdr.channel_number = client.*.helloBh.channel_number;
-            byeRequest.?.bhdr.proto.mtype = .bye;
-            byeRequest.?.bhdr.proto.role = .request;
-            byeRequest.?.bhdr.proto.origin = .application;
+            byeRequest.?.*.bhdr.channel_number = client.*.helloBh.channel_number;
+            byeRequest.?.*.bhdr.proto.mtype = .bye;
+            byeRequest.?.*.bhdr.proto.role = .request;
+            byeRequest.?.*.bhdr.proto.origin = .application;
 
             _ = byeRequest.?.check_and_prepare() catch |err| {
-                byeRequest.?.bhdr.dumpMeta("wrong message ");
+                byeRequest.?.*.bhdr.dumpMeta("wrong message ");
                 return err;
             };
 
             var brBhdr: BinaryHeader = client.*.chnls.?.enqueueToPeer(&byeRequest) catch |err| {
-                byeRequest.?.bhdr.dumpMeta("wrong message was send to peer");
+                byeRequest.?.*.bhdr.dumpMeta("wrong message was send to peer");
                 return err;
             };
 
@@ -1403,29 +1400,29 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                if (client.helloBh.channel_number != recvMsg.?.bhdr.channel_number) {
+                if (client.helloBh.channel_number != recvMsg.?.*.bhdr.channel_number) {
                     client.helloBh.dumpMeta("expected recv");
-                    recvMsg.?.bhdr.dumpMeta("actual recv");
+                    recvMsg.?.*.bhdr.dumpMeta("actual recv");
                 } else {
-                    recvMsg.?.bhdr.dumpMeta("client recv");
+                    recvMsg.?.*.bhdr.dumpMeta("client recv");
                 }
 
-                assert(client.helloBh.channel_number == recvMsg.?.bhdr.channel_number);
+                assert(client.helloBh.channel_number == recvMsg.?.*.bhdr.channel_number);
 
-                if (recvMsg.?.bhdr.status != 0) {
-                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (recvMsg.?.*.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                         log.info("client - Pool is empy - return message to the pool", .{});
                         continue;
                     }
 
-                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                    status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                         log.info("client -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         return err;
                     };
                 }
 
-                assert(recvMsg.?.bhdr.proto.role == .response);
-                assert(recvMsg.?.bhdr.proto.mtype == mtype);
+                assert(recvMsg.?.*.bhdr.proto.role == .response);
+                assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
 
                 return true;
             }
@@ -1538,21 +1535,21 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
                 return false;
             }
 
-            if ((cc.helloBh.?.channel_number != recvd.*.?.bhdr.channel_number)) {
-                if (status.raw_to_status(recvd.*.?.bhdr.status) == .channel_closed) {
+            if ((cc.helloBh.?.channel_number != (*recvd.*.?).bhdr.channel_number)) {
+                if (status.raw_to_status((*recvd.*.?).bhdr.status) == .channel_closed) {
                     return false;
                 }
                 return error.ReceivedMessageForAnotherChannel;
             }
 
-            if (recvd.*.?.bhdr.proto.mtype != .hello) {
+            if ((*recvd.*.?).bhdr.proto.mtype != .hello) {
                 // HelloResponse expected
                 // Possibly this message was send ahead of success
                 // of connect => return to pool;
                 return false;
             }
 
-            switch (status.raw_to_status(recvd.*.?.bhdr.status)) {
+            switch (status.raw_to_status((*recvd.*.?).bhdr.status)) {
                 .invalid_address => return AmpeError.InvalidAddress,
                 .uds_path_not_found => return AmpeError.UDSPathNotFound,
                 .recv_failed, .send_failed => {
@@ -1576,7 +1573,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
                 else => {},
             }
 
-            status.raw_to_error(recvd.*.?.bhdr.status) catch |err| {
+            status.raw_to_error((*recvd.*.?).bhdr.status) catch |err| {
                 // For other errors - propagate up
                 log.info("Client - recived message with non expected error {s}", .{@errorName(err)});
                 return err;
@@ -1694,10 +1691,10 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             defer client.*.ampe.put(&byeRequest);
 
             // Don't forget set the same channel # returned after send HelloRequest
-            byeRequest.?.bhdr.channel_number = client.*.helloBh.channel_number;
-            byeRequest.?.bhdr.proto.mtype = .bye;
-            byeRequest.?.bhdr.proto.role = .request;
-            byeRequest.?.bhdr.proto.origin = .application;
+            byeRequest.?.*.bhdr.channel_number = client.*.helloBh.channel_number;
+            byeRequest.?.*.bhdr.proto.mtype = .bye;
+            byeRequest.?.*.bhdr.proto.role = .request;
+            byeRequest.?.*.bhdr.proto.origin = .application;
 
             client.*.helloBh = client.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
 
@@ -1726,24 +1723,24 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
                     continue;
                 }
 
-                recvMsg.?.bhdr.dumpMeta("client recv");
+                recvMsg.?.*.bhdr.dumpMeta("client recv");
 
-                assert(client.helloBh.channel_number == recvMsg.?.bhdr.channel_number);
+                assert(client.helloBh.channel_number == recvMsg.?.*.bhdr.channel_number);
 
-                if (recvMsg.?.bhdr.status != 0) {
-                    if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+                if (recvMsg.?.*.bhdr.status != 0) {
+                    if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                         log.info("client - Pool is empy - return message to the pool", .{});
                         continue;
                     }
 
-                    status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                    status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                         log.info("client -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                         return err;
                     };
                 }
 
-                assert(recvMsg.?.bhdr.proto.role == .response);
-                assert(recvMsg.?.bhdr.proto.mtype == mtype);
+                assert(recvMsg.?.*.bhdr.proto.role == .response);
+                assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
 
                 return true;
             }
@@ -1836,13 +1833,13 @@ pub const TofuEchoServer = struct {
         };
         defer server.ampe.put(&welcomeResponse);
 
-        welcomeResponse.?.bhdr.dumpMeta("listener recv ");
+        (*welcomeResponse.?).bhdr.dumpMeta("listener recv ");
 
-        if (welcomeResponse.?.bhdr.status == 0) {
+        if ((*welcomeResponse.?).bhdr.status == 0) {
             server.*.listenerBh = initialBh;
             return;
         }
-        status.raw_to_error(welcomeResponse.?.bhdr.status) catch |err| {
+        status.raw_to_error((*welcomeResponse.?).bhdr.status) catch |err| {
             log.info("server - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
             return err;
         };
@@ -1877,27 +1874,27 @@ pub const TofuEchoServer = struct {
                 continue;
             }
 
-            server.helloBh = recvMsg.?.bhdr;
+            server.helloBh = recvMsg.?.*.bhdr;
 
             server.helloBh.dumpMeta("server recv");
 
-            if (recvMsg.?.bhdr.status != 0) {
-                if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+            if (recvMsg.?.*.bhdr.status != 0) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                     log.info("server - Pool is empy - return message to the pool", .{});
                     continue;
                 }
 
-                status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+                status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                     log.info("server -  - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                     return err;
                 };
             }
 
-            assert(recvMsg.?.bhdr.proto.role == .request);
-            assert(recvMsg.?.bhdr.proto.mtype == mtype);
+            assert(recvMsg.?.*.bhdr.proto.role == .request);
+            assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
 
-            recvMsg.?.bhdr.proto.role = .response;
-            recvMsg.?.bhdr.proto.origin = .application; // For sure
+            recvMsg.?.*.bhdr.proto.role = .response;
+            recvMsg.?.*.bhdr.proto.origin = .application; // For sure
 
             _ = server.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
                 log.info("server - enqueueToPeer error {s}", .{@errorName(err)});

@@ -193,7 +193,7 @@ pub const ChannelGroup = struct {
     ///
     /// Check `BinaryHeader` to identify the source.
     ///
-    /// On error: stop using this ChannelGroup.
+    /// On error: stop using this ChannelGroup and call `ampe.destroy` on it.
     ///
     /// Call in a loop from **one thread only**.
     pub fn waitReceive(
