@@ -18,7 +18,7 @@ pub const CHNLSVTable = struct {
 
     waitReceive: *const fn (ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*message.Message,
 
-    updateWaiter: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void,
+    updateReceiver: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void,
 };
 
 const AllocationStrategy = @import("../ampe.zig").AllocationStrategy;

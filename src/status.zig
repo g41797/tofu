@@ -24,7 +24,7 @@ pub const AmpeStatus = enum(u8) {
     communication_failed,
     pool_empty,
     allocation_failed,
-    waiter_update,
+    receiver_update,
     channel_closed,
     shutdown_started,
     connect_failed,
@@ -59,7 +59,7 @@ pub const AmpeError = error{
     CommunicationFailed,
     PoolEmpty,
     AllocationFailed,
-    WaiterUpdate,
+    ReceiverUpdate,
     ChannelClosed,
     ShutdownStarted,
     ConnectFailed,
@@ -95,7 +95,7 @@ var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .communication_failed = AmpeError.CommunicationFailed,
     .pool_empty = AmpeError.PoolEmpty,
     .allocation_failed = AmpeError.AllocationFailed,
-    .waiter_update = AmpeError.WaiterUpdate, // not exactly error
+    .receiver_update = AmpeError.ReceiverUpdate, // not exactly error
     .channel_closed = AmpeError.ChannelClosed,
     .connect_failed = AmpeError.ConnectFailed,
     .listen_failed = AmpeError.ListenFailed,

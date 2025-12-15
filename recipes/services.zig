@@ -467,7 +467,7 @@ pub const EchoClient = struct {
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .receiver_update) {
                 log.info("On client thread - exit required", .{});
                 return;
             }
@@ -507,7 +507,7 @@ pub const EchoClient = struct {
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .waiter_update) {
+            if (status.raw_to_status(recvMsg.?.bhdr.status) == .receiver_update) {
                 log.info("On client thread - exit required", .{});
                 return;
             }

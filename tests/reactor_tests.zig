@@ -185,18 +185,18 @@ test "find free TCP/IP port" {
     try std.testing.expect(port > 0); // Ensure a valid port is returned
 }
 
-test "update waiter" {
+test "update receiver" {
     std.testing.log_level = .debug;
 
-    log.info("start handleUpdateWaiter ", .{});
+    log.info("start handleUpdateReceiver ", .{});
 
-    const updateStatus = recipes.handleUpdateWaiter(gpa) catch |err| {
-        log.info("handleUpdateWaiter {any}", .{
+    const updateStatus = recipes.handleUpdateReceiver(gpa) catch |err| {
+        log.info("handleUpdateReceiver {any}", .{
             err,
         });
         return err;
     };
-    try testing.expect(updateStatus == .waiter_update);
+    try testing.expect(updateStatus == .receiver_update);
 }
 
 test "ampe just create/destroy" {

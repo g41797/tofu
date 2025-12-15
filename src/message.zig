@@ -343,7 +343,7 @@ pub const Message = struct {
     /// Used by application. Reactor does nothing with this field.
     /// Actually it's void* -  use with caution.
     /// One of the possible usages - transfer additional information
-    /// to the 'waiter' via 'updateWaiter()'.
+    /// to the 'receiver' via 'updateReceiver()'.
     @"<void*>": ?*anyopaque = null,
 
     /// 'Transient' field - means does not transferred between peers.

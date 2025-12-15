@@ -1,5 +1,5 @@
 ![](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
-# tofu - _Async messaging for Zig._
+# **_Tofu - Sync your devs, Async your apps_**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Linux](https://github.com/g41797/yaaamp/actions/workflows/linux.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/linux.yml)
@@ -9,8 +9,7 @@
 
 ##
 
-What does **tofu** have to do with a library for 
-_asynchronous message communication_?
+What does **tofu** have to do with _asynchronous message communication_?
 
 I spent a long time breaking my head trying to explain the _point_ of this project.
 
@@ -188,7 +187,7 @@ pub const ChannelGroup = struct {
     ///
     /// Message sources:
     /// - Remote peer (via `enqueueToPeer` on their side).
-    /// - Application (via `updateWaiter` on this ChannelGroup).
+    /// - Application (via `updateReceiver` on this ChannelGroup).
     /// - Ampe (status/control messages).
     ///
     /// Check `BinaryHeader` to identify the source.
@@ -204,23 +203,23 @@ pub const ChannelGroup = struct {
     /// Adds a message to the internal queue for `waitReceive`.
     ///
     /// If `msg.*` is not null:
-    /// - Engine sets status to `'waiter_update'`.
+    /// - Engine sets status to `'receiver_update'`.
     /// - Sets `msg.*` to null after success.
     /// - No need for `channel_number` or similar fields.
     ///
     /// If `msg.*` is null:
-    /// - Creates a `'waiter_update'` Signal and adds it.
+    /// - Creates a `'receiver_update'` Signal and adds it.
     ///
     /// Returns error if shutting down.
     ///
     /// Use from another thread to:
-    /// - Wake the waiter (`msg.*` = null).
+    /// - Wake the receiver (`msg.*` = null).
     /// - Send info/commands/notifications.
     ///
     /// FIFO order only. No priority queues.
     ///
     /// Thread-safe.
-    pub fn updateWaiter(
+    pub fn updateReceiver(
         chnls: ChannelGroup,
         update: *?*message.Message,
     ) status.AmpeError!void {...}

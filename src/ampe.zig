@@ -129,7 +129,7 @@ pub const ChannelGroup = struct {
     ///
     /// Message sources:
     /// - Remote peer (via `enqueueToPeer` on their side).
-    /// - Application (via `updateWaiter` on this ChannelGroup).
+    /// - Application (via `updateReceiver` on this ChannelGroup).
     /// - Ampe (status/control messages).
     ///
     /// Check `BinaryHeader` to identify the source.
@@ -147,27 +147,27 @@ pub const ChannelGroup = struct {
     /// Adds a message to the internal queue for `waitReceive`.
     ///
     /// If `msg.*` is not null:
-    /// - Engine sets status to `'waiter_update'`.
+    /// - Engine sets status to `'receiver_update'`.
     /// - Sets `msg.*` to null after success.
     /// - No need for `channel_number` or similar fields.
     ///
     /// If `msg.*` is null:
-    /// - Creates a `'waiter_update'` Signal and adds it.
+    /// - Creates a `'receiver_update'` Signal and adds it.
     ///
     /// Returns error if shutting down.
     ///
     /// Use from another thread to:
-    /// - Wake the waiter (`msg.*` = null).
+    /// - Wake the receiver (`msg.*` = null).
     /// - Send info/commands/notifications.
     ///
     /// FIFO order only. No priority queues.
     ///
     /// Thread-safe.
-    pub fn updateWaiter(
+    pub fn updateReceiver(
         chnls: ChannelGroup,
         update: *?*message.Message,
     ) status.AmpeError!void {
-        return chnls.vtable.updateWaiter(chnls.ptr, update);
+        return chnls.vtable.updateReceiver(chnls.ptr, update);
     }
 };
 

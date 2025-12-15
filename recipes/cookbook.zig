@@ -91,7 +91,7 @@ pub fn createDestroyChannelGroup(gpa: Allocator) !void {
 pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     // If options have invalid values (0 or maxPoolMsgs < initialPoolMsgs),
     // DefaultOptions will be used.
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
     };
@@ -130,12 +130,12 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
 }
 
 pub fn sendMessageFromThePool(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
     };
 
-    const rtr: *tofu.Reactor = try tofu.Reactor.Create(gpa, options);
+    const rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.*.Destroy();
     const ampe = try rtr.*.ampe();
 
@@ -144,7 +144,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
         // Ignore errors for this example.
     };
 
-    var msg: ?*tofu.Message = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // Message from the pool is not ready for sending.
@@ -156,7 +156,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
 }
 
 pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
     };
@@ -186,7 +186,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
 }
 
 pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
     };
@@ -217,7 +217,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
 }
 
 pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
     };
@@ -255,7 +255,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
 }
 
 pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 64, // Example value.
     };
@@ -295,7 +295,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
 }
 
 pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 10, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
@@ -394,7 +394,7 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
 pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bool) !AmpeStatus {
     // Same code for TCP and UDS servers, only configuration differs.
 
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 2, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
@@ -436,8 +436,8 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
         return lst;
     }
 
-    // Channel is not closed explicitly.
-    // It closes during ChannelGroup destruction (see defer above).
+    // In this example listener channel is not closed explicitly.
+    // It will be closed during ChannelGroup destruction (see defer above).
 
     // Convert status byte to AmpeStatus enum for convenience.
     return status.raw_to_status(st);
@@ -468,7 +468,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
 
-    const options: tofu.Options = .{
+    const options: Options = .{
         // Set to relative high value in order to not handle
         // pool_empty status.
         // But be ready to handle it in the field
@@ -657,8 +657,8 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     return status.raw_to_status(st);
 }
 
-pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
-    const options: tofu.Options = .{
+pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
+    const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
@@ -676,7 +676,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
     assert(attention == null);
 
     // Send attention signal to itself.
-    try chnls.updateWaiter(&attention);
+    try chnls.updateReceiver(&attention);
 
     attention = try chnls.waitReceive(100);
 
@@ -684,14 +684,14 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
     assert(attention.?.*.bhdr.channel_number == 0);
     assert(attention.?.*.bhdr.proto.origin == .engine);
     assert(attention.?.*.bhdr.proto.role == .signal);
-    assert(status.raw_to_status(attention.?.*.bhdr.status) == .waiter_update);
+    assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 
     // Create update message from existing signal.
     attention.?.*.bhdr.proto.role = .request;
     attention.?.*.bhdr.status = 0;
     attention.?.*.bhdr.message_id = 1;
 
-    try chnls.updateWaiter(&attention);
+    try chnls.updateReceiver(&attention);
 
     attention = try chnls.waitReceive(100);
 
@@ -699,7 +699,7 @@ pub fn handleUpdateWaiter(gpa: Allocator) anyerror!AmpeStatus {
     assert(attention.?.*.bhdr.channel_number == 0);
     assert(attention.?.*.bhdr.proto.origin == .application);
     assert(attention.?.*.bhdr.proto.role == .request);
-    assert(status.raw_to_status(attention.?.*.bhdr.status) == .waiter_update);
+    assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 
     return status.raw_to_status(attention.?.*.bhdr.status);
 }
@@ -725,7 +725,7 @@ pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
 }
 
 pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 1024, // Example value.
         .maxPoolMsgs = 1024, // Example value.
     };
@@ -767,7 +767,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .receiver_update) {
                     log.info("On client thread - exit required", .{});
                     return;
                 }
@@ -804,7 +804,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     continue;
                 }
 
-                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .receiver_update) {
                     log.info("On client thread - exit required", .{});
                     return;
                 }
@@ -903,7 +903,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 if (recvMsg == null) {
                     continue;
                 }
-                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .waiter_update) {
+                if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .receiver_update) {
                     log.info("On server thread - exit required", .{});
                     return;
                 }
@@ -1008,9 +1008,9 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     var nullMsg: ?*Message = null;
 
-    clnt.*.chnls.?.updateWaiter(&nullMsg) catch {};
+    clnt.*.chnls.?.updateReceiver(&nullMsg) catch {};
 
-    srvr.*.chnls.?.updateWaiter(&nullMsg) catch {};
+    srvr.*.chnls.?.updateReceiver(&nullMsg) catch {};
 
     return .success;
 }
@@ -1039,7 +1039,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
 
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };
@@ -1471,7 +1471,7 @@ pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!
 }
 
 pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
-    const options: tofu.Options = .{
+    const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
         .maxPoolMsgs = 32, // Example value.
     };

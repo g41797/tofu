@@ -17,7 +17,7 @@ pub fn chnls(grp: *MchnGroup) ChannelGroup {
         .vtable = &.{
             .enqueueToPeer = enqueueToPeer,
             .waitReceive = waitReceive,
-            .updateWaiter = updateWaiter,
+            .updateReceiver = updateReceiver,
         },
     };
     return result;
@@ -127,7 +127,7 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
         }
     };
 
-    if (recvMsg.*.bhdr.status != tofu.status.status_to_raw(.waiter_update)) {
+    if (recvMsg.*.bhdr.status != tofu.status.status_to_raw(.receiver_update)) {
         std.debug.assert(recvMsg.*.@"<ctx>" != null);
     }
 
@@ -135,11 +135,11 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
     return recvMsg;
 }
 
-pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
+pub fn updateReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
     if (msg.* == null) {
-        const updateSignal: *Message = grp.engine.buildStatusSignal(.waiter_update);
+        const updateSignal: *Message = grp.engine.buildStatusSignal(.receiver_update);
         grp.msgs[1].send(updateSignal) catch {
             grp.engine.pool.put(updateSignal);
             return AmpeError.ShutdownStarted;
@@ -148,7 +148,7 @@ pub fn updateWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     }
 
     msg.*.?.bhdr.proto.origin = .application;
-    msg.*.?.bhdr.status = tofu.status.status_to_raw(.waiter_update);
+    msg.*.?.bhdr.status = tofu.status.status_to_raw(.receiver_update);
     msg.*.?.@"<ctx>" = null;
 
     grp.msgs[1].send(msg.*.?) catch {
@@ -176,7 +176,7 @@ pub inline fn resetCmdCompleted(_: *MchnGroup) void {
     return;
 }
 
-pub fn sendToWaiter(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
+pub fn sendToReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
     if (msg.* == null) {
         return AmpeError.NullMessage;
     }

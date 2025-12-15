@@ -942,7 +942,7 @@ fn responseFailure(rtr: *Reactor, failure: AmpeStatus) void {
     }
 
     // Try notify ChannelGroup directly
-    _ = MchnGroup.sendToWaiter(rtr.currMsg.?.@"<ctx>", &rtr.currMsg) catch {};
+    _ = MchnGroup.sendToReceiver(rtr.currMsg.?.@"<ctx>", &rtr.currMsg) catch {};
     return;
 }
 
@@ -1207,7 +1207,7 @@ const TriggeredChannel = struct {
 
         msg.*.?.bhdr.channel_number = tchn.*.acn.chn;
 
-        MchnGroup.sendToWaiter(tchn.acn.ctx.?, msg) catch {};
+        MchnGroup.sendToReceiver(tchn.acn.ctx.?, msg) catch {};
 
         return;
     }

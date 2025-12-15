@@ -134,7 +134,7 @@ pub fn stop(mh: *MultiHomed) void {
     if (mh.*.thread != null) {
         // Interrupt waitReceive on the thread
         var nullMsg: ?*message.Message = null;
-        mh.*.chnls.?.updateWaiter(&nullMsg) catch unreachable;
+        mh.*.chnls.?.updateReceiver(&nullMsg) catch unreachable;
 
         // Wait finish of the thread
         mh.*.thread.?.join();
@@ -270,7 +270,7 @@ fn mainLoop(mh: *MultiHomed) void {
 
         const sts: status.AmpeStatus = status.raw_to_status((receivedMsg.?.*.bhdr.status));
 
-        if (sts == .waiter_update) { // Stop command from the another thread
+        if (sts == .receiver_update) { // Stop command from the another thread
             log.info("Stop command from the another thread", .{});
             return;
         }
