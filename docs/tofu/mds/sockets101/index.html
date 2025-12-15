@@ -8,31 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://g41797.github.io/tofu/tofu/core/services/channel-group/">
+        <link rel="canonical" href="https://g41797.github.io/tofu/tofu/mds/sockets101/">
       
       
-        <link rel="prev" href="../ampe/">
+        <link rel="prev" href="../allocator/">
       
       
-        <link rel="next" href="../message/">
+        <link rel="next" href="../coding-style/">
       
       
         
       
       
-      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>ChannelGroup - tofu documentation - Work In Progress</title>
+        <title>Sockets 101 - Tofu - Sync your devs, Async your apps!</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.618322db.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
   
@@ -116,9 +116,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../../css/custom.css">
+      <link rel="stylesheet" href="../../../css/custom.css">
     
-    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -143,7 +143,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#channel" class="md-skip">
+        <a href="#what-is-a-socket" class="md-skip">
           Skip to content
         </a>
       
@@ -155,14 +155,16 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-header__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
+    <a href="https://g41797.github.io/tofu/" title="Tofu - Sync your devs, Async your apps!" class="md-header__button md-logo" aria-label="Tofu - Sync your devs, Async your apps!" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
+<a href="../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
 
@@ -204,13 +206,13 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            tofu documentation - Work In Progress
+            Tofu - Sync your devs, Async your apps!
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ChannelGroup
+              Sockets 101
             
           </span>
         </div>
@@ -303,14 +305,8 @@
     
   </nav>
   
-</header>
     
-    <div class="md-container" data-md-component="container">
       
-      
-        
-          
-            
 <nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
   <div class="md-grid">
     <ul class="md-tabs__list">
@@ -320,17 +316,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../../getting-started/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/" class="md-tabs__link">
+          
   
-  Overview
+  
+  Getting started
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -339,17 +336,38 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../../sockets101/" class="md-tabs__link">
+    
+    
+      <li class="md-tabs__item">
+        <a href="../protocol/" class="md-tabs__link">
+          
+  
+  
+  Protocol
+
+        </a>
+      </li>
+    
+  
+
+      
         
   
   
-    
   
-  Sockets 101
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../features/" class="md-tabs__link">
+          
+  
+  
+  Implementation
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -363,11 +381,11 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../key-ingredients/" class="md-tabs__link">
+        <a href="../allocator/" class="md-tabs__link">
           
   
   
-  Key ingredients
+  Addendum
 
         </a>
       </li>
@@ -375,29 +393,16 @@
   
 
       
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../../api/tofu-api/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  API Documentation
-
-      </a>
-    </li>
-  
-
-      
     </ul>
   </div>
 </nav>
-          
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
         
       
       <main class="md-main" data-md-component="main">
@@ -416,12 +421,12 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://g41797.github.io/tofu/" title="tofu documentation - Work In Progress" class="md-nav__button md-logo" aria-label="tofu documentation - Work In Progress" data-md-component="logo">
+    <a href="https://g41797.github.io/tofu/" title="Tofu - Sync your devs, Async your apps!" class="md-nav__button md-logo" aria-label="Tofu - Sync your devs, Async your apps!" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="tofu documentation - Work In Progress" id="logo-container">
+<a href="../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="tofu documentation - Work In Progress" id="logo-img" style="opacity:0;visibility:hidden;" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
 
@@ -455,7 +460,7 @@
     })();
 </script>
     </a>
-    tofu documentation - Work In Progress
+    Tofu - Sync your devs, Async your apps!
   </label>
   
     <div class="md-nav__source">
@@ -478,8 +483,60 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../getting-started/" class="md-nav__link">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   
@@ -498,22 +555,23 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../../../sockets101/" class="md-nav__link">
+      <a href="../naq/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Sockets 101
+    NAQ
   
 
     
@@ -525,41 +583,46 @@
     </li>
   
 
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
     
       
       
   
   
-    
   
   
-  
     
     
     
     
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Key ingredients
+    Protocol
   
 
     
@@ -570,12 +633,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Key ingredients
+    Protocol
   
 
           </label>
@@ -588,14 +651,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../../key-ingredients/" class="md-nav__link">
+      <a href="../protocol/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Key Ingredients
+    Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Implementation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
   
 
     
@@ -613,7 +763,89 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
     
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../imports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../key-ingredients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Key ingredients
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
   
   
   
@@ -623,16 +855,18 @@
     
       
       
+        
+      
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
         
           
-          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
             
   
   
@@ -650,8 +884,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -693,35 +927,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ChannelGroup
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../channel-group/" class="md-nav__link">
         
   
   
@@ -737,57 +946,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#channel" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Channel
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channelgroup-createdestroy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ChannelGroup create/destroy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channelgroup-interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ChannelGroup interface
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -841,16 +999,18 @@
     
       
       
+        
+      
     
     
     <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
         
           
-          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
             
   
   
@@ -868,8 +1028,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -886,14 +1046,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../helpers/" class="md-nav__link">
+      <a href="../configurators/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Helpers
+    Configurators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../for-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testers
   
 
     
@@ -909,6 +1097,425 @@
             
           </ul>
         </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Addendum
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Addendum
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../allocator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sockets 101
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sockets 101
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-a-socket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is a Socket?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is a Socket?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stream-oriented-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream-Oriented Sockets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-families-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket Families (Protocols)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket Families (Protocols)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-tcpip-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. TCP/IP Sockets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-unix-domain-sockets-uds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Unix Domain Sockets (UDS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-client-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Client: Connect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-server-listen-and-accept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Server: Listen and Accept
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-disconnect-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Disconnect (Close)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addresses-tcpip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addresses - TCP/IP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Addresses - TCP/IP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#server-address-bind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Address (Bind)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-address-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client Address (Connect)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addresses-unix-domain-sockets-uds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addresses - Unix Domain Sockets (UDS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-linux-tracks-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Linux Tracks Sockets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Linux Tracks Sockets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-descriptor-fd-socket-handle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Descriptor (FD) = Socket Handle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fd-is-unique-only-inside-one-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FD is unique only inside one process
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-tuning-with-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket tuning with options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket tuning with options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reuse-port-quickly-so_reuseaddr-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reuse Port Quickly - SO_REUSEADDR option
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#socket-closing-modes-so_linger-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket closing modes - SO_LINGER option
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -943,28 +1550,21 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../../../api/tofu-api/" class="md-nav__link">
+      <a href="../callback-enabled/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    API Documentation
+    Callback enabled
   
 
     
@@ -973,6 +1573,14 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1002,10 +1610,177 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#channel" class="md-nav__link">
+  <a href="#what-is-a-socket" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Channel
+        What is a Socket?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is a Socket?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stream-oriented-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream-Oriented Sockets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-families-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket Families (Protocols)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket Families (Protocols)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-tcpip-sockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. TCP/IP Sockets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-unix-domain-sockets-uds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Unix Domain Sockets (UDS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-client-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Client: Connect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-server-listen-and-accept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Server: Listen and Accept
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-disconnect-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Disconnect (Close)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addresses-tcpip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addresses - TCP/IP
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Addresses - TCP/IP">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#server-address-bind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Address (Bind)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-address-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client Address (Connect)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#addresses-unix-domain-sockets-uds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addresses - Unix Domain Sockets (UDS)
       
     </span>
   </a>
@@ -1013,24 +1788,80 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#channelgroup-createdestroy" class="md-nav__link">
+  <a href="#how-linux-tracks-sockets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ChannelGroup create/destroy
+        How Linux Tracks Sockets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Linux Tracks Sockets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-descriptor-fd-socket-handle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Descriptor (FD) = Socket Handle
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#channelgroup-interface" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#fd-is-unique-only-inside-one-process" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ChannelGroup interface
+        FD is unique only inside one process
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#socket-tuning-with-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket tuning with options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Socket tuning with options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reuse-port-quickly-so_reuseaddr-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reuse Port Quickly - SO_REUSEADDR option
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#socket-closing-modes-so_linger-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Socket closing modes - SO_LINGER option
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1050,49 +1881,6 @@
 
 
 
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../../key-ingredients/" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Key ingredients
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../ampe/" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Heroes of This Dish
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -1103,128 +1891,119 @@
   
 
 
-  <h1>ChannelGroup</h1>
+  <h1>Sockets 101</h1>
 
-<p><strong><em>ChannelGroup</em></strong> provides full-duplex, asynchronous message exchange between <em>peers</em>. </p>
-<details class="question">
-<summary>NAQ: Why "peers" instead of "client/server"?</summary>
-<p>Tofu uses client and server terms to describe the initial handshake.
-After the handshake, both sides are called peers because they have equal 
-functionality and roles.</p>
-</details>
-<p>Simplest description of <strong><em>ChannelGroup</em></strong> you can get from its name - <em>Group Of Channels</em> <img alt="😄" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/1f604.svg" title=":smile:" />.</p>
-<h2 id="channel">Channel</h2>
-<p>Think of a <em>channel</em> as a <em>virtual socket</em>.</p>
-<p>There are two kinds of channels:</p>
+<p>Because tofu uses sockets under the hood, you still need to understand:</p>
 <ul>
-<li>Listener – Analog of a listener socket.</li>
-<li>IO – Analog of client socket or accepted server socket.</li>
+<li>the addressing scheme</li>
+<li>the correct order of creating sockets</li>
+<li>the difference between client and server sides</li>
+<li>socket tuning</li>
 </ul>
-<details class="question">
-<summary>NAQ: Why not just Socket/SocketGroup?</summary>
-<p>You cannot send messages to an unconnected socket, but it ok with <em>channel</em>.</p>
-</details>
-<p>Channels are identified by a <em>channel number</em> in the range [1-65534].</p>
-<p>Two channel number values are reserved:</p>
+<h2 id="what-is-a-socket">What is a Socket?</h2>
+<p>A socket is a software endpoint.
+It lets two programs communicate.
+This can be on the same computer or across a network.</p>
+<h3 id="stream-oriented-sockets">Stream-Oriented Sockets</h3>
+<p>These use a reliable, ordered, connection-based protocol.
+TCP (Transmission Control Protocol) is the main example.
+Data is sent as a continuous stream of bytes.
+It guarantees all data arrives correctly.</p>
+<h2 id="socket-families-protocols">Socket Families (Protocols)</h2>
+<p>Sockets use different communication protocol families.</p>
+<h3 id="1-tcpip-sockets">1. TCP/IP Sockets</h3>
+<p>For network communication.
+Uses IP addresses to identify machines.
+TCP/IP is the foundation of the internet.</p>
+<h3 id="2-unix-domain-sockets-uds">2. Unix Domain Sockets (UDS)</h3>
+<p>For local communication only.
+Works on the same computer.
+No network hardware needed.
+Often faster than TCP/IP for local processes.</p>
+<h2 id="socket-operations">Socket Operations</h2>
+<p>Sockets follow this lifecycle.</p>
+<h3 id="1-create">1. Create</h3>
+<p>First step: create the socket.
+This reserves system resources.
+Gives you a handle (file descriptor) for later use.</p>
+<h3 id="2-client-connect">2. Client: Connect</h3>
+<p>Client uses connect().
+Links its socket to the server's address.
+If successful, communication stream opens.</p>
+<h3 id="3-server-listen-and-accept">3. Server: Listen and Accept</h3>
+<p>Server waits for client connections.</p>
 <ul>
-<li>0 – Unassigned channel number</li>
-<li>65535 – Tofu internal channel number</li>
+<li>Bind: Attach socket to specific local address.</li>
+<li>Listen: Wait for incoming connection requests.</li>
+<li>Accept: When client connects, accept() returns.<ul>
+<li>Creates a <strong>second</strong>, <strong>new socket</strong>.</li>
+<li>Original socket stays as listener.</li>
+<li>New socket handles data with that client.</li>
 </ul>
-<p>Channel numbers are unique within the engine that created them, from <strong><em>creation</em></strong> until <strong><em>closure</em></strong>.</p>
-<div class="admonition warn">
-<p class="admonition-title">Warn</p>
-<p>Another engine in the same process or an engine in a different process may assign the same channel number simultaneously.</p>
-</div>
-<h2 id="channelgroup-createdestroy">ChannelGroup create/destroy</h2>
-<p>Let's create and destroy a ChannelGroup—still without fully understanding what it is.</p>
-<div class="language-zig highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="o">*</span><span class="p">.</span><span class="n">Destroy</span><span class="p">();</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">ampe</span><span class="o">:</span><span class="w"> </span><span class="n">Ampe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">rtr</span><span class="p">.</span><span class="o">*</span><span class="p">.</span><span class="n">ampe</span><span class="p">();</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">destroy</span><span class="p">(</span><span class="n">chnls</span><span class="p">)</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">err</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="n">std</span><span class="p">.</span><span class="n">log</span><span class="p">.</span><span class="n">err</span><span class="p">(</span><span class="s">&quot;destroy channel group failed with error {any}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">.{</span><span class="n">err</span><span class="p">});</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="p">};</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">}</span>
-</span></code></pre></div>
-<p>There are two ways to release resources (messages, channels etc.) of ChannelGroup</p>
+</li>
+</ul>
+<h3 id="4-disconnect-close">4. Disconnect (Close)</h3>
+<p>Communication ends when socket closes.</p>
 <ul>
-<li>explicit - via  <strong>ampe.destroy</strong>(...) [PREFERRED]</li>
-<li>implicit - during destroy of engine - <strong>rtr.*.Destroy</strong>() [FOR SIMPLE GO/NO GO]</li>
+<li>Graceful close: Clean shutdown, data sent completely.</li>
+<li>Non-graceful close: Sudden close, data may be lost.</li>
 </ul>
-<div class="admonition warn">
-<p class="admonition-title">Warn</p>
-<p>ampe.destroy(chngrp) cannot be used directly in defer because defer does not allow try or error unions.  </p>
-</div>
-<h2 id="channelgroup-interface">ChannelGroup interface</h2>
-<div class="language-zig highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">/// Defines the ChannelGroup interface for async message passing.</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1">/// Supports two-way message exchange between peers.</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="c1">/// Submits a message to the engine for async delivery to a peer.</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="c1">/// On success:</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="c1">/// - Sets `msg.*` to null (prevents reuse).</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="c1">/// - Returns `BinaryHeader` for tracking.</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="c1">/// On error:</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="c1">/// - Returns an error.</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="c1">/// - If the engine cannot use the message (internal failure),</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="c1">///   also sets `msg.*` to null.</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="c1">/// Thread-safe.</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">enqueueToPeer</span><span class="p">(</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">        </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="p">,</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">        </span><span class="n">msg</span><span class="o">:</span><span class="w"> </span><span class="o">*?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="p">,</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="n">message</span><span class="p">.</span><span class="n">BinaryHeader</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">    </span><span class="c1">/// Waits for the next message from the internal queue.</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">    </span><span class="c1">/// Timeout is in nanoseconds. Returns `null` if no message arrives in time.</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="c1">/// Message sources:</span>
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="c1">/// - Remote peer (via `enqueueToPeer` on their side).</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="c1">/// - Application (via `updateWaiter` on this ChannelGroup).</span>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">    </span><span class="c1">/// - Ampe (status/control messages).</span>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="c1">/// Check `BinaryHeader` to identify the source.</span>
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="w">    </span><span class="c1">/// On error: stop using this ChannelGroup.</span>
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="w">    </span><span class="c1">/// Call in a loop from **one thread only**.</span>
-</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">waitReceive</span><span class="p">(</span>
-</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="w">        </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="p">,</span>
-</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="w">        </span><span class="n">timeout_ns</span><span class="o">:</span><span class="w"> </span><span class="kt">u64</span><span class="p">,</span>
-</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>
-</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="w">    </span><span class="c1">/// Adds a message to the internal queue for `waitReceive`.</span>
-</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="w">    </span><span class="c1">/// If `msg.*` is not null:</span>
-</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="w">    </span><span class="c1">/// - Engine sets status to `&#39;waiter_update&#39;`.</span>
-</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a><span class="w">    </span><span class="c1">/// - Sets `msg.*` to null after success.</span>
-</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a><span class="w">    </span><span class="c1">/// - No need for `channel_number` or similar fields.</span>
-</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a><span class="w">    </span><span class="c1">/// If `msg.*` is null:</span>
-</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="w">    </span><span class="c1">/// - Creates a `&#39;waiter_update&#39;` Signal and adds it.</span>
-</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a><span class="w">    </span><span class="c1">/// Returns error if shutting down.</span>
-</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a><span class="w">    </span><span class="c1">/// Use from another thread to:</span>
-</span><span id="__span-1-54"><a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a><span class="w">    </span><span class="c1">/// - Wake the waiter (`msg.*` = null).</span>
-</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a><span class="w">    </span><span class="c1">/// - Send info/commands/notifications.</span>
-</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a><span class="w">    </span><span class="c1">/// FIFO order only. No priority queues.</span>
-</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a><span class="w">    </span><span class="c1">///</span>
-</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a><span class="w">    </span><span class="c1">/// Thread-safe.</span>
-</span><span id="__span-1-60"><a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a><span class="w">    </span><span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">updateWaiter</span><span class="p">(</span>
-</span><span id="__span-1-61"><a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a><span class="w">        </span><span class="n">chnls</span><span class="o">:</span><span class="w"> </span><span class="n">ChannelGroup</span><span class="p">,</span>
-</span><span id="__span-1-62"><a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a><span class="w">        </span><span class="n">update</span><span class="o">:</span><span class="w"> </span><span class="o">*?*</span><span class="n">message</span><span class="p">.</span><span class="n">Message</span><span class="p">,</span>
-</span><span id="__span-1-63"><a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a><span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
-</span><span id="__span-1-64"><a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a><span class="p">}</span>
-</span></code></pre></div>
+<h2 id="addresses-tcpip">Addresses - TCP/IP</h2>
+<p>TCP/IP addresses combine IP address + port number.</p>
+<h3 id="server-address-bind">Server Address (Bind)</h3>
+<p>Server binds to local IP address.
+Uses fixed port number (22, 80, 443).</p>
+<p><strong>Specific Adapter:</strong> 192.168.1.10:80
+- Only accepts connections to that IP.</p>
+<p><strong>All Adapters (Wildcard):</strong> 0.0.0.0:8080
+- Listens on all network cards on port 8080.</p>
+<h3 id="client-address-connect">Client Address (Connect)</h3>
+<p>Client uses server's IP or hostname + port.
+Client gets temporary ephemeral port automatically.</p>
+<p>Example: Client connects to 192.168.1.10:80
+Client local: 10.0.0.5:54321 (ephemeral port)</p>
+<h2 id="addresses-unix-domain-sockets-uds">Addresses - Unix Domain Sockets (UDS)</h2>
+<p>No IP addresses or ports.</p>
+<p>Uses file system path instead.
+Example: /tmp/service.sock</p>
+<p>Server binds to path.
+Client connects to same path.</p>
+<h2 id="how-linux-tracks-sockets">How Linux Tracks Sockets</h2>
+<h3 id="file-descriptor-fd-socket-handle">File Descriptor (FD) = Socket Handle</h3>
+<p>Every socket gets a small number (FD).
+Like an ID for your program.
+Example: socket_fd = 5</p>
+<p>Use it to read/write/close: send(5, ...), close(5)</p>
+<h3 id="fd-is-unique-only-inside-one-process">FD is unique only inside one process</h3>
+<p>Process A: FD=3
+Process B: FD=3 (different socket)
+OS uses (PID + FD) to identify real socket.</p>
+<h2 id="socket-tuning-with-options">Socket tuning with options</h2>
+<h3 id="reuse-port-quickly-so_reuseaddr-option">Reuse Port Quickly - SO_REUSEADDR option</h3>
+<p>When TCP connection closes, socket enters TIME_WAIT state.
+Lasts 1-4 minutes.</p>
+<p>During TIME_WAIT:
+- System blocks new program from using same port.</p>
+<p>Problems:
+- Cannot restart server fast.
+- Testing slow (start/stop many times).</p>
+<p>SO_REUSEADDR fixes this.</p>
+<p>tofu sets SO_REUSEADDR on all listening sockets.</p>
+<p>Result: Every new tofu TCP server uses same port immediately.</p>
+<h3 id="socket-closing-modes-so_linger-option">Socket closing modes - SO_LINGER option</h3>
+<p>Normal socket close:</p>
+<ul>
+<li>close() returns right away</li>
+<li>System sends remaining data in background (graceful close)</li>
+</ul>
+<p>SO_LINGER changes this.</p>
+<p>tofu uses only non-graceful (hard) close:</p>
+<ul>
+<li>close() returns immediately</li>
+<li>Connection closes instantly (reset)</li>
+<li>All unsent data discarded</li>
+</ul>
+<p>Get graceful close using other tofu features instead.</p>
 
 
 
@@ -1242,8 +2021,16 @@ functionality and roles.</p>
             </div>
           
           
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
         
       </main>
       
@@ -1254,7 +2041,7 @@ functionality and roles.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../ampe/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Ampe">
+          <a href="../allocator/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Allocator">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1264,20 +2051,20 @@ functionality and roles.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Ampe
+                Allocator
               </div>
             </div>
           </a>
         
         
           
-          <a href="../message/" class="md-footer__link md-footer__link--next" aria-label="Next: Message">
+          <a href="../coding-style/" class="md-footer__link md-footer__link--next" aria-label="Next: Coding style">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Message
+                Coding style
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1314,12 +2101,12 @@ functionality and roles.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["content.code.copy", {"content.code.select": false}, "content.code.annotate //", "navigation.instant", "navigation.tabs", "navigation.path", "navigation.footer", "header.autohide", "content.tooltips"], "search": "../../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["content.code.copy", {"content.code.select": false}, "content.code.annotate", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "navigation.path", "navigation.footer", "header.autohide", "content.tooltips"], "search": "../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
-        <script src="../../../../js/scroll-sync.js"></script>
+        <script src="../../../js/scroll-sync.js"></script>
       
     
   </body>

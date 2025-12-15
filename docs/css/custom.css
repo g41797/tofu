@@ -1,3 +1,29 @@
+/* Center the site name within the header on large screens */
+@media screen and (min-width: 76.25em) {
+    .md-header__inner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Hide elements that might interfere with centering, like the repository link */
+    .md-header-nav__button,
+    .md-header__option {
+        display: none;
+    }
+}
+
+/* Adjust for mobile view if needed */
+@media screen and (max-width: 76.25em) {
+    .md-header-nav {
+        justify-content: center;
+    }
+    .md-header-nav__button {
+        display: none; /* Optionally hide the menu button if you want the name perfectly centered */
+    }
+}
+
+
 /* ============================================
    FONT SIZE CONFIGURATION - REDUCED ~20%
    ============================================ */

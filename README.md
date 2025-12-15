@@ -1,5 +1,5 @@
 ![](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png)
-# **_Tofu - Sync your devs, Async your apps_**
+# **_Tofu - Sync your devs, Async your apps_**!
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Linux](https://github.com/g41797/yaaamp/actions/workflows/linux.yml/badge.svg)](https://github.com/g41797/yaaamp/actions/workflows/linux.yml)
