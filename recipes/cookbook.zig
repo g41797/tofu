@@ -1362,7 +1362,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             byeRequest.?.*.bhdr.proto.role = .request;
             byeRequest.?.*.bhdr.proto.origin = .application;
 
-            _ = byeRequest.?.check_and_prepare() catch |err| {
+            _ = byeRequest.?.*.check_and_prepare() catch |err| {
                 byeRequest.?.*.bhdr.dumpMeta("wrong message ");
                 return err;
             };
@@ -1524,7 +1524,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             }
 
             if (cc.helloBh == null) { // Send helloRequest
-                var helloClone: ?*Message = try cc.*.helloRequest.?.clone();
+                var helloClone: ?*Message = try cc.*.helloRequest.?.*.clone();
                 cc.*.helloBh = cc.*.chnls.?.enqueueToPeer(&helloClone) catch |err| {
                     cc.*.ampe.put(&helloClone);
                     return err;
@@ -1626,7 +1626,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 
         pub fn deinit(self: *Self) void {
             if (self.*.cc != null) {
-                self.*.cc.?.deinit();
+                self.*.cc.?.*.deinit();
                 self.*.cc = null;
             }
 

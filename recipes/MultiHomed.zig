@@ -180,7 +180,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
 
     cnfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-    welcomeRequest.?.copyBh2Body();
+    welcomeRequest.?.*.copyBh2Body();
     const wlcbh: BinaryHeader = try mh.*.chnls.?.enqueueToPeer(&welcomeRequest);
 
     const lstChannel: message.ChannelNumber = wlcbh.channel_number;
@@ -316,21 +316,21 @@ fn closeChannels(mh: *MultiHomed) void {
 //     defer mh.*.ampe.?.put(&closeMsg);
 //
 //     // Prepare ByeSignal for the listener channel.
-//     closeMsg.?.bhdr.proto.mtype = .bye;
-//     closeMsg.?.bhdr.proto.role = .signal;
-//     closeMsg.?.bhdr.proto.oob = .on;
+//     closeMsg.?.*.bhdr.proto.mtype = .bye;
+//     closeMsg.?.*.bhdr.proto.role = .signal;
+//     closeMsg.?.*.bhdr.proto.oob = .on;
 //
 //     // Set channel number to close this channel.
-//     closeMsg.?.bhdr.channel_number = lstChannel;
+//     closeMsg.?.*.bhdr.channel_number = lstChannel;
 //
 //     _ = try mh.*.chnls.?.enqueueToPeer(&closeMsg);
 //
 //     var closeListenerResp: ?*Message = try mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 //     defer mh.*.ampe.?.put(&closeListenerResp);
 //
-//     closeListenerResp.?.bhdr.dumpMeta("closeListener");
+//     closeListenerResp.?.*.bhdr.dumpMeta("closeListener");
 //
-//     assert(closeListenerResp.?.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
+//     assert(closeListenerResp.?.*.bhdr.status == status.status_to_raw(status.AmpeStatus.channel_closed));
 //
 //     return;
 // }

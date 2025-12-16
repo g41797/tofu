@@ -135,7 +135,7 @@ pub const EchoService = struct {
             return false;
         }
 
-        msg.*.?.bhdr.dumpMeta("echo srvs received msg");
+        msg.*.?.*.bhdr.dumpMeta("echo srvs received msg");
 
         const sts: status.AmpeStatus = status.raw_to_status(msg.*.?.*.bhdr.status);
 
@@ -178,7 +178,7 @@ pub const EchoService = struct {
             echo.*.rest -= 1;
         }
 
-        msg.*.?.copyBh2Body();
+        msg.*.?.*.copyBh2Body();
         _ = echo.*.sendTo.?.enqueueToPeer(msg) catch |err| {
             log.warn("enqueueToPeer error {s}", .{@errorName(err)});
             return false;
@@ -295,7 +295,7 @@ pub const EchoClient = struct {
 
         self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
-        helloRequest.?.copyBh2Body();
+        helloRequest.?.*.copyBh2Body();
         self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
 
         while (true) { // Re-connect is not supported
@@ -340,19 +340,19 @@ pub const EchoClient = struct {
             defer self.*.ampe.put(&echoRequest);
 
             // Prepare request - don't forget channel number
-            echoRequest.?.bhdr.channel_number = self.*.helloBh.channel_number;
+            echoRequest.?.*.bhdr.channel_number = self.*.helloBh.channel_number;
 
             // !!! We can set own value of message id !!!
-            echoRequest.?.bhdr.message_id = mn;
+            echoRequest.?.*.bhdr.message_id = mn;
 
-            echoRequest.?.bhdr.proto.mtype = .regular;
-            echoRequest.?.bhdr.proto.origin = .application;
-            echoRequest.?.bhdr.proto.role = .request;
-            echoRequest.?.bhdr.proto.oob = .off;
+            echoRequest.?.*.bhdr.proto.mtype = .regular;
+            echoRequest.?.*.bhdr.proto.origin = .application;
+            echoRequest.?.*.bhdr.proto.role = .request;
+            echoRequest.?.*.bhdr.proto.oob = .off;
 
-            echoRequest.?.bhdr.dumpMeta("echoRequest ");
+            echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
-            echoRequest.?.copyBh2Body();
+            echoRequest.?.*.copyBh2Body();
             _ = try self.*.chnls.?.enqueueToPeer(&echoRequest);
 
             while (true) { //
@@ -406,14 +406,14 @@ pub const EchoClient = struct {
         defer self.*.ampe.put(&byeRequest);
 
         // Set channel number to assigned earlier (hello request/response)
-        byeRequest.?.bhdr.channel_number = self.*.helloBh.channel_number;
+        byeRequest.?.*.bhdr.channel_number = self.*.helloBh.channel_number;
 
-        byeRequest.?.bhdr.proto.mtype = .bye;
-        byeRequest.?.bhdr.proto.origin = .application;
-        byeRequest.?.bhdr.proto.role = .signal;
-        byeRequest.?.bhdr.proto.oob = .on;
+        byeRequest.?.*.bhdr.proto.mtype = .bye;
+        byeRequest.?.*.bhdr.proto.origin = .application;
+        byeRequest.?.*.bhdr.proto.role = .signal;
+        byeRequest.?.*.bhdr.proto.oob = .on;
 
-        byeRequest.?.copyBh2Body();
+        byeRequest.?.*.copyBh2Body();
         _ = self.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
 
         // Wait close of the channel
@@ -448,7 +448,7 @@ pub const EchoClient = struct {
 
             self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
 
-            helloRequest.?.copyBh2Body();
+            helloRequest.?.*.copyBh2Body();
             self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
             var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -457,35 +457,35 @@ pub const EchoClient = struct {
             };
             defer self.*.ampe.put(&recvMsg);
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .connect_failed) {
+            if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .connect_failed) {
                 // Connection failed - reconnect
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+            if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                 log.info("Pool is empy - return message to the pool", .{});
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .receiver_update) {
+            if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .receiver_update) {
                 log.info("On client thread - exit required", .{});
                 return;
             }
 
-            if (recvMsg.?.bhdr.proto.mtype == .hello) {
-                assert(recvMsg.?.bhdr.proto.role == .response);
+            if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
+                assert(recvMsg.?.*.bhdr.proto.role == .response);
 
                 // Connected to server
                 // NOTE: self.*.result is not defined in Self, assuming typo/omission
                 // self.*.result = .success;
 
                 // Disconnect from server
-                recvMsg.?.bhdr.proto.mtype = .bye;
-                recvMsg.?.bhdr.proto.origin = .application;
-                recvMsg.?.bhdr.proto.role = .signal;
-                recvMsg.?.bhdr.proto.oob = .on;
+                recvMsg.?.*.bhdr.proto.mtype = .bye;
+                recvMsg.?.*.bhdr.proto.origin = .application;
+                recvMsg.?.*.bhdr.proto.role = .signal;
+                recvMsg.?.*.bhdr.proto.oob = .on;
 
-                recvMsg.?.copyBh2Body();
+                recvMsg.?.*.copyBh2Body();
                 _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
                 return;
             }
@@ -502,17 +502,17 @@ pub const EchoClient = struct {
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .pool_empty) {
+            if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .pool_empty) {
                 log.info("Pool is empy - return message to the pool", .{});
                 continue;
             }
 
-            if (status.raw_to_status(recvMsg.?.bhdr.status) == .receiver_update) {
+            if (status.raw_to_status(recvMsg.?.*.bhdr.status) == .receiver_update) {
                 log.info("On client thread - exit required", .{});
                 return;
             }
-            if (recvMsg.?.bhdr.status != 0) {
-                status.raw_to_error(recvMsg.?.bhdr.status) catch |err| {
+            if (recvMsg.?.*.bhdr.status != 0) {
+                status.raw_to_error(recvMsg.?.*.bhdr.status) catch |err| {
                     log.info("On client thread - RECEIVED MESSAGE with error status {s}", .{@errorName(err)});
                     continue;
                 };
@@ -550,10 +550,10 @@ pub const EchoClientServer = struct {
 
         ecs.engine = try Reactor.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
         // Dereference the optional pointer to engine, then dereference the pointer to call the method
-        ecs.ampe = try ecs.engine.?.ampe();
+        ecs.ampe = try ecs.engine.?.*.ampe();
 
         // Dereference the optional pointer to echsrv, then dereference the pointer to call the method
-        ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.services());
+        ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.*.services());
 
         return ecs;
     }
@@ -596,10 +596,10 @@ pub const EchoClientServer = struct {
     pub fn deinit(ecs: *EchoClientServer) void {
         if (ecs.*.mh != null) {
             // Dereference the optional pointer to echsrv, then dereference the pointer to call the method
-            ecs.*.echsrv.?.setCancel();
+            ecs.*.echsrv.?.*.setCancel();
 
             // Dereference the optional pointer to mh, then call the method
-            ecs.*.mh.?.stop();
+            ecs.*.mh.?.*.stop();
             ecs.*.mh = null;
 
             ecs.*.gpa.destroy(ecs.*.echsrv.?);
@@ -609,7 +609,7 @@ pub const EchoClientServer = struct {
 
         if (ecs.*.engine != null) {
             // Dereference the optional pointer to engine, then dereference the pointer to call the method
-            ecs.*.engine.?.Destroy();
+            ecs.*.engine.?.*.Destroy();
             ecs.*.engine = null;
         }
 
@@ -621,9 +621,9 @@ pub const EchoClientServer = struct {
         while (client != null) {
             assert(ecs.*.clcCount > 0);
             ecs.*.clcCount -= 1;
-            ecs.*.echoes += client.?.count;
-            client.?.destroy();
-            const next: ?*EchoClient = client.?.next;
+            ecs.*.echoes += client.?.*.count;
+            client.?.*.destroy();
+            const next: ?*EchoClient = client.?.*.next;
             client = next;
         }
         return;
