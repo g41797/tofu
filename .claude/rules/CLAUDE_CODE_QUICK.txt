@@ -35,6 +35,9 @@ CRITICAL:
 - Edit files in-place
 - Zero functionality changes
 - Verify syntax after each file
+- Never execute git commands automatically.
+- Always ask user permission first before any git operation (add, commit, push, etc.).
+- Suggest git commands but wait for approval.
 
 PROCESS:
 1. List all .zig files

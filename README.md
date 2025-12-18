@@ -7,34 +7,42 @@
 
 ---
 
-##
+# tofu
 
-What does **tofu** have to do with _asynchronous message communication_?
+**tofu** is a _protocol_ and an _asynchronous_ **Zig messaging library** used to:
 
-I spent a long time breaking my head trying to explain the _point_ of this project.
+- Build **custom** communication flows.
+- Create **non-blocking** systems.
+- Enable **peer-to-peer** messaging between applications.
 
-There are already tons of networking libraries out there. 
-
-Well, let’s say at least several kilograms for Zig. 
-
-And then it hit me — **tofu**!
-
-Tofu is a simple product with almost no flavor. You can
-
-- eat it plain 
-- add a little spice and make something slightly better
-- or go all the way and create culinary masterpieces.
-
-And what I especially like:
->[tofu is as good as you are a cook](https://www.reddit.com/r/vegan/comments/hguwpc/tofu_is_as_good_as_you_are_a_cook/)
-
-You'll use the tofu library in a similar way:
-
-- from minimal setups 
-- to more complex flows
-- and eventually distributed applications.
+**tofu** is a completely new project. It is not a port of old code, and it does not use any C libraries.
+It is built **100% in native Zig**. The core functionality uses only the standard library.
 
 ---
+
+## Why tofu?
+
+As a food, **tofu** is very simple and has almost no flavor on its own.
+By using tofu **cubes**, you can:
+
+- Eat it **plain** for a simple snack.
+- Add a little **spice** to make it better.
+- Create a **culinary masterpiece**.
+
+As a **protocol**, tofu uses **messages** like cubes. By "cooking" these messages together, you can grow your project:
+
+- Start with **minimal setups**.
+- Build **complex flows**.
+- Create full **distributed applications**.
+
+> [!IMPORTANT]
+> **tofu** is as good as you are a cook.
+
+---
+
+## "Connect your developers. Then connect your applications."
+
+This is the **tofu** mantra. It is a paraphrase of [Conway's Law](https://en.wikipedia.org/wiki/Conway%27s_law). 
 
 
 ## Features
@@ -51,194 +59,47 @@ You'll use the tofu library in a similar way:
 - **Simplest API** - you don't have to bother with or know the "guts" of socket interfaces
 
 
----
-
-
-
-## A bit of history
-
-**tofu** wasn’t just "pulled out of thin air."
-
-I started developing a similar system back in 2008, maintained it, and kept it running for years.
-
-That system powered all data transfer in a serious distributed environment
-
-- from basic IPC 
-- to communication in a proprietary distributed file system.
-
-We parted ways a few years ago, but I haven't heard any complaints yet.
-
-Corporate lawyers can relax — from that system I only took the _smell_
-([precedent case about paying for smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html))
-
-By '_smell_' I mean the idea itself:
-
-- message as the _**data**_ and _**API**_
-- the philosophy of _**gradual evolution**_ 
-  - starting from something simple 
-  - and steadily growing into more advanced and powerful systems.
-
----
-
-
-## API
-
-**_Stripped Interface Definitions_**:
-
-```zig
-/// Defines the async message passing engine interface.
-/// "Ampe" and "engine" mean the same thing.
-///
-/// Provides methods to:
-/// - Get/return messages from the internal pool.
-/// - Create/destroy ChannelGroups.
-/// - Access the shared allocator for memory management.
-pub const Ampe = struct {
-
-    /// Gets a message from the internal pool.
-    ///
-    /// Uses the given `strategy` to decide how to allocate.
-    /// Returns `null` if pool is empty and `strategy` is `poolOnly`.
-    ///
-    /// Returns error if engine is shutting down or allocation fails.
-    ///
-    /// Thread-safe.
-    pub fn get(
-        ampe: Ampe,
-        strategy: AllocationStrategy,
-    ) status.AmpeError!?*message.Message {...}
-
-    /// Returns a message to the internal pool.
-    /// If pool is closed, destroys the message instead.
-    ///
-    /// Always sets `msg.*` to `null` to prevent reuse.
-    ///
-    /// Thread-safe.
-    pub fn put(
-        ampe: Ampe,
-        msg: *?*message.Message,
-    ) void {...}
-
-    /// Creates a new `ChannelGroup`.
-    ///
-    /// Call `destroy` on result to stop communication and free memory.
-    ///
-    /// Thread-safe.
-    pub fn create(
-        ampe: Ampe,
-    ) status.AmpeError!ChannelGroup {...}
-
-    /// Destroys `ChannelGroup`, stops communication, frees memory.
-    ///
-    /// Thread-safe.
-    pub fn destroy(
-        ampe: Ampe,
-        chnls: ChannelGroup,
-    ) status.AmpeError!void {...}
-
-    /// Returns the allocator used by the engine for all memory.
-    ///
-    /// Thread-safe.
-    pub fn getAllocator(
-        ampe: Ampe,
-    ) Allocator {...}
-};
-
-/// Defines how messages are allocated from the pool.
-pub const AllocationStrategy = enum {
-    /// Tries to get a message from the pool. Returns null if the pool is empty.
-    poolOnly,
-    /// Gets a message from the pool or creates a new one if the pool is empty.
-    always,
-};
-
-//////////////////////////////////////////////////////////////////////////
-// Client and server terms are used only during the initial handshake.
-// After the handshake, both sides are equal. We call them **peers**.
-// They send and receive messages based on application logic.
-//////////////////////////////////////////////////////////////////////////
-
-/// Defines the ChannelGroup interface for async message passing.
-/// Supports two-way message exchange between peers.
-pub const ChannelGroup = struct {
-
-    /// Submits a message for async processing:
-    /// - most cases: send to peer
-    /// - others: internal network related processing
-    ///
-    /// On success:
-    /// - Sets `msg.*` to null (prevents reuse).
-    /// - Returns `BinaryHeader` for tracking.
-    ///
-    /// On error:
-    /// - Returns an error.
-    /// - If the engine cannot use the message (internal failure),
-    ///   also sets `msg.*` to null.
-    ///
-    /// Thread-safe.
-    pub fn enqueueToPeer(
-        chnls: ChannelGroup,
-        msg: *?*message.Message,
-    ) status.AmpeError!message.BinaryHeader {...}
-
-    /// Waits for the next message from the internal queue.
-    ///
-    /// Timeout is in nanoseconds. Returns `null` if no message arrives in time.
-    ///
-    /// Message sources:
-    /// - Remote peer (via `enqueueToPeer` on their side).
-    /// - Application (via `updateReceiver` on this ChannelGroup).
-    /// - Ampe (status/control messages).
-    ///
-    /// Check `BinaryHeader` to identify the source.
-    ///
-    /// On error: stop using this ChannelGroup and call `ampe.destroy` on it.
-    ///
-    /// Call in a loop from **one thread only**.
-    pub fn waitReceive(
-        chnls: ChannelGroup,
-        timeout_ns: u64,
-    ) status.AmpeError!?*message.Message {...}
-
-    /// Adds a message to the internal queue for `waitReceive`.
-    ///
-    /// If `msg.*` is not null:
-    /// - Engine sets status to `'receiver_update'`.
-    /// - Sets `msg.*` to null after success.
-    /// - No need for `channel_number` or similar fields.
-    ///
-    /// If `msg.*` is null:
-    /// - Creates a `'receiver_update'` Signal and adds it.
-    ///
-    /// Returns error if shutting down.
-    ///
-    /// Use from another thread to:
-    /// - Wake the receiver (`msg.*` = null).
-    /// - Send info/commands/notifications.
-    ///
-    /// FIFO order only. No priority queues.
-    ///
-    /// Thread-safe.
-    pub fn updateReceiver(
-        chnls: ChannelGroup,
-        update: *?*message.Message,
-    ) status.AmpeError!void {...}
-};
-```
-
 Documentation and examples are available on the [Tofu documentation site](https://g41797.github.io/tofu/) (**_work in progress_**).
 
 ---
 
+## A Bit of History
 
-## NAQ or **N**ever **A**sked **Q**uestions
+**tofu** did not come from nowhere.
 
-<details><summary><i>Why not use another library?</i></summary>
-  Why not? Go ahead and use it.
-</details>
+The journey began in 2008 when I first built a similar system. I maintained and ran that system 
+for many years in high-stakes environments. It powered everything from basic IPC to complex data transfers in a custom distributed file system.
 
+I left that project a few years ago, but I haven't heard any complaints yet — the systems are still running strong.
 
+Corporate lawyers can stay calm: I didn't take any code. I only took the "**smell**."
+(See the [precedent case about paying for a smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html)).
+
+By "**smell**," I mean the core philosophy:
+
+- **The Message is the API**: The data itself defines the connection.
+- **Gradual Evolution**: Start with something simple and grow it into a powerful system over time.
+- **The Mantra**: "Connect your developers. Then connect your applications."
+ 
 ---
+
+## AI Usage
+
+Almost all of this project (99.99%) is "handmade."
+
+AI was used only for these specific tasks:
+
+* **Image Generation**
+  * Generated the project [Logo](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png).
+* **Code Snippets**
+  * Implemented [Big-Endian (BE) to Little-Endian (LE) serialization](/src/message.zig#L86) and vice versa.
+  * Implemented [data copying to message bodies](/src/message.zig#L722) and vice versa.
+* **Code Refactoring**
+  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax for improved clarity.
+  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables to ensure strict type safety.
+
+> [!TIP]
+> Configuration files and guidelines related to refactoring are located in the [.claude/rules](.claude/rules) directory.
 
 
 ## Credits
@@ -252,22 +113,6 @@ Documentation and examples are available on the [Tofu documentation site](https:
   - [Zig on Discourse](https://ziggit.dev/)
 
 ---
-
-## AI Usage
-
-This project utilizes AI in three primary areas:
-
-* **Image Generation**
-  * Generated the project [Logo](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png).
-* **Code Generation**
-  * Implemented [Big-Endian (BE) to Little-Endian (LE) serialization](/src/message.zig#L86) and vice versa.
-  * Implemented [data copying to message bodies](/src/message.zig#L722) and vice versa.
-* **Code Refactoring**
-  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax for improved clarity.
-  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables to ensure strict type safety.
-
-Configuration files and guidelines related to refactoring are located in the [.claude/rules](.claude/rules) directory.
-
 
 ## Last but not least
 ⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu) !
