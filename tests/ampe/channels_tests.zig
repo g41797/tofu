@@ -7,7 +7,7 @@ test {
 }
 
 test "channels basic tests" {
-    var acns = try ActiveChannels.init(std.testing.allocator, 3);
+    var acns: ActiveChannels = try ActiveChannels.init(std.testing.allocator, 3);
     acns.deinit();
 }
 

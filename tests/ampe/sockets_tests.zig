@@ -17,7 +17,7 @@ test "UDS exchanger " {
 
     var tup: Notifier.TempUdsPath = .{};
 
-    const path = try tup.buildPath(gpa);
+    const path: []u8 = try tup.buildPath(gpa);
 
     log.debug("\r\nUDS path {s}\r\n", .{path});
 
@@ -56,17 +56,17 @@ test "TCP/IP exchanger " {
 
 fn run(srvcnf: Configurator, clcnf: Configurator) !void {
     var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf, false);
-    defer exc.deinit();
+    defer exc.*.deinit();
 
-    try exc.startListen();
+    try exc.*.startListen();
 
-    try exc.startClient();
+    try exc.*.startClient();
 
-    try exc.waitConnectClient();
+    try exc.*.waitConnectClient();
 
-    exc.setRun(Exchanger.sendRecvPoll);
+    exc.*.setRun(Exchanger.sendRecvPoll);
 
-    try exc.exchange();
+    try exc.*.exchange();
 
     return;
 }
@@ -110,9 +110,9 @@ pub const Exchanger = struct {
             ret.srf = sendRecvNonPoll;
         }
 
-        errdefer ret.deinit();
+        errdefer ret.*.deinit();
 
-        var tcm = TCM.init(allocator);
+        var tcm: TCM = TCM.init(allocator);
         errdefer tcm.deinit();
         try tcm.ensureTotalCapacity(256);
         ret.tcm = tcm;
@@ -127,14 +127,14 @@ pub const Exchanger = struct {
     }
 
     pub fn setRun(exc: *Exchanger, sr: SendRecv) void {
-        exc.srf = sr;
+        exc.*.srf = sr;
     }
 
     pub fn setRunner(exc: *Exchanger, usePoller: bool) void {
         if (usePoller) {
-            exc.srf = sendRecvPoll;
+            exc.*.srf = sendRecvPoll;
         } else {
-            exc.srf = sendRecvNonPoll;
+            exc.*.srf = sendRecvNonPoll;
         }
     }
 
@@ -142,16 +142,16 @@ pub const Exchanger = struct {
         var lst: TC = .{
             .exp = .{},
             .act = .{},
-            .tskt = try create_listener(&exc.srvcnf),
+            .tskt = try create_listener(&exc.*.srvcnf),
             .acn = .{
-                .chn = exc.lstCN,
-                .mid = exc.lstCN,
+                .chn = exc.*.lstCN,
+                .mid = exc.*.lstCN,
                 .ctx = null,
             },
         };
         errdefer lst.tskt.deinit();
 
-        try exc.tcm.?.put(exc.lstCN, lst);
+        try exc.*.tcm.?.put(exc.*.lstCN, lst);
 
         return;
     }
@@ -160,10 +160,10 @@ pub const Exchanger = struct {
         var cl: TC = .{
             .exp = .{},
             .act = .{},
-            .tskt = try create_client(&exc.clcnf, &exc.pool),
+            .tskt = try create_client(&exc.*.clcnf, &exc.*.pool),
             .acn = .{
-                .chn = exc.clCN,
-                .mid = exc.clCN,
+                .chn = exc.*.clCN,
+                .mid = exc.*.clCN,
                 .ctx = null,
             },
         };
@@ -171,13 +171,13 @@ pub const Exchanger = struct {
         cl.tskt.io.cn = cl.acn.chn;
         errdefer cl.tskt.deinit();
 
-        try exc.tcm.?.put(exc.clCN, cl);
+        try exc.*.tcm.?.put(exc.*.clCN, cl);
 
         return;
     }
 
     pub fn waitConnectClient(exc: *Exchanger) !void {
-        var it = Reactor.Iterator.init(&exc.tcm.?);
+        var it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
 
         var trgrs: internal.triggeredSkts.Triggers = .{};
 
@@ -206,14 +206,14 @@ pub const Exchanger = struct {
             }
 
             if (trgrs.accept == .on) { // Just one listener, so checking trgrs is OK
-                var listener = exc.tcm.?.getPtr(exc.lstCN).?.tskt;
+                var listener: internal.TriggeredSkt = exc.*.tcm.?.getPtr(exc.*.lstCN).?.*.tskt;
 
                 log.debug("wait connected client - try accept", .{});
-                const srvsktptr = try listener.tryAccept();
+                const srvsktptr: ?*internal.sockets.Skt = try listener.tryAccept();
 
                 if (srvsktptr != null) {
                     const srvio: internal.TriggeredSkt = .{
-                        .io = try internal.triggeredSkts.IoSkt.initServerSide(&exc.pool, exc.srvCN, srvsktptr.?),
+                        .io = try internal.triggeredSkts.IoSkt.initServerSide(&exc.*.pool, exc.*.srvCN, srvsktptr.?),
                     };
 
                     var srv: TC = .{
@@ -221,16 +221,16 @@ pub const Exchanger = struct {
                         .act = .{},
                         .tskt = srvio,
                         .acn = .{
-                            .chn = exc.srvCN,
-                            .mid = exc.srvCN,
+                            .chn = exc.*.srvCN,
+                            .mid = exc.*.srvCN,
                             .ctx = null,
                         },
                     };
                     errdefer srv.tskt.deinit();
 
-                    try exc.tcm.?.put(exc.srvCN, srv);
+                    try exc.*.tcm.?.put(exc.*.srvCN, srv);
 
-                    it = Reactor.Iterator.init(&exc.tcm.?);
+                    it = Reactor.Iterator.init(&exc.*.tcm.?);
 
                     serverReady = true;
                     log.debug("wait connected client - server ready", .{});
@@ -239,10 +239,10 @@ pub const Exchanger = struct {
 
             if (trgrs.connect == .on) {
                 log.debug("wait connected client - try connect", .{});
-                const clTsktPtr = exc.tcm.?.getPtr(exc.clCN).?;
+                const clTsktPtr: *TC = exc.*.tcm.?.getPtr(exc.*.clCN).?;
 
-                if (clTsktPtr.act.connect == .on) {
-                    _ = try clTsktPtr.tryConnect();
+                if (clTsktPtr.*.act.connect == .on) {
+                    _ = try clTsktPtr.*.tryConnect();
                 }
             }
 
@@ -256,48 +256,48 @@ pub const Exchanger = struct {
     }
 
     pub fn exchange(exc: *Exchanger) !void {
-        exc.removeTC(exc.lstCN); // poll only io sockets
+        exc.*.removeTC(exc.*.lstCN); // poll only io sockets
 
-        exc.sender = exc.getTC(exc.clCN).?;
-        exc.receiver = exc.getTC(exc.srvCN).?;
+        exc.*.sender = exc.*.getTC(exc.*.clCN).?;
+        exc.*.receiver = exc.*.getTC(exc.*.srvCN).?;
 
-        const sdf: Socket = exc.sender.?.tskt.getSocket();
-        const rdf: Socket = exc.receiver.?.tskt.getSocket();
+        const sdf: Socket = exc.*.sender.?.*.tskt.getSocket();
+        const rdf: Socket = exc.*.receiver.?.*.tskt.getSocket();
 
         log.debug("sender fd {x} receiver fd {x} ", .{ sdf, rdf });
 
         assert(sdf != rdf);
 
-        try exc.exchangeMsgs(11);
+        try exc.*.exchangeMsgs(11);
         return;
     }
 
     pub fn exchangeMsgs(exc: *Exchanger, count: usize) !void {
-        exc.clearPool();
-        exc.clearQs();
+        exc.*.clearPool();
+        exc.*.clearQs();
 
-        const body: []u8 = try exc.allocator.alloc(u8, 10000);
-        defer exc.allocator.free(body);
+        const body: []u8 = try exc.*.allocator.alloc(u8, 10000);
+        defer exc.*.allocator.free(body);
 
         for (0..count) |i| {
-            var smsg = try Message.create(exc.allocator);
+            var smsg: *Message = try Message.create(exc.*.allocator);
 
-            smsg.bhdr.channel_number = exc.srvCN;
-            smsg.bhdr.message_id = i + 1;
-            smsg.bhdr.proto.role = .signal;
-            smsg.bhdr.proto.more = .last;
-            smsg.bhdr.proto.mtype = .application;
-            smsg.bhdr.proto.origin = .application;
-            try smsg.body.copy(body);
+            smsg.*.bhdr.channel_number = exc.*.srvCN;
+            smsg.*.bhdr.message_id = i + 1;
+            smsg.*.bhdr.proto.role = .signal;
+            smsg.*.bhdr.proto.more = .last;
+            smsg.*.bhdr.proto.mtype = .application;
+            smsg.*.bhdr.proto.origin = .application;
+            try smsg.*.body.copy(body);
 
-            exc.forSend.enqueue(smsg);
-            exc.forCmpr.enqueue(try smsg.clone());
-            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver
-            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver
-            exc.pool.put(try Message.create(exc.allocator)); // Prepare free messages for receiver                                                             //
+            exc.*.forSend.enqueue(smsg);
+            exc.*.forCmpr.enqueue(try smsg.*.clone());
+            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver
+            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver
+            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver                                                             //
         }
 
-        const scount = exc.forSend.count();
+        const scount: usize = exc.*.forSend.count();
 
         assert(scount == count);
 
@@ -306,11 +306,11 @@ pub const Exchanger = struct {
         }
 
         for (0..scount) |_| {
-            try exc.sender.?.tskt.addToSend(exc.forSend.dequeue().?);
+            try exc.*.sender.?.*.tskt.addToSend(exc.*.forSend.dequeue().?);
         }
-        assert(exc.sender.?.tskt.io.sendQ.count() == scount);
+        assert(exc.*.sender.?.*.tskt.io.sendQ.count() == scount);
 
-        try exc.srf(exc, count);
+        try exc.*.srf(exc, count);
     }
 
     pub fn sendRecvPoll(
@@ -321,14 +321,14 @@ pub const Exchanger = struct {
             return;
         }
 
-        const it = Reactor.Iterator.init(&exc.tcm.?);
+        const it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
 
         var loop: usize = 1;
 
-        while ((loop < 3 * count) and (exc.forRecv.count() < (count + 1))) : (loop += 1) {
+        while ((loop < 3 * count) and (exc.*.forRecv.count() < (count + 1))) : (loop += 1) {
             var trgrs: internal.triggeredSkts.Triggers = .{};
 
-            trgrs = try exc.plr.?.waitTriggers(it, Notifier.SEC_TIMEOUT_MS);
+            trgrs = try exc.*.plr.?.waitTriggers(it, Notifier.SEC_TIMEOUT_MS);
 
             try testing.expect(trgrs.err != .on);
 
@@ -336,23 +336,23 @@ pub const Exchanger = struct {
             // For the test - checking of 'trgrs' is good enough
 
             if (trgrs.send == .on) {
-                var wasSend = try exc.sender.?.tskt.trySend();
+                var wasSend: MessageQueue = try exc.*.sender.?.*.tskt.trySend();
                 for (0..wasSend.count()) |_| {
-                    exc.pool.put(wasSend.dequeue().?);
+                    exc.*.pool.put(wasSend.dequeue().?);
                 }
             }
             if (trgrs.recv == .on) {
-                var wasRecv = try exc.receiver.?.tskt.tryRecv();
-                wasRecv.move(&exc.forRecv);
+                var wasRecv: MessageQueue = try exc.*.receiver.?.*.tskt.tryRecv();
+                wasRecv.move(&exc.*.forRecv);
             }
 
             log.debug("loop {d} received {d}", .{
                 loop,
-                exc.forRecv.count(),
+                exc.*.forRecv.count(),
             });
         }
 
-        try testing.expect(exc.forRecv.count() == (count + 1));
+        try testing.expect(exc.*.forRecv.count() == (count + 1));
 
         return;
     }
@@ -368,40 +368,40 @@ pub const Exchanger = struct {
         var loop: usize = 0;
 
         while (loop < 100) : (loop += 1) { //
-            var wasSend = try exc.sender.?.tskt.trySend();
+            var wasSend: MessageQueue = try exc.*.sender.?.*.tskt.trySend();
             for (0..wasSend.count()) |_| {
-                exc.pool.put(wasSend.dequeue().?);
+                exc.*.pool.put(wasSend.dequeue().?);
             }
 
-            var wasRecv = try exc.receiver.?.tskt.tryRecv();
+            var wasRecv: MessageQueue = try exc.*.receiver.?.*.tskt.tryRecv();
 
-            wasRecv.move(&exc.forRecv);
+            wasRecv.move(&exc.*.forRecv);
 
-            const rc = exc.forRecv.count();
+            const rc: usize = exc.*.forRecv.count();
             if (rc == (count + 1)) {
                 break;
             }
         }
 
-        try testing.expect(exc.forRecv.count() == (count + 1));
+        try testing.expect(exc.*.forRecv.count() == (count + 1));
 
         return;
     }
 
     fn closeChannels(exc: *Exchanger) void {
-        var it = Reactor.Iterator.init(&exc.tcm.?);
+        var it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
 
-        var next = it.next();
+        var next: ?*TC = it.next();
 
         while (next != null) {
-            next.?.tskt.deinit();
+            next.?.*.tskt.deinit();
             next = it.next();
         }
         return;
     }
 
     fn getTC(exc: *Exchanger, cn: channels.ChannelNumber) ?*TC {
-        const tcp = exc.tcm.?.getPtr(cn);
+        const tcp: ?*TC = exc.*.tcm.?.getPtr(cn);
         if (tcp) |tc| {
             return tc;
         }
@@ -409,46 +409,46 @@ pub const Exchanger = struct {
     }
 
     fn removeTC(exc: *Exchanger, tcn: channels.ChannelNumber) void {
-        const tcp = exc.tcm.?.getPtr(tcn);
+        const tcp: ?*TC = exc.*.tcm.?.getPtr(tcn);
         if (tcp) |tc| {
             tc.*.tskt.deinit();
         }
-        _ = exc.tcm.?.swapRemove(tcn);
+        _ = exc.*.tcm.?.swapRemove(tcn);
     }
 
     pub fn clearQs(exc: *Exchanger) void {
-        message.clearQueue(&exc.forCmpr);
-        message.clearQueue(&exc.forRecv);
-        message.clearQueue(&exc.forSend);
+        message.clearQueue(&exc.*.forCmpr);
+        message.clearQueue(&exc.*.forRecv);
+        message.clearQueue(&exc.*.forSend);
     }
 
     pub fn clearPool(exc: *Exchanger) void {
-        exc.pool.freeAll();
+        exc.*.pool.freeAll();
     }
 
     pub fn deinit(exc: *Exchanger) void {
-        exc.closeChannels();
+        exc.*.closeChannels();
 
-        exc.clearQs();
+        exc.*.clearQs();
 
-        if (exc.tcm != null) {
-            exc.tcm.?.deinit();
-            exc.tcm = null;
+        if (exc.*.tcm != null) {
+            exc.*.tcm.?.deinit();
+            exc.*.tcm = null;
         }
-        if (exc.plr != null) {
-            exc.plr.?.deinit();
-            exc.plr = null;
+        if (exc.*.plr != null) {
+            exc.*.plr.?.deinit();
+            exc.*.plr = null;
         }
 
-        exc.pool.close();
+        exc.*.pool.close();
     }
 };
 
 fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
     var wlcm: *Message = try Message.create(gpa);
-    defer wlcm.destroy();
+    defer wlcm.*.destroy();
 
-    try cnfr.prepareRequest(wlcm);
+    try cnfr.*.prepareRequest(wlcm);
 
     var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
 
@@ -457,7 +457,7 @@ fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
     };
     errdefer tskt.deinit();
 
-    const trgrs = try tskt.triggers();
+    const trgrs: internal.triggeredSkts.Triggers = try tskt.triggers();
 
     try testing.expect(trgrs.accept == .on);
 
@@ -467,8 +467,8 @@ fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
 fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
     var hello: *Message = try Message.create(gpa);
 
-    cnfr.prepareRequest(hello) catch |err| {
-        hello.destroy();
+    cnfr.*.prepareRequest(hello) catch |err| {
+        hello.*.destroy();
         return err;
     };
 
@@ -481,9 +481,9 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
     };
     errdefer tskt.deinit();
 
-    const trgrs = try tskt.triggers();
+    const trgrs: internal.triggeredSkts.Triggers = try tskt.triggers();
 
-    const utrg = internal.triggeredSkts.UnpackedTriggers.fromTriggers(trgrs);
+    const utrg: internal.triggeredSkts.UnpackedTriggers = internal.triggeredSkts.UnpackedTriggers.fromTriggers(trgrs);
 
     const onTrigger: u8 = switch (cnfr.*) {
         .tcp_client => utrg.connect,

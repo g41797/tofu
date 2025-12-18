@@ -73,7 +73,7 @@ pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.ChannelGroup) void {
 /// Function waits finish of all threads.
 /// Task is 'fn () void'
 pub fn RunTasks(allocator: std.mem.Allocator, tasks: []const *const fn () void) !void {
-    var threads = try allocator.alloc(std.Thread, tasks.len);
+    var threads: []std.Thread = try allocator.alloc(std.Thread, tasks.len);
     defer allocator.free(threads);
 
     for (tasks, 0..) |task, i| {

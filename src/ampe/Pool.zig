@@ -68,10 +68,10 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
     var result: ?*Message = null;
     if (pool.first != null) {
         result = pool.first;
-        pool.first = result.?.next;
-        result.?.next = null;
-        result.?.prev = null;
-        result.?.reset();
+        pool.first = result.?.*.next;
+        result.?.*.next = null;
+        result.?.*.prev = null;
+        result.?.*.reset();
         pool.*.currMsgs -= 1;
         return result.?;
     }
@@ -82,7 +82,7 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
         return AmpeError.PoolEmpty;
     }
 
-    const msg = Message.create(pool.allocator) catch {
+    const msg: *Message = Message.create(pool.allocator) catch {
         return AmpeError.AllocationFailed;
     };
 
@@ -99,10 +99,10 @@ pub fn put(pool: *Pool, msg: *Message) void {
         return;
     }
 
-    msg.prev = null;
-    msg.next = null;
+    msg.*.prev = null;
+    msg.*.next = null;
 
-    msg.reset();
+    msg.*.reset();
 
     if (pool.first == null) {
         assert(pool.*.currMsgs == 0);
@@ -112,7 +112,7 @@ pub fn put(pool: *Pool, msg: *Message) void {
         }
         pool.emptyWasReturned = false;
     } else {
-        msg.next = pool.first;
+        msg.*.next = pool.first;
         pool.first = msg;
     }
 
@@ -122,8 +122,8 @@ pub fn put(pool: *Pool, msg: *Message) void {
 }
 
 pub fn free(pool: *Pool, msg: *Message) void {
-    msg.thdrs.deinit();
-    msg.body.deinit();
+    msg.*.thdrs.deinit();
+    msg.*.body.deinit();
     pool.allocator.destroy(msg);
     return;
 }
@@ -152,9 +152,9 @@ pub fn close(pool: *Pool) void {
 }
 
 fn _freeAll(pool: *Pool) void {
-    var chain = pool.first;
+    var chain: ?*Message = pool.first;
     while (chain != null) {
-        const next = chain.?.next;
+        const next: ?*Message = chain.?.*.next;
         pool.free(chain.?);
         pool.currMsgs -= 1;
         chain = next;

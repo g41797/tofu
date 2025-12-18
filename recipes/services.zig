@@ -269,7 +269,7 @@ pub const EchoClient = struct {
     }
 
     pub fn destroy(self: *Self) void {
-        const allocator = self.*.gpa;
+        const allocator: Allocator = self.*.gpa;
         defer allocator.destroy(self);
         self.*.deinit();
         return;

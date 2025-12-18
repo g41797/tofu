@@ -73,33 +73,33 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
         return AmpeError.NullMessage;
     }
 
-    const sendMsg = msgopt.?;
+    const sendMsg: *Message = msgopt.?;
     sendMsg.*.@"<ctx>" = ptr;
 
-    const vc = try sendMsg.check_and_prepare();
+    const vc: message.ValidCombination = try sendMsg.*.check_and_prepare();
 
     const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
 
     var newChannelWasCreated: bool = false;
 
-    if (sendMsg.bhdr.channel_number != 0) {
-        try grp.engine.acns.check(sendMsg.bhdr.channel_number, ptr);
+    if (sendMsg.*.bhdr.channel_number != 0) {
+        try grp.engine.acns.check(sendMsg.*.bhdr.channel_number, ptr);
     } else {
-        var proto = sendMsg.bhdr.proto;
+        var proto: message.ProtoFields = sendMsg.*.bhdr.proto;
         proto._internal = 0; // As sign of the "local" hello/welcome
 
-        const ach = grp.engine.acns.createChannel(sendMsg.bhdr.message_id, sendMsg.bhdr.proto, grp);
-        sendMsg.bhdr.channel_number = ach.chn;
-        std.debug.assert(sendMsg.bhdr.channel_number != 0);
+        const ach: channels.ActiveChannel = grp.engine.acns.createChannel(sendMsg.*.bhdr.message_id, sendMsg.*.bhdr.proto, grp);
+        sendMsg.*.bhdr.channel_number = ach.chn;
+        std.debug.assert(sendMsg.*.bhdr.channel_number != 0);
         newChannelWasCreated = true;
     }
 
-    const ret: BinaryHeader = sendMsg.bhdr;
+    const ret: BinaryHeader = sendMsg.*.bhdr;
 
     grp.engine.submitMsg(sendMsg, vc) catch |err| {
         if (newChannelWasCreated) {
             // Called on caller thread
-            grp.engine.acns.removeChannel(sendMsg.bhdr.channel_number);
+            grp.engine.acns.removeChannel(sendMsg.*.bhdr.channel_number);
         }
 
         if (err == AmpeError.NotificationFailed) {
@@ -214,7 +214,8 @@ const AmpeError = tofu.status.AmpeError;
 const AmpeStatus = tofu.status.AmpeStatus;
 
 const Notifier = @import("Notifier.zig");
-const ActiveChannels = @import("channels.zig").ActiveChannels;
+const channels = @import("channels.zig");
+const ActiveChannels = channels.ActiveChannels;
 
 const Appendable = @import("nats").Appendable;
 const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);

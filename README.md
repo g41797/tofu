@@ -253,6 +253,21 @@ Documentation and examples are available on the [Tofu documentation site](https:
 
 ---
 
+## AI Usage
+
+This project utilizes AI in three primary areas:
+
+* **Image Generation**
+  * Generated the project [Logo](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png).
+* **Code Generation**
+  * Implemented [Big-Endian (BE) to Little-Endian (LE) serialization](/src/message.zig#L86) and vice versa.
+  * Implemented [data copying to message bodies](/src/message.zig#L722) and vice versa.
+* **Code Refactoring**
+  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax for improved clarity.
+  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables to ensure strict type safety.
+
+Configuration files and guidelines related to refactoring are located in the [.claude/rules](.claude/rules) directory.
+
 
 ## Last but not least
 ⭐️ Like, share, and don’t forget to [subscribe to the channel](https://github.com/g41797/tofu) !

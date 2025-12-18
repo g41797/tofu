@@ -277,21 +277,21 @@ inline fn send_destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
 fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) AmpeError!void {
     const grp: *MchnGroup = @alignCast(@ptrCast(chnlsimpl));
 
-    var msg = try rtr._get(.always);
+    var msg: ?*Message = try rtr._get(.always);
     errdefer rtr._put(&msg);
 
-    var cmd = msg.?;
-    cmd.bhdr.channel_number = message.SpecialMaxChannelNumber;
-    cmd.bhdr.proto.mtype = .regular;
-    cmd.bhdr.proto.role = .signal;
-    cmd.bhdr.proto.origin = .engine;
-    cmd.bhdr.proto.oob = .on;
-    cmd.bhdr.proto.more = .last;
+    const cmd: *Message = msg.?;
+    cmd.*.bhdr.channel_number = message.SpecialMaxChannelNumber;
+    cmd.*.bhdr.proto.mtype = .regular;
+    cmd.*.bhdr.proto.role = .signal;
+    cmd.*.bhdr.proto.origin = .engine;
+    cmd.*.bhdr.proto.oob = .on;
+    cmd.*.bhdr.proto.more = .last;
 
-    cmd.bhdr.channel_number = 0;
-    cmd.bhdr.status = status.status_to_raw(st);
+    cmd.*.bhdr.channel_number = 0;
+    cmd.*.bhdr.status = status.status_to_raw(st);
 
-    _ = cmd.ptrToBody(MchnGroup, grp);
+    _ = cmd.*.ptrToBody(MchnGroup, grp);
 
     try rtr.submitMsg(cmd, .AppSignal);
 

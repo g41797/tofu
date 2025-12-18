@@ -52,7 +52,7 @@ pub const Configurator = configurator.Configurator;
 pub const services = @import("services.zig");
 
 pub fn createDestroyMain(gpa: Allocator) !void {
-    var rtr = try Reactor.Create(gpa, DefaultOptions);
+    var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
     defer rtr.Destroy();
 }
 
@@ -96,11 +96,11 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
     var msg1: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
@@ -113,14 +113,14 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
         return error.FirstMesssageShouldBeNotNull;
     }
 
-    var msg2 = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg2: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg2);
     if (msg2 != null) {
         return error.SecondMesssageShouldBeNull;
     }
 
     // Pool is empty, but a message will be allocated.
-    var msg3 = try ampe.get(tofu.AllocationStrategy.always);
+    var msg3: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg3);
     if (msg3 == null) {
         return error.THirdMesssageShouldBeNotNull;
@@ -137,7 +137,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
 
     const rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.*.Destroy();
-    const ampe = try rtr.*.ampe();
+    const ampe: Ampe = try rtr.*.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
     defer ampe.destroy(chnls) catch {
@@ -161,16 +161,16 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer ampe.destroy(chnls) catch {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // Only MessageType.hello and MessageType.welcome can use channel number 0.
@@ -191,16 +191,16 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer ampe.destroy(chnls) catch {
         // Ignore errors for this example.
     };
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // A valid channel number is not enough.
@@ -222,14 +222,14 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.hello needs a valid, resolvable peer (server) address.
@@ -247,9 +247,9 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
 
     _ = try chnls.enqueueToPeer(&msg);
 
-    var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    var recvMsg: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.*.bhdr.status;
+    const st: u8 = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -260,14 +260,14 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
         .maxPoolMsgs = 64, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.hello needs a valid, resolvable peer (server) address.
@@ -284,12 +284,12 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     try cnfg.prepareRequest(msg.?);
 
     // Store information for further processing.
-    const bhdr = try chnls.enqueueToPeer(&msg);
+    const bhdr: BinaryHeader = try chnls.enqueueToPeer(&msg);
     _ = bhdr;
 
-    var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    var recvMsg: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.*.bhdr.status;
+    const st: u8 = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -300,14 +300,14 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr = try Reactor.Create(gpa, options);
+    var rtr: *Reactor = try Reactor.Create(gpa, options);
     defer rtr.Destroy();
-    const ampe = try rtr.ampe();
+    const ampe: Ampe = try rtr.ampe();
 
-    const chnls = try ampe.create();
+    const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.always);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
     defer ampe.put(&msg);
 
     // MessageType.welcome needs the IP address and port of the listening server.
@@ -324,9 +324,9 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 
     _ = try chnls.enqueueToPeer(&msg);
 
-    var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    var recvMsg: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
-    const st = recvMsg.?.*.bhdr.status;
+    const st: u8 = recvMsg.?.*.bhdr.status;
     ampe.put(&recvMsg);
     return status.raw_to_error(st);
 }
@@ -353,7 +353,7 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
 
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     // Create configurator for UDS server.
     var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
@@ -383,7 +383,7 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
 
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     // Create configurator for UDS server.
     var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
@@ -406,7 +406,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
 
-    var msg = try ampe.get(tofu.AllocationStrategy.poolOnly);
+    var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
 
     // Adds configuration to the message's TextHeaders.
@@ -414,12 +414,12 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
     const corrInfo: BinaryHeader = try chnls.enqueueToPeer(&msg);
 
-    var recvMsg = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    var recvMsg: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 
     // Return message to the pool.
     defer ampe.put(&recvMsg);
 
-    const st = recvMsg.?.*.bhdr.status;
+    const st: u8 = recvMsg.?.*.bhdr.status;
 
     // Received message should have the same channel number.
     assert(corrInfo.channel_number == recvMsg.?.*.bhdr.channel_number);
@@ -445,7 +445,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
 pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
-    const port = try tofu.FindFreeTcpPort();
+    const port: u16 = try tofu.FindFreeTcpPort();
 
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
@@ -456,7 +456,7 @@ pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
     var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
@@ -706,7 +706,7 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
 
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
-    const port = try tofu.FindFreeTcpPort();
+    const port: u16 = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
@@ -716,7 +716,7 @@ pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
     var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
@@ -844,7 +844,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.gpa;
+            const allocator: Allocator = self.gpa;
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -970,7 +970,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.gpa;
+            const allocator: Allocator = self.gpa;
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1017,7 +1017,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
-    const port = try tofu.FindFreeTcpPort();
+    const port: u16 = try tofu.FindFreeTcpPort();
     var srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
     var cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
 
@@ -1027,7 +1027,7 @@ pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
     var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
@@ -1063,7 +1063,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
-            const allocator = engine.getAllocator();
+            const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -1096,7 +1096,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.ampe.getAllocator();
+            const allocator: Allocator = self.ampe.getAllocator();
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1108,7 +1108,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
             server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-            var initialBh = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
+            var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
             initialBh.dumpMeta("listener send ");
 
@@ -1210,7 +1210,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
-            const allocator = engine.getAllocator();
+            const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -1240,7 +1240,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.ampe.getAllocator();
+            const allocator: Allocator = self.ampe.getAllocator();
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1462,7 +1462,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath(gpa);
 
     var srvCfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
     var cltCfg: Configurator = .{ .uds_client = configurator.UDSClientConfigurator.init(filePath) };
@@ -1595,7 +1595,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
         connected: bool = undefined,
 
         pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
-            const allocator = engine.getAllocator();
+            const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -1638,7 +1638,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
         }
 
         pub fn destroy(self: *Self) void {
-            const allocator = self.ampe.getAllocator();
+            const allocator: Allocator = self.ampe.getAllocator();
             defer allocator.destroy(self);
             self.deinit();
             return;
@@ -1777,7 +1777,7 @@ pub const TofuEchoServer = struct {
     connected: bool = undefined,
 
     pub fn create(engine: Ampe, cfg: *Configurator) !*Self {
-        const allocator = engine.getAllocator();
+        const allocator: Allocator = engine.getAllocator();
         const result: *Self = allocator.create(Self) catch {
             return AmpeError.AllocationFailed;
         };
@@ -1811,7 +1811,7 @@ pub const TofuEchoServer = struct {
     }
 
     pub fn destroy(self: *Self) void {
-        const allocator = self.ampe.getAllocator();
+        const allocator: Allocator = self.ampe.getAllocator();
         defer allocator.destroy(self);
         self.deinit();
         return;
@@ -1823,7 +1823,7 @@ pub const TofuEchoServer = struct {
 
         server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
 
-        var initialBh = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
+        var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
         initialBh.dumpMeta("listener send ");
 
@@ -1926,12 +1926,12 @@ pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
     const udsPath: []u8 = try tup.buildPath(allocator);
 
-    var mhCnfg = [_]Configurator{
+    var mhCnfg: [2]Configurator = [_]Configurator{
         .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", tcpPort) },
         .{ .uds_server = configurator.UDSServerConfigurator.init(udsPath) },
     };
 
-    var clntCnfgs = [_]Configurator{
+    var clntCnfgs: [2]Configurator = [_]Configurator{
         .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", tcpPort) },
         .{ .uds_client = configurator.UDSClientConfigurator.init(udsPath) },
     };

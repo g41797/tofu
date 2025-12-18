@@ -127,7 +127,7 @@ pub fn stop(mh: *MultiHomed) void {
         return;
     }
 
-    const allocator = mh.*.allocator.?;
+    const allocator: Allocator = mh.*.allocator.?;
 
     defer allocator.destroy(mh);
 
@@ -149,7 +149,7 @@ pub fn stop(mh: *MultiHomed) void {
             mh.*.lstnChnls.?.deinit();
         }
 
-        var next = mh.*.msgq.dequeue();
+        var next: ?*Message = mh.*.msgq.dequeue();
         while (next != null) {
             mh.*.ampe.?.put(&next);
             next = mh.*.msgq.dequeue();

@@ -10,14 +10,14 @@ test "create file for address of uds socket" {
     var buffer: [100]u8 = undefined;
     var tempFile = try temp.create_file(std.testing.allocator, "*.yaaamp");
     defer tempFile.deinit();
-    const uds_path = try tempFile.parent_dir.realpath(tempFile.basename, &buffer);
+    const uds_path: []u8 = try tempFile.parent_dir.realpath(tempFile.basename, &buffer);
     try testing.expectEqual(uds_path.len > 0, true);
 }
 
 test "base Notifier" {
     std.testing.log_level = .debug;
 
-    var ntfr = try Notifier.init(testing.allocator);
+    var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
 
     try testing.expectEqual(true, ntfr.isReadyToSend());
@@ -32,12 +32,12 @@ test "base Notifier" {
     try ntfr.sendNotification(notif);
     try testing.expectEqual(true, ntfr.isReadyToRecv());
 
-    const ntfc = try ntfr.recvNotification();
+    const ntfc: Notification = try ntfr.recvNotification();
     try testing.expectEqual(notif, ntfc);
 
     try ntfr.sendAck(0xFF);
 
-    const ack = try ntfr.recvAck();
+    const ack: u8 = try ntfr.recvAck();
 
     try testing.expectEqual(0xFF, ack);
 }

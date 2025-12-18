@@ -70,7 +70,7 @@ pub fn init(allocator: Allocator) !Notifier {
 fn initUDS(allocator: Allocator) !Notifier {
     var tup: TempUdsPath = .{};
 
-    var socket_file = try tup.buildPath(allocator);
+    var socket_file: []u8 = try tup.buildPath(allocator);
 
     // "regular" uds path looks like:
     // /tmp/tofuYFJ1MWuUSjA.port
@@ -89,11 +89,11 @@ fn initUDS(allocator: Allocator) !Notifier {
     // Set as 'abstract socket' - linux only
     socket_file[0] = 0;
 
-    var listSkt = try SCreator.createUdsListener(allocator, socket_file);
+    var listSkt: Skt = try SCreator.createUdsListener(allocator, socket_file);
     defer listSkt.deinit();
 
     // Create sender(client) socket
-    var senderSkt = try SCreator.createUdsSocket(socket_file);
+    var senderSkt: Skt = try SCreator.createUdsSocket(socket_file);
     errdefer senderSkt.deinit();
 
     _ = try waitConnect(senderSkt.socket.?);
@@ -280,12 +280,12 @@ fn initTCP(allocator: Allocator) !Notifier {
     var sc: SCreator.SocketCreator = SCreator.init(allocator);
     sc.cnfgr = srvCfg;
 
-    var listSkt = try sc.createTcpServer();
+    var listSkt: Skt = try sc.createTcpServer();
     defer listSkt.deinit();
 
     // Create sender(client) socket
     sc.cnfgr = cltCfg;
-    var senderSkt = try sc.createTcpClient();
+    var senderSkt: Skt = try sc.createTcpClient();
     errdefer senderSkt.deinit();
 
     _ = try waitConnect(senderSkt.socket.?);

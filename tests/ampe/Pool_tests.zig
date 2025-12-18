@@ -7,21 +7,21 @@ test {
 }
 
 test "Pool init" {
-    var pool = try Pool.init(std.testing.allocator, null, null, null);
+    var pool: Pool = try Pool.init(std.testing.allocator, null, null, null);
     pool.close();
 }
 
 test "Pool base finctionality" {
-    var pool = try Pool.init(std.testing.allocator, null, null, null);
+    var pool: Pool = try Pool.init(std.testing.allocator, null, null, null);
     pool.freeAll();
     try testing.expectError(AmpeError.PoolEmpty, pool.get(.poolOnly));
 
-    var msg1 = try pool.get(.always);
+    var msg1: ?*tofu.message.Message = try pool.get(.always);
 
-    var msg2 = try pool.get(.always);
+    var msg2: ?*tofu.message.Message = try pool.get(.always);
 
-    pool.put(msg1);
-    pool.put(msg2);
+    pool.put(msg1.?);
+    pool.put(msg2.?);
 
     pool.freeAll();
 
@@ -29,13 +29,13 @@ test "Pool base finctionality" {
 
     msg2 = try pool.get(.always);
 
-    pool.put(msg1);
-    pool.put(msg2);
+    pool.put(msg1.?);
+    pool.put(msg2.?);
 
     try testing.expectEqual(msg2, pool.get(.poolOnly));
     try testing.expectEqual(msg1, pool.get(.poolOnly));
-    pool.free(msg1);
-    pool.free(msg2);
+    pool.free(msg1.?);
+    pool.free(msg2.?);
 
     try testing.expectError(AmpeError.PoolEmpty, pool.get(.poolOnly));
 

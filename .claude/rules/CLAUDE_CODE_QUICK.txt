@@ -1,0 +1,46 @@
+Refactor all Zig files in this project:
+
+1. Replace automatic pointer dereference with explicit ptr.* syntax
+2. Add explicit types to all variable declarations
+
+RULES:
+
+Pointer Dereference:
+- msg.?.bhdr → msg.?.*.bhdr
+- msg.?.copyBh2Body() → msg.?.*.copyBh2Body()
+- ptr.method() → ptr.*.method()
+
+Type Annotations:
+- var rtr = try Reactor.Create(...) → var rtr: *Reactor = try Reactor.Create(...)
+- var msg = try ampe.get(...) → var msg: ?*Message = try ampe.get(...)
+- var recvMsg = try chnls.waitReceive(...) → var recvMsg: ?*Message = try chnls.waitReceive(...)
+- const allocator = engine.getAllocator() → const allocator: Allocator = engine.getAllocator()
+- const bhdr = try chnls.enqueueToPeer(...) → const bhdr: BinaryHeader = try chnls.enqueueToPeer(...)
+- const st = msg.?.*.bhdr.status → const st: u8 = msg.?.*.bhdr.status
+- const port = try tofu.FindFreeTcpPort() → const port: u16 = try tofu.FindFreeTcpPort()
+- const filePath = try tup.buildPath(...) → const filePath: []u8 = try tup.buildPath(...)
+- var next = msgq.dequeue() → var next: ?*Message = msgq.dequeue()
+
+COMMON TYPES:
+*Reactor, Ampe, ChannelGroup, ?*Message, BinaryHeader, AmpeStatus, u8, u16, Allocator, []u8, message.ChannelNumber, std.Thread
+
+DO NOT CHANGE:
+- Module imports: const std = @import("std")
+- Type aliases: const Allocator = std.mem.Allocator
+- Struct defs: const Client = struct {...}
+- Self patterns: const Self = @This()
+
+CRITICAL:
+- PRESERVE ALL COMMENTS (never modify or remove)
+- Edit files in-place
+- Zero functionality changes
+- Verify syntax after each file
+
+PROCESS:
+1. List all .zig files
+2. Create TYPE_REFERENCE.md with discovered types
+3. Refactor each file (show progress)
+4. Create REFACTORING_SUMMARY.md with statistics
+5. Run zig build to verify
+
+START NOW: Process all .zig files in the current directory recursively.

@@ -380,21 +380,21 @@ pub const Message = struct {
     /// except @"<ctx>".  Dealing with @"<void*>" - on application.
     pub fn clone(self: *Message) !*Message {
         const alc = self.body.allocator;
-        var msg = try alc.create(Message);
-        errdefer msg.destroy(); //???
+        const msg: *Message = try alc.create(Message);
+        errdefer msg.*.destroy(); //???
 
         msg.* = .{};
-        msg.bhdr = self.bhdr;
-        msg.@"<ctx>" = null;
+        msg.*.bhdr = self.bhdr;
+        msg.*.@"<ctx>" = null;
 
-        try msg.body.init(alc, @max(self.body.buffer.?.len, blen), null);
+        try msg.*.body.init(alc, @max(self.body.buffer.?.len, blen), null);
         if (self.body.body()) |src| {
-            try msg.body.copy(src);
+            try msg.*.body.copy(src);
         }
 
-        try msg.thdrs.init(alc, @intCast(@max(self.thdrs.buffer.buffer.?.len, tlen)));
+        try msg.*.thdrs.init(alc, @intCast(@max(self.thdrs.buffer.buffer.?.len, tlen)));
         if (self.thdrs.buffer.body()) |src| {
-            try msg.thdrs.buffer.copy(src);
+            try msg.*.thdrs.buffer.copy(src);
         }
 
         return msg;
