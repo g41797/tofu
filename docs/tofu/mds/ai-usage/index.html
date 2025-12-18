@@ -8,27 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://g41797.github.io/tofu/tofu/core/services/translations/">
+        <link rel="canonical" href="https://g41797.github.io/tofu/tofu/mds/ai-usage/">
       
       
+        <link rel="prev" href="../coding-style/">
+      
+      
+        <link rel="next" href="../callback-enabled/">
       
       
         
       
       
-      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>TranslationProvider Component - Tofu - Sync your devs, Async your apps!</title>
+        <title>AI Usage - Tofu - Sync your devs, Async your apps!</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.618322db.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
   
@@ -112,9 +116,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../../css/custom.css">
+      <link rel="stylesheet" href="../../../css/custom.css">
     
-    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -138,11 +142,6 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
-        
-        <a href="#translationprovider-component" class="md-skip">
-          Skip to content
-        </a>
-      
     </div>
     <div data-md-component="announce">
       
@@ -158,9 +157,9 @@
     <a href="https://g41797.github.io/tofu/" title="Tofu - Sync your devs, Async your apps!" class="md-header__button md-logo" aria-label="Tofu - Sync your devs, Async your apps!" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
+<a href="../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
 
@@ -208,7 +207,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TranslationProvider Component
+              AI Usage
             
           </span>
         </div>
@@ -315,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../mds/getting-started/" class="md-tabs__link">
+        <a href="../getting-started/" class="md-tabs__link">
           
   
   
@@ -335,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../mds/protocol/" class="md-tabs__link">
+        <a href="../protocol/" class="md-tabs__link">
           
   
   
@@ -355,7 +354,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../mds/features/" class="md-tabs__link">
+        <a href="../features/" class="md-tabs__link">
           
   
   
@@ -371,11 +370,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../mds/allocator/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../allocator/" class="md-tabs__link">
           
   
   
@@ -418,9 +419,9 @@
     <a href="https://g41797.github.io/tofu/" title="Tofu - Sync your devs, Async your apps!" class="md-nav__button md-logo" aria-label="Tofu - Sync your devs, Async your apps!" data-md-component="logo">
       
 
-<a href="../../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
+<a href="../../.." class="md-header__button md-logo" title="Tofu - Sync your devs, Async your apps!" id="logo-container">
     
-    <img src="../../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
+    <img src="../../../assets/Ziggy_And_Zero_Are_Cooking_Tofu.png" alt="Tofu - Sync your devs, Async your apps!" id="logo-img" style="opacity:0;visibility:hidden;" />
     
 </a>
 
@@ -530,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/getting-started/" class="md-nav__link">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   
@@ -558,7 +559,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/naq/" class="md-nav__link">
+      <a href="../naq/" class="md-nav__link">
         
   
   
@@ -645,7 +646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/protocol/" class="md-nav__link">
+      <a href="../protocol/" class="md-nav__link">
         
   
   
@@ -732,7 +733,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/features/" class="md-nav__link">
+      <a href="../features/" class="md-nav__link">
         
   
   
@@ -760,7 +761,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -788,7 +789,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/imports/" class="md-nav__link">
+      <a href="../imports/" class="md-nav__link">
         
   
   
@@ -816,7 +817,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/key-ingredients/" class="md-nav__link">
+      <a href="../key-ingredients/" class="md-nav__link">
         
   
   
@@ -896,7 +897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/ampe/" class="md-nav__link">
+      <a href="../ampe/" class="md-nav__link">
         
   
   
@@ -924,7 +925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/channel-group/" class="md-nav__link">
+      <a href="../channel-group/" class="md-nav__link">
         
   
   
@@ -952,7 +953,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/message/" class="md-nav__link">
+      <a href="../message/" class="md-nav__link">
         
   
   
@@ -1040,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/configurators/" class="md-nav__link">
+      <a href="../configurators/" class="md-nav__link">
         
   
   
@@ -1068,7 +1069,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/for-tests/" class="md-nav__link">
+      <a href="../for-tests/" class="md-nav__link">
         
   
   
@@ -1108,26 +1109,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -1145,7 +1151,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1163,7 +1169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/allocator/" class="md-nav__link">
+      <a href="../allocator/" class="md-nav__link">
         
   
   
@@ -1191,7 +1197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/sockets101/" class="md-nav__link">
+      <a href="../sockets101/" class="md-nav__link">
         
   
   
@@ -1219,7 +1225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/coding-style/" class="md-nav__link">
+      <a href="../coding-style/" class="md-nav__link">
         
   
   
@@ -1244,10 +1250,17 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../mds/ai-usage/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1263,6 +1276,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1275,7 +1289,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../mds/callback-enabled/" class="md-nav__link">
+      <a href="../callback-enabled/" class="md-nav__link">
         
   
   
@@ -1320,88 +1334,6 @@
   
   
   
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Description
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#props" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Props
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#useful-links" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Useful Links
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -1427,62 +1359,30 @@
   
 
 
-<h1 id="translationprovider-component">TranslationProvider Component</h1>
-<h2 id="description">Description</h2>
-<p>The <code>TranslationProvider</code> is a wrapper for internationalization (i18n) using <strong>i18next</strong> in the Liberty Framework. It ensures that translations are available across the application.</p>
-<h3 id="features">Features</h3>
+  <h1>AI Usage</h1>
+
+<p>Almost all of this project (99.99%) is "handmade."</p>
+<p>AI was used only for these specific tasks:</p>
 <ul>
-<li>Uses <strong>i18next</strong> for managing translations.</li>
-<li>Provides language switching support.</li>
-<li>Works seamlessly with the <strong>AppProvider</strong>.</li>
+<li><strong>Image Generation</strong><ul>
+<li>Generated the project <a href="https://github.com/g41797/tofu/blob/main/_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png">Logo</a>.</li>
 </ul>
-<h2 id="props">Props</h2>
-<table>
-<thead>
-<tr>
-<th>Prop</th>
-<th>Type</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>children</code></td>
-<td><code>ReactNode</code></td>
-<td>-</td>
-<td>Components wrapped by the translation provider.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="example-usage">Example Usage</h2>
-<p>To use the <code>TranslationProvider</code>, wrap it around your application inside <strong>ReactDOM.createRoot</strong>:</p>
-<div class="language-tsx highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">import</span><span class="w"> </span><span class="nx">React</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;react&quot;</span><span class="p">;</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">import</span><span class="w"> </span><span class="nx">ReactDOM</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;react-dom/client&quot;</span><span class="p">;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">AppProvider</span><span class="p">,</span><span class="w"> </span><span class="nx">TranslationProvider</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@nomana-it/tofu-core&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">import</span><span class="w"> </span><span class="nx">App</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;./App&quot;</span><span class="p">;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nx">ReactDOM</span><span class="p">.</span><span class="nx">createRoot</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">&quot;root&quot;</span><span class="p">)</span><span class="o">!</span><span class="p">).</span><span class="nx">render</span><span class="p">(</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">&lt;</span><span class="nt">React</span><span class="p">.</span><span class="na">StrictMode</span><span class="p">&gt;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="p">&lt;</span><span class="nt">AppProvider</span><span class="w"> </span><span class="na">useAuth</span><span class="o">=</span><span class="p">{</span><span class="nx">oidcUseAuth</span><span class="p">}&gt;</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="p">&lt;</span><span class="nt">TranslationProvider</span><span class="p">&gt;</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">            </span><span class="p">&lt;</span><span class="nt">App</span><span class="w"> </span><span class="p">/&gt;</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="p">&lt;/</span><span class="nt">TranslationProvider</span><span class="p">&gt;</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">&lt;/</span><span class="nt">AppProvider</span><span class="p">&gt;</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="p">&lt;/</span><span class="nt">React</span><span class="p">.</span><span class="na">StrictMode</span><span class="p">&gt;</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">);</span>
-</span></code></pre></div>
-<h2 id="notes">Notes</h2>
-<ul>
-<li>The <code>TranslationProvider</code> should always wrap the application <strong>inside</strong> the <code>AppProvider</code> to ensure translations are available globally.</li>
-<li>It integrates with <strong>i18next</strong>, and translations can be managed dynamically.
-`;</li>
+</li>
+<li><strong>Code Snippets</strong><ul>
+<li>Implemented <a href="https://github.com/g41797/tofu/blob/main/src/message.zig#L86">Big-Endian (BE) to Little-Endian (LE) serialization</a> and vice versa.</li>
+<li>Implemented <a href="https://github.com/g41797/tofu/blob/main/src/message.zig#L722">data copying to message bodies</a> and vice versa.</li>
 </ul>
-<h2 id="useful-links">Useful Links</h2>
-<p>🔗 <strong>GitHub Repository (Core):</strong> <a href="https://github.com/fblettner/liberty-core/">Liberty Core</a><br />
-🔗 <strong>GitHub Repository (Test Project):</strong> <a href="https://github.com/fblettner/liberty-test/">Liberty Test</a><br />
-📖 <strong>Live Documentation:</strong> <a href="https://docs.nomana-it.fr/liberty-core/">Liberty Core Docs</a><br />
-💖 <strong>Sponsor &amp; Support:</strong> <a href="https://github.com/sponsors/fblettner">Sponsor Liberty Core</a>  </p>
+</li>
+<li><strong>Code Refactoring</strong><ul>
+<li><strong>Explicit Pointer Dereferencing</strong>: Replaced implicit "Automatic pointer dereference" with explicit <code>ptr.*</code> syntax for improved clarity.</li>
+<li><strong>Explicit Type Declaration</strong>: Replaced "Type Inference" with explicit type declarations for all variables to ensure strict type safety.</li>
+</ul>
+</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Configuration files and guidelines related to refactoring are located in the <a href="https://github.com/g41797/tofu/blob/main/.claude/rules">rules folder</a> directory.</p>
+</div>
 
 
 
@@ -1516,6 +1416,44 @@
         <footer class="md-footer">
   
     
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../coding-style/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Coding style">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Coding style
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../callback-enabled/" class="md-footer__link md-footer__link--next" aria-label="Next: Callback enabled">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Callback enabled
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -1542,12 +1480,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["content.code.copy", {"content.code.select": false}, "content.code.annotate", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "navigation.path", "navigation.footer", "header.autohide", "content.tooltips"], "search": "../../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["content.code.copy", {"content.code.select": false}, "content.code.annotate", "content.tabs.link", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "navigation.path", "navigation.footer", "header.autohide", "content.tooltips"], "search": "../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
-        <script src="../../../../js/scroll-sync.js"></script>
+        <script src="../../../js/scroll-sync.js"></script>
       
     
   </body>
