@@ -15,6 +15,8 @@ pub const std_options: std.Options = .{
 var log_err_count: usize = 0;
 var fba_buffer: [8192]u8 = undefined;
 var fba = std.heap.FixedBufferAllocator.init(&fba_buffer);
+var stdin_buffer: [4096]u8 = undefined;
+var stdout_buffer: [4096]u8 = undefined;
 const crippled = switch (builtin.zig_backend) {
     else => false,
 };
@@ -65,13 +67,13 @@ pub fn main() void {
 
 fn mainServer() !void {
     @disableInstrumentation();
+    var stdin_reader = std.fs.File.stdin().readerStreaming(&stdin_buffer);
+    var stdout_writer = std.fs.File.stdout().writerStreaming(&stdout_buffer);
     var server = try std.zig.Server.init(.{
-        .gpa = fba.allocator(),
-        .in = std.io.getStdIn(),
-        .out = std.io.getStdOut(),
+        .in = &stdin_reader.interface,
+        .out = &stdout_writer.interface,
         .zig_version = builtin.zig_version_string,
     });
-    defer server.deinit();
 
     if (builtin.fuzz) {
         const coverage_id = fuzzer_coverage_id();
@@ -189,7 +191,7 @@ fn mainTerminal() void {
         .root_name = "Test",
         .estimated_total_items = test_fn_list.len,
     });
-    const have_tty = std.io.getStdErr().isTty();
+    const have_tty = std.fs.File.stderr().isTty();
 
     var async_frame_buffer: []align(builtin.target.stackAlignment()) u8 = undefined;
     // 2DO this is on the next line (using `undefined` above) because otherwise zig incorrectly

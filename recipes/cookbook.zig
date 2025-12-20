@@ -1338,7 +1338,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     }
                 }
                 if (i != tries) {
-                    std.time.sleep(sleepBetweenNS);
+                    std.Thread.sleep(sleepBetweenNS);
                 }
             }
 
@@ -1674,7 +1674,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
                 }
 
                 if (i != tries) {
-                    std.time.sleep(sleepBetweenNS);
+                    std.Thread.sleep(sleepBetweenNS);
                 }
             }
 
@@ -1907,15 +1907,15 @@ pub const TofuEchoServer = struct {
 };
 
 pub inline fn sleepSec() void {
-    std.time.sleep(1_000_000_000);
+    std.Thread.sleep(1_000_000_000);
 }
 
 pub inline fn sleep1MlSec() void {
-    std.time.sleep(1_000_000);
+    std.Thread.sleep(1_000_000);
 }
 
 pub inline fn sleep10MlSec() void {
-    std.time.sleep(1_000_000_0);
+    std.Thread.sleep(1_000_000_0);
 }
 
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {

@@ -128,7 +128,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     rtr.allChnN = std.ArrayList(message.ChannelNumber).initCapacity(rtr.allocator, 256) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer rtr.allChnN.deinit();
+    errdefer rtr.allChnN.deinit(rtr.allocator);
 
     try rtr.createNotificationChannel();
 
@@ -161,7 +161,7 @@ pub fn Destroy(rtr: *Reactor) void {
 
         rtr.pool.close();
         rtr.acns.deinit();
-        rtr.allChnN.deinit();
+        rtr.allChnN.deinit(rtr.allocator);
         rtr.ntfr.deinit();
         rtr.ntfcsEnabled = false;
     }
@@ -176,7 +176,7 @@ pub fn Destroy(rtr: *Reactor) void {
 }
 
 fn get(ptr: ?*anyopaque, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr._get(strategy);
 }
 
@@ -195,7 +195,7 @@ fn _get(rtr: *Reactor, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
 }
 
 fn put(ptr: ?*anyopaque, msg: *?*Message) void {
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr._put(msg);
 }
 
@@ -210,13 +210,13 @@ fn _put(rtr: *Reactor, msg: *?*Message) void {
 }
 
 fn create(ptr: ?*anyopaque) AmpeError!ChannelGroup {
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.*._create();
 }
 
 fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
     log.warn("!!! channel group will be destroyed !!!", .{});
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr._destroy(chnlsimpl);
 }
 
@@ -238,7 +238,7 @@ inline fn _create(rtr: *Reactor) AmpeError!ChannelGroup {
 }
 
 inline fn send_create(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
-    const grp: *MchnGroup = @alignCast(@ptrCast(chnlsimpl));
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
 
     grp.resetCmdCompleted();
 
@@ -261,7 +261,7 @@ inline fn _destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
 }
 
 inline fn send_destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
-    const grp: *MchnGroup = @alignCast(@ptrCast(chnlsimpl));
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
 
     grp.resetCmdCompleted();
 
@@ -275,7 +275,7 @@ inline fn send_destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
 }
 
 fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) AmpeError!void {
-    const grp: *MchnGroup = @alignCast(@ptrCast(chnlsimpl));
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
 
     var msg: ?*Message = try rtr._get(.always);
     errdefer rtr._put(&msg);
@@ -299,7 +299,7 @@ fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) Ampe
 }
 
 fn getAllocator(ptr: ?*anyopaque) Allocator {
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.*.allocator;
 }
 
@@ -327,7 +327,7 @@ pub fn submitMsg(rtr: *Reactor, msg: *Message, hint: VC) AmpeError!void {
 }
 
 fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
-    const rtr: *Reactor = @alignCast(@ptrCast(ptr));
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.sendAlert(alert);
 }
 
@@ -806,8 +806,8 @@ fn processInternal(rtr: *Reactor) !void {
     assert(grpPtr.?.*.id.? == grp.id.?);
     _ = rtr.chnlsGroup_map.orderedRemove(grp.id.?);
 
-    const chgr = rtr.acns.channelGroup(chnlsimpl) catch unreachable;
-    defer chgr.deinit();
+    var chgr = rtr.acns.channelGroup(chnlsimpl) catch unreachable;
+    defer chgr.deinit(rtr.allocator);
     _ = rtr.acns.removeChannels(chnlsimpl) catch unreachable;
     {
         for (chgr.items) |chN| {
@@ -817,7 +817,7 @@ fn processInternal(rtr: *Reactor) !void {
                 var tc = trcopt.?;
 
                 assert(tc.acn.ctx != null);
-                const grpCtx: *MchnGroup = @alignCast(@ptrCast(tc.acn.ctx.?));
+                const grpCtx: *MchnGroup = @ptrCast(@alignCast(tc.acn.ctx.?));
                 assert(grp == grpCtx);
                 tc.resp2ac = false;
                 tc.*.deinitTc();
@@ -1106,11 +1106,11 @@ fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFields, p
 }
 
 fn allTrgChannels(rtr: *Reactor, chns: *std.ArrayList(message.ChannelNumber)) !void {
-    chns.resize(0) catch unreachable;
+    chns.resize(rtr.allocator, 0) catch unreachable;
 
     var it = rtr.*.trgrd_map.iterator();
     while (it.next()) |kv_pair| {
-        try chns.append(kv_pair.key_ptr.*);
+        try chns.append(rtr.allocator, kv_pair.key_ptr.*);
     }
 
     return;
@@ -1132,7 +1132,7 @@ fn cleanMboxes(rtr: *Reactor) void {
 inline fn vchns(rtr: *Reactor) void {
     if (rtr.trgrd_map.count() == 0) {
         log.warn(" !!!! zero triggered channels !!!!", .{});
-        std.time.sleep(1_000_000_000); // For breakpoint
+        std.Thread.sleep(1_000_000_000); // For breakpoint
     }
 
     const notfTrChnOpt: ?*TriggeredChannel = rtr.trgrd_map.getPtr(message.SpecialMaxChannelNumber);

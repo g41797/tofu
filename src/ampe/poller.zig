@@ -42,13 +42,14 @@ pub const Poll = struct {
         ret.allocator = allocator;
 
         ret.pollfdVtor = try std.ArrayList(std.posix.pollfd).initCapacity(ret.allocator, 256);
-        errdefer ret.pollfdVtor.deinit();
+        errdefer ret.pollfdVtor.deinit(ret.allocator);
 
         return ret;
     }
 
     pub fn deinit(pl: *const Poll) void {
-        pl.pollfdVtor.deinit();
+        var mutablePl: *Poll = @constCast(pl);
+        mutablePl.pollfdVtor.deinit(mutablePl.allocator);
         return;
     }
 
@@ -136,7 +137,7 @@ pub const Poll = struct {
                 }
             }
 
-            pl.pollfdVtor.append(.{ .fd = tc.getSocket(), .events = events, .revents = 0 }) catch {
+            pl.pollfdVtor.append(pl.allocator, .{ .fd = tc.getSocket(), .events = events, .revents = 0 }) catch {
                 return AmpeError.AllocationFailed;
             };
         }

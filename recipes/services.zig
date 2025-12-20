@@ -95,7 +95,7 @@ pub const EchoService = struct {
     }
 
     fn start(ptr: ?*anyopaque, ampe: Ampe, channels: ChannelGroup) !void {
-        const echo: *EchoService = @alignCast(@ptrCast(ptr));
+        const echo: *EchoService = @ptrCast(@alignCast(ptr));
         echo.*.engine = ampe;
         echo.*.sendTo = channels;
         echo.*.cancel.store(false, .monotonic);
@@ -104,7 +104,7 @@ pub const EchoService = struct {
     }
 
     fn stop(ptr: ?*anyopaque) void {
-        const echo: *EchoService = @alignCast(@ptrCast(ptr));
+        const echo: *EchoService = @ptrCast(@alignCast(ptr));
         echo.*.engine = null;
         echo.*.sendTo = null;
         echo.*.cancel.store(true, .monotonic);
@@ -112,7 +112,7 @@ pub const EchoService = struct {
     }
 
     fn onMessage(ptr: ?*anyopaque, msg: *?*message.Message) bool {
-        const echo: *EchoService = @alignCast(@ptrCast(ptr));
+        const echo: *EchoService = @ptrCast(@alignCast(ptr));
 
         if (echo.*.wasCancelled()) {
             return false;

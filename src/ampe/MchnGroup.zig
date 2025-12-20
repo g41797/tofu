@@ -78,7 +78,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
 
     const vc: message.ValidCombination = try sendMsg.*.check_and_prepare();
 
-    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
 
     var newChannelWasCreated: bool = false;
 
@@ -115,7 +115,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
 }
 
 pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
-    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
     const recvMsg: *Message = grp.msgs[1].receive(timeout_ns) catch |err| {
         switch (err) {
             error.Timeout => {
@@ -136,7 +136,7 @@ pub fn waitReceive(ptr: ?*anyopaque, timeout_ns: u64) AmpeError!?*Message {
 }
 
 pub fn updateReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void {
-    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
 
     if (msg.* == null) {
         const updateSignal: *Message = grp.engine.buildStatusSignal(.receiver_update);
@@ -180,7 +180,7 @@ pub fn sendToReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void 
     if (msg.* == null) {
         return AmpeError.NullMessage;
     }
-    const grp: *MchnGroup = @alignCast(@ptrCast(ptr));
+    const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
 
     grp.msgs[1].send(msg.*.?) catch {
         return AmpeError.ShutdownStarted;

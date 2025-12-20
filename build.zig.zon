@@ -24,11 +24,11 @@
     // original project's identity. Thus it is recommended to leave the comment
     // on the following line intact, so that it shows up in code reviews that
     // modify the field.
-    .fingerprint = 0x955a2d5835817abc, // Changing this has security and trust implications.
+    .fingerprint = 0x955a2d58bb789f03,
 
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.2",
 
     // This field is optional.
     // Each dependency must either provide a `url` and `hash`, or a `path`.
@@ -37,16 +37,16 @@
     // internet connectivity.
     .dependencies = .{
         .nats = .{
-            .url = "git+https://github.com/g41797/nats#5028b8772a15b84a9c7ff959db93ac74ac2c754b",
-            .hash = "nats-0.0.3-MWKeg18aAgBOji2Yb_PlNYb0zyN6SvcCP0ULh8m3Qewp",
+            .url = "git+https://github.com/g41797/nats#b4655d4154457b8f4af31a34f93ef4445da66fd3",
+            .hash = "nats-0.0.3-obw1dFV7BgDV_yIz3BlpO5ThGIbOHoYDsl_9gAvgqDwX",
         },
         .mailbox = .{
-            .url = "git+https://github.com/g41797/mailbox#5e2a00e7af3d27be9f40dc03aeca204bb8973fce",
-            .hash = "mailbox-0.0.0-eJsHsMBEAACjbrEiAWogXHrTTXjUheNjxm-PLKTUQWCz",
+            .url = "git+https://github.com/g41797/mailbox#09ce9a443d17a36df47925e8927252fcde3c6940",
+            .hash = "mailbox-0.0.13-a-vFm3lcAAD33j3q2G2Hj6lnDahYuT1ESGBq99aVehow",
         },
         .temp = .{
-            .url = "git+https://github.com/abhinav/temp.zig#382a711f253d54a88f222650e6c03b62411373c6",
-            .hash = "temp-0.3.0-Ogl1FSSBAAB2WXv3QbTYO3NYfVFoYTBkZsVK3MYvbxFE",
+            .url = "git+https://github.com/abhinav/temp.zig#cf2317e06d32f3f0abdfc743c7a5950d9fdb2d19",
+            .hash = "temp-0.3.0-Ogl1Ff5-AABRtiHj_zDFI0CZVU8ORLPko6iQiw63Znrz",
         },
         .datetime = .{
             .url = "git+https://github.com/frmdstryr/zig-datetime?ref=master#3a39a21e6e34dcb0ade0ff828d0914d40ba535f3",

@@ -282,13 +282,13 @@ pub const IoSkt = struct {
     pool: *internal.Pool = undefined,
     side: Side = undefined,
     cn: message.ChannelNumber = undefined,
-    skt: Skt = undefined,
-    connected: bool = undefined,
-    sendQ: MessageQueue = undefined,
-    currSend: MsgSender = undefined,
-    byeWasSend: bool = undefined,
-    currRecv: MsgReceiver = undefined,
-    byeResponseReceived: bool = undefined,
+    skt: Skt = .{},
+    connected: bool = false,
+    sendQ: MessageQueue = .{},
+    currSend: MsgSender = .{},
+    byeWasSend: bool = false,
+    currRecv: MsgReceiver = .{},
+    byeResponseReceived: bool = false,
     alreadySend: ?*Message = null,
 
     pub fn initServerSide(pool: *internal.Pool, cn: message.ChannelNumber, sskt: Skt) AmpeError!IoSkt {
@@ -531,15 +531,15 @@ pub const IoSkt = struct {
 };
 
 pub const MsgSender = struct {
-    ready: bool = undefined,
+    ready: bool = false,
     cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
-    msg: ?*Message = undefined,
+    msg: ?*Message = null,
     bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'+'} ** BinaryHeader.BHSIZE,
     iov: [3]std.posix.iovec_const = undefined,
-    vind: usize = undefined,
-    sndlen: usize = undefined,
-    iovPrepared: bool = undefined,
+    vind: usize = 3,
+    sndlen: usize = 0,
+    iovPrepared: bool = false,
 
     pub fn init() MsgSender {
         return .{
@@ -722,16 +722,16 @@ pub const MsgSender = struct {
 };
 
 pub const MsgReceiver = struct {
-    ready: bool = undefined,
+    ready: bool = false,
     cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
     pool: *internal.Pool = undefined,
-    ptrg: Trigger = undefined,
+    ptrg: Trigger = .off,
     bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'-'} ** BinaryHeader.BHSIZE,
     iov: [3]std.posix.iovec = undefined,
-    vind: usize = undefined,
-    rcvlen: usize = undefined,
-    msg: ?*Message = undefined,
+    vind: usize = 3,
+    rcvlen: usize = 0,
+    msg: ?*Message = null,
 
     pub fn init(pool: *internal.Pool) MsgReceiver {
         return .{

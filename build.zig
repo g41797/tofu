@@ -6,116 +6,125 @@ pub fn build(b: *std.Build) void {
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
     // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{});
+    const target = b.*.standardTargetOptions(.{});
 
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize = b.*.standardOptimizeOption(.{});
 
-    const nats = b.dependency("nats", .{
+    const nats = b.*.dependency("nats", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const mailbox = b.dependency("mailbox", .{
+    const mailbox = b.*.dependency("mailbox", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const temp = b.dependency("temp", .{
+    const temp = b.*.dependency("temp", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const datetime = b.dependency("datetime", .{
+    const datetime = b.*.dependency("datetime", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
-        .name = "tofu",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/ampe.zig"),
+    // Create the tofu module first
+    const tofuMod = b.*.createModule(.{
+        .root_source_file = b.*.path("src/tofu.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
+
+    tofuMod.*.addImport("nats", nats.*.module("nats"));
+    tofuMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
+    tofuMod.*.addImport("temp", temp.*.module("temp"));
+    tofuMod.*.addImport("datetime", datetime.*.module("datetime"));
+
+    // Create the library module
+    const libMod = b.*.createModule(.{
+        .root_source_file = b.*.path("src/ampe.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = false,
+    });
+
+    libMod.*.addImport("tofu", tofuMod);
+    libMod.*.addImport("nats", nats.*.module("nats"));
+    libMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
+    libMod.*.addImport("temp", temp.*.module("temp"));
+    libMod.*.addImport("datetime", datetime.*.module("datetime"));
 
     // need libc for windows sockets
     if (target.result.os.tag == .windows) {
-        lib.linkLibC();
-        lib.linkSystemLibrary("ws2_32");
+        libMod.*.link_libc = true;
+        libMod.*.linkSystemLibrary("ws2_32", .{});
     }
 
-    const tofuMod = b.addModule("tofu", .{
-        .root_source_file = b.path("src/tofu.zig"),
-        .target = target,
-        .optimize = optimize,
-        .single_threaded = false,
+    const lib = b.*.addLibrary(.{
+        .linkage = .static,
+        .name = "tofu",
+        .root_module = libMod,
     });
-
-    tofuMod.addImport("nats", nats.module("nats"));
-    tofuMod.addImport("mailbox", mailbox.module("mailbox"));
-    tofuMod.addImport("temp", temp.module("temp"));
-    tofuMod.addImport("datetime", datetime.module("datetime"));
-
-    lib.root_module.addImport("tofu", tofuMod);
-    lib.root_module.addImport("nats", nats.module("nats"));
-    lib.root_module.addImport("mailbox", mailbox.module("mailbox"));
-    lib.root_module.addImport("temp", temp.module("temp"));
-
-    lib.root_module.addImport("datetime", datetime.module("datetime"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    b.installArtifact(lib);
+    b.*.installArtifact(lib);
 
-    const recipesMod = b.addModule("recipes", .{
-        .root_source_file = b.path("recipes/cookbook.zig"),
+    // Create recipes module
+    const recipesMod = b.*.createModule(.{
+        .root_source_file = b.*.path("recipes/cookbook.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
 
-    recipesMod.addImport("tofu", tofuMod);
-    recipesMod.addImport("mailbox", mailbox.module("mailbox"));
+    recipesMod.*.addImport("tofu", tofuMod);
+    recipesMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
 
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const lib_unit_tests = b.addTest(.{
-        .root_source_file = b.path("tests/tofu_tests.zig"),
+    // Create test module
+    const testMod = b.*.createModule(.{
+        .root_source_file = b.*.path("tests/tofu_tests.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
-        .error_tracing = true,
-        .test_runner = .{ .path = b.path("testRunner.zig"), .mode = .simple },
     });
 
-    lib_unit_tests.root_module.addImport("tofu", tofuMod);
-    lib_unit_tests.root_module.addImport("recipes", recipesMod);
-    lib_unit_tests.root_module.addImport("nats", nats.module("nats"));
-    lib_unit_tests.root_module.addImport("mailbox", mailbox.module("mailbox"));
-    lib_unit_tests.root_module.addImport("temp", temp.module("temp"));
-    lib_unit_tests.root_module.addImport("datetime", datetime.module("datetime"));
+    testMod.*.addImport("tofu", tofuMod);
+    testMod.*.addImport("recipes", recipesMod);
+    testMod.*.addImport("nats", nats.*.module("nats"));
+    testMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
+    testMod.*.addImport("temp", temp.*.module("temp"));
+    testMod.*.addImport("datetime", datetime.*.module("datetime"));
 
     // need libc for windows sockets
     if (target.result.os.tag == .windows) {
-        lib_unit_tests.linkLibC();
-        lib_unit_tests.linkSystemLibrary("ws2_32");
+        testMod.*.link_libc = true;
+        testMod.*.linkSystemLibrary("ws2_32", .{});
     }
 
-    b.installArtifact(lib_unit_tests);
+    // Creates a step for unit testing. This only builds the test executable
+    // but does not run it.
+    const lib_unit_tests = b.*.addTest(.{
+        .root_module = testMod,
+        .test_runner = .{ .path = b.*.path("testRunner.zig"), .mode = .simple },
+    });
 
-    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
+    b.*.installArtifact(lib_unit_tests);
+
+    const run_lib_unit_tests = b.*.addRunArtifact(lib_unit_tests);
 
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
     // running the unit tests.
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_lib_unit_tests.step);
+    const test_step = b.*.step("test", "Run unit tests");
+    test_step.*.dependOn(&run_lib_unit_tests.step);
 }
 
 const std = @import("std");

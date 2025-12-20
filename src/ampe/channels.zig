@@ -235,13 +235,13 @@ pub const ActiveChannels = struct {
 
         var removedChns: usize = 0;
 
-        var chns_to_remove = std.ArrayList(ChannelNumber).init(cns.allocator);
-        defer chns_to_remove.deinit();
+        var chns_to_remove: std.ArrayList(ChannelNumber) = .empty;
+        defer chns_to_remove.deinit(cns.allocator);
 
         var it = cns.active.iterator();
         while (it.next()) |kv_pair| {
             if (kv_pair.value_ptr.ctx == ptr) {
-                try chns_to_remove.append(kv_pair.key_ptr.*);
+                try chns_to_remove.append(cns.allocator, kv_pair.key_ptr.*);
             }
         }
 
@@ -294,8 +294,8 @@ pub const ActiveChannels = struct {
         cns.mutex.lock();
         defer cns.mutex.unlock();
 
-        var chns = std.ArrayList(ChannelNumber).init(cns.allocator);
-        errdefer chns.deinit();
+        var chns: std.ArrayList(ChannelNumber) = .empty;
+        errdefer chns.deinit(cns.allocator);
 
         var it = cns.active.iterator();
         while (it.next()) |kv_pair| {
@@ -303,7 +303,7 @@ pub const ActiveChannels = struct {
                 continue;
             }
             if (kv_pair.value_ptr.ctx == ptr) {
-                try chns.append(kv_pair.key_ptr.*);
+                try chns.append(cns.allocator, kv_pair.key_ptr.*);
             }
         }
 
