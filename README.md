@@ -7,8 +7,6 @@
 
 ---
 
-# tofu
-
 **tofu** is a _protocol_ and an _asynchronous_ **Zig messaging library** used to:
 
 - Build **custom** communication flows.
@@ -40,9 +38,28 @@ As a **protocol**, tofu uses **messages** like cubes. By "cooking" these message
 
 ---
 
+## A Bit of History
+
+**tofu** did not come from nowhere.
+
+The journey began in 2008 when I first built a similar system. I maintained and ran that system
+for many years in high-stakes environments. It powered everything from basic IPC to complex data transfers in a custom distributed file system.
+
+I left that project a few years ago, but I haven't heard any complaints yet — the systems are still running strong.
+
+Corporate lawyers can stay calm: I didn't take any code. I only took the "**smell**."
+(See the [precedent case about paying for a smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html)).
+
+By "**smell**," I mean the core philosophy:
+
+- **The Message is the API**: The data itself defines the connection.
+- **Gradual Evolution**: Start with something simple and grow it into a powerful system over time.
+- **The Mantra**: "Connect your developers. Then connect your applications."
+
+
 ## "Connect your developers. Then connect your applications."
 
-This is the **tofu** mantra. It is a paraphrase of [Conway's Law](https://en.wikipedia.org/wiki/Conway%27s_law). 
+This **tofu** mantra is a paraphrase of [Conway's Law](https://en.wikipedia.org/wiki/Conway%27s_law). 
 
 
 ## Features
@@ -63,26 +80,6 @@ Documentation and examples are available on the [Tofu documentation site](https:
 
 ---
 
-## A Bit of History
-
-**tofu** did not come from nowhere.
-
-The journey began in 2008 when I first built a similar system. I maintained and ran that system 
-for many years in high-stakes environments. It powered everything from basic IPC to complex data transfers in a custom distributed file system.
-
-I left that project a few years ago, but I haven't heard any complaints yet — the systems are still running strong.
-
-Corporate lawyers can stay calm: I didn't take any code. I only took the "**smell**."
-(See the [precedent case about paying for a smell](http://fable1001.blogspot.com/2009/11/nasreddin-hodja-smell-of-soup-and-sound.html)).
-
-By "**smell**," I mean the core philosophy:
-
-- **The Message is the API**: The data itself defines the connection.
-- **Gradual Evolution**: Start with something simple and grow it into a powerful system over time.
-- **The Mantra**: "Connect your developers. Then connect your applications."
- 
----
-
 ## AI Usage
 
 Almost all of this project (99.99%) is "handmade."
@@ -95,8 +92,9 @@ AI was used only for these specific tasks:
   * Implemented [Big-Endian (BE) to Little-Endian (LE) serialization](/src/message.zig#L86) and vice versa.
   * Implemented [data copying to message bodies](/src/message.zig#L722) and vice versa.
 * **Code Refactoring**
-  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax for improved clarity.
-  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables to ensure strict type safety.
+  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax..
+  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables.
+  * Migration code from 0.14.1 to 0.15.2
 
 > [!TIP]
 > Configuration files and guidelines related to refactoring are located in the [.claude/rules](.claude/rules) directory.
