@@ -120,7 +120,7 @@ This dialog is shown without the usual jokes or side comments common in real pro
 > No problem. I’ll send _signals_ with the same **message ID** — the **Progress** header will show the range [N:M] for page numbers.
 >
 > **S:**  
-> Send me a **Response** with the same **message ID** and processing _status_.  
+> On job finish, send me a **Response** with the same **message ID** and processing _status_.  
 > Also include the **Progress** header.
 >
 > **R:**  
