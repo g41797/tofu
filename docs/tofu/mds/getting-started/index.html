@@ -1560,6 +1560,64 @@ for many years in high-stakes environments. It powered everything from basic IPC
 </ul>
 <h2 id="connect-your-developers-then-connect-your-applications">"Connect your developers. Then connect your applications."</h2>
 <p>This <strong>tofu</strong> mantra is a paraphrase of <a href="https://en.wikipedia.org/wiki/Conway%27s_law">Conway's Law</a>.</p>
+<p><strong>tofu</strong> "expects" that development starts with a conversation (<em>connection</em>) similar to the one shown below.</p>
+<p><strong>Context:</strong></p>
+<ul>
+<li>Two developers are discussing the message flow for a new Print Server.</li>
+<li>The first one is the <em>Spool Server</em> developer (<strong>S</strong>).</li>
+<li>The second one develops the <em>RIP Worker Process</em> (<strong>R</strong>).</li>
+<li>Don’t worry — RIP means <em>Raster Image Processing</em>, not what you might think.</li>
+<li>Some terms may be unknown — that’s fine. These two know exactly what they mean.</li>
+</ul>
+<p>This dialog is shown without the usual jokes or side comments common in real programmer discussions — just the technical part.</p>
+<hr />
+<blockquote>
+<p><strong>S:</strong><br />
+I don’t know the addresses of the workers, so you should connect to me.</p>
+<p><strong>R:</strong><br />
+I’ll send a <strong>HelloRequest</strong>, because the worker can process only specific <em>PDL</em> types, the <strong>PDL</strong> header will contain either <strong>PS</strong> or <strong>PDF</strong>.</p>
+<p><strong>S:</strong><br />
+Do I need to send you a <strong>HelloResponse</strong>?</p>
+<p><strong>R:</strong><br />
+No, just start sending me messages with PDL data.</p>
+<p><strong>S:</strong><br />
+As <em>signals</em>?</p>
+<p><strong>R:</strong><br />
+No, as <em>multi-requests</em> — each with a <strong>message ID</strong> equal to the <strong>job ID</strong>.</p>
+<p><strong>S:</strong><br />
+You forgot the <em>Job Ticket</em>.</p>
+<p><strong>R:</strong><br />
+Right. The first request should have a <strong>JobTicket</strong> header (<strong>JDF</strong> or <strong>PPD</strong>) and the ticket data in the body.<br />
+The following requests will have the <strong>PDL</strong> header (PDF or PS) with the related content.</p>
+<p><strong>S:</strong><br />
+But JDF is usually used only for PDF...</p>
+<p><strong>R:</strong><br />
+Yes, but let’s keep it flexible.</p>
+<p><strong>S:</strong><br />
+Can you process several jobs simultaneously?</p>
+<p><strong>R:</strong><br />
+It depends on licensing. Anyway, if I can, I’ll send another <strong>HelloRequest</strong> — working one job per <em>channel</em> looks cleaner.</p>
+<p><strong>S:</strong><br />
+I need a progress indicator.</p>
+<p><strong>R:</strong><br />
+No problem. I’ll send <em>signals</em> with the same <strong>message ID</strong> — the <strong>Progress</strong> header will show the range [N:M] for page numbers.</p>
+<p><strong>S:</strong><br />
+Send me a <strong>Response</strong> with the same <strong>message ID</strong> and processing <em>status</em>.<br />
+Also include the <strong>Progress</strong> header.</p>
+<p><strong>R:</strong><br />
+Why should I send an obsolete message? Are you expecting a graceful close?</p>
+<p><strong>S:</strong><br />
+Of course.</p>
+<p><strong>R:</strong><br />
+Then I’ll send a <strong>ByeRequest</strong> with the same information, and you’ll send me a <strong>ByeResponse</strong>.<br />
+After that, I’ll abort the connection immediately.</p>
+<p><strong>S:</strong><br />
+That’s enough for today. Send me a short text file with this protocol — I’ll save it in Git.</p>
+<p><strong>R:</strong><br />
+Deal. How about a cup of coffee?
+</p>
+</blockquote>
+<p>I hope you got the point without long smart descriptions or advertising.</p>
 <h2 id="credits">Credits</h2>
 <ul>
 <li><a href="https://github.com/karlseguin">Karl Seguin</a> — for introducing me to <a href="https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/">Zig networking</a></li>
@@ -1661,6 +1719,8 @@ for many years in high-stakes environments. It powered everything from basic IPC
       <script src="../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
         <script src="../../../js/scroll-sync.js"></script>
+      
+        <script src="../../../js/open_in_new_tab.js"></script>
       
     
   </body>
