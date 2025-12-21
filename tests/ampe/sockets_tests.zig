@@ -548,7 +548,7 @@ const ActiveChannels = channels.ActiveChannels;
 
 const sockets = internal.sockets;
 
-const Appendable = @import("nats").Appendable;
+const Appendable = @import("Appendable");
 
 const DBG = tofu.DBG;
 

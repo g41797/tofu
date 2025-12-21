@@ -217,7 +217,7 @@ const Notifier = @import("Notifier.zig");
 const channels = @import("channels.zig");
 const ActiveChannels = channels.ActiveChannels;
 
-const Appendable = @import("nats").Appendable;
+const Appendable = @import("Appendable");
 const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 
 const std = @import("std");

@@ -41,7 +41,8 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
-    tofuMod.*.addImport("nats", nats.*.module("nats"));
+    tofuMod.*.addImport("Appendable", nats.*.module("Appendable"));
+    tofuMod.*.addImport("Formatter", nats.*.module("Formatter"));
     tofuMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
     tofuMod.*.addImport("temp", temp.*.module("temp"));
     tofuMod.*.addImport("datetime", datetime.*.module("datetime"));
@@ -55,7 +56,8 @@ pub fn build(b: *std.Build) void {
     });
 
     libMod.*.addImport("tofu", tofuMod);
-    libMod.*.addImport("nats", nats.*.module("nats"));
+    libMod.*.addImport("Appendable", nats.*.module("Appendable"));
+    libMod.*.addImport("Formatter", nats.*.module("Formatter"));
     libMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
     libMod.*.addImport("temp", temp.*.module("temp"));
     libMod.*.addImport("datetime", datetime.*.module("datetime"));
@@ -98,7 +100,8 @@ pub fn build(b: *std.Build) void {
 
     testMod.*.addImport("tofu", tofuMod);
     testMod.*.addImport("recipes", recipesMod);
-    testMod.*.addImport("nats", nats.*.module("nats"));
+    testMod.*.addImport("Appendable", nats.*.module("Appendable"));
+    testMod.*.addImport("Formatter", nats.*.module("Formatter"));
     testMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
     testMod.*.addImport("temp", temp.*.module("temp"));
     testMod.*.addImport("datetime", datetime.*.module("datetime"));

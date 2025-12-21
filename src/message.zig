@@ -688,7 +688,7 @@ pub fn clearQueue(queue: *MessageQueue) void {
     }
 }
 
-pub const Appendable = @import("nats").Appendable;
+pub const Appendable = @import("Appendable");
 
 const message = @import("message.zig");
 

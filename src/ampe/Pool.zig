@@ -172,7 +172,7 @@ inline fn inform(pool: *Pool) void {
     }
 }
 
-const Appendable = @import("nats").Appendable;
+const Appendable = @import("Appendable");
 
 const tofu = @import("../tofu.zig");
 const DBG = tofu.DBG;
