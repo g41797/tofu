@@ -3,7 +3,7 @@
 
     .version = "0.0.0",
 
-    .fingerprint = 0x955a2d58e1b3f28b,
+    .fingerprint = 0x955a2d5857784f5b,
 
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.

@@ -33,8 +33,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Create the tofu module first
-    const tofuMod = b.*.createModule(.{
+    // Add the tofu module first, it also exports "tofu:
+    const tofuMod = b.*.addModule("tofu", .{
         .root_source_file = b.*.path("src/tofu.zig"),
         .target = target,
         .optimize = optimize,
