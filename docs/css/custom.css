@@ -1,217 +1,100 @@
-/* Center the site name within the header on large screens */
+/* ============================================
+   LAYOUT & WIDTH FIXES
+   ============================================ */
+
+/* Allow the content area to expand beyond the narrow default */
+.md-grid {
+    max-width: 95rem !important; /* Increases usable width from ~60rem */
+}
+
+/* Fix the header centering without breaking the sidebar alignment */
 @media screen and (min-width: 76.25em) {
     .md-header__inner {
         display: flex;
-        justify-content: center;
+        justify-content: space-between; /* Keeps logo left, repo right, name center-ish */
         align-items: center;
     }
 
-    /* Hide elements that might interfere with centering, like the repository link */
-    .md-header-nav__button,
-    .md-header__option {
-        display: none;
+    .md-header__title {
+        flex-grow: 1;
+        text-align: center;
     }
 }
 
-/* Adjust for mobile view if needed */
+/* Prevent sidebar from disappearing too early when zooming */
 @media screen and (max-width: 76.25em) {
-    .md-header-nav {
-        justify-content: center;
-    }
-    .md-header-nav__button {
-        display: none; /* Optionally hide the menu button if you want the name perfectly centered */
+    .md-nav--primary {
+        display: block; /* Force primary nav to stay active longer */
     }
 }
-
 
 /* ============================================
-   FONT SIZE CONFIGURATION - REDUCED ~20%
+   FONT SIZE CONFIGURATION (Safe Scaling)
    ============================================ */
 
-/* Base font size - affects all body text */
-:root {
-    font-size: 14.4px !important;  /* 18px → 14.4px (~20% smaller) */
-}
+/* REMOVED :root font-size override as it breaks Material's rem-based breakpoints.
+   Instead, we scale individual components.
+*/
 
-/* Paragraph and general text size */
+/* Base text size (~15px equivalent) */
 .md-typeset {
-    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
-    line-height: 1.8 !important;
+    font-size: 0.75rem !important;
+    line-height: 1.6 !important;
 }
 
-/* Code blocks (fenced code) - General PRE styles */
-.md-typeset pre {
-    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
-    max-width: 100% !important;
+/* Navigation (Left Sidebar) */
+.md-nav__link {
+    font-size: 0.7rem !important;
 }
 
-/* Code element inside PRE */
+/* Header Tabs (Top Navigation) */
+.md-tabs__link {
+    font-size: 0.75rem !important;
+}
+
+/* Code blocks */
 .md-typeset pre > code {
-    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
-    line-height: 1.7 !important;
+    font-size: 0.7rem !important;
+    line-height: 1.5 !important;
 }
 
 /* Inline code */
 .md-typeset code {
-    font-size: 0.92rem !important;   /* 1.15rem → 0.92rem */
-    padding: 0.15em 0.5em !important;
+    font-size: 0.75rem !important;
 }
 
 /* Headers scaling */
-.md-typeset h1 {
-    font-size: 2.24rem !important;   /* 2.8rem → 2.24rem */
-    margin-top: 1.5rem !important;
-}
-.md-typeset h2 {
-    font-size: 1.76rem !important;   /* 2.2rem → 1.76rem */
-    margin-top: 1.3rem !important;
-}
-.md-typeset h3 {
-    font-size: 1.44rem !important;   /* 1.8rem → 1.44rem */
-    margin-top: 1.1rem !important;
-}
-.md-typeset h4 {
-    font-size: 1.2rem !important;    /* 1.5rem → 1.2rem */
-}
-
-/* Lists */
-.md-typeset ul,
-.md-typeset ol {
-    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
-}
-
-/* Tables */
-.md-typeset table {
-    font-size: 0.92rem !important;   /* 1.15rem → 0.92rem */
-}
-
-/* Navigation menu font size */
-.md-nav,
-.md-nav__link {
-    font-size: 0.88rem !important;   /* 1.1rem → 0.88rem */
-}
-
-/* Header navigation tabs */
-.md-tabs__link {
-    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
-    font-weight: 500 !important;
-}
-
-/* Header title (site name) */
-.md-header__title {
-    font-size: 1.12rem !important;   /* 1.4rem → 1.12rem */
-}
-
-/* Admonitions (note boxes) */
-.md-typeset .admonition,
-.md-typeset details {
-    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
-}
-
-.md-typeset .admonition-title {
-    font-size: 1.0rem !important;    /* 1.25rem → 1.0rem */
-}
-
-/* Tabs */
-.md-typeset .tabbed-labels > label {
-    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
-}
-
-/* Code block line numbers */
-.md-typeset .linenodiv,
-.md-typeset .linenos {
-    font-size: 0.8rem !important;    /* 1.0rem → 0.8rem */
-}
+.md-typeset h1 { font-size: 1.8rem !important; }
+.md-typeset h2 { font-size: 1.5rem !important; }
+.md-typeset h3 { font-size: 1.2rem !important; }
 
 /* ============================================
-   BUTTON STYLES (also reduced ~20%)
+   COLOR SCHEMES
    ============================================ */
 
-/* Small Button */
-.md-button--small {
-    font-size: 0.64rem !important;   /* 0.8rem → 0.64rem */
-    padding: 4px 10px !important;
-    border-radius: 6px !important;
-}
-
-/* Medium Button (default) */
-.md-button--medium {
-    font-size: 0.8rem !important;    /* 1rem → 0.8rem */
-    padding: 8px 16px;
-}
-
-/* Large Button */
-.md-button--large {
-    font-size: 0.96rem !important;   /* 1.2rem → 0.96rem */
-    padding: 12px 20px;
-    border-radius: 6px;
-}
-
-/* ============================================
-   PRINT STYLES
-   ============================================ */
-
-@media print {
-    @page {
-        margin: 0.5in 0.1in 0.5in 0.1in;
-    }
-
-    .print-button {
-        display: none;
-    }
-}
-
-.print-button {
-    float: right;
-    margin-left: 1em;
-    padding: 0.5em 1em;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-/* ============================================
-   COLOR SCHEMES - DRAMATIC LIGHT/DARK CONTRAST
-   ============================================ */
-
-/* LIGHT MODE: Subtle mint (gentle, less saturated) */
+/* LIGHT MODE: Muted Mint */
 [data-md-color-scheme="default"] {
-    --md-primary-fg-color:        #388e3c;       /* Muted green */
-    --md-primary-fg-color--light: #66bb6a;       /* Soft green */
-    --md-primary-fg-color--dark:  #2e7d32;       /* Slightly darker green */
-    --md-accent-fg-color:         #ffeb3b;       /* Sunny yellow */
-    --md-accent-fg-color--light:  #fff176;       /* Light yellow */
-
-    --md-default-bg-color:        #f5f5f5;       /* Neutral light gray */
-    --md-default-fg-color:        #1a1a1a;       /* Dark gray */
-
-    --md-code-bg-color:           #fafafa;       /* Very subtle gray */
-    --md-code-fg-color:           #2d2d2d;       /* Dark gray */
-
-    --md-hue:                     120;           /* Keep green hue but muted */
+    --md-primary-fg-color:        #388e3c;
+    --md-accent-fg-color:         #ffeb3b;
+    --md-default-bg-color:        #f5f5f5;
+    --md-default-fg-color:        #1a1a1a;
+    --md-code-bg-color:           #fafafa;
 }
 
-/* DARK MODE: Deep purple + electric green (bold, futuristic) */
+/* DARK MODE: Electric Purple/Green */
 [data-md-color-scheme="slate"] {
-    --md-primary-fg-color:        #8b5cf6;       /* Electric purple */
-    --md-primary-fg-color--light: #c084fc;      /* Light purple */
-    --md-primary-fg-color--dark:  #5b21b6;      /* Deep purple */
-    --md-accent-fg-color:         #10b981;       /* Emerald green */
-    --md-accent-fg-color--light:  #34d399;      /* Bright green */
-
-    --md-default-bg-color:        #0f0f23;       /* Deep navy */
-    --md-default-fg-color:        #e2e8f0;       /* Light gray */
-
-    --md-code-bg-color:           #1a1b2e;       /* Dark purple-gray */
-    --md-code-fg-color:           #a78bfa;       /* Light purple */
-
-    --md-hue:                     270;           /* Purple hue */
-
-    /* Dark mode header/background */
-    --md-header-bg-color:         #0a0a14;       /* Almost black */
+    --md-primary-fg-color:        #8b5cf6;
+    --md-accent-fg-color:         #10b981;
+    --md-default-bg-color:        #0f0f23;
+    --md-default-fg-color:        #e2e8f0;
+    --md-code-bg-color:           #1a1b2e;
+    --md-header-bg-color:         #0a0a14;
 }
 
-/** Ensure the repository icon's container is always displayed **/
+/* ============================================
+   FUNCTIONAL FIXES (Repository & Logo)
+   ============================================ */
+
 .md-header__source {
     display: block !important;
 }
@@ -221,83 +104,111 @@
     display: inline-flex !important;
 }
 
+/* Clean up logo flash */
+.md-header__button.md-logo img {
+    transition: opacity 0.3s ease-in;
+}
+
 /* ============================================
-   REAL TOP SCROLLBAR FOR CODE BLOCKS
+   CODE BLOCK SCROLLBARS
    ============================================ */
 
-/* PRE: container for code + top scrollbar */
 .md-typeset pre {
-    position: relative;
-    padding-top: 20px;        /* room for top bar */
-    margin: 0;
-    background: var(--md-code-bg-color);
     border-radius: 8px;
+    overflow: hidden;
 }
 
-/* Top scrollbar bar */
-.md-typeset pre .code-top-scrollbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-
-    overflow-x: auto;
-    overflow-y: hidden;
-    height: 16px;
-
-    background: var(--md-code-bg-color);
-}
-
-/* Inner filler to define scrollWidth */
-.md-typeset pre .code-top-scrollbar-inner {
-    height: 1px;
-}
-
-/* Top scrollbar styling (WebKit) */
-.md-typeset pre .code-top-scrollbar::-webkit-scrollbar {
+.md-typeset pre > code::-webkit-scrollbar {
     height: 8px;
 }
-.md-typeset pre .code-top-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--md-accent-fg-color) !important;
+
+.md-typeset pre > code::-webkit-scrollbar-thumb {
+    background: var(--md-accent-fg-color--light) !important;
     border-radius: 4px;
 }
 
-/* CODE: keep native bottom scrollbar */
-.md-typeset pre > code {
+/* Hide only the text name in the sidebar title, but keep the logo if present */
+.md-sidebar--primary .md-nav__title {
+    font-size: 0;
+}
+
+.md-sidebar--primary .md-nav__title img {
+    height: 2rem; /* Ensure logo size is preserved */
     display: block;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: pre;
 }
 
-/* Bottom scrollbar styling */
-.md-typeset pre > code::-webkit-scrollbar {
-    height: 10px;
-}
-.md-typeset pre > code::-webkit-scrollbar-track {
-    background: var(--md-code-bg-color);
-}
-.md-typeset pre > code::-webkit-scrollbar-thumb {
-    background: var(--md-accent-fg-color--light) !important;
-    border-radius: 5px;
+/*!* Center the site title and logo in the top header *!*/
+/*.md-header__title {*/
+/*    display: flex;*/
+/*    justify-content: center; !* Horizontally center *!*/
+/*    align-items: center;     !* Vertically center *!*/
+/*    flex-grow: 1;            !* Take up all available space *!*/
+/*}*/
+
+/*!* Ensure the title container itself is centered relative to the whole bar *!*/
+/*.md-header__inner {*/
+/*    display: flex;*/
+/*    justify-content: space-between;*/
+/*}*/
+
+/*!* Add a small gap between the logo and the text if they are touching *!*/
+/*.md-logo img {*/
+/*    margin-right: 0.5rem;*/
+/*}*/
+
+/* FORCE TOP HEADER CENTERING */
+@media screen and (min-width: 76.25em) {
+    /* 1. Make the title container fill the center gap */
+    .md-header__title {
+        display: flex !important;
+        justify-content: center !important;
+        flex: 1 1 auto !important;
+    }
+
+    /* 2. Target the link that contains the logo and the text */
+    .md-header__button.md-logo {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-right: 0 !important; /* Remove default left-margin */
+        padding: 0 !important;
+    }
+
+    /* 3. Ensure the text itself doesn't have internal left-alignment */
+    .md-header__topic {
+        text-align: center !important;
+        width: 100% !important;
+    }
 }
 
-/* ============================================
-   HIDE LOGO FLASH DURING NAVIGATION - AGGRESSIVE
-   ============================================ */
-
-/* Completely hide logo image by default */
-.md-header__button.md-logo img {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    display: none !important;
+/* Allow the main content area to take up more space */
+.md-content {
+    max-width: 100% !important; /* Removes the internal limit on text width */
 }
 
-/* Show ONLY when fully loaded and stable */
-.md-content[data-md-state="done"] .md-header__button.md-logo img,
-body:not([data-md-toggle]) .md-header__button.md-logo img {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    transition: opacity 0.2s ease-in;
+/* Increases the overall site container width */
+.md-grid {
+    max-width: 95rem !important; /* Standard is ~60rem; this makes it much wider */
+}
+/* Ensure code blocks allow horizontal scrolling instead of wrapping */
+.md-typeset pre > code {
+    white-space: pre !important;
+    word-break: normal !important;
+    overflow-x: auto !important;
+}
+
+/* Force regular text to wrap normally */
+.md-typeset p {
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+/* Lower the breakpoint so the sidebar stays visible longer during zoom */
+@media screen and (min-width: 40em) {
+    .md-sidebar--primary {
+        display: block !important; /* Keeps navigation visible */
+    }
+    .md-sidebar--secondary {
+        display: block !important; /* Keeps Table of Contents visible */
+    }
 }
