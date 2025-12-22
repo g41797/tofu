@@ -9,5 +9,5 @@ site/
 .claude/settings.local.json
 *.a
 *.a.o
-docs_site/docs/api/*
-!docs_site/docs/api/.gitkeep
+#docs_site/docs/api/*
+#!docs_site/docs/api/.gitkeep

@@ -1,3 +1,6 @@
+//! Services interface pattern for cooperative message processing in tofu applications.
+//! Provides example implementations including EchoService, EchoClient, and EchoClientServer.
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const log = std.log;
@@ -205,6 +208,8 @@ pub const EchoService = struct {
     }
 };
 
+/// Simple echo client for testing tofu communication.
+/// Connects to a server, sends echo requests, and validates responses.
 pub const EchoClient = struct {
     const Self = EchoClient;
 
@@ -224,7 +229,7 @@ pub const EchoClient = struct {
     connected: bool = false,
     helloBh: BinaryHeader = .{},
 
-    /// Init echo client and after successful connect immediately run it on the thread
+    /// Initializes and starts echo client on a separate thread after connecting to server.
     /// Does not support re-connect
     ///  cfg - server address configurator
     ///  echoes - count of sends
@@ -523,7 +528,8 @@ pub const EchoClient = struct {
     }
 };
 
-/// Example of echo client - server communication
+/// Complete echo client-server example demonstrating tofu message passing.
+/// Runs a multihomed server and multiple echo clients for testing.
 pub const EchoClientServer = struct {
     gpa: Allocator = undefined,
     engine: ?*Reactor = null,
@@ -534,6 +540,7 @@ pub const EchoClientServer = struct {
     clcCount: u16 = 0,
     echoes: usize = 0,
 
+    /// Initializes the echo client-server system with the given server configurations.
     pub fn init(allocator: Allocator, srvcfg: []Configurator) !EchoClientServer {
         var ecs: EchoClientServer = .{
             .gpa = allocator,
@@ -558,6 +565,8 @@ pub const EchoClientServer = struct {
         return ecs;
     }
 
+    /// Runs the echo client-server test with the specified client configurations.
+    /// Returns the final status after all clients complete their echo operations.
     pub fn run(ecs: *EchoClientServer, clncfg: []Configurator) !status.AmpeStatus {
         defer ecs.*.deinit();
 
@@ -593,6 +602,7 @@ pub const EchoClientServer = struct {
         return echoSts;
     }
 
+    /// Cleans up all resources including the multihomed server and message pool.
     pub fn deinit(ecs: *EchoClientServer) void {
         if (ecs.*.mh != null) {
             // Dereference the optional pointer to echsrv, then dereference the pointer to call the method

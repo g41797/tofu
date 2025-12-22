@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Message structure and protocol definitions for tofu communication.
+//! Provides the core data structure for asynchronous message passing with headers and body.
+
 /// Enum representing the on-off states
 pub const Trigger = enum(u1) {
     on = 1,
@@ -52,8 +55,10 @@ pub const ProtoFields = packed struct(u8) {
 /// Type alias for channel number, represented as a 16-bit unsigned integer.
 pub const ChannelNumber = u16;
 
+/// Reserved channel number (0) for unassigned channels.
 pub const SpecialMinChannelNumber = std.math.minInt(u16);
 
+/// Reserved channel number (65535) for tofu internal use.
 pub const SpecialMaxChannelNumber = std.math.maxInt(u16);
 
 /// Type alias for message ID, represented as a 64-bit unsigned integer.
@@ -680,6 +685,7 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
+/// Clears and destroys all messages in a queue, releasing their memory.
 pub fn clearQueue(queue: *MessageQueue) void {
     var next = queue.dequeue();
     while (next != null) {
@@ -688,6 +694,7 @@ pub fn clearQueue(queue: *MessageQueue) void {
     }
 }
 
+/// Type alias for dynamically growing buffer used in message headers and body.
 pub const Appendable = @import("Appendable");
 
 const message = @import("message.zig");
@@ -716,7 +723,7 @@ const DBG = @import("ampe.zig").DBG;
 //       Gemini generated helpers
 // ====================================
 
-/// Converts a struct pointer's address into a provided slice.
+/// Converts a pointer's address into a byte slice.
 /// Returns a slice of the filled portion of the destination slice.
 /// Returns an empty slice if the destination slice is too small.
 pub fn ptrToSlice(comptime T: type, ptr: *T, destination: []u8) []u8 {
@@ -735,8 +742,8 @@ pub fn ptrToSlice(comptime T: type, ptr: *T, destination: []u8) []u8 {
     return destination[0..@sizeOf(usize)];
 }
 
-/// Converts a slice back to a struct pointer.
-/// Returns an optional pointer which is null if the slice is too small.
+/// Converts a byte slice back to a pointer of type T.
+/// Returns null if the slice is too small.
 pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
     if (slice.len < @sizeOf(usize)) {
         return null;
@@ -748,9 +755,8 @@ pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
     return @ptrFromInt(addr); // Corrected function
 }
 
-/// Converts a struct's underlying memory into a provided destination slice.
-/// Returns a slice of the filled portion of the destination, or an empty slice
-/// if the destination is too small.
+/// Converts a struct's memory into a byte slice.
+/// Returns empty slice if destination is too small.
 pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
     const struct_size = @sizeOf(T);
     if (destination.len < struct_size) {
@@ -760,9 +766,8 @@ pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
     return destination[0..struct_size];
 }
 
-/// Converts a slice of bytes back into a struct.
-/// Returns true on success, or false if the slice's length does not match the
-/// size of the target struct.
+/// Converts a byte slice back into a struct of type T.
+/// Returns true on success, false if slice length does not match struct size.
 pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) bool {
     const struct_size = @sizeOf(T);
     if (slice.len != struct_size) {
@@ -774,21 +779,8 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
 
 const SliceTooSmallError = error{SliceTooSmall};
 
-/// Converts a single scalar value into a byte slice representation.
-///
-/// This function relies on the in-memory representation of the scalar value
-/// (native endianness).
-///
-/// Returns a comptime error if the type T is an aggregate (e.g., struct, array).
-///
-/// Args:
-///     T: The type of the value (e.g., u32, i16, f64, pointer).
-///     value: The scalar value to convert.
-///     dest: The destination byte slice.
-///
-/// Returns:
-///     A slice of the filled portion of the destination slice, or an empty slice
-///     if the destination is too small.
+/// Converts a scalar value into a byte slice using native endianness.
+/// Returns empty slice if destination is too small.
 pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
     // 1. Comptime error check for aggregate types
     comptime {
@@ -815,20 +807,8 @@ pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
     return dest[0..value_size];
 }
 
-/// Converts a byte slice back to a single scalar value.
-///
-/// This function interprets the slice contents based on the scalar value's
-/// native endianness.
-///
-/// Returns a comptime error if the type T is an aggregate.
-///
-/// Args:
-///     T: The target scalar type (e.g., u32, i16, f64).
-///     slice: The byte slice containing the value data.
-///
-/// Returns:
-///     The decoded scalar value, or SliceTooSmallError if the slice length
-///     is less than the size of T.
+/// Converts a byte slice back to a scalar value using native endianness.
+/// Returns error if slice is too small.
 pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
     // 1. Comptime error check for aggregate types (including .Pointer)
     comptime {

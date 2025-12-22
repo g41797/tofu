@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Configuration helpers for TCP and UDS (Unix Domain Socket) connections.
+//! Provides configurators for client and server setup with address injection into messages.
+
 /// Enum representing supported communication protocols.
 pub const Proto = enum {
     tcp,

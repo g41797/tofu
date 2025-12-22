@@ -1,6 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 <TBD>
 // SPDX-License-Identifier: <TBD>
 
+//! Multihomed server implementation for tofu.
+//!
+//! A multihomed server has multiple network connections (TCP/UDS) and can provide
+//! services on multiple networks simultaneously. This pattern enhances reliability
+//! and performance through redundancy and direct access to different subnets.
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //                 AI Overview
 //
@@ -74,20 +80,24 @@ pub const Services = services.Services;
 const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
+/// Async message passing engine interface.
 ampe: ?Ampe = null,
+/// Memory allocator for server resources.
 allocator: ?Allocator = null,
+/// Channel group for managing all server connections.
 chnls: ?ChannelGroup = null,
+/// Services implementation for processing messages.
 srvcs: Services = undefined,
+/// Map of listener channel numbers to their configurations.
 lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
+/// Server thread handle.
 thread: ?std.Thread = null,
+/// Queue for accumulating messages before thread starts.
 msgq: message.MessageQueue = .{},
-
-// Use Mailbox (https://github.com/g41797/mailbox) for
-// receiving status from thread (via close() for finish & interrupt() for ack)
-// without transfer any Message
+/// Mailbox for thread synchronization and status reporting.
 ackMbox: MSGMailBox = .{},
 
-/// Initiates multihomed tofu server (mhts)
+/// Starts a multihomed tofu server with multiple listeners.
 ///   ampe - engine
 ///   adrs - slice with addresses of TCP and/or UDS servers
 ///   srvcs - caller supplied message processors

@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Utility functions for testing tofu applications.
+//! Provides helpers for temporary UDS paths, TCP port finding, and thread coordination.
+
 /// UDS (Unix Domain Socket) uses a file path for communication on the same machine,
 /// unlike network sockets that use IP addresses and ports.
 ///

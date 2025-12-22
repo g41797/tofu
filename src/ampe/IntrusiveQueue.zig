@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Intrusive queue implementation for types with prev/next pointers.
+//! Provides zero-allocation FIFO queue operations using intrusive linked lists.
+
 /// In order to use IntrusiveQueue, T should look like
 /// pub const T = struct {
 ///     prev: ?*T = null,

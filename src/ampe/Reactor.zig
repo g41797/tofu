@@ -63,6 +63,9 @@ m4delCnt: usize = undefined,
 
 allChnN: std.ArrayList(message.ChannelNumber) = undefined,
 
+/// Creates and initializes a new Reactor instance with the specified allocator and options.
+/// The Reactor implements the Ampe interface using the Reactor pattern for async I/O.
+/// Returns a pointer to the created Reactor or an error if initialization fails.
 pub fn Create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     const rtr: *Reactor = gpa.create(Reactor) catch {
         return AmpeError.AllocationFailed;
@@ -140,6 +143,9 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     return rtr;
 }
 
+/// Destroys the Reactor, stopping all communication and releasing all resources.
+/// Closes all active channels, stops the internal thread, and frees allocated memory.
+/// This function blocks until the Reactor thread terminates gracefully.
 pub fn Destroy(rtr: *Reactor) void {
     const gpa = rtr.allocator;
     defer gpa.destroy(rtr);

@@ -1,3 +1,6 @@
+//! Example recipes demonstrating tofu usage patterns.
+//! Provides step-by-step examples from basic setup to complex client-server communication.
+
 const cookbook = @This();
 
 const std = @import("std");
@@ -8,54 +11,58 @@ const assert = std.debug.assert;
 const testing = std.testing;
 const alctr = std.testing.allocator;
 
-// Import of module 'tofu'
+/// Import of the tofu module.
 pub const tofu = @import("tofu");
 
-// Reactor: The single-threaded, event-driven implementation
-// of the Ampe interface. It utilizes the Reactor pattern to multiplex
-// non-blocking socket I/O via an internal poll-style loop.
+/// Reactor: The single-threaded, event-driven implementation of the Ampe interface.
 pub const Reactor = tofu.Reactor;
 
+/// Async message passing engine interface.
 pub const Ampe = tofu.Ampe;
 
-// Contains settings for the internal message pool.
+/// Configuration options for the internal message pool.
 pub const Options = tofu.Options;
 
-// The default configuration options for the pool.
+/// Default configuration options for the message pool.
 pub const DefaultOptions = tofu.DefaultOptions;
 
-// A grouping mechanism for managing a collection of related channels.
+/// Interface for managing a collection of related channels.
 pub const ChannelGroup = tofu.ChannelGroup;
 
+/// Message structure and protocol definitions module.
 pub const message = tofu.message;
 
-// The core Message structure processed by the engine.
+/// Core message structure processed by the engine.
 pub const Message = tofu.Message;
 
-// Meta-data for the Message.
-// Used internally by the engine for routing and by the application for context.
+/// Binary header containing message metadata.
 pub const BinaryHeader = message.BinaryHeader;
 
+/// Status codes and error handling module.
 pub const status = tofu.status;
-// An enum representation of the status byte
-// (part of BinaryHeader) for clear status tracking.
+
+/// Status codes for tofu operations.
 pub const AmpeStatus = status.AmpeStatus;
-// An error type corresponding to the status above,
-// used for conveying failure states.
+
+/// Error set for tofu operations.
 pub const AmpeError = status.AmpeError;
 
-// Helpers - for convenient injection of socket addresses
-// to the message.
+/// Configuration helpers for TCP and UDS connections.
 pub const configurator = tofu.configurator;
+
+/// Tagged union representing different configurator types.
 pub const Configurator = configurator.Configurator;
 
+/// Services interface module.
 pub const services = @import("services.zig");
 
+/// Demonstrates basic Reactor creation and destruction.
 pub fn createDestroyMain(gpa: Allocator) !void {
     var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
     defer rtr.Destroy();
 }
 
+/// Shows how to obtain the Ampe interface from a Reactor instance.
 pub fn createDestroyAmpe(gpa: Allocator) !void {
     // Create engine implementation object
     const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
@@ -73,6 +80,7 @@ pub fn createDestroyAmpe(gpa: Allocator) !void {
     // It will be destroyed via  rtr.*.Destroy().
 }
 
+/// Demonstrates the complete lifecycle of a ChannelGroup.
 pub fn createDestroyChannelGroup(gpa: Allocator) !void {
     const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
     defer rtr.*.Destroy();
@@ -88,6 +96,7 @@ pub fn createDestroyChannelGroup(gpa: Allocator) !void {
     }
 }
 
+/// Demonstrates pool behavior with minimal size configuration.
 pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     // If options have invalid values (0 or maxPoolMsgs < initialPoolMsgs),
     // DefaultOptions will be used.
@@ -129,6 +138,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     return;
 }
 
+/// Shows proper message acquisition and sending with error handling.
 pub fn sendMessageFromThePool(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
@@ -155,6 +165,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     return;
 }
 
+/// Example of handling messages with invalid channel numbers.
 pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
@@ -185,6 +196,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     return;
 }
 
+/// Demonstrates error when sending Hello message without server address configuration.
 pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
@@ -216,6 +228,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     return;
 }
 
+/// Shows error handling for Hello message with invalid server address.
 pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
@@ -254,6 +267,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     return status.raw_to_error(st);
 }
 
+/// Demonstrates connection attempt to a server that is not listening.
 pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
@@ -294,6 +308,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     return status.raw_to_error(st);
 }
 
+/// Example of Welcome message with invalid listener address.
 pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 10, // Example value.
@@ -331,6 +346,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     return status.raw_to_error(st);
 }
 
+/// Demonstrates starting a TCP server listener on a free port.
 pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
@@ -344,6 +360,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, false);
 }
 
+/// Demonstrates starting a UDS server listener on a temporary socket path.
 pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
     // UDS (Unix Domain Socket) uses a file path for communication on the same machine,
     // unlike network sockets that use IP addresses and ports.
@@ -374,6 +391,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, true);
 }
 
+/// Demonstrates running multiple UDS server listeners simultaneously.
 pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
     // UDS (Unix Domain Socket) uses a file path for communication on the same machine,
     // unlike network sockets that use IP addresses and ports.
@@ -391,6 +409,8 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
     return handleStartOfListener(gpa, &cnfg, true);
 }
 
+/// Generic listener startup handler for TCP or UDS servers.
+/// Tests listener creation and handles WelcomeRequest/Response handshake.
 pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bool) !AmpeStatus {
     // Same code for TCP and UDS servers, only configuration differs.
 
@@ -443,6 +463,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     return status.raw_to_status(st);
 }
 
+/// Demonstrates TCP client-server connection on localhost.
 pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
@@ -453,6 +474,7 @@ pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
 
+/// Demonstrates UDS client-server connection using temporary socket path.
 pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
@@ -464,6 +486,8 @@ pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
 
+/// Generic connection handler for client-server communication (TCP or UDS).
+/// Demonstrates complete handshake: Welcome→Hello→exchange→Bye.
 pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
@@ -657,6 +681,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     return status.raw_to_status(st);
 }
 
+/// Demonstrates using updateReceiver to wake waitReceive thread.
 pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
     const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
@@ -704,6 +729,7 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
     return status.raw_to_status(attention.?.*.bhdr.status);
 }
 
+/// Demonstrates TCP client reconnection with multi-threaded approach.
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
@@ -713,6 +739,7 @@ pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
+/// Demonstrates UDS client reconnection with multi-threaded approach.
 pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
@@ -724,6 +751,8 @@ pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
 
+/// Generic reconnection handler using multi-threaded pattern.
+/// Server runs on separate thread, client attempts reconnection.
 pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     const options: Options = .{
         .initialPoolMsgs = 1024, // Example value.
@@ -1015,6 +1044,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     return .success;
 }
 
+/// Demonstrates TCP client reconnection with single-threaded approach.
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
@@ -1024,6 +1054,7 @@ pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
 
+/// Demonstrates UDS client reconnection with single-threaded approach.
 pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
@@ -1035,6 +1066,8 @@ pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
 
+/// Generic reconnection handler using single-threaded pattern.
+/// Server and client interleave operations on one thread.
 pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     // Same code for TCP and UDS client/server, only configurations differ.
     // Configurations must match (both TCP or both UDS).
@@ -1459,6 +1492,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     return AmpeStatus.communication_failed;
 }
 
+/// Demonstrates UDS reconnection using Connector helper pattern.
 pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
@@ -1470,6 +1504,7 @@ pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!
     return handleReConnectViaConnector(gpa, &srvCfg, &cltCfg);
 }
 
+/// Generic reconnection handler using Connector helper for retry logic.
 pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurator) anyerror!AmpeStatus {
     const options: Options = .{
         .initialPoolMsgs = 16, // Example value.
@@ -1767,6 +1802,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
     return AmpeStatus.communication_failed;
 }
 
+/// Example echo server using TofuEchoServer pattern.
 pub const TofuEchoServer = struct {
     const Self = @This();
     ampe: Ampe = undefined,
@@ -1906,18 +1942,22 @@ pub const TofuEchoServer = struct {
     }
 };
 
+/// Helper function to sleep for one second.
 pub inline fn sleepSec() void {
     std.Thread.sleep(1_000_000_000);
 }
 
+/// Helper function to sleep for one millisecond.
 pub inline fn sleep1MlSec() void {
     std.Thread.sleep(1_000_000);
 }
 
+/// Helper function to sleep for 10 milliseconds.
 pub inline fn sleep10MlSec() void {
     std.Thread.sleep(1_000_000_0);
 }
 
+/// Demonstrates complete echo client-server example with multiple clients.
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
 
     // Prepare configurators: TCP client/server, UDS client/server

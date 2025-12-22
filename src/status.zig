@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Status codes and error handling for tofu operations.
+//! Provides conversion between status enums, raw bytes, and error types.
+
+/// Status codes for tofu operations.
+/// Used in message binary headers to indicate operation results.
 pub const AmpeStatus = enum(u8) {
     success = 0,
     not_implemented_yet,
@@ -37,6 +42,8 @@ pub const AmpeStatus = enum(u8) {
     unknown_error,
 };
 
+/// Error set for tofu operations.
+/// Corresponds to AmpeStatus enum values for error handling.
 pub const AmpeError = error{
     NotImplementedYet,
     WrongConfiguration,
@@ -107,6 +114,8 @@ var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .processing_failed = AmpeError.ProcessingFailed,
 });
 
+/// Converts AmpeError to the corresponding AmpeStatus enum value.
+/// Returns unknown_error if no matching status is found.
 pub fn errorToStatus(err: AmpeError) AmpeStatus {
     var iter = StatusToErrorMap.iterator();
     while (iter.next()) |item| {
@@ -118,6 +127,8 @@ pub fn errorToStatus(err: AmpeError) AmpeStatus {
     return AmpeStatus.unknown_error;
 }
 
+/// Converts a raw u8 status byte to AmpeStatus enum.
+/// Returns unknown_error for invalid values.
 pub inline fn raw_to_status(rs: u8) AmpeStatus {
     if (rs >= @intFromEnum(AmpeStatus.unknown_error)) {
         return .unknown_error;
@@ -125,6 +136,8 @@ pub inline fn raw_to_status(rs: u8) AmpeStatus {
     return @enumFromInt(rs);
 }
 
+/// Converts a raw u8 status byte to AmpeError or void for success.
+/// Returns void if status is success (0), otherwise returns corresponding error.
 pub inline fn raw_to_error(rs: u8) AmpeError!void {
     if (rs == 0) {
         return;
@@ -136,10 +149,12 @@ pub inline fn raw_to_error(rs: u8) AmpeError!void {
     return StatusToErrorMap.get(@enumFromInt(rs)).?;
 }
 
+/// Converts AmpeStatus enum to raw u8 byte for wire protocol.
 pub inline fn status_to_raw(status: AmpeStatus) u8 {
     return (@intFromEnum(status));
 }
 
+/// Converts AmpeStatus enum to AmpeError or void for success.
 pub inline fn status_to_error(status: AmpeStatus) AmpeError!void {
     return raw_to_error(@intFromEnum(status));
 }

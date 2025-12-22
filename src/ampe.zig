@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+//! Async message passing engine (Ampe) interface definition.
+//! Provides the core API for message-based asynchronous communication in tofu.
+
 // 2DO - Define error set(s) for errors returned by ChannelGroup and Ampe
 
 /// Defines the async message passing engine interface.
@@ -173,18 +176,25 @@ pub const ChannelGroup = struct {
 
 /// Holds configuration options for the message passing engine.
 pub const Options = struct {
+    /// Initial number of messages to pre-allocate in the pool.
     initialPoolMsgs: ?u16 = null,
+    /// Maximum number of messages the pool can hold.
     maxPoolMsgs: ?u16 = null,
 };
 
+/// Default configuration options for the message pool.
 pub const DefaultOptions: Options = .{
     .initialPoolMsgs = 16,
     .maxPoolMsgs = 64,
 };
 
+/// Timeout value for indefinite wait in waitReceive (no timeout).
 pub const waitReceive_INFINITE_TIMEOUT: u64 = std.math.maxInt(u64);
+
+/// One-second timeout value for waitReceive operations.
 pub const waitReceive_SEC_TIMEOUT: u64 = std.time.ns_per_s;
 
+/// Debug flag indicating whether the build is in debug mode.
 pub const DBG = (@import("builtin").mode == .Debug);
 
 const message = @import("message.zig");
