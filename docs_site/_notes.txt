@@ -175,3 +175,18 @@ Example of mkdocs.yml
         https://lalinsky.github.io/zio/
 
 
+Check html
+    cd to folder with html
+    python3 -m http.server 8011
+
+    in browser 127.0.0.1:8011
+
+
+Customization Tips for icon
+
+    Color and Style: The icon inherits your theme's palette (e.g., primary color: blue grey). Adjust under palette if needed.
+    Fallback to Image: If you prefer a custom SVG version, download message-fast from https://pictogrammers.com/library/mdi/icon/message-fast, save it in assets/, and revert to logo: assets/message-fast.svg.
+    Similar Icons: If message-fast isn't ideal, try alternatives like material/message-flash (for urgent messages) or material/message (basic chat bubble) by changing the shortcode.
+    For more icons, search the MkDocs icon picker: https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/#search. Copy the shortcode directly.
+
+    This setup keeps your docs clean and vector-based for better scalability. If you need it as a favicon instead (site icon in browser tabs), add favicon: assets/message-fast.svg under theme: (after downloading the SVG).
