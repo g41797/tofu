@@ -1,0 +1,151 @@
+site_name: "      Tofu - Sync your devs, Async your apps!"
+site_url: https://g41797.github.io/tofu/
+repo_url: https://github.com/g41797/tofu/
+repo_name: tofu on GitHub
+
+theme:
+  name: material
+  logo: assets/Ziggy_And_Zero_Are_Cooking_Tofu.png
+  custom_dir: overrides
+  icon:
+    repo: fontawesome/brands/github # <--- EXPLICITLY reference the icon
+    admonition:
+      note: octicons/tag-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/squirrel-16
+      success: octicons/check-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-circle-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: sky
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: lime
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode   
+  features:
+    - content.code.copy
+    - content.code.select: false
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+#    - navigation.tabs
+#    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.footer
+    - header.autohide
+    - content.tooltips
+    - navigation.expand
+    - announce.dismiss # Allows users to close it if they want
+
+nav:
+  - Getting started:
+      - Overview: mds/getting-started.md
+      - NAQ: mds/naq.md
+      - Protocol: mds/protocol.md # Moved here to balance the top tabs
+  - Implementation:
+      - Features: mds/features.md
+      - Installation: mds/installation.md
+      - Imports: mds/imports.md
+      - Key ingredients: mds/key-ingredients.md
+      - Heroes of This Dish: # This now acts as a section header
+          - Ampe: mds/ampe.md
+          - ChannelGroup: mds/channel-group.md
+          - Message: mds/message.md
+      - Helpers: # This now acts as a section header
+          - Configurators: mds/configurators.md
+          - Testers: mds/for-tests.md
+  - NATS API Reference Just for testing: api/index.html
+  - Addendum:
+      - Allocator: mds/allocator.md
+      - Sockets 101: mds/sockets101.md
+      - Coding style: mds/coding-style.md
+      - AI Usage : mds/ai-usage.md
+      - Callback enabled: mds/callback-enabled.md
+
+#nav:
+#    - Getting started:
+#      - Overview: mds/getting-started.md
+#      - NAQ: mds/naq.md
+#    - Protocol:
+#        - mds/protocol.md
+#    - Implementation:
+#      - Features: mds/features.md
+#      - Installation: mds/installation.md
+#      - Imports: mds/imports.md
+#      - Key ingredients: mds/key-ingredients.md
+#      - Heroes of This Dish:
+#        - Ampe: mds/ampe.md
+#        - ChannelGroup: mds/channel-group.md
+#        - Message: mds/message.md
+#      - Helpers:
+#          - Configurators: mds/configurators.md
+#          - Testers: mds/for-tests.md
+#    - API Reference: api/index.html
+#    - Addendum:
+#      - Allocator: mds/allocator.md
+#      - Sockets 101: mds/sockets101.md
+#      - Coding style: mds/coding-style.md
+#      - AI Usage : mds/ai-usage.md
+#      - Callback enabled: mds/callback-enabled.md
+plugins:
+  - search
+  - awesome-pages
+  - minify  
+#  - blog:
+#      blog_toc: true
+  - redirects:
+      redirect_maps:
+        'index.md': mds/getting-started.md
+  - open-in-new-tab
+  - drawio
+extra:
+#  homepage: https://g41797.github.io/tofu/
+  generator: false
+#  announcement: "Sync your devs, Async your apps!"
+
+markdown_extensions:
+  - attr_list
+  - pymdownx.highlight:
+      anchor_linenums: true
+      linenums: false
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+     custom_fences:
+     - name: mermaid
+       class: mermaid
+       format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+extra_css:
+  - css/custom.css
+extra_javascript:
+    - js/scroll-sync.js
+copyright: >
+  Copyright &copy; 2025 g41797

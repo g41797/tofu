@@ -1,0 +1,33 @@
+{% set asset = config.theme.get("logo") %}
+{% set icon  = config.theme.get("icon", {}).get("logo") %}
+
+<a href="{{ base_url }}/" class="md-header__button md-logo" title="{{ config.site_name }}" id="logo-container">
+    {% if asset or icon %}
+    <img src="{{ asset | url }}" alt="{{ config.site_name }}" id="logo-img" style="opacity:0;visibility:hidden;" />
+    {% else %}
+    {% include ".icons/material/book-open-blank-variant.svg" %}
+    {% endif %}
+</a>
+
+<script>
+    (function() {
+        const img = document.getElementById('logo-img');
+        if (!img) return;
+        img.style.opacity = '0';
+        img.style.visibility = 'hidden';
+        setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.transition = 'opacity 0.2s ease-in';
+        }, 10);
+        const observer = new MutationObserver(() => {
+            if (img.style.opacity !== '1') {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                    img.style.visibility = 'visible';
+                }, 10);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
