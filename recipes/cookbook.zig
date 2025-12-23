@@ -1,5 +1,44 @@
-//! Example recipes demonstrating tofu usage patterns.
-//! Provides step-by-step examples from basic setup to complex client-server communication.
+//! Tofu Cookbook - Complete collection of usage examples from simple to complex.
+//!
+//! **How to Use This File:**
+//! Read examples in order from top to bottom. Each example builds on previous concepts.
+//! Start with `createDestroyMain`, end with `handleEchoClientServer`.
+//!
+//! **Learning Path:**
+//! 1. Engine basics (`createDestroy*`) - Create/destroy Reactor and Ampe
+//! 2. Pool basics (`getMsgsFrom*`) - Understand message pool and allocation strategies
+//! 3. Sending (`sendMessageFromThePool`) - Message lifecycle and ownership transfer
+//! 4. Error handling (`handle*Wrong*`) - What happens when things go wrong
+//! 5. Listeners (`handleStartOf*`) - Create TCP/UDS server listeners
+//! 6. Connection (`handleConnectOf*`) - Complete client-server handshake
+//! 7. Communication (`handleConnect`) - Full message exchange flow
+//! 8. Reconnection (`handleReConnect*`) - Handle connection failures
+//! 9. Complete system (`handleEchoClientServer`) - Production-like setup
+//!
+//! **Message-as-Cube Throughout:**
+//! Every example shows messages as cubes. You get cube from pool. You configure cube.
+//! You send cube (ownership transfers). You receive cube. You return cube to pool.
+//! Simple pattern repeated in different contexts.
+//!
+//! **Pattern Categories:**
+//! - **ST (Single-Threaded)**: All operations on one thread
+//! - **MT (Multi-Threaded)**: Client and server on separate threads
+//! - **TCP**: Using TCP/IP sockets
+//! - **UDS**: Using Unix Domain Sockets
+//!
+//! **Key Concepts Demonstrated:**
+//! - Message pool management (`get()`/`put()`)
+//! - Hello/Welcome handshake
+//! - Request/Response patterns
+//! - Signal (one-way) patterns
+//! - Error handling (pool_empty, connect_failed, channel_closed)
+//! - Graceful vs force disconnect
+//! - updateReceiver for thread communication
+//! - Reconnection strategies
+//! - Helper structures (TofuClient, TofuServer, ClientConnector, TofuEchoServer)
+//!
+//! **All Examples Are Tests:**
+//! Run with `zig build test`. Each function is complete, runnable example.
 
 const cookbook = @This();
 

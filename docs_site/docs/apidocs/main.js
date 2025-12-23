@@ -191,12 +191,17 @@
     }
 
     function renderHome() {
-      if (moduleList.length == 0) {
-        domStatus.textContent = "sources.tar contains no modules";
-        domStatus.classList.remove("hidden");
-        return;
-      }
-      return renderModule(0);
+        try {
+            if (moduleList.length == 0) {
+                domStatus.textContent = "sources.tar contains no modules";
+                domStatus.classList.remove("hidden");
+                return;
+            }
+            return renderModule(0);
+        } catch(e) {
+            domStatus.textContent = "Home load failed";
+            domStatus.classList.remove("hidden");
+        }
     }
 
     function renderModule(pkg_index) {
@@ -598,12 +603,31 @@
       }
     }
 
+
+    function namespaceMembers(decl_index, include_private) {
+        try { return unwrapSlice32(wasm_exports.namespace_members(decl_index, include_private)); } catch(e){return [];}
+    }
+    function declFields(decl_index) {
+        try { return unwrapSlice32(wasm_exports.decl_fields(decl_index)); } catch(e){return [];}
+    }
+    function declParams(decl_index) {
+        try { return unwrapSlice32(wasm_exports.decl_params(decl_index)); } catch(e){return [];}
+    }
+    function declErrorSet(decl_index) {
+        try { return unwrapSlice64(wasm_exports.decl_error_set(decl_index)); } catch(e){return [];}
+    }
+
     function renderNamespacePage(decl_index) {
-      renderNav(decl_index);
-      renderDeclHeading(decl_index);
-      const members = namespaceMembers(decl_index, false).slice();
-      const fields = declFields(decl_index).slice();
-      renderNamespace(decl_index, members, fields);
+        try {
+            renderNav(decl_index);
+            renderDeclHeading(decl_index);
+            const members = namespaceMembers(decl_index, false) || [];
+            const fields = declFields(decl_index) || [];
+            renderNamespace(decl_index, members, fields);
+        } catch (e) {
+            console.error("Namespace failed:", e);
+            renderNotFound();
+        }
     }
 
     function operatorCompare(a, b) {
@@ -963,18 +987,34 @@
     }
 
     function unwrapSlice32(bigint) {
-      const ptr = Number(bigint & 0xffffffffn);
-      const len = Number(bigint >> 32n);
-      if (len === 0) return [];
-      return new Uint32Array(wasm_exports.memory.buffer, ptr, len);
+        try {
+            const ptr = Number(bigint & 0xffffffffn);
+            const len = Number(bigint >> 32n);
+            if (len === 0 || ptr === 0 || len > 100000 || !wasm_exports?.memory) return [];
+            if (ptr + len * 4 > wasm_exports.memory.buffer.byteLength) {
+                console.warn("Slice32 OOB:", ptr, len);
+                return [];
+            }
+            return Array.from(new Uint32Array(wasm_exports.memory.buffer, ptr, len));
+        } catch (e) {
+            console.warn("unwrapSlice32 safe:", e);
+            return [];
+        }
     }
 
     function unwrapSlice64(bigint) {
-      const ptr = Number(bigint & 0xffffffffn);
-      const len = Number(bigint >> 32n);
-      if (len === 0) return [];
-      return new BigUint64Array(wasm_exports.memory.buffer, ptr, len);
+        try {
+            const ptr = Number(bigint & 0xffffffffn);
+            const len = Number(bigint >> 32n);
+            if (len === 0 || ptr === 0 || len > 50000 || !wasm_exports?.memory) return [];
+            if (ptr + len * 8 > wasm_exports.memory.buffer.byteLength) return [];
+            return Array.from(new BigUint64Array(wasm_exports.memory.buffer, ptr, len));
+        } catch (e) {
+            console.warn("unwrapSlice64 safe:", e);
+            return [];
+        }
     }
+
 
     function findDecl(fqn) {
       setInputString(fqn);

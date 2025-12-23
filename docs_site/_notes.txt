@@ -190,3 +190,20 @@ Customization Tips for icon
     For more icons, search the MkDocs icon picker: https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/#search. Copy the shortcode directly.
 
     This setup keeps your docs clean and vector-based for better scalability. If you need it as a favicon instead (site icon in browser tabs), add favicon: assets/message-fast.svg under theme: (after downloading the SVG).
+
+
+    python -m http.server 8080
+
+    http://0.0.0.0:8080/ better in incognito mode
+
+    Extract tar
+        tar -xf ./sources.tar -C temp
+
+    ls by size
+        ls -laSh
+
+    find ./temp/ -type f -size +400k -exec ls -lh {} \;
+
+    find . -name "*.zig" | tar -cf sources_fixed.tar -T -
+
+    ls -lta *.tar

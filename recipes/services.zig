@@ -1,5 +1,20 @@
 //! Services interface pattern for cooperative message processing in tofu applications.
-//! Provides example implementations including EchoService, EchoClient, and EchoClientServer.
+//!
+//! This file demonstrates the Services pattern - a cooperative way to process messages
+//! received by a server. The key insight: messages are cubes. Services process these cubes
+//! and optionally send new cubes back to clients.
+//!
+//! **Core Pattern:**
+//! Server calls `waitReceive()` → gets message → calls `service.onMessage()` → service processes
+//!
+//! **Three Example Implementations:**
+//! - `EchoService`: Simplest service - receives request, sends back as response
+//! - `EchoClient`: Complete client lifecycle - connect, send echoes, disconnect
+//! - `EchoClientServer`: Full system with multihomed server + multiple clients
+//!
+//! **Message-as-Cube Philosophy:**
+//! Each message is independent cube. Services combine cubes to create application logic.
+//! No complex frameworks. Just: receive cube → process → optionally send cube.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -24,44 +39,92 @@ const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
 const MultiHomed = @import("MultiHomed.zig");
 
-/// Defines the Services interface for async message processing.
-/// All methods of interfaces are called on the same thread of the caller(server).
+/// Defines the Services interface for cooperative message processing.
+///
+/// **Threading Model:**
+/// All methods are called on the same thread (the server thread that calls `waitReceive()`).
+/// This single-threaded model simplifies state management in your service.
+///
+/// **Message-as-Cube Pattern:**
+/// The service receives message cubes from `onMessage()`, processes them, and optionally
+/// sends new message cubes via `enqueueToPeer()`. Think of it like a factory assembly line:
+/// cubes come in, you transform or respond to them, cubes go out.
+///
+/// **Cooperative Processing:**
+/// Server and service work together. Server handles `waitReceive()`, service handles business logic.
+/// Server owns the channels. Service uses them but does not destroy them.
 pub const Services = struct {
     ptr: ?*anyopaque,
     vtable: *const SRVCSVTable,
 
-    /// Activate cooperative processing.
-    ///  - ampe - the same engine used by the server, services can use it for pool
-    ///         operations (get/put)
-    ///  - sendTo - channels created by the server for communication  with clients,
-    ///             services can use enqueueToPeer method.
-    ///             --- Don't call waitReceive - it's duty of the server.        ---
-    ///             --- Don't destroy 'channels' - it's also duty of the server. ---
+    /// Starts cooperative processing. Server calls this before message loop.
+    ///
+    /// **Parameters:**
+    /// - `ampe` - Same engine as server. Use for pool operations (`get()`/`put()`)
+    /// - `sendTo` - Channels created by server. Use `enqueueToPeer()` to send messages.
+    ///
+    /// **Important Rules:**
+    /// - Do NOT call `waitReceive()` - server handles this
+    /// - Do NOT destroy channels - server owns them
+    /// - You CAN use `enqueueToPeer()` from multiple threads
+    /// - You CAN use `get()`/`put()` from multiple threads
+    ///
+    /// **Pattern:**
+    /// ```zig
+    /// fn start(ptr: ?*anyopaque, ampe: Ampe, channels: ChannelGroup) !void {
+    ///     const self: *MyService = @ptrCast(@alignCast(ptr));
+    ///     self.engine = ampe;
+    ///     self.sendTo = channels;
+    ///     // Initialize your service state
+    /// }
+    /// ```
     pub fn start(srvcs: Services, ampe: Ampe, sendTo: ChannelGroup) !void {
         return srvcs.vtable.*.start(srvcs.ptr, ampe, sendTo);
     }
 
-    /// For any client or engine message (received via waitReceive) server calls onMessage
-    /// for further processing. onMessage always called from the same server thread.
+    /// Processes one message cube. Server calls this for every received message.
     ///
-    /// If service takes ownership of the message , it should set msg.* to null.
+    /// **Message Ownership:**
+    /// - Message comes in via `msg` parameter
+    /// - If you take ownership, set `msg.* = null`
+    /// - If you don't take ownership, server returns message to pool after this call
+    /// - Null is valid value for `put()` - it just does nothing
     ///
-    /// After call services returns message to the pool (null is valid value for 'put')
+    /// **Thread Context:**
+    /// Always called from same server thread. Your service can have non-thread-safe state.
     ///
-    /// Service may send responses or signals to peer via 'channels' provided during start.
+    /// **Sending Messages:**
+    /// Use `sendTo.enqueueToPeer()` to send responses or signals. You can send from this
+    /// function or delegate to worker threads. Remember: `enqueueToPeer()` is thread-safe.
     ///
-    /// For simple processing it may be good enough to process message within onMessage.
-    /// But it's better to redistribute processing between pool of threads or similar mechanism.
-    /// Remember - you can use 'enqueueToPeer' from multiple threads.
+    /// **Return Value:**
+    /// - `true` - Continue processing. Server will call `onMessage()` again for next message.
+    /// - `false` - Stop processing. Server exits message loop and calls `stop()`.
     ///
-    /// Returns
-    ///    true  - continue to receive messages and call onMessage
-    ///    false - stop to receive and call
+    /// **Example Pattern:**
+    /// ```zig
+    /// fn onMessage(ptr: ?*anyopaque, msg: *?*Message) bool {
+    ///     // Check status
+    ///     if (msg.*.?.*.bhdr.status != 0) {
+    ///         // Handle error status
+    ///     }
+    ///
+    ///     // Transform request to response (reuse same message cube)
+    ///     msg.*.?.*.bhdr.proto.role = .response;
+    ///
+    ///     // Send back
+    ///     _ = sendTo.enqueueToPeer(msg) catch { return false; };
+    ///
+    ///     return true; // Continue
+    /// }
+    /// ```
     pub fn onMessage(srvcs: Services, msg: *?*message.Message) bool {
         return srvcs.vtable.*.onMessage(srvcs.ptr, msg);
     }
 
-    /// Stop processing
+    /// Stops processing. Server calls this after message loop exits.
+    ///
+    /// Clean up your service resources here. Server will destroy channels after this.
     pub fn stop(srvcs: Services) void {
         return srvcs.vtable.*.stop(srvcs.ptr);
     }
@@ -75,16 +138,47 @@ const SRVCSVTable = struct {
     onMessage: *const fn (ptr: ?*anyopaque, msg: *?*message.Message) bool,
 };
 
-/// Simplest service - 'echo'
-/// For received request - send back the same message as response
-/// For received signal - send it back as-is
-/// Very lazy - stops after 1000+ processed messages
+/// Simplest service implementation - echo server pattern.
+///
+/// **What It Does:**
+/// Receives message cube → transforms it → sends back
+/// - Request becomes response (same message_id)
+/// - Signal sent back as-is
+///
+/// **Key Pattern Demonstrated:**
+/// Message cube reuse. Does not create new messages. Just changes role field and sends back.
+/// This is efficient and shows the message-as-cube concept clearly.
+///
+/// **Lifecycle:**
+/// - Server calls `start()` - service saves engine and channels
+/// - Server calls `onMessage()` for each received message
+/// - Service processes message (changes request → response)
+/// - Service sends message back
+/// - After 1000 messages, service returns `false` to stop
+///
+/// **Error Handling Pattern:**
+/// Handles `pool_empty` status by adding messages to pool. Shows how to handle
+/// engine-originated status values. Application status values pass through unchanged.
+///
+/// **Thread Safety:**
+/// All methods called from one thread (server thread). No synchronization needed
+/// except for cancel flag (used for graceful shutdown from another thread).
 pub const EchoService = struct {
+    // Engine interface for pool operations (get/put)
     engine: ?Ampe = null,
+
+    // Channels for sending messages back to clients
     sendTo: ?ChannelGroup = null,
+
+    // Atomic flag for graceful shutdown from another thread
     cancel: Atomic(bool) = .init(false),
+
+    // Allocator for creating new messages when pool is empty
     allocator: Allocator = undefined,
-    rest: u32 = 1000 + 100, // Added 100 messages, because non-graceful close
+
+    // Counter: stops after processing this many messages
+    // Extra 100 for non-graceful close messages (ByeSignal, channel_closed, etc.)
+    rest: u32 = 1000 + 100,
 
     pub fn services(echo: *EchoService) Services {
         return .{
@@ -129,65 +223,88 @@ pub const EchoService = struct {
         return echo.*.processMessage(msg);
     }
 
+    // Core message processing function. Demonstrates key tofu patterns.
     fn processMessage(echo: *EchoService, msg: *?*message.Message) bool {
+        // Null message is valid (can happen after ownership transfer). Just continue.
         if (msg.* == null) {
             return true;
         }
 
+        // Check if we processed enough messages. Service decides when to stop.
         if (echo.*.rest == 0) {
-            return false;
+            return false; // Signal server to stop calling onMessage
         }
 
         msg.*.?.*.bhdr.dumpMeta("echo srvs received msg");
 
         const sts: status.AmpeStatus = status.raw_to_status(msg.*.?.*.bhdr.status);
 
-        // Please pay attention - this code analyses only error statuses from engine.
-        // Application may transfer own statuses for .origin == .application.
-        // These statuses does not processed by engine and may be used free for
-        // application purposes.
-
-        // In cookbook examples I was lazy enough to separate engine and application statuses,
-        // but you definitely are not...
-        // As excuse - I did not use application statuses in examples.
+        // IMPORTANT PATTERN: Check message origin first
+        //
+        // Messages have two origins:
+        // 1. .engine - Created by tofu engine (status values mean specific things)
+        // 2. .application - Created by your app (status values are yours to define)
+        //
+        // Always check origin before interpreting status byte. Same status value
+        // means different things depending on origin.
+        //
+        // This pattern shows engine status handling. Application status handling
+        // would go in the else branch (not shown here for simplicity).
         if (msg.*.?.*.bhdr.proto.origin == .engine) {
             switch (sts) {
-                // For lack of free messages in the pool - add messages to the pool.
-                // Also because we do nothing with former message, it also
-                // will be returned to the pool after call of 'onMessage"
+                // POOL_EMPTY PATTERN:
+                // Pool has no free messages. Add messages to pool and continue.
+                // The received message (which has pool_empty status) will be returned
+                // to pool automatically after onMessage returns.
                 .pool_empty => return echo.*.addMessagesToPool(),
+
+                // OTHER ENGINE STATUSES:
+                // Could be: connect_failed, channel_closed, communication_failed, etc.
+                // For echo service, we log but continue. Real service would handle
+                // specific statuses (e.g., stop on channel_closed).
                 else => {
-                    // Let's start to learn what are the list of possible error statuses.
-                    // Later you can add specific handling per status
                     log.debug("received error status {s}", .{std.enums.tagName(status.AmpeStatus, sts).?});
-                    // continue processing anyway
-                    return true;
+                    return true; // Continue despite error
                 },
             }
         }
 
+        // MESSAGE TRANSFORMATION PATTERN:
+        // Echo service transforms request → response by changing role field.
+        // Signal stays as signal (no transformation).
+        // This demonstrates message cube reuse - no new allocation needed.
         switch (msg.*.?.*.bhdr.proto.role) {
             .request => {
+                // Transform request cube to response cube
                 msg.*.?.*.bhdr.proto.role = .response;
             },
-            .signal => {},
+            .signal => {
+                // Signal stays as signal
+            },
             else => {
+                // Response role here would be error (we don't expect responses)
                 log.warn("message role {s} is not supported", .{std.enums.tagName(message.MessageRole, msg.*.?.*.bhdr.proto.role).?});
                 return false;
             },
         }
 
+        // Count only application messages (not hello/bye protocol messages)
         if ((msg.*.?.*.bhdr.proto.mtype != .hello) and (msg.*.?.*.bhdr.proto.mtype != .bye)) {
             echo.*.rest -= 1;
         }
 
+        // Copy binary header to body. Useful for debugging - receiver can compare
+        // what was sent vs what was received.
         msg.*.?.*.copyBh2Body();
+
+        // Send message cube back to client
+        // After this call, msg.* becomes null (ownership transferred to engine)
         _ = echo.*.sendTo.?.enqueueToPeer(msg) catch |err| {
             log.warn("enqueueToPeer error {s}", .{@errorName(err)});
-            return false;
+            return false; // Stop on send error
         };
 
-        return true;
+        return true; // Continue processing
     }
 
     pub inline fn setCancel(echo: *EchoService) void {
@@ -208,8 +325,41 @@ pub const EchoService = struct {
     }
 };
 
-/// Simple echo client for testing tofu communication.
-/// Connects to a server, sends echo requests, and validates responses.
+/// Complete echo client implementation demonstrating full client lifecycle.
+///
+/// **Pattern Demonstrated:**
+/// Connect → Send N echo requests → Receive N responses → Disconnect
+///
+/// **Key Concepts Shown:**
+/// 1. Connection establishment (HelloRequest → HelloResponse)
+/// 2. Request-response pattern with message_id correlation
+/// 3. Setting custom message_id values (instead of auto-generated)
+/// 4. Graceful disconnect (ByeSignal with OOB flag)
+/// 5. Error handling (pool_empty, connection failures)
+/// 6. Thread-based client (runs on separate thread)
+///
+/// **Message Flow:**
+/// ```
+/// Client                    Server
+///   |--HelloRequest------->|
+///   |<--HelloResponse------|  (connection established)
+///   |--EchoRequest[1]----->|
+///   |<--EchoResponse[1]----|  (same message_id)
+///   |--EchoRequest[2]----->|
+///   |<--EchoResponse[2]----|  (same message_id)
+///   ...
+///   |--ByeSignal(OOB)----->|
+///   |<--ChannelClosed------|
+/// ```
+///
+/// **Usage Pattern:**
+/// ```zig
+/// var ackMbox: MailBoxIntrusive(EchoClient) = .{};
+/// try EchoClient.start(ampe, cfg, 100, &ackMbox);
+/// const finished: *EchoClient = try ackMbox.receive(timeout);
+/// defer finished.destroy();
+/// // Check finished.count for successful echoes
+/// ```
 pub const EchoClient = struct {
     const Self = EchoClient;
 
@@ -229,11 +379,32 @@ pub const EchoClient = struct {
     connected: bool = false,
     helloBh: BinaryHeader = .{},
 
-    /// Initializes and starts echo client on a separate thread after connecting to server.
-    /// Does not support re-connect
-    ///  cfg - server address configurator
-    ///  echoes - count of sends
-    ///  ack - mailbox for sending message with status of the processing
+    /// Creates and starts echo client on a separate thread.
+    ///
+    /// **Parameters:**
+    /// - `engine` - Ampe interface for pool operations and channel creation
+    /// - `cfg` - Server address configuration (TCP or UDS)
+    /// - `echoes` - Number of echo requests to send (0 means 256)
+    /// - `ack` - Mailbox for receiving completion notification
+    ///
+    /// **Behavior:**
+    /// 1. Creates client struct and channel group
+    /// 2. Connects to server (sends HelloRequest, waits for HelloResponse)
+    /// 3. Spawns thread that sends/receives echo messages
+    /// 4. When done, client sends itself to `ack` mailbox
+    ///
+    /// **Important:**
+    /// Does NOT support reconnection. Connection failure stops client.
+    ///
+    /// **Usage:**
+    /// ```zig
+    /// var ackMbox: MailBoxIntrusive(EchoClient) = .{};
+    /// try EchoClient.start(ampe, tcpCfg, 100, &ackMbox);
+    /// // Wait for completion
+    /// const client: *EchoClient = try ackMbox.receive(timeout);
+    /// defer client.destroy();
+    /// log.info("Processed {d} echoes", .{client.count});
+    /// ```
     pub fn start(engine: Ampe, cfg: Configurator, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
         const all: Allocator = engine.getAllocator();
 

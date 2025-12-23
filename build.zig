@@ -133,10 +133,11 @@ pub fn build(b: *std.Build) void {
     const docs_step = b.*.step("docs", "Generate API documentation");
 
     // Create documentation for the main library
+    lib.root_module.strip = true;
     const install_docs = b.*.addInstallDirectory(.{
         .source_dir = lib.getEmittedDocs(),
         .install_dir = .prefix,
-        .install_subdir = "docs_site/docs/api",
+        .install_subdir = "docs_site/docs/apidocs",
     });
 
     docs_step.*.dependOn(&install_docs.step);
