@@ -73,74 +73,55 @@ This **tofu** mantra is a paraphrase of [Conway's Law](https://en.wikipedia.org/
 
 This dialog is shown without the usual jokes or side comments common in real programmer discussions — just the technical part.
 
----
+```
+S: I don't know the addresses of the workers, so you should connect to me.
 
->
-> **S:**  
-> I don’t know the addresses of the workers, so you should connect to me.
->
-> **R:**  
-> I’ll send a **HelloRequest**, because the worker can process only specific _PDL_ types, the **PDL** header will contain either **PS** or **PDF**.
->
-> **S:**  
-> Do I need to send you a **HelloResponse**?
->
-> **R:**  
-> No, just start sending me messages with PDL data.
->
-> **S:**  
-> As _signals_?
->
-> **R:**  
-> No, as _multi-requests_ — each with a **message ID** equal to the **job ID**.
->
-> **S:**  
-> You forgot the _Job Ticket_.
->
-> **R:**  
-> Right. The first request should have a **JobTicket** header (**JDF** or **PPD**) and the ticket data in the body.  
-> The following requests will have the **PDL** header (PDF or PS) with the related content.
->
-> **S:**  
-> But JDF is usually used only for PDF...
->
-> **R:**  
-> Yes, but let’s keep it flexible.
->
-> **S:**  
-> Can you process several jobs simultaneously?
->
-> **R:**  
-> It depends on licensing. Anyway, if I can, I’ll send another **HelloRequest** — working one job per _channel_ looks cleaner.
->
-> **S:**  
-> I need a progress indicator.
->
-> **R:**  
-> No problem. I’ll send _signals_ with the same **message ID** — the **Progress** header will show the range [N:M] for page numbers.
->
-> **S:**  
-> On job finish, send me a **Response** with the same **message ID** and processing _status_.  
-> Also include the **Progress** header.
->
-> **R:**  
-> Why should I send an obsolete message? Are you expecting a graceful close?
->
-> **S:**  
-> Of course.
->
-> **R:**  
-> Then I’ll send a **ByeRequest** with the same information, and you’ll send me a **ByeResponse**.  
-> After that, I’ll abort the connection immediately.
->
-> **S:**  
-> That’s enough for today. Send me a short text file with this protocol — I’ll save it in Git.
->
-> **R:**  
-> Deal. How about a cup of coffee?
-> 
+R: I'll send a HelloRequest, because the worker can process only specific PDL types,
+   the PDL header will contain either PS or PDF.
 
+S: Do I need to send you a HelloResponse?
 
+R: No, just start sending me messages with PDL data.
+
+S: As signals?
+
+R: No, as multi-requests — each with a message ID equal to the job ID.
+
+S: You forgot the Job Ticket.
+
+R: Right. The first request should have a JobTicket header (JDF or PPD) and the
+   ticket data in the body. The following requests will have the PDL header
+   (PDF or PS) with the related content.
+
+S: But JDF is usually used only for PDF...
+
+R: Yes, but let's keep it flexible.
+
+S: Can you process several jobs simultaneously?
+
+R: It depends on licensing. Anyway, if I can, I'll send another HelloRequest —
+   working one job per channel looks cleaner.
+
+S: I need a progress indicator.
+
+R: No problem. I'll send signals with the same message ID — the Progress header
+   will show the range [N:M] for page numbers.
+
+S: On job finish, send me a Response with the same message ID and processing status.
+   Also include the Progress header.
+
+R: Why should I send an obsolete message? Are you expecting a graceful close?
+
+S: Of course.
+
+R: Then I'll send a ByeRequest with the same information, and you'll send me a
+   ByeResponse. After that, I'll abort the connection immediately.
+
+S: That's enough for today. Send me a short text file with this protocol —
+   I'll save it in Git.
+
+R: Deal. How about a cup of coffee?
+```
 
 I hope you got the point without long smart descriptions or advertising.
 
@@ -162,26 +143,6 @@ I hope you got the point without long smart descriptions or advertising.
 Documentation and examples are available on the [Tofu documentation site](https://g41797.github.io/tofu/) (**_work in progress_**).
 
 ---
-
-## AI Usage
-
-Almost all of this project (99.99%) is "handmade."
-
-AI was used only for these specific tasks:
-
-* **Image Generation**
-  * Generated the project [Logo](_logo/Ziggy_And_Zero_Are_Cooking_Tofu.png).
-* **Code Snippets**
-  * Implemented [Big-Endian (BE) to Little-Endian (LE) serialization](/src/message.zig#L86) and vice versa.
-  * Implemented [data copying to message bodies](/src/message.zig#L722) and vice versa.
-* **Code Refactoring**
-  * **Explicit Pointer Dereferencing**: Replaced implicit "Automatic pointer dereference" with explicit `ptr.*` syntax..
-  * **Explicit Type Declaration**: Replaced "Type Inference" with explicit type declarations for all variables.
-  * Migration code from 0.14.1 to 0.15.2
-
-> [!TIP]
-> Configuration files and guidelines related to refactoring are located in the [.claude/rules](.claude/rules) directory.
-
 
 ## Credits
 - [Karl Seguin](https://github.com/karlseguin) — for introducing me to [Zig networking](https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/)
