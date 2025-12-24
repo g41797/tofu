@@ -95,6 +95,9 @@ pub const Configurator = configurator.Configurator;
 /// Services interface module.
 pub const services = @import("services.zig");
 
+/// MultiHomed Tofu server.
+pub const MultiHomed = @import("MultiHomed.zig");
+
 /// Demonstrates basic Reactor creation and destruction.
 pub fn createDestroyMain(gpa: Allocator) !void {
     var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);

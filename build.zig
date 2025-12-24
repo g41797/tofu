@@ -81,7 +81,7 @@ pub fn build(b: *std.Build) void {
 
     // Create recipes module
     const recipesMod = b.*.createModule(.{
-        .root_source_file = b.*.path("recipes/cookbook.zig"),
+        .root_source_file = b.*.path("recipes/recipes.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
@@ -132,15 +132,33 @@ pub fn build(b: *std.Build) void {
     // Add a documentation generation step
     const docs_step = b.*.step("docs", "Generate API documentation");
 
-    // Create documentation for the main library
-    lib.root_module.strip = true;
-    const install_docs = b.*.addInstallDirectory(.{
-        .source_dir = lib.getEmittedDocs(),
+    // Create documentation directly from src/tofu.zig (already has good module docs)
+    const tofu_docs_lib = b.*.addObject(.{
+        .name = "tofu",
+        .root_module = tofuMod,
+    });
+
+    const install_tofu_docs = b.*.addInstallDirectory(.{
+        .source_dir = tofu_docs_lib.getEmittedDocs(),
         .install_dir = .prefix,
         .install_subdir = "docs_site/docs/apidocs",
     });
 
-    docs_step.*.dependOn(&install_docs.step);
+    // Create documentation for recipes module
+    const recipes_docs_lib = b.*.addObject(.{
+        .name = "recipes",
+        .root_module = recipesMod,
+    });
+
+    const install_recipes_docs = b.*.addInstallDirectory(.{
+        .source_dir = recipes_docs_lib.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs_site/docs/recipes",
+    });
+
+    // Both documentation sets are generated with single command
+    docs_step.*.dependOn(&install_tofu_docs.step);
+    docs_step.*.dependOn(&install_recipes_docs.step);
 }
 
 const std = @import("std");

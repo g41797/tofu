@@ -1,8 +1,62 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Main public API module for tofu - asynchronous message passing library.
-//! Re-exports core types and utilities for building message-based applications.
+//! # Tofu - Asynchronous Message Passing for Zig
+//!
+//! Tofu is an asynchronous message passing library providing peer-to-peer, duplex communication
+//! over TCP/IP and Unix Domain Sockets. Built on the Reactor pattern, it enables non-blocking,
+//! message-based communication with a focus on simplicity and gradual complexity.
+//!
+//! ## Core Philosophy
+//!
+//! **Message as both data and API** - Messages are discrete units ("cubes") that flow through
+//! the system. Get cube from pool → configure → send → receive → return to pool.
+//!
+//! **Gradual evolution** - Start simple (single-threaded echo server), grow to complex
+//! (multi-threaded, multi-listener systems) using the same patterns.
+//!
+//! **Stream-oriented transport** - TCP/IP and Unix Domain Sockets for reliable, ordered delivery.
+//!
+//! **Multithread-friendly** - Thread-safe APIs with internal message pooling and backpressure management.
+//!
+//! ## Quick Start
+//!
+//! 1. Create a Reactor (the async message passing engine)
+//! 2. Get the Ampe interface for message/channel management
+//! 3. Create a ChannelGroup for message exchange
+//! 4. Get messages from pool, configure, send/receive
+//! 5. Clean up: return messages to pool, destroy channels, destroy reactor
+//!
+//! See the recipes module for comprehensive examples from basic to advanced patterns.
+//!
+//! ## Key Components
+//!
+//! - **Ampe** - Async message passing engine interface (get/put messages, create/destroy channels)
+//! - **ChannelGroup** - Interface for message exchange (enqueueToPeer, waitReceive)
+//! - **Message** - Core data structure with binary header, text headers, and body
+//! - **Reactor** - Concrete implementation using Reactor pattern with event-driven I/O
+//! - **Configurator** - Helpers for TCP/UDS connection setup
+//!
+//! ## Architecture Highlights
+//!
+//! - **Reactor Pattern**: Single-threaded event loop handles all I/O
+//! - **Message Pool**: Pre-allocated messages reduce allocation overhead
+//! - **Backpressure**: Pool control prevents memory exhaustion
+//! - **Thread Safety**: Application threads safely interact with reactor thread
+//! - **Intrusive Data Structures**: Zero-allocation message queuing
+//!
+//! ## Threading Model
+//!
+//! Thread-safe operations:
+//! - `get()`, `put()` - Message pool access
+//! - `enqueueToPeer()` - Send messages
+//! - `updateReceiver()` - Wake receiver or send notifications
+//! - `create()`, `destroy()` - Channel group lifecycle
+//!
+//! Single-threaded constraint:
+//! - `waitReceive()` - Must be called from ONE thread per ChannelGroup
+//!
+//! Multiple ChannelGroups can be used from different threads for parallel message processing.
 
 /// Async message passing engine interface for managing messages and channels.
 pub const Ampe = @import("ampe.zig").Ampe;

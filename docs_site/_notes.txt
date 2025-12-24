@@ -207,3 +207,6 @@ Customization Tips for icon
     find . -name "*.zig" | tar -cf sources_fixed.tar -T -
 
     ls -lta *.tar
+
+Show only zig files
+    tree -P '*.zig' --prune

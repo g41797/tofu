@@ -267,7 +267,8 @@ test "echo client/server test" {
 
 const tofu = @import("tofu");
 
-const recipes = @import("recipes");
+const recipes_mod = @import("recipes");
+const recipes = recipes_mod.cookbook;
 
 const Ampe = tofu.Ampe;
 const ChannelGroup = tofu.ChannelGroup;

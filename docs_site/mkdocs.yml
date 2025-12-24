@@ -5,6 +5,7 @@ repo_name: tofu on GitHub
 
 theme:
   name: material
+  logo: assets/Ziggy_And_Zero_Are_Cooking_Tofu.png
   custom_dir: overrides
   icon:
     logo: material/forum  # Changed to a valid Google Material Symbol for messaging (overlapping bubbles for chat/forum); alternatives: material/chat-bubble, material/send, material/quick-reply
@@ -51,7 +52,6 @@ theme:
     - header.autohide
     - content.tooltips
     - navigation.expand
-#    - announce.dismiss
     - navigation.tabs  # Added: Renders top-level nav as tabs for a cleaner, more app-like header on wide screens
     - navigation.tabs.sticky  # Added: Keeps tabs visible while scrolling for improved accessibility
     - toc.follow  # Added: Auto-scrolls the table of contents to keep the active section visible, enhancing readability
@@ -66,21 +66,21 @@ nav:
       - Installation: mds/installation.md
       - Imports: mds/imports.md
       - Key ingredients: mds/key-ingredients.md
-      - Heroes of This Dish: # This now acts as a section header
-          - Ampe: mds/ampe.md
-          - ChannelGroup: mds/channel-group.md
-          - Message: mds/message.md
+#      - Heroes of This Dish: # This now acts as a section header
+      - Ampe: mds/ampe.md
+      - ChannelGroup: mds/channel-group.md
+      - Message: mds/message.md
       - Helpers: # This now acts as a section header
           - Configurators: mds/configurators.md
           - Testers: mds/for-tests.md
-  - Reference:
-      - API Documentation: ./apidocs
-#  - API Reference: apidocs/index.html
+  - Tofu API:
+      - Zig Docs: apidocs/index.html
+  - Recipes:
+      - Zig Docs: recipes/index.html
   - Addendum:
       - Allocator: mds/allocator.md
       - Sockets 101: mds/sockets101.md
       - Coding style: mds/coding-style.md
-      - AI Usage : mds/ai-usage.md
       - Callback enabled: mds/callback-enabled.md
 plugins:
   - search
