@@ -1,5 +1,7 @@
 site_name: "Tofu - Sync your devs, Async your apps!"
-site_url: https://g41797.github.io/tofu/
+# For local development, use: site_url: http://127.0.0.1:8000/
+# For GitHub Pages deployment, use: site_url: https://g41797.github.io/tofu/
+site_url: http://127.0.0.1:8000/
 repo_url: https://github.com/g41797/tofu/
 repo_name: tofu on GitHub
 
@@ -57,8 +59,9 @@ theme:
     - toc.follow  # Added: Auto-scrolls the table of contents to keep the active section visible, enhancing readability
 
 nav:
+  - Home: index.md
   - Getting started:
-      - Overview: index.md
+      - Overview: mds/overview.md
       - NAQ: mds/naq.md
       - Protocol: mds/protocol.md # Moved here to balance the top tabs
   - Implementation:
@@ -130,7 +133,10 @@ markdown_extensions:
 #  - pymdownx.details
 #  - pymdownx.tabbed:
 #      alternate_style: true
+extra_css:
+  - stylesheets/extra.css
 extra_javascript:
   - js/scroll-sync.js
+  - js/hero-theme-toggle.js
 copyright: >
   Copyright &copy; 2025 g41797

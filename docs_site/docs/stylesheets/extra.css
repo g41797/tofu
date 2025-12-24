@@ -1,0 +1,407 @@
+/* ===================================================================
+   Tofu Landing Page - Hero Styles
+   Supports Material for MkDocs light/dark mode
+   =================================================================== */
+
+/* Hide navigation sidebar and TOC on landing page only (content is self-contained) */
+body:has(.hero-wrapper) .md-nav,
+body:has(.hero-wrapper) .md-sidebar {
+  display: none !important;
+}
+
+
+/* Hero Wrapper - Full viewport layout */
+.hero-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+/* Hero Container - Main content area */
+.hero-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  flex-grow: 1;
+  justify-content: center;
+}
+
+/* Hero Image - Centered project logo (MAXIMUM SIZE) */
+.hero-image {
+  text-align: center;
+  max-width: 1400px;
+  width: 95%;
+  margin: 0 auto;
+}
+
+.hero-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode image shadow */
+[data-md-color-scheme="slate"] .hero-image img {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Hero Content - Text box */
+.hero-content {
+  text-align: center;
+  max-width: 800px;
+  width: 100%;
+  padding: 2rem;
+  background: var(--md-default-bg-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Dark mode content box */
+[data-md-color-scheme="slate"] .hero-content {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Hero Title */
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  color: var(--md-primary-fg-color);
+  line-height: 1.2;
+}
+
+/* Hero Slogan */
+.hero-slogan {
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin: 0 0 2rem 0;
+  color: var(--md-default-fg-color--light);
+  line-height: 1.4;
+}
+
+/* Hero Description */
+.hero-description {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 0.25rem;
+  color: var(--md-default-fg-color);
+}
+
+.hero-description ul {
+  list-style: disc;
+  padding-left: 2rem;
+  margin: 1rem 0;
+}
+
+.hero-description li {
+  margin: 0.5rem 0;
+  color: var(--md-default-fg-color);
+}
+
+/* Ensure list text is visible in dark mode */
+[data-md-color-scheme="slate"] .hero-description li {
+  color: var(--md-default-fg-color);
+}
+
+.hero-subtitle {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Hero Buttons - Top placement for better UX */
+.hero-buttons-top {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 2rem auto 0.5rem auto;
+  max-width: 600px;
+}
+
+/* Legacy hero-buttons for compatibility */
+.hero-buttons {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.hero-button {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  min-width: 180px;
+}
+
+/* Primary Button - Light Mode */
+[data-md-color-scheme="default"] .hero-button-primary {
+  background-color: #3f51b5; /* indigo */
+  color: white;
+  border-color: #3f51b5;
+}
+
+[data-md-color-scheme="default"] .hero-button-primary:hover {
+  background-color: #303f9f;
+  border-color: #303f9f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(63, 81, 181, 0.3);
+}
+
+/* Primary Button - Dark Mode */
+[data-md-color-scheme="slate"] .hero-button-primary {
+  background-color: #009688; /* teal */
+  color: white;
+  border-color: #009688;
+}
+
+[data-md-color-scheme="slate"] .hero-button-primary:hover {
+  background-color: #00796b;
+  border-color: #00796b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.3);
+}
+
+/* Secondary Button - Light Mode */
+[data-md-color-scheme="default"] .hero-button-secondary {
+  background-color: transparent;
+  color: #00bcd4; /* cyan */
+  border-color: #00bcd4;
+}
+
+[data-md-color-scheme="default"] .hero-button-secondary:hover {
+  background-color: #00bcd4;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+}
+
+/* Secondary Button - Dark Mode */
+[data-md-color-scheme="slate"] .hero-button-secondary {
+  background-color: transparent;
+  color: #cddc39; /* lime */
+  border-color: #cddc39;
+}
+
+[data-md-color-scheme="slate"] .hero-button-secondary:hover {
+  background-color: #cddc39;
+  color: #121212;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(205, 220, 57, 0.3);
+}
+
+/* Hero Mantra Section */
+.hero-mantra {
+  text-align: center;
+  max-width: 700px;
+  width: 100%;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.hero-mantra h3 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--md-primary-fg-color);
+}
+
+.hero-mantra p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 1.5rem;
+}
+
+.hero-mantra a {
+  color: var(--md-accent-fg-color);
+  text-decoration: none;
+  border-bottom: 1px solid var(--md-accent-fg-color);
+}
+
+.hero-mantra a:hover {
+  color: var(--md-primary-fg-color);
+  border-bottom-color: var(--md-primary-fg-color);
+}
+
+/* Hero Quote - Main quote in content area */
+.hero-quote-main {
+  font-size: 1.3rem;
+  font-style: italic;
+  padding: 1.5rem 2rem;
+  margin: 0.5rem 0 2rem 0;
+  border-left: 4px solid var(--md-accent-fg-color);
+  background: var(--md-code-bg-color);
+  border-radius: 4px;
+  color: var(--md-default-fg-color);
+  text-align: center;
+}
+
+/* GitHub username link styling */
+.hero-quote-main a {
+  text-decoration: none;
+  border-bottom: 1px solid;
+  transition: all 0.3s ease;
+  font-style: normal;
+}
+
+/* Light mode - use indigo instead of cyan */
+[data-md-color-scheme="default"] .hero-quote-main a {
+  color: #3f51b5;
+  border-bottom-color: #3f51b5;
+}
+
+[data-md-color-scheme="default"] .hero-quote-main a:hover {
+  color: #1a237e;
+  border-bottom-color: #1a237e;
+}
+
+/* Dark mode - use teal instead of lime */
+[data-md-color-scheme="slate"] .hero-quote-main a {
+  color: #26a69a;
+  border-bottom-color: #26a69a;
+}
+
+[data-md-color-scheme="slate"] .hero-quote-main a:hover {
+  color: #80cbc4;
+  border-bottom-color: #80cbc4;
+}
+
+/* Old hero quote styles (keep for compatibility) */
+.hero-quote {
+  font-size: 1.3rem;
+  font-style: italic;
+  padding: 1.5rem 2rem;
+  margin: 2rem 0 0 0;
+  border-left: 4px solid var(--md-accent-fg-color);
+  background: var(--md-code-bg-color);
+  border-radius: 4px;
+  color: var(--md-default-fg-color);
+}
+
+.hero-quote footer {
+  font-size: 1rem;
+  font-style: normal;
+  margin-top: 1rem;
+  text-align: right;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Hero Footer */
+.hero-footer {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.9rem;
+  width: 100%;
+  margin-top: auto;
+}
+
+.hero-footer p {
+  margin: 0;
+}
+
+/* ===================================================================
+   Responsive Design
+   =================================================================== */
+
+/* Tablet and below */
+@media screen and (max-width: 768px) {
+  .hero-image {
+    max-width: 90%;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+  }
+
+  .hero-content {
+    padding: 1.5rem;
+  }
+
+  .hero-buttons,
+  .hero-buttons-top {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .hero-button {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .hero-quote-main {
+    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Mobile */
+@media screen and (max-width: 480px) {
+  .hero-wrapper {
+    padding: 1rem 0.5rem;
+  }
+
+  .hero-image {
+    max-width: 100%;
+  }
+
+  .hero-description {
+    font-size: 0.95rem;
+  }
+
+  .hero-content {
+    padding: 1rem;
+  }
+
+  .hero-button {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+  }
+
+  .hero-quote-main {
+    font-size: 1rem;
+    padding: 1rem;
+  }
+}
+
+/* ===================================================================
+   Additional Accessibility & Polish
+   =================================================================== */
+
+/* Focus states for keyboard navigation */
+.hero-button:focus {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Print styles - hide interactive elements */
+@media print {
+  .hero-buttons {
+    display: none;
+  }
+}
