@@ -6,7 +6,7 @@
 .vscode/
 *.o
 site/
-.claude/settings.local.json
+.claude/
 *.a
 *.a.o
 #docs_site/docs/api/*
