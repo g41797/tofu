@@ -405,3 +405,13 @@ html {
     display: none;
   }
 }
+
+/* ===================================================================
+   Mermaid Diagram Fixes
+   =================================================================== */
+
+/* Fix Mermaid note text visibility in dark mode */
+[data-md-color-scheme="slate"] .md-typeset .mermaid .noteText,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .noteText tspan {
+  fill: var(--md-typeset-color) !important;
+}

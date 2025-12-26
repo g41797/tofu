@@ -69,7 +69,7 @@ nav:
       - Installation: mds/installation.md
       - Imports: mds/imports.md
       - Key ingredients: mds/key-ingredients.md
-#      - Heroes of This Dish: # This now acts as a section header
+      #      - Heroes of This Dish: # This now acts as a section header
       - Ampe: mds/ampe.md
       - ChannelGroup: mds/channel-group.md
       - Message: mds/message.md
@@ -81,6 +81,7 @@ nav:
   - Recipes:
       - Zig Docs: recipes/index.html
   - Addendum:
+      - Conversation: mds/conversation.md
       - Allocator: mds/allocator.md
       - Sockets 101: mds/sockets101.md
       - Coding style: mds/coding-style.md
@@ -89,9 +90,9 @@ plugins:
   - search
   - awesome-pages
   - minify
-#  - redirects:
-#      redirect_maps:
-#        'index.md': mds/getting-started.md
+  #  - redirects:
+  #      redirect_maps:
+  #        'index.md': mds/getting-started.md
   - open-in-new-tab
 extra:
   generator: false
@@ -103,7 +104,11 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - admonition
   - pymdownx.details
   - pymdownx.tabbed:
