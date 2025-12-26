@@ -408,3 +408,6 @@ Check state of UDS
 
     Static Website Server Generator in Zig
         https://github.com/Mariuspersen/Ztatic/tree/multiwebsitehosting
+
+    Run web server on recipes
+        python3 -m http.server 8080 --directory zig-out/docs_site/docs/recipes/

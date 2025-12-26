@@ -60,3 +60,7 @@ pub const services = @import("services.zig");
 /// Shows how to build servers with multiple listeners (TCP + UDS) running on
 /// a single thread with cooperative message dispatch.
 pub const MultiHomed = @import("MultiHomed.zig");
+
+/// Import of the tofu module.
+pub const tofu = @import("tofu");
+
