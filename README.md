@@ -20,12 +20,13 @@ It is built **100% in native Zig**. The core functionality uses only the standar
 
 ## Why tofu?
 
-As a food, **tofu** is very simple and has almost no flavor on its own.
-By using tofu **cubes**, you can:
+As a food, **tofu** is simple and doesn’t have much flavor on its own.  
+With tofu cubes, you can:
 
-- Eat it **plain** for a simple snack.
-- Add a little **spice** to make it better.
-- Create a **culinary masterpiece**.
+- Eat them plain as an easy snack.
+- Add some spice to make them better.
+- Cook up something really tasty.
+
 
 As a **protocol**, tofu uses **messages** like cubes. By "cooking" these messages together, you can grow your project:
 
