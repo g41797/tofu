@@ -81,13 +81,13 @@ nav:
       - Callback enabled: mds/callback-enabled.md
       - AI Generated:
         - mds/aigenerated.md
-        - Sockets 101: mds/sockets101.md
         - Quick Reference: mds/tofu-quick-reference-guide.md
         - Conversation: mds/conversation.md
         - Recipes: mds/tofu-message-patterns-and-recipes.md
         - Philosophy: mds/tofu-philosophy-and-advantages.md
         - Specification: mds/specification.md
         - Review: mds/tofu-implementation-review.md
+        - Sockets 101: mds/sockets101.md
   - Tofu API:
       - Zig Docs: apidocs/index.html
   - Recipes:

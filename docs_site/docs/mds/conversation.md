@@ -543,6 +543,7 @@ This conversation exemplifies tofu's philosophy:
 > **"Connect your developers. Then connect your applications."**
 
 The protocol emerged naturally from:
+
 - Understanding requirements (print job processing)
 - Developer expertise (PDL types, job tickets)
 - Practical constraints (unknown worker addresses)
