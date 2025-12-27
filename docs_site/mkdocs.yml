@@ -54,8 +54,8 @@ theme:
     - header.autohide
     - content.tooltips
     - navigation.expand
-    - navigation.tabs  # Added: Renders top-level nav as tabs for a cleaner, more app-like header on wide screens
-    - navigation.tabs.sticky  # Added: Keeps tabs visible while scrolling for improved accessibility
+#    - navigation.tabs  # Added: Renders top-level nav as tabs for a cleaner, more app-like header on wide screens
+#    - navigation.tabs.sticky  # Added: Keeps tabs visible while scrolling for improved accessibility
     - toc.follow  # Added: Auto-scrolls the table of contents to keep the active section visible, enhancing readability
 nav:
   - Home: index.md

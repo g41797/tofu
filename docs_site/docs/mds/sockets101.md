@@ -1,4 +1,8 @@
 
+
+??? question "Why “101”?"
+    It’s 100% built by AI — and 1% by the project’s author.
+
 Because tofu uses sockets under the hood, you still need to understand:
 
 - the addressing scheme
@@ -144,4 +148,10 @@ tofu uses only non-graceful (hard) close:
 - Connection closes instantly (reset)
 - All unsent data discarded
 
-Get graceful close using other tofu features instead.
+To shut down gracefully, use these tofu features instead:
+
+- ByeRequest from peer A to peer B
+- ByeResponse from peer B back to peer A
+- After that, peer B’s engine closes the socket immediately (not gracefully)
+- Finally, both peers get a channel_closed status from their own engine.
+
