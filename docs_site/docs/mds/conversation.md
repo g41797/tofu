@@ -114,6 +114,7 @@ sequenceDiagram
 ```
 
 **Key Points:**
+
 - S (Server) creates listener via WelcomeRequest
 - R (Worker) connects and sends HelloRequest with PDL capability
 - No HelloResponse - streamlined connection
@@ -155,6 +156,7 @@ sequenceDiagram
 ```
 
 **Key Points:**
+
 - All messages for one job use same message_id (job_id)
 - First request: JobTicket header + ticket data
 - Subsequent requests: PDL header + PDL data chunks
@@ -205,6 +207,7 @@ sequenceDiagram
 ```
 
 **Key Points:**
+
 - Worker sends multiple HelloRequests for parallel jobs
 - Each job gets its own channel (clean separation)
 - Channel 123 handles job_id=1001
@@ -259,6 +262,7 @@ sequenceDiagram
 ```
 
 **Key Points:**
+
 - Worker lifecycle spans multiple jobs
 - Successful job: Status=Success in ByeRequest
 - Failed job: Status=ProcessingFailed (or other error)
@@ -366,24 +370,24 @@ Server → Worker: ByeResponse (mid=job_id)
 This conversation demonstrates tofu's core philosophy:
 
 1. **Natural Protocol Evolution:**
-   - Started with basic connection ("you should connect to me")
-   - Evolved through discussion (multi-requests, job tickets, progress)
-   - Refined with experience ("JDF is usually only for PDF" → "let's keep it flexible")
+    - Started with basic connection ("you should connect to me")
+    - Evolved through discussion (multi-requests, job tickets, progress)
+    - Refined with experience ("JDF is usually only for PDF" → "let's keep it flexible")
 
 2. **Developer-Driven Design:**
-   - No formal specification written first
-   - Protocol emerged from understanding requirements
-   - Both developers contributed to shape the flow
+    - No formal specification written first
+    - Protocol emerged from understanding requirements
+    - Both developers contributed to shape the flow
 
 3. **Flexibility Over Rigidity:**
-   - "Let's keep it flexible" - design for change
-   - Multi-channel support added mid-conversation
-   - Progress updates added when need identified
+    - "Let's keep it flexible" - design for change
+    - Multi-channel support added mid-conversation
+    - Progress updates added when need identified
 
 4. **Message-as-Cube Approach:**
-   - Each message type is a building block
-   - Combine HelloRequest + JobTicket + PDL Requests + Signals + ByeRequest
-   - Result: Complete print job processing workflow
+    - Each message type is a building block
+    - Combine HelloRequest + JobTicket + PDL Requests + Signals + ByeRequest
+    - Result: Complete print job processing workflow
 
 ### Translation to Code
 
@@ -395,23 +399,23 @@ After this conversation, developers can:
 
    1. Worker → Server: HelloRequest, PDL: PS|PDF
    2. Server → Worker: Multi-requests (job_id)
-      - First: JobTicket: JDF|PPD, body: ticket
-      - Rest: PDL: PS|PDF, body: data chunks
+       - First: JobTicket: JDF|PPD, body: ticket
+       - Rest: PDL: PS|PDF, body: data chunks
    3. Worker → Server: Signals, Progress: [N:M]
    4. Worker → Server: ByeRequest, Status + Progress
    5. Server → Worker: ByeResponse
    ```
 
 2. **Implement Using Tofu:**
-   - Use tofu's Message structure
-   - Configure TCP server/client
-   - Implement message handlers
-   - No complex code generation needed
+    - Use tofu's Message structure
+    - Configure TCP server/client
+    - Implement message handlers
+    - No complex code generation needed
 
 3. **Iterate Quickly:**
-   - Test with real data
-   - Adjust headers as needed
-   - Add new message types if requirements change
+    - Test with real data
+    - Adjust headers as needed
+    - Add new message types if requirements change
 
 ---
 
@@ -443,6 +447,7 @@ message PDLChunk {
 ```
 
 **Problems:**
+
 - Requires IDL file before coding
 - Code generation step needed
 - Changes require regeneration
@@ -461,6 +466,7 @@ Conversation → Text Protocol → Implementation
 ```
 
 **Advantages:**
+
 - Start coding immediately after conversation
 - Protocol is the documentation
 - Changes are simple (add headers, adjust messages)
@@ -472,32 +478,34 @@ Conversation → Text Protocol → Implementation
 
 ### From This Conversation
 
+
+
 1. **Start with Connection Pattern:**
-   - Who connects to whom?
-   - What capabilities need to be announced?
+     - Who connects to whom?
+     - What capabilities need to be announced?
 
 2. **Identify Message Roles:**
-   - Requests that expect responses
-   - Signals for one-way notifications
-   - Multi-message sequences (job chunks)
+    - Requests that expect responses
+    - Signals for one-way notifications
+    - Multi-message sequences (job chunks)
 
 3. **Use Headers for Metadata:**
-   - PDL type (PS/PDF)
-   - Job ticket format (JDF/PPD)
-   - Progress indicators ([N:M])
+    - PDL type (PS/PDF)
+    - Job ticket format (JDF/PPD)
+    - Progress indicators ([N:M])
 
 4. **Leverage Message ID:**
-   - Correlation across multi-message flows
-   - Business transaction ID (job_id = message_id)
+    - Correlation across multi-message flows
+    - Business transaction ID (job_id = message_id)
 
 5. **Design for Lifecycle:**
-   - Connection establishment (Hello)
-   - Data exchange (Requests/Signals)
-   - Graceful termination (Bye)
+    - Connection establishment (Hello)
+    - Data exchange (Requests/Signals)
+    - Graceful termination (Bye)
 
 6. **Plan for Scale:**
-   - Multiple channels for parallel processing
-   - Clean separation (one job per channel)
+    - Multiple channels for parallel processing
+    - Clean separation (one job per channel)
 
 ---
 
@@ -506,25 +514,25 @@ Conversation → Text Protocol → Implementation
 After this conversation, S and R would:
 
 1. **Write Brief Protocol Doc:** (Save in Git)
-   - Copy conversation or summary
-   - Add message format details
-   - Document headers
+    - Copy conversation or summary
+    - Add message format details
+    - Document headers
 
 2. **Create Test Scenarios:**
-   - Single job end-to-end
-   - Multi-job parallel processing
-   - Error handling (corrupted PDL)
+    - Single job end-to-end
+    - Multi-job parallel processing
+    - Error handling (corrupted PDL)
 
 3. **Implement Incrementally:**
-   - Basic connection first
-   - Single job flow
-   - Progress updates
-   - Multi-job support
+    - Basic connection first
+    - Single job flow
+    - Progress updates
+    - Multi-job support
 
 4. **Iterate Based on Reality:**
-   - Discover edge cases
-   - Adjust message flow
-   - Add new headers as needed
+    - Discover edge cases
+    - Adjust message flow
+    - Add new headers as needed
 
 ---
 

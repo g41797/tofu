@@ -1,14 +1,14 @@
 
-Async message passing engine(**_Ampe_**) or simply the **_engine_** is the "holder" (owner) and allocator of all tofu resources:
+**_Ampe_** or **_engine_** is the "holder" (owner) and allocator of all tofu resources
 
-- ChannelGroup(s)
-- Message(s))
+- ChannelGroups
+- Messages
 
 Consider it the GPA of tofu. 
 
+!!! question "What are the differences between protocol and implementation?"
 
 ---
-
 
 
 ## Ampe creation
