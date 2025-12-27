@@ -25,8 +25,9 @@ This is a paraphrase of Conway's Law. Tofu expects development to start with a *
 ### The Dialog (From README.md)
 
 Context: Two developers discussing the message flow for a new Print Server:
+
 - **S**: Spool Server developer
-- **R**: RIP Worker Process developer (Raster Image Processing)
+- **R**: RIP Worker Process developer
 
 ```
 S: I don't know the addresses of the workers, so you should connect to me.
@@ -81,6 +82,7 @@ R: Deal. How about a cup of coffee?
 ### Why This Dialog Matters
 
 **Traditional Approach (API-First):**
+
 1. Define service interfaces (gRPC, Thrift, etc.)
 2. Generate code from IDL
 3. Implement complex service classes
@@ -88,6 +90,7 @@ R: Deal. How about a cup of coffee?
 5. Then finally: start coding business logic
 
 **Tofu Approach (Message-First):**
+
 1. Have a conversation like S and R
 2. Define message structure (headers + body)
 3. Write the protocol as plain text
@@ -100,22 +103,26 @@ R: Deal. How about a cup of coffee?
 
 ### The Food Analogy
 
-> As a food, **tofu** is very simple and has almost no flavor on its own.
-> By using tofu **cubes**, you can:
-> - Eat it **plain** for a simple snack
-> - Add a little **spice** to make it better
-> - Create a **culinary masterpiece**
+As a food, **tofu** is very simple and has almost no flavor on its own.
+By using tofu **cubes**, you can:
+
+- Eat it **plain** for a simple snack
+- Add a little **spice** to make it better
+- Create a **culinary masterpiece**
 
 ### The Software Analogy
 
-> As a **protocol**, tofu uses **messages** like cubes. By "cooking" these messages together, you can grow your project:
-> - Start with **minimal setups**
-> - Build **complex flows**
-> - Create full **distributed applications**
+As a **protocol**, tofu uses **messages** like cubes. 
+By "cooking" these messages together, you can grow your project:
+
+- Start with **minimal setups**
+- Build **complex flows**
+- Create full **distributed applications**
 
 ### Messages = Building Blocks
 
 Each message is a self-contained cube:
+
 - **BinaryHeader (16 bytes)**: Metadata (channel, type, role, status, message_id)
 - **TextHeaders (optional)**: Key-value pairs for configuration/app data
 - **Body (optional)**: Application payload
@@ -129,12 +136,14 @@ You combine these cubes to build complex communication flows, just like combinin
 ### 1. **Developer Communication First**
 
 **Traditional frameworks force you to think in:**
+
 - Service definitions
 - Method signatures
 - Complex type systems
 - Code generation tools
 
 **Tofu lets you think in:**
+
 - Natural conversation ("I'll send you a HelloRequest with PDL type")
 - Message flow ("You reply with HelloResponse, then I send multi-requests")
 - Business logic ("Progress header will show [N:M] for page numbers")
@@ -142,17 +151,20 @@ You combine these cubes to build complex communication flows, just like combinin
 ### 2. **Flexibility Without Complexity**
 
 Notice in the S/R dialog:
+
 - They changed their mind mid-conversation ("You forgot the Job Ticket")
 - They discussed options ("JDF is usually only for PDF" → "Let's keep it flexible")
 - They adapted the protocol on the fly ("working one job per channel looks cleaner")
 
 **Traditional API-first would require:**
+
 - Regenerating code
 - Updating service definitions
 - Version management
 - Complex migration paths
 
 **Tofu just requires:**
+
 - Updating the message structure
 - Documenting the new headers
 - Implementing the logic
@@ -195,6 +207,7 @@ After Hello/Welcome, both sides are equal peers. No client/server rigidity. Both
 
 ### Not a High-Level Framework
 Tofu doesn't provide:
+
 - Built-in serialization (JSON, Protobuf, etc.) - you choose
 - Authentication/authorization - you implement
 - Load balancing, discovery - you design
@@ -203,6 +216,7 @@ Tofu doesn't provide:
 
 ### Not "Zero Configuration"
 You must:
+
 - Design your message structure
 - Handle your business logic
 - Manage your application state
@@ -211,6 +225,7 @@ You must:
 
 ### Not Opinionated About Business Logic
 Tofu doesn't force:
+
 - Request/response patterns only
 - Pub/sub only
 - RPC semantics
@@ -223,6 +238,7 @@ You design the flow that makes sense for your application (like S and R did).
 
 ### 1. Have the Conversation
 Sit with your peer (like S and R) and discuss:
+
 - Who connects to whom?
 - What message types do we need?
 - What goes in headers? What in body?
@@ -271,6 +287,7 @@ Change your protocol as you learn. Add headers. Adjust message types. Refine the
 
 ### vs. gRPC/Thrift
 **gRPC:**
+
 - Define .proto files
 - Generate code
 - Implement service interfaces
@@ -278,6 +295,7 @@ Change your protocol as you learn. Add headers. Adjust message types. Refine the
 - Version management hell
 
 **Tofu:**
+
 - Define message structure (can be plain text)
 - Write business logic with messages
 - Handle errors via status byte
@@ -285,12 +303,14 @@ Change your protocol as you learn. Add headers. Adjust message types. Refine the
 
 ### vs. HTTP REST
 **REST:**
+
 - URL design debates
 - HTTP method semantics
 - Status code confusion
 - No built-in duplex
 
 **Tofu:**
+
 - Channels (not URLs)
 - Message roles (request/response/signal)
 - Status byte + custom app statuses
@@ -298,12 +318,14 @@ Change your protocol as you learn. Add headers. Adjust message types. Refine the
 
 ### vs. Message Queue (RabbitMQ, Kafka)
 **MQ:**
+
 - Topics, queues, exchanges
 - Complex routing
 - Separate broker infrastructure
 - Usually one-way
 
 **Tofu:**
+
 - Channels (direct peer-to-peer)
 - No broker needed
 - Built into your app
@@ -326,16 +348,19 @@ Start simple, add sophistication as needed. No big-design-up-front required.
 16-byte binary header + optional text headers + optional body = infinite possibilities.
 
 ### 5. **No Lock-In**
+
 - Choose your serialization
 - Choose your authentication
 - Choose your deployment model
 
 ### 6. **Threading Model That Works**
+
 - Thread-safe APIs for `get()`, `put()`, `enqueueToPeer()`
 - Single-threaded `waitReceive()` per ChannelGroup
 - Clear concurrency model
 
 ### 7. **Explicit, Not Magic**
+
 - Explicit pointer dereferencing
 - Explicit type annotations
 - No hidden behaviors
@@ -367,9 +392,9 @@ Both single-threaded and multi-threaded reconnection. Shows resilience.
 
 Tofu's philosophy is radical in its simplicity:
 
-> Don't design APIs. Design conversations.
-> Don't implement services. Send messages.
-> Don't build frameworks. Combine cubes.
+- Don't design APIs. Design conversations. 
+- Don't implement services. Send messages.
+- Don't build frameworks. Combine cubes.
 
 The S/R dialog isn't just an example - it's the **entire development methodology**:
 

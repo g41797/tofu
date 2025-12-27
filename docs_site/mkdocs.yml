@@ -82,9 +82,9 @@ nav:
       - AI Generated:
         - mds/aigenerated.md
         - Quick Reference: mds/tofu-quick-reference-guide.md
-        - Conversation: mds/conversation.md
-        - Recipes: mds/tofu-message-patterns-and-recipes.md
         - Philosophy: mds/tofu-philosophy-and-advantages.md
+        - Recipes: mds/tofu-message-patterns-and-recipes.md
+        - Conversation: mds/conversation.md
         - Specification: mds/specification.md
         - Review: mds/tofu-implementation-review.md
         - Sockets 101: mds/sockets101.md
@@ -118,6 +118,9 @@ markdown_extensions:
       alternate_style: true
   - attr_list
   - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 extra_css:
   - stylesheets/extra.css
 extra_javascript:

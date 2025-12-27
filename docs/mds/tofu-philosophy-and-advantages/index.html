@@ -11,10 +11,10 @@
         <link rel="canonical" href="http://127.0.0.1:8000/mds/tofu-philosophy-and-advantages/">
       
       
-        <link rel="prev" href="../tofu-message-patterns-and-recipes/">
+        <link rel="prev" href="../tofu-quick-reference-guide/">
       
       
-        <link rel="next" href="../specification/">
+        <link rel="next" href="../tofu-message-patterns-and-recipes/">
       
       
         
@@ -1281,62 +1281,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../conversation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Conversation
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tofu-message-patterns-and-recipes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Recipes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -1970,6 +1914,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tofu-message-patterns-and-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conversation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conversation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2949,9 +2949,11 @@
 <hr />
 <h2 id="the-sr-dialog-tofus-killer-feature">The S/R Dialog: Tofu's Killer Feature</h2>
 <h3 id="the-dialog-from-readmemd">The Dialog (From README.md)</h3>
-<p>Context: Two developers discussing the message flow for a new Print Server:
-- <strong>S</strong>: Spool Server developer
-- <strong>R</strong>: RIP Worker Process developer (Raster Image Processing)</p>
+<p>Context: Two developers discussing the message flow for a new Print Server:</p>
+<ul>
+<li><strong>S</strong>: Spool Server developer</li>
+<li><strong>R</strong>: RIP Worker Process developer</li>
+</ul>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>S: I don&#39;t know the addresses of the workers, so you should connect to me.
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>R: I&#39;ll send a HelloRequest, because the worker can process only specific PDL types,
@@ -3001,67 +3003,84 @@
 </span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>R: Deal. How about a cup of coffee?
 </span></code></pre></div>
 <h3 id="why-this-dialog-matters">Why This Dialog Matters</h3>
-<p><strong>Traditional Approach (API-First):</strong>
-1. Define service interfaces (gRPC, Thrift, etc.)
-2. Generate code from IDL
-3. Implement complex service classes
-4. Handle versioning, compatibility
-5. Then finally: start coding business logic</p>
-<p><strong>Tofu Approach (Message-First):</strong>
-1. Have a conversation like S and R
-2. Define message structure (headers + body)
-3. Write the protocol as plain text
-4. Implement directly using Messages
-5. Done - you're coding business logic from day 1</p>
+<p><strong>Traditional Approach (API-First):</strong></p>
+<ol>
+<li>Define service interfaces (gRPC, Thrift, etc.)</li>
+<li>Generate code from IDL</li>
+<li>Implement complex service classes</li>
+<li>Handle versioning, compatibility</li>
+<li>Then finally: start coding business logic</li>
+</ol>
+<p><strong>Tofu Approach (Message-First):</strong></p>
+<ol>
+<li>Have a conversation like S and R</li>
+<li>Define message structure (headers + body)</li>
+<li>Write the protocol as plain text</li>
+<li>Implement directly using Messages</li>
+<li>Done - you're coding business logic from day 1</li>
+</ol>
 <hr />
 <h2 id="messages-as-cubes-the-tofu-metaphor">Messages as Cubes: The Tofu Metaphor</h2>
 <h3 id="the-food-analogy">The Food Analogy</h3>
-<blockquote>
 <p>As a food, <strong>tofu</strong> is very simple and has almost no flavor on its own.
-By using tofu <strong>cubes</strong>, you can:
-- Eat it <strong>plain</strong> for a simple snack
-- Add a little <strong>spice</strong> to make it better
-- Create a <strong>culinary masterpiece</strong></p>
-</blockquote>
+By using tofu <strong>cubes</strong>, you can:</p>
+<ul>
+<li>Eat it <strong>plain</strong> for a simple snack</li>
+<li>Add a little <strong>spice</strong> to make it better</li>
+<li>Create a <strong>culinary masterpiece</strong></li>
+</ul>
 <h3 id="the-software-analogy">The Software Analogy</h3>
-<blockquote>
-<p>As a <strong>protocol</strong>, tofu uses <strong>messages</strong> like cubes. By "cooking" these messages together, you can grow your project:
-- Start with <strong>minimal setups</strong>
-- Build <strong>complex flows</strong>
-- Create full <strong>distributed applications</strong></p>
-</blockquote>
+<p>As a <strong>protocol</strong>, tofu uses <strong>messages</strong> like cubes. 
+By "cooking" these messages together, you can grow your project:</p>
+<ul>
+<li>Start with <strong>minimal setups</strong></li>
+<li>Build <strong>complex flows</strong></li>
+<li>Create full <strong>distributed applications</strong></li>
+</ul>
 <h3 id="messages-building-blocks">Messages = Building Blocks</h3>
-<p>Each message is a self-contained cube:
-- <strong>BinaryHeader (16 bytes)</strong>: Metadata (channel, type, role, status, message_id)
-- <strong>TextHeaders (optional)</strong>: Key-value pairs for configuration/app data
-- <strong>Body (optional)</strong>: Application payload</p>
+<p>Each message is a self-contained cube:</p>
+<ul>
+<li><strong>BinaryHeader (16 bytes)</strong>: Metadata (channel, type, role, status, message_id)</li>
+<li><strong>TextHeaders (optional)</strong>: Key-value pairs for configuration/app data</li>
+<li><strong>Body (optional)</strong>: Application payload</li>
+</ul>
 <p>You combine these cubes to build complex communication flows, just like combining tofu cubes creates a meal.</p>
 <hr />
 <h2 id="key-advantages-analysis">Key Advantages Analysis</h2>
 <h3 id="1-developer-communication-first">1. <strong>Developer Communication First</strong></h3>
-<p><strong>Traditional frameworks force you to think in:</strong>
-- Service definitions
-- Method signatures
-- Complex type systems
-- Code generation tools</p>
-<p><strong>Tofu lets you think in:</strong>
-- Natural conversation ("I'll send you a HelloRequest with PDL type")
-- Message flow ("You reply with HelloResponse, then I send multi-requests")
-- Business logic ("Progress header will show [N:M] for page numbers")</p>
+<p><strong>Traditional frameworks force you to think in:</strong></p>
+<ul>
+<li>Service definitions</li>
+<li>Method signatures</li>
+<li>Complex type systems</li>
+<li>Code generation tools</li>
+</ul>
+<p><strong>Tofu lets you think in:</strong></p>
+<ul>
+<li>Natural conversation ("I'll send you a HelloRequest with PDL type")</li>
+<li>Message flow ("You reply with HelloResponse, then I send multi-requests")</li>
+<li>Business logic ("Progress header will show [N:M] for page numbers")</li>
+</ul>
 <h3 id="2-flexibility-without-complexity">2. <strong>Flexibility Without Complexity</strong></h3>
-<p>Notice in the S/R dialog:
-- They changed their mind mid-conversation ("You forgot the Job Ticket")
-- They discussed options ("JDF is usually only for PDF" → "Let's keep it flexible")
-- They adapted the protocol on the fly ("working one job per channel looks cleaner")</p>
-<p><strong>Traditional API-first would require:</strong>
-- Regenerating code
-- Updating service definitions
-- Version management
-- Complex migration paths</p>
-<p><strong>Tofu just requires:</strong>
-- Updating the message structure
-- Documenting the new headers
-- Implementing the logic</p>
+<p>Notice in the S/R dialog:</p>
+<ul>
+<li>They changed their mind mid-conversation ("You forgot the Job Ticket")</li>
+<li>They discussed options ("JDF is usually only for PDF" → "Let's keep it flexible")</li>
+<li>They adapted the protocol on the fly ("working one job per channel looks cleaner")</li>
+</ul>
+<p><strong>Traditional API-first would require:</strong></p>
+<ul>
+<li>Regenerating code</li>
+<li>Updating service definitions</li>
+<li>Version management</li>
+<li>Complex migration paths</li>
+</ul>
+<p><strong>Tofu just requires:</strong></p>
+<ul>
+<li>Updating the message structure</li>
+<li>Documenting the new headers</li>
+<li>Implementing the logic</li>
+</ul>
 <h3 id="3-message-id-as-business-context">3. <strong>Message ID as Business Context</strong></h3>
 <p>In the S/R dialog: "each with a message ID equal to the job ID"</p>
 <p>This is powerful - the message ID becomes your business transaction ID. No need for separate correlation, no complex context propagation. The message carries everything.</p>
@@ -3087,32 +3106,40 @@ By using tofu <strong>cubes</strong>, you can:
 <hr />
 <h2 id="what-tofu-is-not">What Tofu Is NOT</h2>
 <h3 id="not-a-high-level-framework">Not a High-Level Framework</h3>
-<p>Tofu doesn't provide:
-- Built-in serialization (JSON, Protobuf, etc.) - you choose
-- Authentication/authorization - you implement
-- Load balancing, discovery - you design</p>
+<p>Tofu doesn't provide:</p>
+<ul>
+<li>Built-in serialization (JSON, Protobuf, etc.) - you choose</li>
+<li>Authentication/authorization - you implement</li>
+<li>Load balancing, discovery - you design</li>
+</ul>
 <p><strong>This is intentional.</strong> Tofu is the foundation. You build your solution on top.</p>
 <h3 id="not-zero-configuration">Not "Zero Configuration"</h3>
-<p>You must:
-- Design your message structure
-- Handle your business logic
-- Manage your application state</p>
+<p>You must:</p>
+<ul>
+<li>Design your message structure</li>
+<li>Handle your business logic</li>
+<li>Manage your application state</li>
+</ul>
 <p><strong>But:</strong> You do this with simple message passing, not complex frameworks.</p>
 <h3 id="not-opinionated-about-business-logic">Not Opinionated About Business Logic</h3>
-<p>Tofu doesn't force:
-- Request/response patterns only
-- Pub/sub only
-- RPC semantics</p>
+<p>Tofu doesn't force:</p>
+<ul>
+<li>Request/response patterns only</li>
+<li>Pub/sub only</li>
+<li>RPC semantics</li>
+</ul>
 <p>You design the flow that makes sense for your application (like S and R did).</p>
 <hr />
 <h2 id="from-user-perspective-getting-started">From User Perspective: Getting Started</h2>
 <h3 id="1-have-the-conversation">1. Have the Conversation</h3>
-<p>Sit with your peer (like S and R) and discuss:
-- Who connects to whom?
-- What message types do we need?
-- What goes in headers? What in body?
-- Request/response or signals?
-- What are the failure modes?</p>
+<p>Sit with your peer (like S and R) and discuss:</p>
+<ul>
+<li>Who connects to whom?</li>
+<li>What message types do we need?</li>
+<li>What goes in headers? What in body?</li>
+<li>Request/response or signals?</li>
+<li>What are the failure modes?</li>
+</ul>
 <h3 id="2-write-it-down">2. Write It Down</h3>
 <p>Create a simple text file describing:
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Client → Server: HelloRequest with PDL header (PS or PDF)
@@ -3147,39 +3174,51 @@ By using tofu <strong>cubes</strong>, you can:
 <hr />
 <h2 id="comparison-with-other-approaches">Comparison with Other Approaches</h2>
 <h3 id="vs-grpcthrift">vs. gRPC/Thrift</h3>
-<p><strong>gRPC:</strong>
-- Define .proto files
-- Generate code
-- Implement service interfaces
-- Complex error handling
-- Version management hell</p>
-<p><strong>Tofu:</strong>
-- Define message structure (can be plain text)
-- Write business logic with messages
-- Handle errors via status byte
-- Evolve headers naturally</p>
+<p><strong>gRPC:</strong></p>
+<ul>
+<li>Define .proto files</li>
+<li>Generate code</li>
+<li>Implement service interfaces</li>
+<li>Complex error handling</li>
+<li>Version management hell</li>
+</ul>
+<p><strong>Tofu:</strong></p>
+<ul>
+<li>Define message structure (can be plain text)</li>
+<li>Write business logic with messages</li>
+<li>Handle errors via status byte</li>
+<li>Evolve headers naturally</li>
+</ul>
 <h3 id="vs-http-rest">vs. HTTP REST</h3>
-<p><strong>REST:</strong>
-- URL design debates
-- HTTP method semantics
-- Status code confusion
-- No built-in duplex</p>
-<p><strong>Tofu:</strong>
-- Channels (not URLs)
-- Message roles (request/response/signal)
-- Status byte + custom app statuses
-- Full duplex by design</p>
+<p><strong>REST:</strong></p>
+<ul>
+<li>URL design debates</li>
+<li>HTTP method semantics</li>
+<li>Status code confusion</li>
+<li>No built-in duplex</li>
+</ul>
+<p><strong>Tofu:</strong></p>
+<ul>
+<li>Channels (not URLs)</li>
+<li>Message roles (request/response/signal)</li>
+<li>Status byte + custom app statuses</li>
+<li>Full duplex by design</li>
+</ul>
 <h3 id="vs-message-queue-rabbitmq-kafka">vs. Message Queue (RabbitMQ, Kafka)</h3>
-<p><strong>MQ:</strong>
-- Topics, queues, exchanges
-- Complex routing
-- Separate broker infrastructure
-- Usually one-way</p>
-<p><strong>Tofu:</strong>
-- Channels (direct peer-to-peer)
-- No broker needed
-- Built into your app
-- Bidirectional by default</p>
+<p><strong>MQ:</strong></p>
+<ul>
+<li>Topics, queues, exchanges</li>
+<li>Complex routing</li>
+<li>Separate broker infrastructure</li>
+<li>Usually one-way</li>
+</ul>
+<p><strong>Tofu:</strong></p>
+<ul>
+<li>Channels (direct peer-to-peer)</li>
+<li>No broker needed</li>
+<li>Built into your app</li>
+<li>Bidirectional by default</li>
+</ul>
 <hr />
 <h2 id="the-tofu-advantage-summary">The Tofu Advantage Summary</h2>
 <h3 id="1-conversation-driven-development">1. <strong>Conversation-Driven Development</strong></h3>
@@ -3224,11 +3263,11 @@ By using tofu <strong>cubes</strong>, you can:
 <hr />
 <h2 id="conclusion">Conclusion</h2>
 <p>Tofu's philosophy is radical in its simplicity:</p>
-<blockquote>
-<p>Don't design APIs. Design conversations.
-Don't implement services. Send messages.
-Don't build frameworks. Combine cubes.</p>
-</blockquote>
+<ul>
+<li>Don't design APIs. Design conversations. </li>
+<li>Don't implement services. Send messages.</li>
+<li>Don't build frameworks. Combine cubes.</li>
+</ul>
 <p>The S/R dialog isn't just an example - it's the <strong>entire development methodology</strong>:</p>
 <ol>
 <li>Talk about what messages you need</li>
@@ -3275,7 +3314,7 @@ Don't build frameworks. Combine cubes.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../tofu-message-patterns-and-recipes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Recipes">
+          <a href="../tofu-quick-reference-guide/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quick Reference">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3285,20 +3324,20 @@ Don't build frameworks. Combine cubes.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Recipes
+                Quick Reference
               </div>
             </div>
           </a>
         
         
           
-          <a href="../specification/" class="md-footer__link md-footer__link--next" aria-label="Next: Specification">
+          <a href="../tofu-message-patterns-and-recipes/" class="md-footer__link md-footer__link--next" aria-label="Next: Recipes">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Specification
+                Recipes
               </div>
             </div>
             <div class="md-footer__button md-icon">
