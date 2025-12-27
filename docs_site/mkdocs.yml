@@ -48,7 +48,7 @@ theme:
     - content.tabs.link
     - navigation.sections
     - navigation.top
-    - navigation.instant
+#    - navigation.instant
     - navigation.path
     - navigation.footer
     - header.autohide
