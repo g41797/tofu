@@ -39,7 +39,7 @@ pub const MoreMessagesFlag = enum(u1) {
 };
 
 /// If '.on' , indicates high priority message.
-/// Oob message will be placed in the head of the queue of messages for send.
+/// Oob message will be placed in the head of the queue of messages for send or internal processing.
 pub const Oob = Trigger;
 
 /// Packed struct containing protocol fields for message metadata.
