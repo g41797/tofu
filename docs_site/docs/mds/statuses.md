@@ -1,5 +1,4 @@
 
-## Errors and Statuses
 
 Tofu defines own error set:
 ```zig title="Partial tofu error set"
