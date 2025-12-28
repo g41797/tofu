@@ -76,15 +76,6 @@ nav:
       - Allocator: mds/allocator.md
       - Coding style: mds/coding-style.md
       - Callback enabled: mds/callback-enabled.md
-  - AI generated docs:
-      - mds/aigenerated.md
-      - Quick Reference: mds/tofu-quick-reference-guide.md
-      - Philosophy: mds/tofu-philosophy-and-advantages.md
-      - Recipes: mds/tofu-message-patterns-and-recipes.md
-      - Conversation: mds/conversation.md
-      - Specification: mds/specification.md
-      - Review: mds/tofu-implementation-review.md
-
 plugins:
   - search
   - awesome-pages
