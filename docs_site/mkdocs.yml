@@ -56,11 +56,11 @@ nav:
   - Getting started:
       - Overview: mds/overview.md
       - Features: mds/features.md
-      - Ingredients: mds/key-ingredients.md
       - Mantra: mds/mantra.md
   - Implementation:
       - Installation: mds/installation.md
       - Imports: mds/imports.md
+      - Ingredients: mds/key-ingredients.md
       - Ampe: mds/ampe.md
       - Errors and Statuses: mds/statuses.md
       - ChannelGroup: mds/channel-group.md
