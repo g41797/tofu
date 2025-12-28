@@ -97,7 +97,7 @@ extra:
   generator: false
   social:
     - icon: material/home
-      link: /
+      link: .
       name: Home
 markdown_extensions:
   - pymdownx.highlight:
