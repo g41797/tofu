@@ -1,0 +1,212 @@
+
+            ю1234567890-ч
+            явертыуиопшщ
+            асдфгхйкл;'э
+            зьцжбнм,.//*-
+
+tofu GitHub pages
+    https://g41797.github.io/tofu/
+
+Publishing a Quarto website through GitHub Pages (updated)
+    https://www.youtube.com/watch?v=wZ9pZOFSCko
+
+Making a Website with GitHub/Quarto
+    https://steffilazerte.ca/posts/github-website/
+
+Mongoose - Embedded Web Server / Embedded Network Library
+    https://github.com/cesanta/mongoose
+
+    User Guide
+        https://mongoose.ws/documentation/#user-guide
+
+    API Reference
+        https://mongoose.ws/documentation/#api-reference
+
+Are file descriptors for linux sockets always in increasing order
+    https://stackoverflow.com/questions/9376189/are-file-descriptors-for-linux-sockets-always-in-increasing-order
+
+Creating and managing polls
+    https://meta.discourse.org/t/creating-and-managing-polls/77548
+
+
+Learn Hugo theme
+    https://learn.netlify.app/
+
+    Grav Documentation: https://learn.getgrav.org/
+    Why: Grav’s documentation uses the Learn theme,
+    showcasing its tutorial-driven layout, clean design, a
+    nd hierarchical navigation, perfect for explaining async messaging in Zig.
+
+
+    Hugo Learn Theme Demo: https://learn.netlify.app/en/
+
+    Why: While a demo, this site illustrates the Learn theme’s s
+    implicity and Markdown-driven structure, suitable for straightforward software docs.
+
+Add ananke
+     hugo new site docs
+     cd docs
+     ls -la
+     git submodule add https://github.com/theNewDynamic/gohugo-theme-ananke.git themes/ananke
+
+Relearn
+    https://mcshelby.github.io/hugo-theme-relearn/introduction/quickstart/
+    cd docs
+    git submodule add --depth 1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
+
+Kraiklyn hugo theme
+    https://themes.gohugo.io/themes/kraiklyn/
+
+    cd docs
+    git submodule add --depth 1 https://github.com/jsnjack/kraiklyn.git themes/kraiklyn
+
+mkdocs-sample
+    https://github.com/yriahi/mkdocs-sample
+    https://yriahi.github.io/mkdocs-sample/
+
+Mkdocs Material theme
+    https://github.com/squidfunk/mkdocs-material
+
+Material for MkDocs
+    https://squidfunk.github.io/mkdocs-material/getting-started/
+
+
+How to build docs in GitHub without GitHub Actions or other CI/CD tools
+    https://github.com/mkdocs/mkdocs/discussions/2599
+
+
+Installing and Deploying MkDocs Material with GitHub Pages
+    https://docs.nomana-it.fr/blog/2024/11/26/installing-and-deploying-mkdocs-material-with-github-pages/
+
+    Repo
+        https://github.com/fblettner/fblettner.github.io
+
+    Generated
+        https://docs.nomana-it.fr/
+
+    Additional installation
+        pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin
+
+    Added to yml
+
+      icon:
+        admonition:
+          note: octicons/tag-16
+          abstract: octicons/checklist-16
+          info: octicons/info-16
+          tip: octicons/squirrel-16
+          success: octicons/check-16
+          question: octicons/question-16
+          warning: octicons/alert-16
+          failure: octicons/x-circle-16
+          danger: octicons/zap-16
+          bug: octicons/bug-16
+          example: octicons/beaker-16
+          quote: octicons/quote-16
+
+        - content.code.select
+        - content.code.annotate //
+
+        - pymdownx.emoji:
+              emoji_index: !!python/name:material.extensions.emoji.twemoji
+              emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+
+Writing your docs
+    https://www.mkdocs.org/user-guide/writing-your-docs/
+
+GitHub Pages documentation
+    https://docs.github.com/en/pages
+
+Create a private fork of a public repository
+    https://gist.github.com/0xjac/85097472043b697ab57ba1b1c7530274
+
+Import your project to GitHub
+    https://github.com/new/import
+
+Colors tuning
+    https://tailwindcss.com/docs/colors
+    Scroll to the color grid.
+    Find violet row → click any shade (e.g., violet-500).
+    Click = copies OKLCH value
+    Shift + Click = copies nearest HEX (#8b5cf6 for violet-500)
+
+Emojipedia
+    https://emojipedia.org/
+
+Docs
+    https://socket.io/docs/v4 – flawless modern Material redesign
+    https://centrifugal.dev/docs – extremely polished and developer-friendly
+    https://ably.com/docs – enterprise-grade with perfect code tab switching
+    https://docs.nats.io – still the gold standard
+
+    https://docs.ejabberd.im/
+    repo: https://github.com/processone/docs.ejabberd.im
+
+MkDocs Plugin for embedding Drawio files
+    https://tuunit.github.io/mkdocs-drawio/
+
+yEd editor increase font size
+    Use Command-Line Arguments (Advanced)
+    For users launching yEd via a command line or script, you can pass specific Java parameters to attempt UI scaling.
+    You can add the -Dsun.java2d.uiScale parameter to the launch command. For example, in a launch script, you might find a line like INSTALL4J_ADD_VM_PARAMS= and change it to:
+    INSTALL4J_ADD_VM_PARAMS=-Dsun.java2d.uiScale=2.0
+
+Diagrams for mkdocs
+    https://squidfunk.github.io/mkdocs-material/reference/diagrams/
+
+
+Draw.io increase UI
+        ........... -z 2.0
+
+Create a sequence diagram
+    https://www.drawio.com/blog/sequence-diagrams
+
+Remove backgrounds
+    https://www.photoroom.com/tools/background-remover
+
+Complete list of github markdown emoji markup
+    https://gist.github.com/rxaviers/7360908
+
+Example of mkdocs.yml
+    https://github.com/lalinsky/zio/blob/main/mkdocs.yml
+
+    Generated site
+        https://lalinsky.github.io/zio/
+
+
+Check html
+    cd to folder with html
+    python3 -m http.server 8011
+
+    in browser 127.0.0.1:8011
+
+
+Customization Tips for icon
+
+    Color and Style: The icon inherits your theme's palette (e.g., primary color: blue grey). Adjust under palette if needed.
+    Fallback to Image: If you prefer a custom SVG version, download message-fast from https://pictogrammers.com/library/mdi/icon/message-fast, save it in assets/, and revert to logo: assets/message-fast.svg.
+    Similar Icons: If message-fast isn't ideal, try alternatives like material/message-flash (for urgent messages) or material/message (basic chat bubble) by changing the shortcode.
+    For more icons, search the MkDocs icon picker: https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/#search. Copy the shortcode directly.
+
+    This setup keeps your docs clean and vector-based for better scalability. If you need it as a favicon instead (site icon in browser tabs), add favicon: assets/message-fast.svg under theme: (after downloading the SVG).
+
+
+    python -m http.server 8080
+
+    http://0.0.0.0:8080/ better in incognito mode
+
+    Extract tar
+        tar -xf ./sources.tar -C temp
+
+    ls by size
+        ls -laSh
+
+    find ./temp/ -type f -size +400k -exec ls -lh {} \;
+
+    find . -name "*.zig" | tar -cf sources_fixed.tar -T -
+
+    ls -lta *.tar
+
+Show only zig files
+    tree -P '*.zig' --prune
