@@ -1,7 +1,5 @@
 site_name: "Tofu - Sync your devs, Async your apps!"
-# For local development, use: site_url: http://127.0.0.1:8000/
-# For GitHub Pages deployment, use: site_url: https://g41797.github.io/tofu/
-site_url: http://127.0.0.1:8000/
+site_url: https://g41797.github.io/tofu/
 repo_url: https://github.com/g41797/tofu/
 repo_name: tofu on GitHub
 

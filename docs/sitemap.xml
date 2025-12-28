@@ -1,115 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>http://127.0.0.1:8000/</loc>
+         <loc>https://g41797.github.io/tofu/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/blog/</loc>
+         <loc>https://g41797.github.io/tofu/blog/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/aigenerated/</loc>
+         <loc>https://g41797.github.io/tofu/mds/aigenerated/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/allocator/</loc>
+         <loc>https://g41797.github.io/tofu/mds/allocator/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/ampe/</loc>
+         <loc>https://g41797.github.io/tofu/mds/ampe/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/callback-enabled/</loc>
+         <loc>https://g41797.github.io/tofu/mds/callback-enabled/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/channel-group/</loc>
+         <loc>https://g41797.github.io/tofu/mds/channel-group/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/coding-style/</loc>
+         <loc>https://g41797.github.io/tofu/mds/coding-style/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/configurators/</loc>
+         <loc>https://g41797.github.io/tofu/mds/configurators/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/conversation/</loc>
+         <loc>https://g41797.github.io/tofu/mds/conversation/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/features/</loc>
+         <loc>https://g41797.github.io/tofu/mds/features/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/for-tests/</loc>
+         <loc>https://g41797.github.io/tofu/mds/for-tests/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/imports/</loc>
+         <loc>https://g41797.github.io/tofu/mds/imports/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/installation/</loc>
+         <loc>https://g41797.github.io/tofu/mds/installation/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/key-ingredients/</loc>
+         <loc>https://g41797.github.io/tofu/mds/key-ingredients/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/mantra/</loc>
+         <loc>https://g41797.github.io/tofu/mds/mantra/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/message/</loc>
+         <loc>https://g41797.github.io/tofu/mds/message/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/naq/</loc>
+         <loc>https://g41797.github.io/tofu/mds/naq/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/overview/</loc>
+         <loc>https://g41797.github.io/tofu/mds/overview/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/sockets101/</loc>
+         <loc>https://g41797.github.io/tofu/mds/sockets101/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/specification/</loc>
+         <loc>https://g41797.github.io/tofu/mds/specification/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/statuses/</loc>
+         <loc>https://g41797.github.io/tofu/mds/statuses/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/tofu-implementation-review/</loc>
+         <loc>https://g41797.github.io/tofu/mds/tofu-implementation-review/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/tofu-message-patterns-and-recipes/</loc>
+         <loc>https://g41797.github.io/tofu/mds/tofu-message-patterns-and-recipes/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/tofu-philosophy-and-advantages/</loc>
+         <loc>https://g41797.github.io/tofu/mds/tofu-philosophy-and-advantages/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/tofu-quick-reference-guide/</loc>
+         <loc>https://g41797.github.io/tofu/mds/tofu-quick-reference-guide/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/notused/YAAAMP/</loc>
+         <loc>https://g41797.github.io/tofu/mds/notused/YAAAMP/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
     <url>
-         <loc>http://127.0.0.1:8000/mds/notused/protocol/</loc>
+         <loc>https://g41797.github.io/tofu/mds/notused/protocol/</loc>
          <lastmod>2025-12-28</lastmod>
     </url>
 </urlset>
