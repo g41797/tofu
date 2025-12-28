@@ -101,7 +101,6 @@ extra:
     - icon: material/home
       link: /
       name: Home
-
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
