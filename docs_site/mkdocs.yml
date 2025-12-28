@@ -43,14 +43,12 @@ theme:
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
-    #    - navigation.sections
     - navigation.top
     - navigation.instant
     - navigation.path
     - navigation.footer
     - header.autohide
     - content.tooltips
-    #    - navigation.expand
     - toc.follow
 
 nav:
@@ -95,10 +93,6 @@ plugins:
 
 extra:
   generator: false
-  social:
-    - icon: material/home
-      link: .
-      name: Home
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
