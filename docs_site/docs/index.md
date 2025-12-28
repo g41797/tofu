@@ -25,7 +25,8 @@ hide:
 
 <div class="hero-buttons-top">
   <a href="mds/overview/" class="hero-button hero-button-primary">Get Started</a>
-  <a href="https://github.com/g41797/tofu" class="hero-button hero-button-secondary" target="_blank" rel="noopener">GitHub Repository</a>
+  <a href="https://g41797.github.io/tofu/apidocs/" class="hero-button hero-button-secondary" target="_blank" rel="noopener">API</a>
+  <a href="https://g41797.github.io/tofu/recipes/" class="hero-button hero-button-secondary" target="_blank" rel="noopener">Recipes</a>
 </div>
 
 </div>

@@ -6,8 +6,6 @@
 
 Consider it the GPA of tofu. 
 
-!!! question "What are the differences between protocol and implementation?"
-
 ---
 
 
@@ -154,80 +152,3 @@ Pool configuration is used during creation of engine:
 Just clarification - you don't deal with pool destroy, it will be destroyed during destroy of engine. 
 
 ---
-
-## Errors and Statuses
-
-Tofu defines own error set:
-```zig title="Partial tofu error set"
-pub const AmpeError = error{
-    NotImplementedYet,
-    WrongConfiguration,
-    NotAllowed,
-    NullMessage,
-    ............
-    PoolEmpty,
-    AllocationFailed,
-    ............
-    ShutdownStarted,
-    ProcessingFailed, 
-    UnknownError,
-};
-```
-There is also enumerator for statuses:
-```zig title="Partial tofu statuses"
-pub const AmpeStatus = enum(u8) {
-    success = 0,
-    not_implemented_yet,
-    wrong_configuration,
-    not_allowed,
-    null_message,
-    ............
-    pool_empty,
-    allocation_failed,
-    ............
-    shutdown_started,
-    ............
-    processing_failed,
-    unknown_error,
-};
-```
-
-Every _AmpeError_ has corresponding _AmpeStatus_ enumerator (except 'success').
-
-Errors and Statuses have self-described names which I hope means I don’t have to describe each one separately.
-
-To jump ahead a bit, this system allows errors to be transmitted as part of Message, 
-using just 1 byte (u8).
-
-You can use helper function `#!zig status.raw_to_error(rs: u8) AmpeError!void` in order
-to convert byte to corresponding error.
-
-Not every non-zero status means an error right away. It depends on the situation.  
-For example, '_channel_closed_'
-
-- is not an error if you requested to close the channel  
-- it is an error if it happens in the middle of communication
-
-
-[//]: # (!!! note )
-
-[//]: # (    Я буду использовать термин '**_object_**', хотя с точки зрения Zig это структура &#40;так же и для остальных objects-structs&#41;.)
-
-
-[//]: # ( - [Create engine implementation object]&#40;#__codelineno-4-8&#41;)
-
-[//]: # ( - [Destroy it after return or on error]&#40;#__codelineno-4-9&#41;)
-
-[//]: # ( - [Create ampe interface]&#40;#__codelineno-4-10&#41;)
-
-
-
-[//]: # (## Useful Links)
-
-[//]: # (🔗 **GitHub Repository &#40;Core&#41;:** [Liberty Core]&#40;https://github.com/fblettner/liberty-core/&#41;  )
-
-[//]: # (📖 **Live Documentation:** [Liberty Core Docs]&#40;https://docs.nomana-it.fr/liberty-core/&#41;  )
-
-[//]: # ([goto code block 1 line 1]&#40;#__codelineno-1-1&#41; Example !!!)
- 
-

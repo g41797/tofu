@@ -1,10 +1,14 @@
 
 
-Tofu has only three main ingredients:
+Tofu ingredients:
 
 - **Ampe** — the Async Message Passing Engine (we call it the _engine_).
 - **ChannelGroup**
 - **Message**
+- **Errors** and **Statuses**
+- **Configurators**
+- **Test Helpers**
+
 
 Each ingredient depends on the others, so it’s hard to explain one without understanding the rest.  
 Because of that, the short descriptions below give only the basic idea.
@@ -41,6 +45,12 @@ Each **ChannelGroup** uses an **internal queue** for messages (from engine or ap
 
 The **ChannelGroup** is a thin layer.  
 It forwards messages between application and engine thread.
+
+I hope **Errors and Statuses** don't need explanation.
+
+**Configurators** are helpers for adding network information(ports, addresses, etc.) to Message.
+
+**Test Helpers** create network information for safe testing.
 
 ---
 

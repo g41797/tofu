@@ -2,106 +2,114 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>http://127.0.0.1:8000/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/blog/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/aigenerated/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/allocator/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/ampe/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/callback-enabled/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/channel-group/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/coding-style/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/configurators/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/conversation/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/features/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/for-tests/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/imports/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/installation/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/key-ingredients/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/mantra/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/message/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/naq/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/overview/</loc>
-         <lastmod>2025-12-27</lastmod>
-    </url>
-    <url>
-         <loc>http://127.0.0.1:8000/mds/protocol/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/sockets101/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/specification/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
+    </url>
+    <url>
+         <loc>http://127.0.0.1:8000/mds/statuses/</loc>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/tofu-implementation-review/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/tofu-message-patterns-and-recipes/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/tofu-philosophy-and-advantages/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
     </url>
     <url>
          <loc>http://127.0.0.1:8000/mds/tofu-quick-reference-guide/</loc>
-         <lastmod>2025-12-27</lastmod>
+         <lastmod>2025-12-28</lastmod>
+    </url>
+    <url>
+         <loc>http://127.0.0.1:8000/mds/notused/YAAAMP/</loc>
+         <lastmod>2025-12-28</lastmod>
+    </url>
+    <url>
+         <loc>http://127.0.0.1:8000/mds/notused/protocol/</loc>
+         <lastmod>2025-12-28</lastmod>
     </url>
 </urlset>

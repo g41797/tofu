@@ -1,6 +1,6 @@
 
 
-??? question "Why “101”?"
+??? question "NAQ: Why “101”?"
     It’s 100% built by AI — and 1% by the project’s author.
 
 Because tofu uses sockets under the hood, you still need to understand:

@@ -9,7 +9,6 @@ body:has(.hero-wrapper) .md-sidebar {
   display: none !important;
 }
 
-
 /* Hero Wrapper - Full viewport layout */
 .hero-wrapper {
   min-height: 100vh;
@@ -29,12 +28,12 @@ body:has(.hero-wrapper) .md-sidebar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3rem;
+  gap: 1rem;              /* REDUCED from 3rem to tighten layout */
   flex-grow: 1;
   justify-content: center;
 }
 
-/* Hero Image - Centered project logo (MAXIMUM SIZE) */
+/* Hero Image - Centered project logo */
 .hero-image {
   text-align: center;
   max-width: 1400px;
@@ -106,37 +105,18 @@ body:has(.hero-wrapper) .md-sidebar {
 
 .hero-description li {
   margin: 0.5rem 0;
-  color: var(--md-default-fg-color);
 }
 
-/* Ensure list text is visible in dark mode */
-[data-md-color-scheme="slate"] .hero-description li {
-  color: var(--md-default-fg-color);
-}
-
-.hero-subtitle {
-  margin-top: 1.5rem;
-  font-size: 1rem;
-  color: var(--md-default-fg-color--light);
-}
-
-/* Hero Buttons - Top placement for better UX */
-.hero-buttons-top {
-  display: flex;
-  gap: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 2rem auto 0.5rem auto;
-  max-width: 600px;
-}
-
-/* Legacy hero-buttons for compatibility */
+/* Hero Buttons - Stacked vertically as lines */
+.hero-buttons-top,
 .hero-buttons {
   display: flex;
-  gap: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 2rem;
+  flex-direction: column; /* Forces vertical stack */
+  gap: 1rem;              /* Space between buttons */
+  align-items: center;    /* Centers the stack */
+  margin: 0.5rem auto;    /* REDUCED top margin to bring closer to quote */
+  max-width: 320px;       /* Width of the "button lines" */
+  width: 100%;
 }
 
 .hero-button {
@@ -150,7 +130,8 @@ body:has(.hero-wrapper) .md-sidebar {
   border: 2px solid transparent;
   cursor: pointer;
   text-align: center;
-  min-width: 180px;
+  width: 100%;            /* Makes all buttons same width */
+  box-sizing: border-box;
 }
 
 /* Primary Button - Light Mode */
@@ -232,78 +213,17 @@ body:has(.hero-wrapper) .md-sidebar {
   margin-bottom: 1.5rem;
 }
 
-.hero-mantra a {
-  color: var(--md-accent-fg-color);
-  text-decoration: none;
-  border-bottom: 1px solid var(--md-accent-fg-color);
-}
-
-.hero-mantra a:hover {
-  color: var(--md-primary-fg-color);
-  border-bottom-color: var(--md-primary-fg-color);
-}
-
-/* Hero Quote - Main quote in content area */
+/* Hero Quote - Main quote */
 .hero-quote-main {
   font-size: 1.3rem;
   font-style: italic;
   padding: 1.5rem 2rem;
-  margin: 0.5rem 0 2rem 0;
+  margin: 0.5rem 0 0.5rem 0; /* REDUCED bottom margin from 2rem to tighten layout */
   border-left: 4px solid var(--md-accent-fg-color);
   background: var(--md-code-bg-color);
   border-radius: 4px;
   color: var(--md-default-fg-color);
   text-align: center;
-}
-
-/* GitHub username link styling */
-.hero-quote-main a {
-  text-decoration: none;
-  border-bottom: 1px solid;
-  transition: all 0.3s ease;
-  font-style: normal;
-}
-
-/* Light mode - use indigo instead of cyan */
-[data-md-color-scheme="default"] .hero-quote-main a {
-  color: #3f51b5;
-  border-bottom-color: #3f51b5;
-}
-
-[data-md-color-scheme="default"] .hero-quote-main a:hover {
-  color: #1a237e;
-  border-bottom-color: #1a237e;
-}
-
-/* Dark mode - use teal instead of lime */
-[data-md-color-scheme="slate"] .hero-quote-main a {
-  color: #26a69a;
-  border-bottom-color: #26a69a;
-}
-
-[data-md-color-scheme="slate"] .hero-quote-main a:hover {
-  color: #80cbc4;
-  border-bottom-color: #80cbc4;
-}
-
-/* Old hero quote styles (keep for compatibility) */
-.hero-quote {
-  font-size: 1.3rem;
-  font-style: italic;
-  padding: 1.5rem 2rem;
-  margin: 2rem 0 0 0;
-  border-left: 4px solid var(--md-accent-fg-color);
-  background: var(--md-code-bg-color);
-  border-radius: 4px;
-  color: var(--md-default-fg-color);
-}
-
-.hero-quote footer {
-  font-size: 1rem;
-  font-style: normal;
-  margin-top: 1rem;
-  text-align: right;
-  color: var(--md-default-fg-color--light);
 }
 
 /* Hero Footer */
@@ -316,102 +236,24 @@ body:has(.hero-wrapper) .md-sidebar {
   margin-top: auto;
 }
 
-.hero-footer p {
-  margin: 0;
-}
-
 /* ===================================================================
    Responsive Design
    =================================================================== */
 
-/* Tablet and below */
 @media screen and (max-width: 768px) {
-  .hero-image {
-    max-width: 90%;
-  }
-
-  .hero-description {
-    font-size: 1rem;
-  }
-
-  .hero-content {
-    padding: 1.5rem;
-  }
-
-  .hero-buttons,
-  .hero-buttons-top {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .hero-button {
-    width: 100%;
-    max-width: 300px;
-  }
-
-  .hero-quote-main {
-    font-size: 1.1rem;
-    padding: 1rem 1.5rem;
-  }
-}
-
-/* Mobile */
-@media screen and (max-width: 480px) {
-  .hero-wrapper {
-    padding: 1rem 0.5rem;
-  }
-
-  .hero-image {
-    max-width: 100%;
-  }
-
-  .hero-description {
-    font-size: 0.95rem;
-  }
-
-  .hero-content {
-    padding: 1rem;
-  }
-
-  .hero-button {
-    padding: 0.8rem 2rem;
-    font-size: 1rem;
-  }
-
-  .hero-quote-main {
-    font-size: 1rem;
-    padding: 1rem;
-  }
-}
-
-/* ===================================================================
-   Additional Accessibility & Polish
-   =================================================================== */
-
-/* Focus states for keyboard navigation */
-.hero-button:focus {
-  outline: 2px solid var(--md-accent-fg-color);
-  outline-offset: 2px;
-}
-
-/* Smooth scrolling for anchor links */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Print styles - hide interactive elements */
-@media print {
-  .hero-buttons {
-    display: none;
-  }
+  .hero-title { font-size: 2.5rem; }
+  .hero-slogan { font-size: 1.4rem; }
+  .hero-image { max-width: 90%; }
 }
 
 /* ===================================================================
    Mermaid Diagram Fixes
    =================================================================== */
-
-/* Fix Mermaid note text visibility in dark mode */
 [data-md-color-scheme="slate"] .md-typeset .mermaid .noteText,
 [data-md-color-scheme="slate"] .md-typeset .mermaid .noteText tspan {
   fill: var(--md-typeset-color) !important;
+}
+
+html {
+  scroll-behavior: smooth;
 }
