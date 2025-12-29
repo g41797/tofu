@@ -140,7 +140,7 @@ pub fn build(b: *std.Build) void {
 
     const install_tofu_docs = b.*.addInstallDirectory(.{
         .source_dir = tofu_docs_lib.getEmittedDocs(),
-        .install_dir = .{ .custom = "docs_site/docs" },
+        .install_dir = .{ .custom = "../docs_site/docs" },
         .install_subdir = "apidocs",
     });
 
@@ -152,7 +152,7 @@ pub fn build(b: *std.Build) void {
 
     const install_recipes_docs = b.*.addInstallDirectory(.{
         .source_dir = recipes_docs_lib.getEmittedDocs(),
-        .install_dir = .{ .custom = "docs_site/docs" },
+        .install_dir = .{ .custom = "../docs_site/docs" },
         .install_subdir = "recipes",
     });
 

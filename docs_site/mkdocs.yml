@@ -1,5 +1,6 @@
 site_name: "Tofu - Sync your devs, Async your apps!"
 site_url: https://g41797.github.io/tofu/
+site_dir: ../docs
 repo_url: https://github.com/g41797/tofu/
 repo_name: tofu on GitHub
 
