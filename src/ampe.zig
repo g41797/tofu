@@ -7,7 +7,10 @@ pub const Ampe = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.AmpeVTable,
 
-    /// Thread-safe. Returns null if pool empty and strategy is poolOnly.
+    /// Gets a message from the internal pool based on the allocation strategy.
+    /// Returns null if the pool is empty and the strategy is poolOnly.
+    /// Returns an error if the engine is shutting down or allocation fails.
+    /// Thread-safe.
     pub fn get(
         ampe: Ampe,
         strategy: AllocationStrategy,
@@ -15,7 +18,10 @@ pub const Ampe = struct {
         return ampe.vtable.get(ampe.ptr, strategy);
     }
 
-    /// Thread-safe. Sets msg to null.
+    /// Returns a message to the internal pool.
+    /// If the pool is closed, destroys the message.
+    /// Sets msg.* to null to prevent reuse.
+    /// Thread-safe.
     pub fn put(
         ampe: Ampe,
         msg: *?*message.Message,
@@ -31,6 +37,8 @@ pub const Ampe = struct {
         ampe.vtable.put(ampe.ptr, msg);
     }
 
+    /// Don't forget:
+    ///     - Call destroy on the result to abort communication and free memory.
     /// Thread-safe.
     pub fn create(
         ampe: Ampe,
@@ -38,6 +46,7 @@ pub const Ampe = struct {
         return ampe.vtable.create(ampe.ptr);
     }
 
+    /// Aborts communication,  frees memory
     /// Thread-safe.
     pub fn destroy(
         ampe: Ampe,
@@ -46,6 +55,7 @@ pub const Ampe = struct {
         return ampe.vtable.destroy(ampe.ptr, chnls.ptr);
     }
 
+    /// I hope returns GPA-compatible allocator
     pub fn getAllocator(
         ampe: Ampe,
     ) Allocator {
@@ -64,7 +74,17 @@ pub const ChannelGroup = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.CHNLSVTable,
 
-    /// Thread-safe. Sets msg to null. Returns BinaryHeader for tracking.
+    /// Submits a message for async processing:
+    /// - most cases: send to peer
+    /// - others: internal network related processing
+    /// On success:
+    /// - Sets `msg.*` to null (prevents reuse).
+    /// - Returns `BinaryHeader` for tracking.
+    /// On error:
+    /// - Returns an error.
+    /// - If the engine cannot use the message (internal failure),
+    ///   also sets `msg.*` to null.
+    /// Thread-safe.
     pub fn enqueueToPeer(
         chnls: ChannelGroup,
         msg: *?*message.Message,
@@ -72,7 +92,15 @@ pub const ChannelGroup = struct {
         return chnls.vtable.enqueueToPeer(chnls.ptr, msg);
     }
 
-    /// Single thread only. Timeout in nanoseconds. Returns null on timeout.
+    /// Waits for the next message from the internal queue.
+    /// Timeout is in nanoseconds. Returns `null` if no message arrives in time.
+    /// Message sources:
+    /// - Remote peer (via `enqueueToPeer` on their side).
+    /// - Application (via `updateReceiver` on this ChannelGroup).
+    /// - Ampe (status/control messages).
+    /// Check `BinaryHeader` to identify the source.
+    /// On error: stop using this ChannelGroup and call `ampe.destroy` on it.
+    /// Call in a loop from **one thread only**.
     pub fn waitReceive(
         chnls: ChannelGroup,
         timeout_ns: u64,
@@ -80,8 +108,19 @@ pub const ChannelGroup = struct {
         return chnls.vtable.waitReceive(chnls.ptr, timeout_ns);
     }
 
-    /// Thread-safe. Wake receiver or send notification. FIFO only.
-    /// Pass null msg to just wake receiver, non-null to send data.
+    /// Adds a message to the internal queue for `waitReceive`.
+    /// If `msg.*` is not null:
+    /// - Engine sets status to `'receiver_update'`.
+    /// - Sets `msg.*` to null after success.
+    /// - No need for `channel_number` or similar fields.
+    /// If `msg.*` is null:
+    /// - Creates a `'receiver_update'` Signal and adds it.
+    /// Returns error if shutting down.
+    /// Use from another thread to:
+    /// - Wake the receiver (`msg.*` = null).
+    /// - Send info/commands/notifications.
+    /// FIFO order only. No priority queues.
+    /// Thread-safe.
     pub fn updateReceiver(
         chnls: ChannelGroup,
         update: *?*message.Message,
