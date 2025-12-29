@@ -47,7 +47,7 @@ pub const Services = struct {
     }
 };
 
-const SRVCSVTable = struct {
+pub const SRVCSVTable = struct {
     start: *const fn (ptr: ?*anyopaque, ampe: Ampe, sendTo: ChannelGroup) anyerror!void,
 
     stop: *const fn (ptr: ?*anyopaque) void,
@@ -84,7 +84,7 @@ pub const EchoService = struct {
         };
     }
 
-    fn start(ptr: ?*anyopaque, ampe: Ampe, channels: ChannelGroup) !void {
+    pub fn start(ptr: ?*anyopaque, ampe: Ampe, channels: ChannelGroup) !void {
         const echo: *EchoService = @ptrCast(@alignCast(ptr));
         echo.*.engine = ampe;
         echo.*.sendTo = channels;
@@ -93,7 +93,7 @@ pub const EchoService = struct {
         return;
     }
 
-    fn stop(ptr: ?*anyopaque) void {
+    pub fn stop(ptr: ?*anyopaque) void {
         const echo: *EchoService = @ptrCast(@alignCast(ptr));
         echo.*.engine = null;
         echo.*.sendTo = null;
@@ -101,7 +101,7 @@ pub const EchoService = struct {
         return;
     }
 
-    fn onMessage(ptr: ?*anyopaque, msg: *?*message.Message) bool {
+    pub fn onMessage(ptr: ?*anyopaque, msg: *?*message.Message) bool {
         const echo: *EchoService = @ptrCast(@alignCast(ptr));
 
         if (echo.*.wasCancelled()) {
@@ -116,7 +116,7 @@ pub const EchoService = struct {
         return echo.*.processMessage(msg);
     }
 
-    fn processMessage(echo: *EchoService, msg: *?*message.Message) bool {
+    pub fn processMessage(echo: *EchoService, msg: *?*message.Message) bool {
         if (msg.* == null) {
             return true;
         }
@@ -175,7 +175,7 @@ pub const EchoService = struct {
         return echo.*.cancel.load(.monotonic);
     }
 
-    fn addMessagesToPool(echo: *EchoService) bool {
+    pub fn addMessagesToPool(echo: *EchoService) bool {
         // Just one as example
         var newMsg: ?*Message = Message.create(echo.*.allocator) catch {
             return false;
@@ -230,7 +230,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn deinit(self: *Self) void {
+    pub fn deinit(self: *Self) void {
         if (self.*.chnls != null) {
             self.*.ampe.destroy(self.*.chnls.?) catch {};
             self.*.chnls = null;
@@ -238,7 +238,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn release(self: *Self) void {
+    pub fn release(self: *Self) void {
         self.*.ack.*.send(self) catch {
             self.*.destroy();
         };
@@ -252,7 +252,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn runOnThread(self: *Self) void {
+    pub fn runOnThread(self: *Self) void {
         defer self.*.release();
         defer self.*.disconnect();
 
@@ -266,7 +266,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn connect(self: *Self) status.AmpeError!void {
+    pub fn connect(self: *Self) status.AmpeError!void {
         var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer self.*.ampe.put(&helloRequest);
 
@@ -304,7 +304,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn sendRecvEchoes(self: *Self) status.AmpeError!void {
+    pub fn sendRecvEchoes(self: *Self) status.AmpeError!void {
         // Simular to connect, because connect is
         //     - send hello request
         //     - recv hello response
@@ -369,7 +369,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn disconnect(self: *Self) void {
+    pub fn disconnect(self: *Self) void {
         if (!self.*.connected) {
             return;
         }
@@ -409,7 +409,7 @@ pub const EchoClient = struct {
         return;
     }
 
-    fn backUp(self: *Self) void {
+    pub fn backUp(self: *Self) void {
         defer self.*.destroy();
 
         _ = self.*.connect() catch |err| {
@@ -592,7 +592,7 @@ pub const EchoClientServer = struct {
         return;
     }
 
-    fn cleanMbox(ecs: *EchoClientServer) void {
+    pub fn cleanMbox(ecs: *EchoClientServer) void {
         var client: ?*EchoClient = ecs.*.ack.close();
         while (client != null) {
             assert(ecs.*.clcCount > 0);

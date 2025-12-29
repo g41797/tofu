@@ -740,7 +740,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         cfg: Configurator = undefined,
         result: ?AmpeStatus = undefined,
 
-        fn runOnThread(self: *Self) void {
+        pub fn runOnThread(self: *Self) void {
             while (true) {
                 var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&helloRequest);
@@ -857,7 +857,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         cfg: Configurator = undefined,
         result: ?AmpeStatus = .unknown_error,
 
-        fn runOnThread(self: *Self) void {
+        pub fn runOnThread(self: *Self) void {
             while (true) { // Create listener
 
                 var welcomeRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
@@ -1100,7 +1100,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return;
         }
 
-        fn createListener(server: *Self) !void {
+        pub fn createListener(server: *Self) !void {
             var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer server.*.ampe.put(&welcomeRequest);
 
@@ -1144,7 +1144,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return server.waitRequestSendResponse(.bye, timeOut);
         }
 
-        fn waitRequestSendResponse(server: *Self, mtype: message.MessageType, timeOut: u64) !bool {
+        pub fn waitRequestSendResponse(server: *Self, mtype: message.MessageType, timeOut: u64) !bool {
             while (true) {
                 var recvMsg: ?*Message = server.*.chnls.?.waitReceive(timeOut) catch |err| {
                     log.info("server - waitReceive error {s}", .{@errorName(err)});
@@ -1188,7 +1188,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             }
         }
 
-        fn addMessagesToPool(self: *Self, count: u8) !void {
+        pub fn addMessagesToPool(self: *Self, count: u8) !void {
             const allocator: Allocator = self.*.ampe.getAllocator();
             var i: usize = 0;
             while (i < count) : (i += 1) {
@@ -1386,7 +1386,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return client.recvResponse(.bye, timeOut);
         }
 
-        fn recvResponse(client: *Self, mtype: message.MessageType, timeOut: u64) !bool {
+        pub fn recvResponse(client: *Self, mtype: message.MessageType, timeOut: u64) !bool {
             while (true) {
                 var recvMsg: ?*Message = client.*.chnls.?.waitReceive(timeOut) catch |err| {
                     log.info("client - waitReceive error {s}", .{@errorName(err)});
@@ -1426,7 +1426,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             }
         }
 
-        fn addMessagesToPool(self: *Self, count: u8) !void {
+        pub fn addMessagesToPool(self: *Self, count: u8) !void {
             const allocator: Allocator = self.*.ampe.getAllocator();
             var i: usize = 0;
             while (i < count) : (i += 1) {
@@ -1709,7 +1709,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             return client.recvResponse(.bye, timeOut);
         }
 
-        fn recvResponse(client: *Self, mtype: message.MessageType, timeOut: u64) !bool {
+        pub fn recvResponse(client: *Self, mtype: message.MessageType, timeOut: u64) !bool {
             while (true) {
                 var recvMsg: ?*Message = client.*.chnls.?.waitReceive(timeOut) catch |err| {
                     log.info("client - waitReceive error {s}", .{@errorName(err)});
@@ -1815,7 +1815,7 @@ pub const TofuEchoServer = struct {
         return;
     }
 
-    fn createListener(server: *Self) !void {
+    pub fn createListener(server: *Self) !void {
         var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer server.*.ampe.put(&welcomeRequest);
 
@@ -1860,7 +1860,7 @@ pub const TofuEchoServer = struct {
         return server.waitRequestSendResponse(.bye, timeOut);
     }
 
-    fn waitRequestSendResponse(server: *Self, mtype: message.MessageType, timeOut: u64) !bool {
+    pub fn waitRequestSendResponse(server: *Self, mtype: message.MessageType, timeOut: u64) !bool {
         while (true) {
             var recvMsg: ?*Message = server.*.chnls.?.waitReceive(timeOut) catch |err| {
                 log.info("server - waitReceive error {s}", .{@errorName(err)});

@@ -103,7 +103,7 @@ pub fn stop(mh: *MultiHomed) void {
     return;
 }
 
-fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
+pub fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     for (adrs) |cnfg| {
         _ = try mh.*.startListener(cnfg);
     }
@@ -119,7 +119,7 @@ fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     return mh;
 }
 
-fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
+pub fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
     var welcomeRequest: ?*Message = mh.*.ampe.?.get(tofu.AllocationStrategy.always) catch unreachable;
     defer mh.*.ampe.?.put(&welcomeRequest);
 
@@ -175,7 +175,7 @@ fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
     }
 }
 
-fn onThread(mh: *MultiHomed) void {
+pub fn onThread(mh: *MultiHomed) void {
     defer mh.*.thread = null;
     defer mh.*.srvcs.stop();
     defer mh.*.closeChannels();
@@ -206,7 +206,7 @@ fn onThread(mh: *MultiHomed) void {
 }
 
 // Main message processing loop for all channels.
-fn mainLoop(mh: *MultiHomed) void {
+pub fn mainLoop(mh: *MultiHomed) void {
     while (true) {
         // One waitReceive() for all channels (listeners + clients)
         var receivedMsg: ?*Message = mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -243,7 +243,7 @@ inline fn closeMbox(mh: *MultiHomed) void {
     _ = mh.*.ackMbox.close(); // Nothing to clean
 }
 
-fn closeChannels(mh: *MultiHomed) void {
+pub fn closeChannels(mh: *MultiHomed) void {
     if (mh.*.chnls != null) {
         mh.*.ampe.?.destroy(mh.*.chnls.?) catch unreachable;
         mh.*.chnls = null;
