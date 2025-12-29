@@ -1,44 +1,26 @@
-//! Tofu Cookbook - Complete collection of usage examples from simple to complex.
+//! Usage examples for tofu library operations.
 //!
-//! **How to Use This File:**
-//! Read examples in order from top to bottom. Each example builds on previous concepts.
-//! Start with `createDestroyMain`, end with `handleEchoClientServer`.
+//! Read examples in order (top to bottom). Each builds on previous concepts.
 //!
-//! **Learning Path:**
-//! 1. Engine basics (`createDestroy*`) - Create/destroy Reactor and Ampe
-//! 2. Pool basics (`getMsgsFrom*`) - Understand message pool and allocation strategies
-//! 3. Sending (`sendMessageFromThePool`) - Message lifecycle and ownership transfer
-//! 4. Error handling (`handle*Wrong*`) - What happens when things go wrong
-//! 5. Listeners (`handleStartOf*`) - Create TCP/UDS server listeners
-//! 6. Connection (`handleConnectOf*`) - Complete client-server handshake
-//! 7. Communication (`handleConnect`) - Full message exchange flow
-//! 8. Reconnection (`handleReConnect*`) - Handle connection failures
-//! 9. Complete system (`handleEchoClientServer`) - Production-like setup
+//! ## Topics Covered
 //!
-//! **Message-as-Cube Throughout:**
-//! Every example shows messages as cubes. You get cube from pool. You configure cube.
-//! You send cube (ownership transfers). You receive cube. You return cube to pool.
-//! Simple pattern repeated in different contexts.
+//! 1. Engine lifecycle - `createDestroy*`
+//! 2. Message pool - `getMsgsFrom*`
+//! 3. Message sending - `sendMessageFromThePool`
+//! 4. Error handling - `handle*Wrong*`
+//! 5. Listeners - `handleStartOf*`
+//! 6. Connections - `handleConnectOf*`, `handleConnect`
+//! 7. Reconnection - `handleReConnect*`
+//! 8. Full system - `handleEchoClientServer`
 //!
-//! **Pattern Categories:**
-//! - **ST (Single-Threaded)**: All operations on one thread
-//! - **MT (Multi-Threaded)**: Client and server on separate threads
-//! - **TCP**: Using TCP/IP sockets
-//! - **UDS**: Using Unix Domain Sockets
+//! ## Patterns
 //!
-//! **Key Concepts Demonstrated:**
-//! - Message pool management (`get()`/`put()`)
-//! - Hello/Welcome handshake
-//! - Request/Response patterns
-//! - Signal (one-way) patterns
-//! - Error handling (pool_empty, connect_failed, channel_closed)
-//! - Graceful vs force disconnect
-//! - updateReceiver for thread communication
-//! - Reconnection strategies
-//! - Helper structures (TofuClient, TofuServer, ClientConnector, TofuEchoServer)
+//! - ST (Single-Threaded) - operations on one thread
+//! - MT (Multi-Threaded) - client/server on separate threads
+//! - TCP - TCP/IP sockets
+//! - UDS - Unix Domain Sockets
 //!
-//! **All Examples Are Tests:**
-//! Run with `zig build test`. Each function is complete, runnable example.
+//! All examples are runnable tests: `zig build test`
 
 const cookbook = @This();
 
