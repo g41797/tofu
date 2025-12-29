@@ -285,7 +285,7 @@ const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
-const VC = message.ValidCombination;
+const VC = message.ValidForSend;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;

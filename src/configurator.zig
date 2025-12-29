@@ -40,13 +40,8 @@ pub const TCPClientConfigurator = struct {
         return cnf;
     }
 
-    pub fn prepareRequest(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg, .request);
-        try self.toConfiguration(&msg.*.thdrs);
-    }
-
-    pub fn prepareSignal(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg, .signal);
+    pub fn configure(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
+        prepareForClient(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -112,13 +107,8 @@ pub const TCPServerConfigurator = struct {
         return cnf;
     }
 
-    pub fn prepareRequest(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg, .request);
-        try self.toConfiguration(&msg.*.thdrs);
-    }
-
-    pub fn prepareSignal(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg, .signal);
+    pub fn configure(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
+        prepareForServer(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -175,13 +165,8 @@ pub const UDSClientConfigurator = struct {
         return ret;
     }
 
-    pub fn prepareRequest(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg, .request);
-        try self.toConfiguration(&msg.*.thdrs);
-    }
-
-    pub fn prepareSignal(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
-        prepareForClient(msg, .signal);
+    pub fn configure(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
+        prepareForClient(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -227,13 +212,8 @@ pub const UDSServerConfigurator = struct {
         return ret;
     }
 
-    pub fn prepareRequest(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg, .request);
-        try self.toConfiguration(&msg.*.thdrs);
-    }
-
-    pub fn prepareSignal(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
-        prepareForServer(msg, .signal);
+    pub fn configure(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
+        prepareForServer(msg);
         try self.toConfiguration(&msg.*.thdrs);
     }
 
@@ -268,13 +248,7 @@ pub const UDSServerConfigurator = struct {
 };
 
 pub const WrongConfigurator = struct {
-    pub fn prepareRequest(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
-        _ = self;
-        _ = msg;
-        return AmpeError.WrongConfiguration;
-    }
-
-    pub fn prepareSignal(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
+    pub fn configure(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
         _ = self;
         _ = msg;
         return AmpeError.WrongConfiguration;
@@ -288,15 +262,9 @@ pub const Configurator = union(enum) {
     uds_client: UDSClientConfigurator,
     wrong: WrongConfigurator,
 
-    pub fn prepareRequest(self: *const Configurator, msg: *Message) AmpeError!void {
+    pub fn configure(self: *const Configurator, msg: *Message) AmpeError!void {
         return switch (self.*) {
-            inline else => |conf| try conf.prepareRequest(msg),
-        };
-    }
-
-    pub fn prepareSignal(self: *const Configurator, msg: *Message) AmpeError!void {
-        return switch (self.*) {
-            inline else => |conf| try conf.prepareSignal(msg),
+            inline else => |conf| try conf.configure(msg),
         };
     }
 
@@ -416,56 +384,12 @@ pub const Configurator = union(enum) {
     }
 };
 
-inline fn prepareForServer(msg: *Message, role: message.MessageRole) void {
-    msg.bhdr = .{};
-
-    msg.bhdr.proto = .{
-        .mtype = .welcome,
-        .role = role,
-    };
+inline fn prepareForServer(msg: *Message) void {
+    msg.bhdr = .init(.WelcomeRequest);
 }
 
-inline fn prepareForClient(msg: *Message, role: message.MessageRole) void {
-    msg.bhdr = .{};
-
-    msg.bhdr.proto = .{
-        .mtype = .hello,
-        .role = role,
-    };
-}
-
-inline fn isFirstServerRequest(msg: *Message) bool {
-    if (msg.bhdr.proto.mtype != .welcome) {
-        return false;
-    }
-    if (msg.bhdr.proto.role != .request) {
-        return false;
-    }
-    if (msg.bhdr.proto.more != .last) {
-        return false;
-    }
-    if (msg.bhdr.proto.origin != .application) {
-        return false;
-    }
-
-    return true;
-}
-
-inline fn isFirstClientRequest(msg: *Message) bool {
-    if (msg.bhdr.proto.mtype != .hello) {
-        return false;
-    }
-    if (msg.bhdr.proto.role != .request) {
-        return false;
-    }
-    if (msg.bhdr.proto.more != .last) {
-        return false;
-    }
-    if (msg.bhdr.proto.origin != .application) {
-        return false;
-    }
-
-    return true;
+inline fn prepareForClient(msg: *Message) void {
+    msg.bhdr = .init(.HelloRequest);
 }
 
 const LazyPTOP = 7099;
@@ -479,4 +403,4 @@ pub const AmpeError = @import("status.zig").AmpeError;
 const std = @import("std");
 const activeTag = std.meta.activeTag;
 
-// 2DO prepareRequest - replace with prepare +
+// 2DO configure - replace with prepare +

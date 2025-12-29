@@ -986,3 +986,38 @@ test "valueToSlice - pointer - sliceToValue" {
 
     try std.testing.expectEqual(ptr, ptr2);
 }
+
+
+// inline fn isFirstServerRequest(msg: *Message) bool {
+//     if (msg.bhdr.proto.mtype != .welcome) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.role != .request) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.more != .last) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.origin != .application) {
+//         return false;
+//     }
+//
+//     return true;
+// }
+//
+// inline fn isFirstClientRequest(msg: *Message) bool {
+//     if (msg.bhdr.proto.mtype != .hello) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.role != .request) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.more != .last) {
+//         return false;
+//     }
+//     if (msg.bhdr.proto.origin != .application) {
+//         return false;
+//     }
+//
+//     return true;
+// }

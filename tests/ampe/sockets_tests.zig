@@ -448,7 +448,7 @@ fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
     var wlcm: *Message = try Message.create(gpa);
     defer wlcm.*.destroy();
 
-    try cnfr.*.prepareRequest(wlcm);
+    try cnfr.*.configure(wlcm);
 
     var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
 
@@ -467,7 +467,7 @@ fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
 fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
     var hello: *Message = try Message.create(gpa);
 
-    cnfr.*.prepareRequest(hello) catch |err| {
+    cnfr.*.configure(hello) catch |err| {
         hello.*.destroy();
         return err;
     };
@@ -512,7 +512,7 @@ const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageQueue = message.MessageQueue;
 const MessageID = message.MessageID;
-const VC = message.ValidCombination;
+const VC = message.ValidForSend;
 const CN = message.ChannelNumber;
 
 const Reactor = tofu.Reactor;

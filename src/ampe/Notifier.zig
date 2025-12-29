@@ -25,7 +25,7 @@ pub const Alerter = struct {
 pub const Notification = packed struct(u8) {
     kind: NotificationKind = undefined,
     oob: Oob = undefined,
-    hint: ValidCombination = undefined,
+    hint: ValidForSend = undefined,
     alert: Alert = undefined,
     _reserved7: u1 = 0,
 };
@@ -315,7 +315,7 @@ const TempUdsPath = tofu.TempUdsPath;
 
 const message = tofu.message;
 const Oob = message.Oob;
-const ValidCombination = message.ValidCombination;
+const ValidForSend = message.ValidForSend;
 
 const status = tofu.status;
 const AmpeError = status.AmpeError;

@@ -21,7 +21,7 @@ test "base configurator test" {
 
         var conf: Configurator = .{ .tcp_client = TCPClientConfigurator.init(null, null) };
 
-        _ = try conf.prepareRequest(msg);
+        _ = try conf.configure(msg);
 
         const restored = Configurator.fromMessage(msg);
 

@@ -778,8 +778,8 @@ fn processMessageFromChannels(rtr: *Reactor) !void {
         .ByeResponse => return rtr.sendByeResponse(),
 
         .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return rtr.enqueueToPeer(),
-
-        else => return AmpeError.InvalidMessage,
+        //
+        // else => return AmpeError.InvalidMessage,
     }
 
     return;
@@ -1370,7 +1370,7 @@ const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
-const VC = message.ValidCombination;
+const VC = message.ValidForSend;
 const MessageQueue = message.MessageQueue;
 
 const Options = tofu.Options;

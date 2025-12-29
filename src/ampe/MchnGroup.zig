@@ -76,7 +76,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
     const sendMsg: *Message = msgopt.?;
     sendMsg.*.@"<ctx>" = ptr;
 
-    const vc: message.ValidCombination = try sendMsg.*.check_and_prepare();
+    const vfs: message.ValidForSend = try sendMsg.*.check_and_prepare();
 
     const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
 
@@ -96,7 +96,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
 
     const ret: BinaryHeader = sendMsg.*.bhdr;
 
-    grp.engine.submitMsg(sendMsg, vc) catch |err| {
+    grp.engine.submitMsg(sendMsg, vfs) catch |err| {
         if (newChannelWasCreated) {
             // Called on caller thread
             grp.engine.acns.removeChannel(sendMsg.*.bhdr.channel_number);
@@ -204,7 +204,7 @@ pub const TextHeaderIterator = message.TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 pub const MessageID = message.MessageID;
-pub const VC = message.ValidCombination;
+pub const VC = message.ValidForSend;
 
 pub const Reactor = tofu.Reactor;
 

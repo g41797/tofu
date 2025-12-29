@@ -1,8 +1,4 @@
-//! Usage examples for tofu library operations.
-//!
-//! Read examples in order (top to bottom). Each builds on previous concepts.
-//!
-//! ## Topics Covered
+//! Tofu "cookbook" - useful examples
 //!
 //! 1. Engine lifecycle - `createDestroy*`
 //! 2. Message pool - `getMsgsFrom*`
@@ -12,13 +8,7 @@
 //! 6. Connections - `handleConnectOf*`, `handleConnect`
 //! 7. Reconnection - `handleReConnect*`
 //! 8. Full system - `handleEchoClientServer`
-//!
-//! ## Patterns
-//!
-//! - ST (Single-Threaded) - operations on one thread
-//! - MT (Multi-Threaded) - client/server on separate threads
-//! - TCP - TCP/IP sockets
-//! - UDS - Unix Domain Sockets
+//! 9. .....
 //!
 //! All examples are runnable tests: `zig build test`
 
@@ -41,6 +31,7 @@ pub const ChannelGroup = tofu.ChannelGroup;
 pub const message = tofu.message;
 pub const Message = tofu.Message;
 pub const BinaryHeader = message.BinaryHeader;
+pub const ValidForSend = message.ValidForSend;
 pub const status = tofu.status;
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
@@ -241,7 +232,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     var cnfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.prepareRequest(msg.?);
+    try cnfg.configure(msg.?);
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -279,7 +270,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     var cnfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.prepareRequest(msg.?);
+    try cnfg.configure(msg.?);
 
     // Store information for further processing.
     const bhdr: BinaryHeader = try chnls.enqueueToPeer(&msg);
@@ -318,7 +309,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     var cnfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("192.128.4.5", 3298) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.prepareRequest(msg.?);
+    try cnfg.configure(msg.?);
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -408,7 +399,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
     defer ampe.put(&msg);
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.prepareRequest(msg.?);
+    try cnfg.configure(msg.?);
 
     const corrInfo: BinaryHeader = try chnls.enqueueToPeer(&msg);
 
@@ -500,7 +491,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     defer ampe.put(&welcomeRequest);
 
     // Add configuration to the message's TextHeaders.
-    try srvCfg.prepareRequest(welcomeRequest.?);
+    try srvCfg.configure(welcomeRequest.?);
 
     const srvCorrInfo: BinaryHeader = try chnls.enqueueToPeer(&welcomeRequest);
 
@@ -540,7 +531,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     defer ampe.put(&helloRequest);
 
     // Add configuration to the message's TextHeaders.
-    try cltCfg.prepareRequest(helloRequest.?);
+    try cltCfg.configure(helloRequest.?);
 
     const cltCorrInfo: BinaryHeader = try chnls.enqueueToPeer(&helloRequest);
 
@@ -745,7 +736,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&helloRequest);
 
-                self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+                self.*.cfg.configure(helloRequest.?) catch unreachable;
 
                 _ = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
@@ -863,7 +854,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                 var welcomeRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&welcomeRequest);
 
-                self.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
+                self.*.cfg.configure(welcomeRequest.?) catch unreachable;
 
                 _ = self.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
@@ -1104,7 +1095,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer server.*.ampe.put(&welcomeRequest);
 
-            server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
+            server.*.cfg.configure(welcomeRequest.?) catch unreachable;
 
             var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
@@ -1257,7 +1248,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                         // Prepare and send HelloRequest
                         var helloRequest: ?*Message = client.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                         defer client.*.ampe.put(&helloRequest);
-                        client.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+                        client.*.cfg.configure(helloRequest.?) catch unreachable;
                         client.*.helloBh = client.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
                         assert(client.*.helloBh.channel_number != 0);
@@ -1492,7 +1483,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
             var helloRequest: ?*Message = try engine.get(tofu.AllocationStrategy.always);
             errdefer engine.put(&helloRequest);
 
-            try cfg.*.prepareRequest(helloRequest.?);
+            try cfg.*.configure(helloRequest.?);
 
             return .{
                 .ampe = engine,
@@ -1819,7 +1810,7 @@ pub const TofuEchoServer = struct {
         var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer server.*.ampe.put(&welcomeRequest);
 
-        server.*.cfg.prepareRequest(welcomeRequest.?) catch unreachable;
+        server.*.cfg.configure(welcomeRequest.?) catch unreachable;
 
         var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 

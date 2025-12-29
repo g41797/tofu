@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Usage examples for tofu message passing library.
+//! Working examples - all are used in the tests.
 //!
-//! ## Modules
+// ! ## Modules
 //!
-//! - **`cookbook`** - Examples from basic to advanced (read top to bottom)
-//! - **`services`** - Cooperative message processing pattern
+//! - **`cookbook`** - Examples from basic to advanced
+//! - **`services`** - Example of dump message processing
 //! - **`MultiHomed`** - Multi-listener server (TCP + UDS on one thread)
 
 pub const cookbook = @import("cookbook.zig");

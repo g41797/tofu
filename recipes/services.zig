@@ -1,8 +1,7 @@
-//! Services interface for cooperative message processing.
+//! Services interface for message processing.
 //!
-//! Pattern: Server calls `waitReceive()` → passes message to `service.onMessage()` → service processes.
+//! Flow: Server calls `waitReceive()` → passes message to `service.onMessage()` → service processes.
 //!
-//! Implementations: `EchoService`, `EchoClient`, `EchoClientServer`.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -270,7 +269,7 @@ pub const EchoClient = struct {
         var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer self.*.ampe.put(&helloRequest);
 
-        self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+        self.*.cfg.configure(helloRequest.?) catch unreachable;
 
         helloRequest.?.*.copyBh2Body();
         self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
@@ -423,7 +422,7 @@ pub const EchoClient = struct {
             var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer self.*.ampe.put(&helloRequest);
 
-            self.*.cfg.prepareRequest(helloRequest.?) catch unreachable;
+            self.*.cfg.configure(helloRequest.?) catch unreachable;
 
             helloRequest.?.*.copyBh2Body();
             self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;

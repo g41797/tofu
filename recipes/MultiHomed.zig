@@ -3,7 +3,7 @@
 
 //! Server with multiple listeners (TCP/UDS) on one thread.
 //!
-//! Pattern: Single `waitReceive()` loop handles all listeners and client connections.
+//! Flow: Single `waitReceive()` loop handles all listeners and client connections.
 //! Messages dispatched by channel_number to Services implementation.
 //!
 //! Single-threaded: no locks, sequential processing, simpler state management.
@@ -123,7 +123,7 @@ pub fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
     var welcomeRequest: ?*Message = mh.*.ampe.?.get(tofu.AllocationStrategy.always) catch unreachable;
     defer mh.*.ampe.?.put(&welcomeRequest);
 
-    cnfg.prepareRequest(welcomeRequest.?) catch unreachable;
+    cnfg.configure(welcomeRequest.?) catch unreachable;
 
     welcomeRequest.?.*.copyBh2Body();
     const wlcbh: BinaryHeader = try mh.*.chnls.?.enqueueToPeer(&welcomeRequest);

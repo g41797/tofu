@@ -40,17 +40,76 @@ pub const ProtoFields = packed struct(u8) {
     more: MoreMessagesFlag = .last,
     oob: Oob = .off,
     _internal: u1 = 0,
+
+    pub fn init(vfs: ValidForSend) ProtoFields {
+        var proto: ProtoFields = .{};
+
+        switch (vfs) {
+            .WelcomeRequest => {
+                proto.role = .request;
+                proto.mtype = .welcome;
+            },
+
+            .HelloRequest => {
+                proto.role = .request;
+                proto.mtype = .hello;
+            },
+            .HelloResponse => {
+                proto.role = .response;
+                proto.mtype = .hello;
+            },
+
+            .ByeRequest => {
+                proto.role = .request;
+                proto.mtype = .bye;
+            },
+            .ByeResponse => {
+                proto.role = .response;
+                proto.mtype = .bye;
+            },
+            .ByeSignal => {
+                proto.role = .signal;
+                proto.mtype = .bye;
+                proto.oob = .on;
+            },
+
+            .AppRequest => {
+                proto.role = .request;
+            },
+            .AppResponse => {
+                proto.role = .response;
+            },
+            .AppSignal => {
+                proto.role = .signal;
+            },
+        }
+
+        return proto;
+    }
 };
 
 pub const ChannelNumber = u16;
 
-/// Reserved (0).
 pub const SpecialMinChannelNumber = std.math.minInt(u16);
 
-/// Reserved (65535).
 pub const SpecialMaxChannelNumber = std.math.maxInt(u16);
 
 pub const MessageID = u64;
+
+pub const ValidForSend = enum(u4) {
+    WelcomeRequest = 0,
+
+    HelloRequest = 1,
+    HelloResponse = 2,
+
+    ByeRequest = 3,
+    ByeResponse = 4,
+    ByeSignal = 5,
+
+    AppRequest = 6,
+    AppResponse = 7,
+    AppSignal = 8,
+};
 
 pub const BinaryHeader = packed struct {
     channel_number: ChannelNumber = 0,
@@ -65,6 +124,12 @@ pub const BinaryHeader = packed struct {
     @"<bl>": u16 = 0,
 
     pub const BHSIZE = @sizeOf(BinaryHeader);
+
+    pub fn init(vfs: ValidForSend) BinaryHeader {
+        var bh: BinaryHeader = .{};
+        bh.proto = .init(vfs);
+        return bh;
+    }
 
     pub fn clean(bh: *BinaryHeader) void {
         bh.* = .{};
@@ -276,28 +341,6 @@ pub const TextHeaders = struct {
     }
 };
 
-pub const ValidCombination = enum(u4) {
-    WelcomeRequest = 0,
-
-    HelloRequest = 1,
-    HelloResponse = 2,
-
-    ByeRequest = 3,
-    ByeResponse = 4,
-    ByeSignal = 5,
-
-    AppRequest = 6,
-    AppResponse = 7,
-    AppSignal = 8,
-
-    _reserved9,
-    _reserved10,
-    _reserved11,
-    _reserved12,
-    _reserved13,
-    _reserved14,
-};
-
 /// Always get from pool. Persistent fields: bhdr, thdrs, body. Transient: void*, ctx.
 pub const Message = struct {
     // Intrusive list
@@ -486,7 +529,7 @@ pub const Message = struct {
     }
 
     /// Validates the message and updates its binary header fields based on content lengths.
-    pub fn check_and_prepare(msg: *Message) AmpeError!ValidCombination {
+    pub fn check_and_prepare(msg: *Message) AmpeError!ValidForSend {
         errdefer msg.*.bhdr.dumpMeta("illegal message");
 
         msg.bhdr.status = status_to_raw(.success);
@@ -514,7 +557,7 @@ pub const Message = struct {
             return AmpeError.InvalidMoreUsage;
         }
 
-        const vc: ValidCombination = switch (mtype) {
+        const vfs: ValidForSend = switch (mtype) {
             .regular => switch (mode) {
                 .request => .AppRequest,
                 .response => .AppResponse,
@@ -555,7 +598,7 @@ pub const Message = struct {
         };
         const channel_number = msg.bhdr.channel_number;
         if (channel_number == 0) {
-            switch (vc) {
+            switch (vfs) {
                 .WelcomeRequest, .HelloRequest => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
@@ -571,7 +614,7 @@ pub const Message = struct {
         }
         msg.bhdr.@"<thl>" = @intCast(actualHeadersLen);
 
-        if ((msg.bhdr.@"<thl>" == 0) and ((vc == .WelcomeRequest) or (vc == .HelloRequest))) {
+        if ((msg.bhdr.@"<thl>" == 0) and ((vfs == .WelcomeRequest) or (vfs == .HelloRequest))) {
             msg.bhdr.status = status_to_raw(.wrong_configuration);
             return AmpeError.WrongConfiguration;
         }
@@ -587,7 +630,7 @@ pub const Message = struct {
             msg.bhdr.message_id = next_mid();
         }
 
-        return vc;
+        return vfs;
     }
 
     /// Debug: channel_number == 0 means simultaneous usage.
