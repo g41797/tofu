@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Intrusive queue implementation for types with prev/next pointers.
-//! Provides zero-allocation FIFO queue operations using intrusive linked lists.
+//! Zero-allocation FIFO using intrusive linked lists.
 
 /// In order to use IntrusiveQueue, T should look like
 /// pub const T = struct {
@@ -18,7 +17,6 @@ pub fn IntrusiveQueue(comptime T: type) type {
         first: ?*T = null,
         last: ?*T = null,
 
-        /// Adds an item to the end of the queue.
         pub fn enqueue(fifo: *Self, msg: *T) void {
             msg.prev = null;
             msg.next = null;
@@ -35,7 +33,6 @@ pub fn IntrusiveQueue(comptime T: type) type {
             return;
         }
 
-        /// Adds an item to the front (head) of the queue.
         pub fn pushFront(fifo: *Self, msg: *T) void {
             msg.prev = null;
             msg.next = null;
@@ -56,7 +53,6 @@ pub fn IntrusiveQueue(comptime T: type) type {
             return;
         }
 
-        /// Removes and returns the item at the front of the queue, or null if empty.
         pub fn dequeue(fifo: *Self) ?*T {
             if (fifo.first == null) {
                 return null;
@@ -77,12 +73,10 @@ pub fn IntrusiveQueue(comptime T: type) type {
             return result;
         }
 
-        /// Checks if the queue is empty.
         pub fn empty(fifo: *Self) bool {
             return (fifo.first == null);
         }
 
-        /// Returns the number of items in the queue.
         pub fn count(fifo: *Self) usize {
             var ret: usize = 0;
             var next = fifo.first;
@@ -92,7 +86,6 @@ pub fn IntrusiveQueue(comptime T: type) type {
             return ret;
         }
 
-        /// Moves all items from one queue to another.
         pub fn move(src: *Self, dest: *Self) void {
             var next = src.dequeue();
             while (next != null) {

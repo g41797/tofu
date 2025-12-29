@@ -1,20 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Utility functions for testing tofu applications.
-//! Provides helpers for temporary UDS paths, TCP port finding, and thread coordination.
+//! Test utilities: UDS paths, free TCP ports, thread coordination.
 
-/// UDS (Unix Domain Socket) uses a file path for communication on the same machine,
-/// unlike network sockets that use IP addresses and ports.
-///
-/// WelcomeRequest for a UDS server needs a file path.
-/// TempUdsPath creates a temporary file path for testing.
-/// .....................................................
+/// Creates temp file path for UDS testing. Usage:
 /// var tup: tofu.TempUdsPath = .{};
-///
 /// const filePath = try tup.buildPath(allocator);
-///
-/// var cnfg: Configurator = .{ .uds_server = configurator.UDSServerConfigurator.init(filePath) };
+/// var cnfg: Configurator = .{ .uds_server = UDSServerConfigurator.init(filePath) };
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
     socket_path: [108:0]u8 = undefined,
@@ -34,10 +26,7 @@ pub const TempUdsPath = struct {
     }
 };
 
-/// Helper function for finding free TCP/IP port
-/// Because there is a problem with 'Address In Use'
-/// for repeating tests, it's better to get free TCP/IP socket
-/// and use it's port for the listener
+/// Avoids 'Address In Use' in repeated tests.
 pub fn FindFreeTcpPort() !u16 {
     const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
     defer posix.close(sockfd); // Ensure socket is closed immediately after use
@@ -60,10 +49,7 @@ pub fn FindFreeTcpPort() !u16 {
     return std.mem.bigToNative(u16, addr.port);
 }
 
-/// Helper function to destroy ChannelGroup using defer.
-/// Suitable for tests and simple examples.
-/// In production, ChannelGroup is long-lived, and destruction
-/// should handle errors differently.
+/// For tests only. Logs errors.
 pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.ChannelGroup) void {
     ampe.destroy(chnls) catch |err| {
         log.info("DestroyChannels failed with error {any}", .{err});
@@ -71,10 +57,7 @@ pub fn DestroyChannels(ampe: tofu.Ampe, chnls: tofu.ChannelGroup) void {
     };
 }
 
-/// Helper function for running tasks simultaneously.
-/// Every task runs on own thread.
-/// Function waits finish of all threads.
-/// Task is 'fn () void'
+/// Waits for all to finish.
 pub fn RunTasks(allocator: std.mem.Allocator, tasks: []const *const fn () void) !void {
     var threads: []std.Thread = try allocator.alloc(std.Thread, tasks.len);
     defer allocator.free(threads);

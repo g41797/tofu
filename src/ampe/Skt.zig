@@ -101,13 +101,11 @@ pub fn setREUSE(skt: *Skt) !void {
     }
 }
 
-// Represents the C 'struct linger'
 pub const Linger = extern struct {
     l_onoff: c_int, // Option on/off
     l_linger: c_int, // Linger time in seconds
 };
 
-// Sets SO_LINGER on a socket to enable immediate, abortive close.
 pub fn setLingerAbort(skt: *Skt) AmpeError!void {
     const linger_config = Linger{
         .l_onoff = 1, // Enable linger
@@ -267,32 +265,11 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
     }
 }
 
-/// Doctored version of std.posix.accept - fix for Linux only
-/// Accept a connection on a socket.
-/// If `sockfd` is opened in non blocking mode, the function will
-/// return error.WouldBlock when EAGAIN is received.
+/// Modified std.posix.accept for Linux. Returns error.WouldBlock for non-blocking.
 pub fn acceptPosix(
-    /// This argument is a socket that has been created with `socket`, bound to a local address
-    /// with `bind`, and is listening for connections after a `listen`.
     sock: posix.socket_t,
-    /// This argument is a pointer to a sockaddr structure.  This structure is filled in with  the
-    /// address  of  the  peer  socket, as known to the communications layer.  The exact format of the
-    /// address returned addr is determined by the socket's address  family  (see  `socket`  and  the
-    /// respective  protocol  man  pages).
     addr: ?*posix.sockaddr,
-    /// This argument is a value-result argument: the caller must initialize it to contain  the
-    /// size (in bytes) of the structure pointed to by addr; on return it will contain the actual size
-    /// of the peer address.
-    ///
-    /// The returned address is truncated if the buffer provided is too small; in this  case,  `addr_size`
-    /// will return a value greater than was supplied to the call.
     addr_size: ?*posix.socklen_t,
-    /// The following values can be bitwise ORed in flags to obtain different behavior:
-    /// * `SOCK.NONBLOCK` - Set the `NONBLOCK` file status flag on the open file description (see `open`)
-    ///   referred  to by the new file descriptor.  Using this flag saves extra calls to `fcntl` to achieve
-    ///   the same result.
-    /// * `SOCK.CLOEXEC`  - Set the close-on-exec (`FD_CLOEXEC`) flag on the new file descriptor.   See  the
-    ///   description  of the `CLOEXEC` flag in `open` for reasons why this may be useful.
     flags: u32,
 ) posix.AcceptError!posix.socket_t {
     const have_accept4 = !(builtin.target.os.tag.isDarwin() or native_os == .windows or native_os == .haiku);

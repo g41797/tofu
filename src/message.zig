@@ -1,16 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Message structure and protocol definitions for tofu communication.
-//! Provides the core data structure for asynchronous message passing with headers and body.
-
-/// Enum representing the on-off states
 pub const Trigger = enum(u1) {
     on = 1,
     off = 0,
 };
 
-/// Enum representing the type of a message, used to categorize messages for processing.
 pub const MessageType = enum(u2) {
     regular = 0,
     welcome = 1,
@@ -18,7 +13,6 @@ pub const MessageType = enum(u2) {
     bye = 3,
 };
 
-/// Enum representing the role of a message, indicating whether it is a request, response, or signal.
 pub const MessageRole = enum(u2) {
     invalid = 0,
     request = 1,
@@ -26,23 +20,19 @@ pub const MessageRole = enum(u2) {
     signal = 3,
 };
 
-/// Enum indicating the origin of a message, either from the application or the ampe.
 pub const OriginFlag = enum(u1) {
     application = 0,
     engine = 1,
 };
 
-/// Enum indicating whether more messages are expected in a sequence.
 pub const MoreMessagesFlag = enum(u1) {
     last = 0,
     more = 1,
 };
 
-/// If '.on' , indicates high priority message.
-/// Oob message will be placed in the head of the queue of messages for send or internal processing.
+/// High priority. Goes to head of queue.
 pub const Oob = Trigger;
 
-/// Packed struct containing protocol fields for message metadata.
 pub const ProtoFields = packed struct(u8) {
     mtype: MessageType = .regular,
     role: MessageRole = .invalid,
@@ -52,42 +42,34 @@ pub const ProtoFields = packed struct(u8) {
     _internal: u1 = 0,
 };
 
-/// Type alias for channel number, represented as a 16-bit unsigned integer.
 pub const ChannelNumber = u16;
 
-/// Reserved channel number (0) for unassigned channels.
+/// Reserved (0).
 pub const SpecialMinChannelNumber = std.math.minInt(u16);
 
-/// Reserved channel number (65535) for tofu internal use.
+/// Reserved (65535).
 pub const SpecialMaxChannelNumber = std.math.maxInt(u16);
 
-/// Type alias for message ID, represented as a 64-bit unsigned integer.
 pub const MessageID = u64;
 
-/// Packed struct representing the binary header of a message, containing metadata.
 pub const BinaryHeader = packed struct {
     channel_number: ChannelNumber = 0,
     proto: ProtoFields = .{},
     status: u8 = 0,
     message_id: MessageID = 0,
 
-    /// Used by engine for internal purposes.
-    /// Don't touch !!!
+    /// Engine internal. Don't touch.
     @"<thl>": u16 = 0,
 
-    /// Used by engine for internal purposes.
-    /// Don't touch !!!
+    /// Engine internal. Don't touch.
     @"<bl>": u16 = 0,
 
-    /// Constant representing the size of the BinaryHeader in bytes (16 bytes).
     pub const BHSIZE = @sizeOf(BinaryHeader);
 
-    /// Resets the binary header to its default state.
     pub fn clean(bh: *BinaryHeader) void {
         bh.* = .{};
     }
 
-    /// Serializes the binary header to a byte array, handling endianness conversion if needed.
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
         if (is_be) {
             // On BE platform, copy directly from self to buf
@@ -109,7 +91,6 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
-    /// Deserializes a byte array into the binary header, handling endianness conversion if needed.
     pub fn fromBytes(self: *BinaryHeader, bytes: *const [BHSIZE]u8) void {
         const dest: *[BHSIZE]u8 = @ptrCast(self);
         @memcpy(dest, bytes);
@@ -125,7 +106,6 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
-    /// Logs debug information about the binary header if debugging is enabled.
     pub inline fn dump(self: *BinaryHeader, txt: []const u8) void {
         if (!DBG) {
             return;
@@ -157,18 +137,15 @@ pub const BinaryHeader = packed struct {
     }
 };
 
-/// Structure representing a single text header as a name-value pair.
 pub const TextHeader = struct {
     name: []const u8 = undefined,
     value: []const u8 = undefined,
 };
 
-/// Iterator for parsing text headers from a byte slice.
 pub const TextHeaderIterator = struct {
     bytes: ?[]const u8 = null,
     index: usize = 0,
 
-    /// Initializes a new TextHeaderIterator with the provided byte slice.
     pub fn init(bytes: ?[]const u8) TextHeaderIterator {
         return .{
             .bytes = bytes,
@@ -176,12 +153,10 @@ pub const TextHeaderIterator = struct {
         };
     }
 
-    /// Resets the iterator to the beginning of the byte slice.
     pub fn rewind(it: *TextHeaderIterator) void {
         it.index = 0;
     }
 
-    /// Returns the next text header from the byte slice, or null if no more headers exist.
     pub fn next(it: *TextHeaderIterator) ?TextHeader {
         if (it.bytes == null) {
             return null;
@@ -240,23 +215,19 @@ pub const TextHeaderIterator = struct {
     }
 };
 
-/// Structure for managing a collection of text headers, stored in an Appendable buffer.
-/// Headers are stored as "name: value\r\n" without a trailing CRLF.
+/// Format: "name: value\r\n"
 pub const TextHeaders = struct {
     buffer: Appendable = .{},
 
-    /// Initializes the TextHeaders structure with an allocator and initial buffer length.
     pub fn init(hdrs: *TextHeaders, allocator: Allocator, len: u16) !void {
         try hdrs.buffer.init(allocator, len, null);
         return;
     }
 
-    /// Deallocates the TextHeaders buffer.
     pub fn deinit(hdrs: *TextHeaders) void {
         hdrs.buffer.deinit();
     }
 
-    /// Safely appends text headers from an iterator, ensuring proper formatting.
     pub fn appendSafe(hdrs: *TextHeaders, it: *TextHeaderIterator) !void {
         var next = it.next();
 
@@ -267,18 +238,16 @@ pub const TextHeaders = struct {
         return;
     }
 
-    /// Appends raw text headers without validation, assuming correct formatting.
+    /// No validation.
     pub fn appendNotSafe(hdrs: *TextHeaders, textheaders: []const u8) !void {
         try hdrs.buffer.append(textheaders);
         return;
     }
 
-    /// Appends a single text header from a TextHeader structure.
     pub fn appendTextHeader(hdrs: *TextHeaders, th: *TextHeader) !void {
         return hdrs.append(th.name, th.value);
     }
 
-    /// Appends a name-value pair as a text header, ensuring proper formatting.
     pub fn append(hdrs: *TextHeaders, name: []const u8, value: []const u8) !void {
         const nam = std.mem.trim(u8, name, " \t\r\n");
         if (nam.len == 0) {
@@ -296,21 +265,17 @@ pub const TextHeaders = struct {
         return;
     }
 
-    /// Resets the TextHeaders buffer to an empty state.
     pub fn reset(hdrs: *TextHeaders) void {
         hdrs.buffer.reset();
         return;
     }
 
-    /// Returns an iterator for the text headers in the buffer.
     pub fn hiter(hdrs: *TextHeaders) TextHeaderIterator {
         const raw = hdrs.buffer.body();
         return TextHeaderIterator.init(raw);
     }
 };
 
-/// Enum representing valid message type and mode combinations
-/// allowed for sending by the application.
 pub const ValidCombination = enum(u4) {
     WelcomeRequest = 0,
 
@@ -333,33 +298,26 @@ pub const ValidCombination = enum(u4) {
     _reserved14,
 };
 
-/// Structure representing a complete message, including binary header, text headers, and body.
+/// Always get from pool. Persistent fields: bhdr, thdrs, body. Transient: void*, ctx.
 pub const Message = struct {
-    /// Used for intrusive containers
+    // Intrusive list
     prev: ?*Message = null,
     next: ?*Message = null,
 
-    /// 'Persistent' fields - means transferred between peers.
+    // Persistent (transferred between peers)
     bhdr: BinaryHeader = .{},
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
 
-    /// 'Transient' field - means does not transferred between peers.
-    /// Used by application. Reactor does nothing with this field.
-    /// Actually it's void* -  use with caution.
-    /// One of the possible usages - transfer additional information
-    /// to the 'receiver' via 'updateReceiver()'.
+    /// App usage. Not transferred.
     @"<void*>": ?*anyopaque = null,
 
-    /// 'Transient' field - means does not transferred between peers.
-    /// Used by engine for internal purposes.
-    /// Don't touch !!!
+    /// Engine internal. Don't touch.
     @"<ctx>": ?*anyopaque = null,
 
     const blen: u16 = 256;
     const tlen: u16 = 64;
 
-    /// Creates a new Message instance with initialized body and text headers.
     pub fn create(allocator: Allocator) AmpeError!*Message {
         var msg = allocator.create(Message) catch {
             return AmpeError.AllocationFailed;
@@ -632,8 +590,7 @@ pub const Message = struct {
         return vc;
     }
 
-    /// For debugging - 0 is wrong channel number
-    /// Usually it's sign of simultaneous usage of Message
+    /// Debug: channel_number == 0 means simultaneous usage.
     pub inline fn assert(msg: *Message) void {
         if ((msg.*.bhdr.proto.origin == .application) and (msg.bhdr.channel_number == message.SpecialMinChannelNumber)) {
             var bh: ?BinaryHeader = msg.bhVal();
@@ -668,16 +625,13 @@ pub const Message = struct {
         return ret;
     }
 
-    /// Generates the next unique message ID using an atomic counter.
     pub fn next_mid() MessageID {
         return uid.fetchAdd(1, .monotonic);
     }
 };
 
-/// Atomic counter for generating unique message IDs.
 var uid: Atomic(MessageID) = .init(1);
 
-/// Returns the actual length of an Appendable buffer's content.
 pub inline fn actuaLen(apnd: *Appendable) usize {
     if (apnd.body()) |b| {
         return b.len;
@@ -685,7 +639,6 @@ pub inline fn actuaLen(apnd: *Appendable) usize {
     return 0;
 }
 
-/// Clears and destroys all messages in a queue, releasing their memory.
 pub fn clearQueue(queue: *MessageQueue) void {
     var next = queue.dequeue();
     while (next != null) {
@@ -694,12 +647,10 @@ pub fn clearQueue(queue: *MessageQueue) void {
     }
 }
 
-/// Type alias for dynamically growing buffer used in message headers and body.
 pub const Appendable = @import("Appendable");
 
 const message = @import("message.zig");
 
-/// Structure for managing a queue of messages in a FIFO order.
 pub const MessageQueue = @import("ampe/IntrusiveQueue.zig").IntrusiveQueue(Message);
 
 pub const status = @import("status.zig");
@@ -723,9 +674,7 @@ const DBG = @import("ampe.zig").DBG;
 //       Gemini generated helpers
 // ====================================
 
-/// Converts a pointer's address into a byte slice.
-/// Returns a slice of the filled portion of the destination slice.
-/// Returns an empty slice if the destination slice is too small.
+/// Returns empty slice if destination too small.
 pub fn ptrToSlice(comptime T: type, ptr: *T, destination: []u8) []u8 {
     // Check if the destination slice is large enough.
     if (destination.len < @sizeOf(usize)) {
@@ -742,8 +691,7 @@ pub fn ptrToSlice(comptime T: type, ptr: *T, destination: []u8) []u8 {
     return destination[0..@sizeOf(usize)];
 }
 
-/// Converts a byte slice back to a pointer of type T.
-/// Returns null if the slice is too small.
+/// Returns null if slice too small.
 pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
     if (slice.len < @sizeOf(usize)) {
         return null;
@@ -755,8 +703,7 @@ pub fn sliceToPtr(comptime T: type, slice: []const u8) ?*T {
     return @ptrFromInt(addr); // Corrected function
 }
 
-/// Converts a struct's memory into a byte slice.
-/// Returns empty slice if destination is too small.
+/// Returns empty slice if destination too small.
 pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
     const struct_size = @sizeOf(T);
     if (destination.len < struct_size) {
@@ -766,8 +713,7 @@ pub fn structToSlice(comptime T: type, ptr: *const T, destination: []u8) []u8 {
     return destination[0..struct_size];
 }
 
-/// Converts a byte slice back into a struct of type T.
-/// Returns true on success, false if slice length does not match struct size.
+/// Returns false if slice length doesn't match struct size.
 pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) bool {
     const struct_size = @sizeOf(T);
     if (slice.len != struct_size) {
@@ -779,8 +725,7 @@ pub fn structFromSlice(comptime T: type, slice: []const u8, destination: *T) boo
 
 const SliceTooSmallError = error{SliceTooSmall};
 
-/// Converts a scalar value into a byte slice using native endianness.
-/// Returns empty slice if destination is too small.
+/// Native endianness. Returns empty slice if destination too small.
 pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
     // 1. Comptime error check for aggregate types
     comptime {
@@ -807,8 +752,7 @@ pub fn valueToSlice(comptime T: type, value: T, dest: []u8) []u8 {
     return dest[0..value_size];
 }
 
-/// Converts a byte slice back to a scalar value using native endianness.
-/// Returns error if slice is too small.
+/// Native endianness. Returns error if slice too small.
 pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
     // 1. Comptime error check for aggregate types (including .Pointer)
     comptime {

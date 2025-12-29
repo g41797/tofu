@@ -1,82 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 <TBD>
 // SPDX-License-Identifier: <TBD>
 
-//! Multihomed server implementation for tofu.
+//! Server with multiple listeners (TCP/UDS) on one thread.
 //!
-//! **What is Multihomed Server:**
-//! Server with multiple listeners (TCP + UDS) running on ONE thread. Can accept
-//! connections from different networks simultaneously.
+//! Pattern: Single `waitReceive()` loop handles all listeners and client connections.
+//! Messages dispatched by channel_number to Services implementation.
 //!
-//! **Key Pattern Demonstrated:**
-//! - Multiple listeners, one `waitReceive()` loop
-//! - Dispatch messages by channel_number
-//! - Cooperative services pattern
-//! - Single-threaded architecture (simpler than multi-threaded)
-//!
-//! **Message Flow:**
-//! ```
-//! Listener1(TCP) ---|
-//! Listener2(UDS) ---|---> waitReceive() --> dispatch by channel --> Services
-//! Client1 -----------|
-//! Client2 -----------|
-//! ```
-//!
-//! **Why Single Thread:**
-//! Simpler state management. No locks needed. Messages naturally serialized.
-//! Services.onMessage() called sequentially for each message. This works well
-//! for I/O bound workloads.
-//!
-//! **Message-as-Cube:**
-//! Each listener creates listener channel. Each client connection creates client channel.
-//! Server receives message cubes from all channels through one `waitReceive()`.
-//! Cubes dispatched to Services based on channel_number. Services process and send back.
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-//                 AI Overview
-//
-// A multihomed TCP/IP server is a server with multiple network connections
-// (network interface cards) and IP addresses, allowing it to connect to
-// and provide services on multiple networks simultaneously.
-//
-// This configuration enhances reliability and performance by providing redundancy
-// and allowing direct access to different subnets for services like file sharing or databases.
-//
-// Key characteristics
-//
-//     Multiple network interfaces:
-//         The server has more than one physical network adapter or is configured
-//         with multiple IP addresses on a single adapter.
-//
-//     Connection to multiple networks:
-//         It can be attached to several physical networks or subnets at the same time.
-//
-//     Host, not a router:
-//         By default, a multihomed machine is not a router.
-//         It does not forward packets between its interfaces.
-//
-//     Service accessibility:
-//         It can provide services to clients on different networks directly,
-//         without the need for a router to forward traffic to it.
-//
-// Use cases
-//
-//     High-performance servers:
-//         Servers like those for NFS or databases can have multiple network cards
-//         to improve file sharing or data access for a large pool of users across different networks.
-//
-//     Redundancy:
-//         Having multiple network connections can provide redundancy.
-//         If one connection fails, the other can still provide access to the server's services.
-//
-// Configuration
-//
-//     A server can have multiple IP addresses, either by adding new network cards
-//     or by configuring multiple IP addresses on a single network card.
-//
-//     For some services, you can explicitly configure the service to bind to a specific
-//     IP address on a particular network interface.
-//
-///////////////////////////////////////////////////////////////////////////////////////////////
+//! Single-threaded: no locks, sequential processing, simpler state management.
 
 pub const MultiHomed = @This();
 
@@ -104,57 +34,16 @@ pub const Services = services.Services;
 const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);
 
-/// Async message passing engine interface.
 ampe: ?Ampe = null,
-/// Memory allocator for server resources.
 allocator: ?Allocator = null,
-/// Channel group for managing all server connections.
 chnls: ?ChannelGroup = null,
-/// Services implementation for processing messages.
 srvcs: Services = undefined,
-/// Map of listener channel numbers to their configurations.
 lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
-/// Server thread handle.
 thread: ?std.Thread = null,
-/// Queue for accumulating messages before thread starts.
 msgq: message.MessageQueue = .{},
-/// Mailbox for thread synchronization and status reporting.
 ackMbox: MSGMailBox = .{},
 
-/// Creates and starts multihomed server with multiple listeners on separate thread.
-///
-/// **Parameters:**
-/// - `ampe` - Engine interface (for pool operations and channel creation)
-/// - `adrs` - Array of listener configurations (TCP and/or UDS addresses)
-/// - `srvcs` - Services implementation for processing client messages
-///
-/// **What This Does:**
-/// 1. Creates listener for each address in `adrs`
-/// 2. Starts dedicated thread running message loop
-/// 3. Thread calls `waitReceive()` for all channels (listeners + clients)
-/// 4. Dispatches received messages to Services
-/// 5. Returns server handle immediately (non-blocking)
-///
-/// **Pattern:**
-/// ```zig
-/// var listeners: [2]Configurator = .{
-///     .{ .tcp_server = TCPServerConfigurator.init("0.0.0.0", 8080) },
-///     .{ .uds_server = UDSServerConfigurator.init("/tmp/app.sock") },
-/// };
-/// var echoSvc: EchoService = .{};
-/// var server: *MultiHomed = try MultiHomed.run(ampe, &listeners, echoSvc.services());
-/// defer server.stop(); // Stops thread and cleans up
-/// ```
-///
-/// **Important:**
-/// - Server runs on separate thread
-/// - One `waitReceive()` handles all listeners and clients
-/// - Call `stop()` to shutdown gracefully
-///
-/// **Errors:**
-/// - `error.EmptyConfiguration` if `adrs` is empty
-/// - `error.StartServicesFailure` if Services.start() fails
-/// - Network errors if listeners cannot bind
+/// Call stop() to cleanup.
 pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
     if (adrs.len == 0) {
         return error.EmptyConfiguration;
@@ -178,8 +67,6 @@ pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
     return mh.*.init(adrs);
 }
 
-/// Stops the thread, destroys  all channels, releases messages to the pool,
-/// releases server object memory
 pub fn stop(mh: *MultiHomed) void {
     if (mh.*.allocator == null) {
         return;
@@ -318,12 +205,10 @@ fn onThread(mh: *MultiHomed) void {
     return;
 }
 
-// Main message processing loop. Handles messages from all channels.
-// This is the heart of multihomed pattern.
+// Main message processing loop for all channels.
 fn mainLoop(mh: *MultiHomed) void {
     while (true) {
-        // ONE waitReceive() for ALL channels (listeners + clients)
-        // This is key to multihomed pattern: single thread handles everything
+        // One waitReceive() for all channels (listeners + clients)
         var receivedMsg: ?*Message = mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
             log.info("server - waitReceive error {s}", .{@errorName(err)});
             return;
@@ -332,26 +217,19 @@ fn mainLoop(mh: *MultiHomed) void {
 
         const sts: status.AmpeStatus = status.raw_to_status((receivedMsg.?.*.bhdr.status));
 
-        // CHECK 1: Stop signal from another thread
-        // Another thread called updateReceiver() to wake us up
+        // Stop signal from another thread
         if (sts == .receiver_update) {
             log.info("Stop command from the another thread", .{});
             return;
         }
 
-        // CHECK 2: Dispatch by channel_number
-        // Is this message from a listener channel or client channel?
+        // Dispatch by channel_number
         if (mh.*.lstnChnls.?.contains(receivedMsg.?.*.bhdr.channel_number)) {
-            // Listener channel should not send messages to us
-            // If we get message from listener, something is wrong
             log.info("listener failed with status {s}", .{@tagName(sts)});
             return;
         }
 
-        // This is a client message. Pass to Services for processing.
-        // Services.onMessage() returns:
-        //   true  - continue processing
-        //   false - stop server
+        // Pass to Services for processing
         const cont: bool = mh.*.srvcs.onMessage(&receivedMsg);
         if (!cont) {
             log.warn("onMessage returns false -  stop processing", .{});
