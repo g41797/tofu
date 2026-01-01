@@ -65,6 +65,8 @@ pub fn build(b: *std.Build) void {
         .linkage = .static,
         .name = "tofu",
         .root_module = libMod,
+        .use_llvm = true,
+        .use_lld = true,
     });
     b.installArtifact(lib);
 
@@ -96,6 +98,8 @@ pub fn build(b: *std.Build) void {
     // Creates unit testing artifact
     const lib_unit_tests = b.addTest(.{
         .root_module = testMod,
+        .use_llvm = true,
+        .use_lld = true,
     });
     b.installArtifact(lib_unit_tests);
 
@@ -110,6 +114,8 @@ pub fn build(b: *std.Build) void {
     const tofu_docs_lib = b.addObject(.{
         .name = "tofu",
         .root_module = tofuMod,
+        .use_llvm = true,
+        .use_lld = true,
     });
 
     const install_tofu_docs = b.addInstallDirectory(.{
@@ -121,6 +127,8 @@ pub fn build(b: *std.Build) void {
     const recipes_docs_lib = b.addObject(.{
         .name = "recipes",
         .root_module = recipesMod,
+        .use_llvm = true,
+        .use_lld = true,
     });
 
     const install_recipes_docs = b.addInstallDirectory(.{
