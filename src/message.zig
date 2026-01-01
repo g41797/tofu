@@ -14,10 +14,94 @@ pub const MessageType = enum(u2) {
 };
 
 pub const MessageRole = enum(u2) {
-    invalid = 0,
-    request = 1,
-    response = 2,
-    signal = 3,
+    request = 0,
+    response = 1,
+    signal = 2,
+};
+
+pub const OpCode = enum(u4) {
+    Request = 0,
+    Response = 1,
+    Signal = 2,
+    HelloRequest = 3,
+    HelloResponse = 4,
+    ByeRequest = 5,
+    ByeResponse = 6,
+    ByeSignal = 7,
+    WelcomeRequest = 8,
+    WelcomeResponse = 9,
+
+    pub inline fn isValid(oc: OpCode) bool {
+        return std.enums.fromInt(OpCode, @intFromEnum(oc)) != null;
+    }
+
+    pub fn isRequest(oc: OpCode) bool {
+        return switch (oc) {
+            .Request, .HelloRequest, .ByeRequest, .WelcomeRequest => true,
+            else => false,
+        };
+    }
+
+    pub fn isResponse(oc: OpCode) bool {
+        return switch (oc) {
+            .Response, .HelloResponse, .ByeResponse, .WelcomeResponse => true,
+            else => false,
+        };
+    }
+
+    pub fn isSignal(oc: OpCode) bool {
+        return switch (oc) {
+            .Signal, .ByeSignal => true,
+            else => false,
+        };
+    }
+
+    pub fn getType(oc: OpCode) MessageType { // No validation
+        return switch (oc) {
+            .Request,
+            .Response,
+            .Signal,
+            => .regular,
+            .ByeRequest,
+            .ByeResponse,
+            .ByeSignal,
+            => .bye,
+            .HelloRequest,
+            .HelloResponse,
+            => .hello,
+            .WelcomeRequest,
+            .WelcomeResponse,
+            => .welcome,
+        };
+    }
+
+    pub fn getRole(oc: OpCode) MessageRole { // No validation
+        return switch (oc) {
+            .Request, .HelloRequest, .ByeRequest, .WelcomeRequest => .request,
+            .Response, .HelloResponse, .ByeResponse, .WelcomeResponse => .response,
+            .Signal, .ByeSignal => .signal,
+        };
+    }
+
+    pub fn echo(oc: OpCode) error{
+        InvalidOpCode,
+    }!OpCode {
+        if (!oc.isValid()) {
+            return AmpeError.InvalidOpCode;
+        }
+
+        if (!oc.isRequest()) {
+            return AmpeError.InvalidOpCode;
+        }
+
+        return switch (oc) {
+            .Request => .Response,
+            .HelloRequest => .HelloResponse,
+            .ByeRequest => .ByeResponse,
+            .WelcomeRequest => .WelcomeResponse,
+            else => unreachable,
+        };
+    }
 };
 
 pub const OriginFlag = enum(u1) {
@@ -34,57 +118,50 @@ pub const MoreMessagesFlag = enum(u1) {
 pub const Oob = Trigger;
 
 pub const ProtoFields = packed struct(u8) {
-    mtype: MessageType = .regular,
-    role: MessageRole = .invalid,
+    opCode: OpCode = .Request,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
     oob: Oob = .off,
     _internal: u1 = 0,
 
-    pub fn init(vfs: ValidForSend) ProtoFields {
-        var proto: ProtoFields = .{};
+    pub fn default(oc: OpCode) ProtoFields {
+        var pf: ProtoFields = .{
+            .opCode = oc,
+        };
 
-        switch (vfs) {
-            .WelcomeRequest => {
-                proto.role = .request;
-                proto.mtype = .welcome;
-            },
-
-            .HelloRequest => {
-                proto.role = .request;
-                proto.mtype = .hello;
-            },
-            .HelloResponse => {
-                proto.role = .response;
-                proto.mtype = .hello;
-            },
-
-            .ByeRequest => {
-                proto.role = .request;
-                proto.mtype = .bye;
-            },
-            .ByeResponse => {
-                proto.role = .response;
-                proto.mtype = .bye;
-            },
-            .ByeSignal => {
-                proto.role = .signal;
-                proto.mtype = .bye;
-                proto.oob = .on;
-            },
-
-            .AppRequest => {
-                proto.role = .request;
-            },
-            .AppResponse => {
-                proto.role = .response;
-            },
-            .AppSignal => {
-                proto.role = .signal;
-            },
+        switch (oc) {
+            .ByeSignal => pf.oob = .on,
+            .WelcomeResponse => pf.origin = .engine,
+            else => {},
         }
 
-        return proto;
+        return pf;
+    }
+
+    pub fn isValid(pf: ProtoFields) bool {
+        return pf.opCode.isValid();
+    }
+
+    pub inline fn getType(pf: ProtoFields) MessageType {
+        return pf.opCode.getType();
+    }
+
+    pub inline fn getRole(pf: ProtoFields) MessageRole {
+        return pf.opCode.getRole();
+    }
+
+    pub fn fromByte(byte: u8) .InvalidOpCode!ProtoFields {
+        const pf: ProtoFields = @bitCast(byte);
+
+        if (std.enums.fromInt(OpCode, @intFromEnum(pf.opCode)) == null) {
+            return .InvalidOpCode;
+        }
+
+        return pf;
+    }
+
+    pub fn asByte(pf: ProtoFields) u8 {
+        return @bitCast(pf);
     }
 };
 
@@ -95,21 +172,6 @@ pub const SpecialMinChannelNumber = std.math.minInt(u16);
 pub const SpecialMaxChannelNumber = std.math.maxInt(u16);
 
 pub const MessageID = u64;
-
-pub const ValidForSend = enum(u4) {
-    WelcomeRequest = 0,
-
-    HelloRequest = 1,
-    HelloResponse = 2,
-
-    ByeRequest = 3,
-    ByeResponse = 4,
-    ByeSignal = 5,
-
-    AppRequest = 6,
-    AppResponse = 7,
-    AppSignal = 8,
-};
 
 pub const BinaryHeader = packed struct {
     channel_number: ChannelNumber = 0,
@@ -125,16 +187,17 @@ pub const BinaryHeader = packed struct {
 
     pub const BHSIZE = @sizeOf(BinaryHeader);
 
-    pub fn init(vfs: ValidForSend) BinaryHeader {
-        var bh: BinaryHeader = .{};
-        bh.proto = .init(vfs);
-        return bh;
+    pub fn init(oc: OpCode) BinaryHeader {
+        return .{
+            .proto = .default(oc),
+        };
     }
 
     pub fn clean(bh: *BinaryHeader) void {
         bh.* = .{};
     }
 
+    // Contributed by Grok
     pub fn toBytes(self: *BinaryHeader, buf: *[BHSIZE]u8) void {
         if (is_be) {
             // On BE platform, copy directly from self to buf
@@ -156,6 +219,7 @@ pub const BinaryHeader = packed struct {
         return;
     }
 
+    // Contributed by Grok
     pub fn fromBytes(self: *BinaryHeader, bytes: *const [BHSIZE]u8) void {
         const dest: *[BHSIZE]u8 = @ptrCast(self);
         @memcpy(dest, bytes);
@@ -176,7 +240,7 @@ pub const BinaryHeader = packed struct {
             return;
         }
 
-        const tn = std.enums.tagName(MessageType, self.*.proto.mtype).?;
+        const tn = std.enums.tagName(OpCode, self.*.proto.opCode).?;
 
         log.debug("{s} {s} chn {d} mid {d} thl {d} bl  {d}", .{ txt, tn, self.channel_number, self.message_id, self.@"<thl>", self.@"<bl>" });
 
@@ -190,13 +254,12 @@ pub const BinaryHeader = packed struct {
 
         const proto: message.ProtoFields = self.*.proto;
 
-        const mt = std.enums.tagName(MessageType, proto.mtype).?;
-        const rl = std.enums.tagName(MessageRole, proto.role).?;
+        const oc = std.enums.tagName(OpCode, proto.opCode).?;
         const org = std.enums.tagName(OriginFlag, proto.origin).?;
         const mr = std.enums.tagName(MoreMessagesFlag, proto.more).?;
         const ob = std.enums.tagName(Oob, proto.oob).?;
 
-        log.debug("    [mid {d}] ({d}) {s} {s} {s} {s} {s} {s} {s}", .{ self.*.message_id, self.*.channel_number, txt, mt, rl, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
+        log.debug("    [mid {d}] ({d}) {s} {s} {s} {s} {s} {s}", .{ self.*.message_id, self.*.channel_number, txt, oc, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
 
         return;
     }
@@ -280,6 +343,7 @@ pub const TextHeaderIterator = struct {
     }
 };
 
+/// key-value pairs similar to HTTP headers
 /// Format: "name: value\r\n"
 pub const TextHeaders = struct {
     buffer: Appendable = .{},
@@ -303,7 +367,6 @@ pub const TextHeaders = struct {
         return;
     }
 
-    /// No validation.
     pub fn appendNotSafe(hdrs: *TextHeaders, textheaders: []const u8) !void {
         try hdrs.buffer.append(textheaders);
         return;
@@ -341,18 +404,16 @@ pub const TextHeaders = struct {
     }
 };
 
-/// Always get from pool. Persistent fields: bhdr, thdrs, body. Transient: void*, ctx.
 pub const Message = struct {
-    // Intrusive list
     prev: ?*Message = null,
     next: ?*Message = null,
 
-    // Persistent (transferred between peers)
+    /// Actual data
     bhdr: BinaryHeader = .{},
     thdrs: TextHeaders = .{},
     body: Appendable = .{},
 
-    /// App usage. Not transferred.
+    /// App usage. Be careful.
     @"<void*>": ?*anyopaque = null,
 
     /// Engine internal. Don't touch.
@@ -362,14 +423,13 @@ pub const Message = struct {
     const tlen: u16 = 64;
 
     pub fn create(allocator: Allocator) AmpeError!*Message {
-        var msg = allocator.create(Message) catch {
+        var msg: *Message = allocator.create(Message) catch {
             return AmpeError.AllocationFailed;
         };
 
         msg.* = .{};
-        msg.bhdr = .{};
 
-        errdefer msg.destroy();
+        errdefer msg.*.destroy();
 
         msg.body.init(allocator, blen, null) catch {
             return AmpeError.AllocationFailed;
@@ -382,8 +442,6 @@ pub const Message = struct {
         return msg;
     }
 
-    /// Creates a deep copy of the Message, including its headers and body,
-    /// except @"<ctx>".  Dealing with @"<void*>" - on application.
     pub fn clone(self: *Message) !*Message {
         const alc = self.body.allocator;
         const msg: *Message = try alc.create(Message);
@@ -408,6 +466,7 @@ pub const Message = struct {
 
     /// Resets the message to its initial state,
     /// clearing headers , body and transient fields.
+    /// Pay attention - message is not valid for enqueueToPeer
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.reset();
@@ -419,8 +478,8 @@ pub const Message = struct {
 
     /// Sets the message's binary header, text headers, and body, with validation.
     pub fn set(msg: *Message, bhdr: *BinaryHeader, thdrs: ?*TextHeaders, body: ?[]const u8) !void {
-        msg.bhdr = bhdr.*;
-        msg._reset();
+        msg.*.bhdr = bhdr.*;
+        msg.*._reset();
 
         if (thdrs) |hdrs| {
             const it = hdrs.hiter();
@@ -448,9 +507,7 @@ pub const Message = struct {
         return;
     }
 
-    /// Stores a struct pointer's address into body.
-    /// Another way to use message as container, but be careful -
-    /// don't send pointer to another process.
+    // 2DO - replace, use @"<ctx>" instead...
     pub fn ptrToBody(msg: *Message, comptime T: type, ptr: *T) []u8 {
         msg.body.change(@sizeOf(usize)) catch unreachable;
 
@@ -466,8 +523,6 @@ pub const Message = struct {
         return destination[0..@sizeOf(usize)];
     }
 
-    /// Converts a body content back to a struct pointer.
-    /// Returns an optional pointer which is null if the body is empty.
     pub fn bodyToPtr(msg: *Message, comptime T: type) ?*T {
         const slice = msg.body.buffer.?[0..msg.body.actual_len];
 
@@ -481,20 +536,17 @@ pub const Message = struct {
         return @ptrFromInt(addr);
     }
 
-    /// Validates the message, ensuring it conforms to allowed type and mode combinations.
     inline fn validate(msg: *Message) !void {
         _ = try msg.*.check_and_prepare();
         return;
     }
 
-    /// Internal function to reset text headers and body without touching the binary header.
     fn _reset(msg: *Message) void {
         msg.thdrs.reset();
         msg.body.reset();
         return;
     }
 
-    /// Deallocates the message's text headers and body.
     inline fn deinit(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.deinit();
@@ -502,7 +554,6 @@ pub const Message = struct {
         return;
     }
 
-    /// Destroys the message, deallocating all resources including the message itself.
     pub fn destroy(msg: *Message) void {
         const allocator = msg.thdrs.buffer.allocator;
         msg.deinit();
@@ -518,36 +569,34 @@ pub const Message = struct {
         }
     }
 
-    /// Returns the actual length of the message body.
     pub fn actual_body_len(msg: *Message) usize {
         return actuaLen(&msg.body);
     }
 
-    /// Returns the actual length of the text headers.
     pub fn actual_headers_len(msg: *Message) usize {
         return actuaLen(&msg.thdrs.buffer);
     }
 
-    /// Validates the message and updates its binary header fields based on content lengths.
-    pub fn check_and_prepare(msg: *Message) AmpeError!ValidForSend {
+    pub fn check_and_prepare(msg: *Message) AmpeError!void {
         errdefer msg.*.bhdr.dumpMeta("illegal message");
 
+        if (!msg.*.bhdr.proto.opCode.isValid()) {
+            return AmpeError.InvalidOpCode;
+        }
+
+        // Fix possible wrong fields
+        msg.bhdr.proto.origin = .application;
         msg.bhdr.status = status_to_raw(.success);
         msg.bhdr.@"<bl>" = 0;
         msg.bhdr.@"<thl>" = 0;
 
         const bhdr: BinaryHeader = msg.bhdr;
-        const mtype = bhdr.proto.mtype;
-        const mode = bhdr.proto.role;
-        const origin = bhdr.proto.origin;
+        const oc: OpCode = bhdr.proto.opCode;
+        const mtype = oc.getType();
+        const role = oc.getRole();
         const more = bhdr.proto.more;
 
-        if (origin != .application) {
-            msg.bhdr.status = status_to_raw(.not_allowed);
-            return AmpeError.NotAllowed;
-        }
-
-        if ((mode == .response) and (bhdr.message_id == 0)) {
+        if ((role == .response) and (bhdr.message_id == 0)) {
             msg.bhdr.status = status_to_raw(.invalid_message_id);
             return AmpeError.InvalidMessageId;
         }
@@ -557,48 +606,9 @@ pub const Message = struct {
             return AmpeError.InvalidMoreUsage;
         }
 
-        const vfs: ValidForSend = switch (mtype) {
-            .regular => switch (mode) {
-                .request => .AppRequest,
-                .response => .AppResponse,
-                .signal => .AppSignal,
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AmpeError.InvalidMessageMode;
-                },
-            },
-            .welcome => switch (mode) {
-                .request => .WelcomeRequest,
-                .response => {
-                    msg.bhdr.status = status_to_raw(.not_allowed);
-                    return AmpeError.NotAllowed;
-                },
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AmpeError.InvalidMessageMode;
-                },
-            },
-            .hello => switch (mode) {
-                .request => .HelloRequest,
-                .response => .HelloResponse,
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AmpeError.InvalidMessageMode;
-                },
-            },
-            .bye => switch (mode) {
-                .request => .ByeRequest,
-                .response => .ByeResponse,
-                .signal => .ByeSignal,
-                else => {
-                    msg.bhdr.status = status_to_raw(.invalid_message_mode);
-                    return AmpeError.InvalidMessageMode;
-                },
-            },
-        };
         const channel_number = msg.bhdr.channel_number;
         if (channel_number == 0) {
-            switch (vfs) {
+            switch (oc) {
                 .WelcomeRequest, .HelloRequest => {},
                 else => {
                     msg.bhdr.status = status_to_raw(.invalid_channel_number);
@@ -614,7 +624,7 @@ pub const Message = struct {
         }
         msg.bhdr.@"<thl>" = @intCast(actualHeadersLen);
 
-        if ((msg.bhdr.@"<thl>" == 0) and ((vfs == .WelcomeRequest) or (vfs == .HelloRequest))) {
+        if ((msg.bhdr.@"<thl>" == 0) and ((oc == .WelcomeRequest) or (oc == .HelloRequest))) {
             msg.bhdr.status = status_to_raw(.wrong_configuration);
             return AmpeError.WrongConfiguration;
         }
@@ -630,7 +640,7 @@ pub const Message = struct {
             msg.bhdr.message_id = next_mid();
         }
 
-        return vfs;
+        return;
     }
 
     /// Debug: channel_number == 0 means simultaneous usage.
@@ -645,7 +655,6 @@ pub const Message = struct {
         return;
     }
 
-    // For debugging - save binary header within body
     pub fn copyBh2Body(msg: *Message) void {
         _ = message.structToSlice(message.BinaryHeader, &msg.*.bhdr, msg.*.body.buffer.?);
         msg.*.body.change(@sizeOf(message.BinaryHeader)) catch unreachable;
@@ -666,6 +675,14 @@ pub const Message = struct {
         }
 
         return ret;
+    }
+
+    pub fn getOpCode(msg: *Message) error{InvalidOpCode}!OpCode {
+        const oc: OpCode = msg.*.bhdr.proto.opCode;
+        if (!oc.isValid()) {
+            return AmpeError.InvalidOpCode;
+        }
+        return oc;
     }
 
     pub fn next_mid() MessageID {
@@ -690,28 +707,9 @@ pub fn clearQueue(queue: *MessageQueue) void {
     }
 }
 
-pub const Appendable = @import("Appendable");
-
-const message = @import("message.zig");
-
 pub const MessageQueue = @import("ampe/IntrusiveQueue.zig").IntrusiveQueue(Message);
 
-pub const status = @import("status.zig");
-pub const AmpeStatus = status.AmpeStatus;
-pub const AmpeError = status.AmpeError;
-pub const status_to_raw = status.status_to_raw;
-
-const std = @import("std");
-const builtin = @import("builtin");
-const Allocator = std.mem.Allocator;
 const is_be = builtin.target.cpu.arch.endian() == .big;
-
-const Atomic = std.atomic.Value;
-const AtomicOrder = std.builtin.AtomicOrder;
-const AtomicRmwOp = std.builtin.AtomicRmwOp;
-
-const log = std.log;
-const DBG = @import("ampe.zig").DBG;
 
 // ====================================
 //       Gemini generated helpers
@@ -822,3 +820,19 @@ pub fn sliceToValue(comptime T: type, slice: []const u8) SliceTooSmallError!T {
 
     return result;
 }
+
+const DBG = @import("ampe.zig").DBG;
+pub const status = @import("status.zig");
+pub const AmpeStatus = status.AmpeStatus;
+pub const AmpeError = status.AmpeError;
+pub const status_to_raw = status.status_to_raw;
+pub const Appendable = @import("Appendable");
+const message = @This();
+
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Atomic = std.atomic.Value;
+const AtomicOrder = std.builtin.AtomicOrder;
+const AtomicRmwOp = std.builtin.AtomicRmwOp;
+const log = std.log;
+const builtin = @import("builtin");

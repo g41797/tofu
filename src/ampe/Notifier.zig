@@ -25,22 +25,19 @@ pub const Alerter = struct {
 pub const Notification = packed struct(u8) {
     kind: NotificationKind = undefined,
     oob: Oob = undefined,
-    hint: ValidForSend = undefined,
     alert: Alert = undefined,
-    _reserved7: u1 = 0,
+    _reserved: u5 = 0,
 };
 
 pub const UnpackedNotification = struct {
     kind: u8 = 0,
     oob: u8 = 0,
-    hint: u8 = 0,
     alert: u8 = 0,
 
     pub fn fromNotification(nt: Notification) UnpackedNotification {
         return .{
             .kind = @intFromEnum(nt.kind),
             .oob = @intFromEnum(nt.oob),
-            .hint = @intFromEnum(nt.hint),
             .alert = @intFromEnum(nt.alert),
         };
     }
@@ -315,7 +312,6 @@ const TempUdsPath = tofu.TempUdsPath;
 
 const message = tofu.message;
 const Oob = message.Oob;
-const ValidForSend = message.ValidForSend;
 
 const status = tofu.status;
 const AmpeError = status.AmpeError;

@@ -1,165 +1,134 @@
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
+const std = @import("std");
+
 pub fn build(b: *std.Build) void {
     // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
-    const target = b.*.standardTargetOptions(.{});
+    // what target to build for.
+    const target = b.standardTargetOptions(.{});
 
     // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
-    const optimize = b.*.standardOptimizeOption(.{});
+    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
+    const optimize = b.standardOptimizeOption(.{});
 
-    const nats = b.*.dependency("nats", .{
+    const nats = b.dependency("nats", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const mailbox = b.dependency("mailbox", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const temp = b.dependency("temp", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const datetime = b.dependency("datetime", .{
         .target = target,
         .optimize = optimize,
     });
 
-    const mailbox = b.*.dependency("mailbox", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const temp = b.*.dependency("temp", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const datetime = b.*.dependency("datetime", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // Add the tofu module first, it also exports "tofu:
-    const tofuMod = b.*.addModule("tofu", .{
-        .root_source_file = b.*.path("src/tofu.zig"),
+    // Add the tofu module
+    const tofuMod = b.addModule("tofu", .{
+        .root_source_file = b.path("src/tofu.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
 
-    tofuMod.*.addImport("Appendable", nats.*.module("Appendable"));
-    tofuMod.*.addImport("Formatter", nats.*.module("Formatter"));
-    tofuMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
-    tofuMod.*.addImport("temp", temp.*.module("temp"));
-    tofuMod.*.addImport("datetime", datetime.*.module("datetime"));
+    tofuMod.addImport("Appendable", nats.module("Appendable"));
+    tofuMod.addImport("Formatter", nats.module("Formatter"));
+    tofuMod.addImport("mailbox", mailbox.module("mailbox"));
+    tofuMod.addImport("temp", temp.module("temp"));
+    tofuMod.addImport("datetime", datetime.module("datetime"));
 
     // Create the library module
-    const libMod = b.*.createModule(.{
-        .root_source_file = b.*.path("src/ampe.zig"),
+    const libMod = b.createModule(.{
+        .root_source_file = b.path("src/ampe.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
 
-    libMod.*.addImport("tofu", tofuMod);
-    libMod.*.addImport("Appendable", nats.*.module("Appendable"));
-    libMod.*.addImport("Formatter", nats.*.module("Formatter"));
-    libMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
-    libMod.*.addImport("temp", temp.*.module("temp"));
-    libMod.*.addImport("datetime", datetime.*.module("datetime"));
+    libMod.addImport("tofu", tofuMod);
+    libMod.addImport("Appendable", nats.module("Appendable"));
+    libMod.addImport("Formatter", nats.module("Formatter"));
+    libMod.addImport("mailbox", mailbox.module("mailbox"));
+    libMod.addImport("temp", temp.module("temp"));
+    libMod.addImport("datetime", datetime.module("datetime"));
 
-    // need libc for windows sockets
+    // Need libc for windows sockets
     if (target.result.os.tag == .windows) {
-        libMod.*.link_libc = true;
-        libMod.*.linkSystemLibrary("ws2_32", .{});
+        libMod.link_libc = true;
+        libMod.linkSystemLibrary("ws2_32", .{});
     }
 
-    const lib = b.*.addLibrary(.{
+    const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "tofu",
         .root_module = libMod,
     });
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    b.*.installArtifact(lib);
+    b.installArtifact(lib);
 
     // Create recipes module
-    const recipesMod = b.*.createModule(.{
-        .root_source_file = b.*.path("recipes/recipes.zig"),
+    const recipesMod = b.createModule(.{
+        .root_source_file = b.path("recipes/recipes.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
-
-    recipesMod.*.addImport("tofu", tofuMod);
-    recipesMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
+    recipesMod.addImport("tofu", tofuMod);
+    recipesMod.addImport("mailbox", mailbox.module("mailbox"));
 
     // Create test module
-    const testMod = b.*.createModule(.{
-        .root_source_file = b.*.path("tests/tofu_tests.zig"),
+    const testMod = b.createModule(.{
+        .root_source_file = b.path("tests/tofu_tests.zig"),
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
     });
+    testMod.addImport("tofu", tofuMod);
+    testMod.addImport("recipes", recipesMod);
+    testMod.addImport("Appendable", nats.module("Appendable"));
+    testMod.addImport("Formatter", nats.module("Formatter"));
+    testMod.addImport("mailbox", mailbox.module("mailbox"));
+    testMod.addImport("temp", temp.module("temp"));
+    testMod.addImport("datetime", datetime.module("datetime"));
 
-    testMod.*.addImport("tofu", tofuMod);
-    testMod.*.addImport("recipes", recipesMod);
-    testMod.*.addImport("Appendable", nats.*.module("Appendable"));
-    testMod.*.addImport("Formatter", nats.*.module("Formatter"));
-    testMod.*.addImport("mailbox", mailbox.*.module("mailbox"));
-    testMod.*.addImport("temp", temp.*.module("temp"));
-    testMod.*.addImport("datetime", datetime.*.module("datetime"));
-
-    // need libc for windows sockets
-    if (target.result.os.tag == .windows) {
-        testMod.*.link_libc = true;
-        testMod.*.linkSystemLibrary("ws2_32", .{});
-    }
-
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const lib_unit_tests = b.*.addTest(.{
+    // Creates unit testing artifact
+    const lib_unit_tests = b.addTest(.{
         .root_module = testMod,
-        .test_runner = .{ .path = b.*.path("testRunner.zig"), .mode = .simple },
     });
+    b.installArtifact(lib_unit_tests);
 
-    b.*.installArtifact(lib_unit_tests);
+    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
 
-    const run_lib_unit_tests = b.*.addRunArtifact(lib_unit_tests);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_lib_unit_tests.step);
 
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
-    const test_step = b.*.step("test", "Run unit tests");
-    test_step.*.dependOn(&run_lib_unit_tests.step);
+    // Documentation generation step
+    const docs_step = b.step("docs", "Generate API documentation");
 
-    // Add a documentation generation step
-    const docs_step = b.*.step("docs", "Generate API documentation");
-
-    // Create documentation directly from src/tofu.zig (already has good module docs)
-    const tofu_docs_lib = b.*.addObject(.{
+    const tofu_docs_lib = b.addObject(.{
         .name = "tofu",
         .root_module = tofuMod,
     });
 
-    const install_tofu_docs = b.*.addInstallDirectory(.{
+    const install_tofu_docs = b.addInstallDirectory(.{
         .source_dir = tofu_docs_lib.getEmittedDocs(),
         .install_dir = .{ .custom = "../docs_site/docs" },
         .install_subdir = "apidocs",
     });
 
-    // Create documentation for recipes module
-    const recipes_docs_lib = b.*.addObject(.{
+    const recipes_docs_lib = b.addObject(.{
         .name = "recipes",
         .root_module = recipesMod,
     });
 
-    const install_recipes_docs = b.*.addInstallDirectory(.{
+    const install_recipes_docs = b.addInstallDirectory(.{
         .source_dir = recipes_docs_lib.getEmittedDocs(),
         .install_dir = .{ .custom = "../docs_site/docs" },
         .install_subdir = "recipes",
     });
 
-    // Both documentation sets are generated with single command
-    docs_step.*.dependOn(&install_tofu_docs.step);
-    docs_step.*.dependOn(&install_recipes_docs.step);
+    docs_step.dependOn(&install_tofu_docs.step);
+    docs_step.dependOn(&install_recipes_docs.step);
 }
-
-const std = @import("std");
-const builtin = @import("builtin");

@@ -9,8 +9,8 @@ pub fn ampe(rtr: *Reactor) !Ampe {
         .vtable = &.{
             .get = get,
             .put = put,
-            .create = create,
-            .destroy = destroy,
+            .create = createCG,
+            .destroy = destroyCG,
             .getAllocator = getAllocator,
         },
     };
@@ -63,7 +63,7 @@ m4delCnt: usize = undefined,
 
 allChnN: std.ArrayList(message.ChannelNumber) = undefined,
 
-pub fn Create(gpa: Allocator, options: Options) AmpeError!*Reactor {
+pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     const rtr: *Reactor = gpa.create(Reactor) catch {
         return AmpeError.AllocationFailed;
     };
@@ -140,7 +140,7 @@ pub fn Create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     return rtr;
 }
 
-pub fn Destroy(rtr: *Reactor) void {
+pub fn destroy(rtr: *Reactor) void {
     const gpa = rtr.allocator;
     defer gpa.destroy(rtr);
     {
@@ -209,12 +209,12 @@ fn _put(rtr: *Reactor, msg: *?*Message) void {
     return;
 }
 
-fn create(ptr: ?*anyopaque) AmpeError!ChannelGroup {
+fn createCG(ptr: ?*anyopaque) AmpeError!ChannelGroup {
     const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.*._create();
 }
 
-fn destroy(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
+fn destroyCG(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
     log.warn("!!! channel group will be destroyed !!!", .{});
     const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr._destroy(chnlsimpl);
@@ -228,7 +228,7 @@ inline fn _create(rtr: *Reactor) AmpeError!ChannelGroup {
         return AmpeError.ShutdownStarted;
     }
 
-    const grp = try MchnGroup.Create(rtr, next_gid());
+    const grp = try MchnGroup.create(rtr, next_gid());
 
     const channelGroup: ChannelGroup = grp.chnls();
 
@@ -269,7 +269,7 @@ inline fn send_destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
 
     grp.waitCmdCompleted();
 
-    grp.Destroy();
+    grp.destroy();
 
     return;
 }
@@ -282,8 +282,7 @@ fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) Ampe
 
     const cmd: *Message = msg.?;
     cmd.*.bhdr.channel_number = message.SpecialMaxChannelNumber;
-    cmd.*.bhdr.proto.mtype = .regular;
-    cmd.*.bhdr.proto.role = .signal;
+    cmd.*.bhdr.proto.opCode = .Signal;
     cmd.*.bhdr.proto.origin = .engine;
     cmd.*.bhdr.proto.oob = .on;
     cmd.*.bhdr.proto.more = .last;
@@ -293,7 +292,7 @@ fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) Ampe
 
     _ = cmd.*.ptrToBody(MchnGroup, grp);
 
-    try rtr.submitMsg(cmd, .AppSignal);
+    try rtr.submitMsg(cmd);
 
     return;
 }
@@ -303,7 +302,7 @@ fn getAllocator(ptr: ?*anyopaque) Allocator {
     return rtr.*.allocator;
 }
 
-pub fn submitMsg(rtr: *Reactor, msg: *Message, hint: VC) AmpeError!void {
+pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
     rtr.sndMtx.lock();
     defer rtr.sndMtx.unlock();
 
@@ -319,7 +318,6 @@ pub fn submitMsg(rtr: *Reactor, msg: *Message, hint: VC) AmpeError!void {
 
     try rtr.ntfr.sendNotification(.{
         .kind = .message,
-        .hint = hint,
         .oob = oob,
     });
 
@@ -431,9 +429,8 @@ fn releaseToPool(rtr: *Reactor, storedMsg: *?*Message) void {
 pub fn buildStatusSignal(rtr: *Reactor, stat: AmpeStatus) *Message {
     var ret = Message.create(rtr.allocator) catch unreachable;
     ret.bhdr.status = status.status_to_raw(stat);
-    ret.bhdr.proto.mtype = .regular;
+    ret.bhdr.proto.opCode = .Signal;
     ret.bhdr.proto.origin = .engine;
-    ret.bhdr.proto.role = .signal;
     return ret;
 }
 
@@ -741,7 +738,7 @@ fn processTriggeredChannels(rtr: *Reactor, it: *Iterator) !void {
             var next: ?*Message = wereRecv.dequeue();
             while (next != null) {
                 var byeResponseReceived: bool = false;
-                if ((next.?.bhdr.proto.mtype == .bye) and (next.?.bhdr.proto.role == .response)) {
+                if ((next.?.bhdr.proto.opCode == .ByeResponse)) {
                     byeResponseReceived = true;
                 }
                 tc.sendToCtx(&next);
@@ -767,19 +764,19 @@ fn processMessageFromChannels(rtr: *Reactor) !void {
         return rtr.processInternal();
     }
 
-    const hint = rtr.currNtfc.hint;
+    const oc: message.OpCode = try rtr.currMsg.?.*.getOpCode();
 
     rtr.currMsg.?.assert();
 
-    switch (hint) {
+    switch (oc) {
         .HelloRequest => return rtr.sendHelloRequest(),
         .WelcomeRequest => return rtr.sendWelcomeRequest(),
         .ByeRequest, .ByeSignal => return rtr.sendBye(),
         .ByeResponse => return rtr.sendByeResponse(),
 
-        .HelloResponse, .AppRequest, .AppSignal, .AppResponse => return rtr.enqueueToPeer(),
-        //
-        // else => return AmpeError.InvalidMessage,
+        .HelloResponse, .Request, .Signal, .Response => return rtr.enqueueToPeer(),
+
+        else => return AmpeError.InvalidMessage,
     }
 
     return;
@@ -858,7 +855,7 @@ fn sendHelloRequest(rtr: *Reactor) !void {
 
     rtr.createIoClientChannel() catch |err| {
         assert(rtr.currMsg != null);
-        rtr.currMsg.?.bhdr.proto.role = .response;
+        rtr.currMsg.?.bhdr.proto.opCode = .HelloResponse;
 
         const st = status.errorToStatus(err);
         rtr.responseFailure(st);
@@ -874,7 +871,7 @@ fn sendWelcomeRequest(rtr: *Reactor) !void {
     rtr.createListenerChannel() catch |err| {
         log.info("createListenerChannel {d} failed with error {any}", .{ rtr.currMsg.?.bhdr.channel_number, err });
 
-        rtr.currMsg.?.bhdr.proto.role = .response;
+        rtr.currMsg.?.bhdr.proto.opCode = .WelcomeResponse;
 
         const st = status.errorToStatus(err);
         rtr.responseFailure(st);
@@ -889,7 +886,7 @@ fn sendBye(rtr: *Reactor) !void {
 
     const bye: *Message = rtr.currMsg.?;
 
-    if ((bye.bhdr.proto.role == .signal) and (bye.bhdr.proto.oob == .on)) {
+    if ((bye.bhdr.proto.getRole() == .signal) and (bye.bhdr.proto.oob == .on)) {
         // Initiate close of the channel
         rtr.responseFailure(AmpeStatus.channel_closed);
         return;
@@ -1081,8 +1078,8 @@ fn createListenerChannel(rtr: *Reactor) AmpeError!void {
     tcptr.*.tskt = tskt;
 
     // Listener started, so we can send succ. status to the caller.
-    if (tcptr.*.acn.intr.?.role == .request) {
-        rtr.currMsg.?.bhdr.proto.role = .response;
+    if (tcptr.*.acn.intr.?.getRole() == .request) {
+        rtr.currMsg.?.bhdr.proto.opCode = .WelcomeResponse;
         rtr.currMsg.?.bhdr.status = 0;
         tcptr.sendToCtx(&rtr.currMsg);
     }
@@ -1370,7 +1367,6 @@ const TextHeaderIterator = message.TextHeaderIterator;
 const TextHeaders = message.TextHeaders;
 const Message = message.Message;
 const MessageID = message.MessageID;
-const VC = message.ValidForSend;
 const MessageQueue = message.MessageQueue;
 
 const Options = tofu.Options;
@@ -1425,5 +1421,3 @@ const AtomicRmwOp = std.builtin.AtomicRmwOp;
 const Socket = std.posix.socket_t;
 const log = std.log;
 const assert = std.debug.assert;
-
-// 2DO  Add processing options for Pool as part of init()

@@ -460,12 +460,12 @@ pub const IoSkt = struct {
             received.?.bhdr.channel_number = ioskt.cn;
 
             if (DBG) {
-                if ((received.?.bhdr.proto.mtype == .hello) or (received.?.bhdr.proto.mtype == .bye)) {
+                if ((received.?.bhdr.proto.getType() == .hello) or (received.?.bhdr.proto.getType() == .bye)) {
                     received.?.bhdr.dumpMeta("<--rcv ");
                 }
             }
 
-            if ((received.?.bhdr.proto.mtype == .bye) and (received.?.bhdr.proto.role == .response)) {
+            if ((received.?.bhdr.proto.getType() == .bye) and (received.?.bhdr.proto.getRole() == .response)) {
                 ioskt.byeResponseReceived = true;
             }
 
@@ -500,7 +500,7 @@ pub const IoSkt = struct {
                 break;
             }
 
-            if (wasSend.?.bhdr.proto.mtype == .bye) {
+            if (wasSend.?.bhdr.proto.getType() == .bye) {
                 ioskt.byeWasSend = true;
             }
 
@@ -671,7 +671,7 @@ pub const MsgSender = struct {
 
                 if (DBG) {
                     if (ret != null) {
-                        if ((ret.?.bhdr.proto.mtype == .hello) or (ret.?.bhdr.proto.mtype == .bye)) {
+                        if ((ret.?.bhdr.proto.getType() == .hello) or (ret.?.bhdr.proto.getType() == .bye)) {
                             ret.?.bhdr.dumpMeta("-->snd ");
                         }
                     }

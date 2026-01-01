@@ -1,6 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="testall" type="ZIGBRAINS_BUILD" factoryName="ZIGBRAINS_BUILD" singleton="false">
     <ZigBrainsOption name="workingDirectory" value="$PROJECT_DIR$" />
+    <envs />
     <ZigBrainsOption name="buildSteps" value="install" />
     <ZigBrainsOption name="compilerArgs" value="" />
     <ZigBrainsOption name="debugBuildSteps" value="install" />

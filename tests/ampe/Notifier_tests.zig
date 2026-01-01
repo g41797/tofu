@@ -25,7 +25,6 @@ test "base Notifier" {
 
     const notif: Notification = .{
         .kind = .message,
-        .hint = .ByeSignal,
         .oob = .on,
     };
 

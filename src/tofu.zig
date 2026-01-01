@@ -15,6 +15,7 @@ pub const configurator = @import("configurator.zig");
 pub const message = @import("message.zig");
 pub const Message = message.Message;
 pub const BinaryHeader = message.BinaryHeader;
+pub const OpCode = message.OpCode;
 pub const status = @import("status.zig");
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;

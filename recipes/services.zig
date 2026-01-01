@@ -140,19 +140,20 @@ pub const EchoService = struct {
         }
 
         // Transform request to response
-        switch (msg.*.?.*.bhdr.proto.role) {
+        const oc: message.OpCode = msg.*.?.*.getOpCode() catch unreachable;
+        switch (oc.getRole()) {
             .request => {
-                msg.*.?.*.bhdr.proto.role = .response;
+                msg.*.?.*.bhdr.proto.opCode = oc.echo() catch unreachable;
             },
             .signal => {},
             else => {
-                log.warn("message role {s} is not supported", .{std.enums.tagName(message.MessageRole, msg.*.?.*.bhdr.proto.role).?});
+                log.warn("{s} is not supported", .{std.enums.tagName(message.OpCode, msg.*.?.*.bhdr.proto.opCode).?});
                 return false;
             },
         }
 
         // Count application messages only
-        if ((msg.*.?.*.bhdr.proto.mtype != .hello) and (msg.*.?.*.bhdr.proto.mtype != .bye)) {
+        if ((msg.*.?.*.bhdr.proto.getType() != .hello) and (msg.*.?.*.bhdr.proto.getType() != .bye)) {
             echo.*.rest -= 1;
         }
 
@@ -294,8 +295,7 @@ pub const EchoClient = struct {
             }
 
             // Should be hello response
-            assert(recvMsgOpt.?.*.bhdr.proto.mtype == .hello);
-            assert(recvMsgOpt.?.*.bhdr.proto.role == .response);
+            assert(recvMsgOpt.?.*.bhdr.proto.opCode == .HelloResponse);
             self.*.connected = true;
             break;
         }
@@ -321,10 +321,7 @@ pub const EchoClient = struct {
             // !!! We can set own value of message id !!!
             echoRequest.?.*.bhdr.message_id = mn;
 
-            echoRequest.?.*.bhdr.proto.mtype = .regular;
-            echoRequest.?.*.bhdr.proto.origin = .application;
-            echoRequest.?.*.bhdr.proto.role = .request;
-            echoRequest.?.*.bhdr.proto.oob = .off;
+            echoRequest.?.*.bhdr.proto = .default(.Request);
 
             echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
@@ -351,8 +348,7 @@ pub const EchoClient = struct {
                 }
 
                 // Should be application response
-                assert(recvMsgOpt.?.*.bhdr.proto.mtype == .regular);
-                assert(recvMsgOpt.?.*.bhdr.proto.role == .response);
+                assert(recvMsgOpt.?.*.bhdr.proto.opCode == .Response);
 
                 // And ofc the same message id
                 assert(recvMsgOpt.?.*.bhdr.message_id == mn);
@@ -384,10 +380,7 @@ pub const EchoClient = struct {
         // Set channel number to assigned earlier (hello request/response)
         byeRequest.?.*.bhdr.channel_number = self.*.helloBh.channel_number;
 
-        byeRequest.?.*.bhdr.proto.mtype = .bye;
-        byeRequest.?.*.bhdr.proto.origin = .application;
-        byeRequest.?.*.bhdr.proto.role = .signal;
-        byeRequest.?.*.bhdr.proto.oob = .on;
+        byeRequest.?.*.bhdr.proto = .default(.ByeSignal);
 
         byeRequest.?.*.copyBh2Body();
         _ = self.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
@@ -448,18 +441,14 @@ pub const EchoClient = struct {
                 return;
             }
 
-            if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
-                assert(recvMsg.?.*.bhdr.proto.role == .response);
+            if (recvMsg.?.*.bhdr.proto.opCode == .HelloResponse) {
 
                 // Connected to server
                 // NOTE: self.*.result is not defined in Self, assuming typo/omission
                 // self.*.result = .success;
 
                 // Disconnect from server
-                recvMsg.?.*.bhdr.proto.mtype = .bye;
-                recvMsg.?.*.bhdr.proto.origin = .application;
-                recvMsg.?.*.bhdr.proto.role = .signal;
-                recvMsg.?.*.bhdr.proto.oob = .on;
+                recvMsg.?.*.bhdr.proto.default(.ByeSignal);
 
                 recvMsg.?.*.copyBh2Body();
                 _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
@@ -523,7 +512,7 @@ pub const EchoClientServer = struct {
         // FIX: The optional pointer must be accessed (.?), then dereferenced (.*)
         ecs.echsrv.?.* = .{};
 
-        ecs.engine = try Reactor.Create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
+        ecs.engine = try Reactor.create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
         // Dereference the optional pointer to engine, then dereference the pointer to call the method
         ecs.ampe = try ecs.engine.?.*.ampe();
 
@@ -584,7 +573,7 @@ pub const EchoClientServer = struct {
 
         if (ecs.*.engine != null) {
             // Dereference the optional pointer to engine, then dereference the pointer to call the method
-            ecs.*.engine.?.*.Destroy();
+            ecs.*.engine.?.*.destroy();
             ecs.*.engine = null;
         }
 

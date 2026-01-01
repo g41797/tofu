@@ -23,7 +23,7 @@ pub fn chnls(grp: *MchnGroup) ChannelGroup {
     return result;
 }
 
-pub fn Create(engine: *Reactor, id: ?u32) AmpeError!*MchnGroup {
+pub fn create(engine: *Reactor, id: ?u32) AmpeError!*MchnGroup {
     const grp = engine.allocator.create(MchnGroup) catch {
         return AmpeError.AllocationFailed;
     };
@@ -32,7 +32,7 @@ pub fn Create(engine: *Reactor, id: ?u32) AmpeError!*MchnGroup {
     return grp;
 }
 
-pub fn Destroy(grp: *MchnGroup) void {
+pub fn destroy(grp: *MchnGroup) void {
     const gpa = grp.engine.allocator;
     grp.deinit();
     gpa.destroy(grp);
@@ -76,7 +76,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
     const sendMsg: *Message = msgopt.?;
     sendMsg.*.@"<ctx>" = ptr;
 
-    const vfs: message.ValidForSend = try sendMsg.*.check_and_prepare();
+    _ = try sendMsg.*.check_and_prepare();
 
     const grp: *MchnGroup = @ptrCast(@alignCast(ptr));
 
@@ -96,7 +96,7 @@ pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader 
 
     const ret: BinaryHeader = sendMsg.*.bhdr;
 
-    grp.engine.submitMsg(sendMsg, vfs) catch |err| {
+    grp.engine.submitMsg(sendMsg) catch |err| {
         if (newChannelWasCreated) {
             // Called on caller thread
             grp.engine.acns.removeChannel(sendMsg.*.bhdr.channel_number);

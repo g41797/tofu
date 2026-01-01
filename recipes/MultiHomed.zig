@@ -154,8 +154,7 @@ pub fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
 
         switch (sts) {
             .success => {
-                assert(receivedMsg.?.*.bhdr.proto.mtype == .welcome);
-                assert(receivedMsg.?.*.bhdr.proto.role == .response);
+                assert(receivedMsg.?.*.bhdr.proto.opCode == .WelcomeResponse);
 
                 try mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, cnfg);
                 return;

@@ -41,16 +41,16 @@ pub const services = @import("services.zig");
 pub const MultiHomed = @import("MultiHomed.zig");
 
 pub fn createDestroyMain(gpa: Allocator) !void {
-    var rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, DefaultOptions);
+    defer rtr.destroy();
 }
 
 pub fn createDestroyAmpe(gpa: Allocator) !void {
     // Create engine implementation object
-    const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
+    const rtr: *Reactor = try Reactor.create(gpa, DefaultOptions);
 
     // Destroy it after return or on error
-    defer rtr.*.Destroy();
+    defer rtr.*.destroy();
 
     // Create ampe interface
     const ampe: Ampe = try rtr.*.ampe();
@@ -59,12 +59,12 @@ pub fn createDestroyAmpe(gpa: Allocator) !void {
 
     // No need to destroy ampe itself.
     // It is an interface provided by Reactor.
-    // It will be destroyed via  rtr.*.Destroy().
+    // It will be destroyed via  rtr.*.destroy().
 }
 
 pub fn createDestroyChannelGroup(gpa: Allocator) !void {
-    const rtr: *Reactor = try Reactor.Create(gpa, DefaultOptions);
-    defer rtr.*.Destroy();
+    const rtr: *Reactor = try Reactor.create(gpa, DefaultOptions);
+    defer rtr.*.destroy();
 
     const ampe: Ampe = try rtr.*.ampe();
 
@@ -85,8 +85,8 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -95,7 +95,7 @@ pub fn getMsgsFromSmallestPool(gpa: Allocator) !void {
     var msg1: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // If msg1 is not null, return it to the pool.
-    // Pool is cleaned during rtr.Destroy().
+    // Pool is cleaned during rtr.destroy().
     defer ampe.put(&msg1);
 
     if (msg1 == null) {
@@ -124,8 +124,8 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    const rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.*.Destroy();
+    const rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.*.destroy();
     const ampe: Ampe = try rtr.*.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -137,7 +137,7 @@ pub fn sendMessageFromThePool(gpa: Allocator) !void {
     defer ampe.put(&msg);
 
     // Message from the pool is not ready for sending.
-    // It needs setup first.
+    // It needs setup/init first.
     // It will be returned to the pool by defer.
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -150,8 +150,8 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -166,8 +166,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     // Other messages need a valid, non-zero channel number.
 
     // Invalid Bye Request.
-    msg.?.*.bhdr.proto.mtype = .bye;
-    msg.?.*.bhdr.proto.role = .request;
+    msg.?.*.bhdr.proto.opCode = .ByeRequest;
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -180,8 +179,8 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -197,8 +196,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     // MessageType.welcome needs the server address for listening.
 
     // Hello Request without server address (configuration).
-    msg.?.*.bhdr.proto.mtype = .hello;
-    msg.?.*.bhdr.proto.role = .request;
+    msg.?.*.bhdr.proto.opCode = .HelloRequest;
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -211,8 +209,8 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 1, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -249,8 +247,8 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
         .maxPoolMsgs = 64, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -289,8 +287,8 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -388,8 +386,8 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const chnls: ChannelGroup = try ampe.create();
@@ -415,9 +413,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Configurator, runTheSame: bo
 
     // Since we sent a WelcomeRequest, the received message should be a WelcomeResponse
     // with the listen status (success or failure).
-    // A WelcomeSignal would return a Signal with an error status for failed listen.
-    assert(recvMsg.?.*.bhdr.proto.mtype == .welcome);
-    assert(recvMsg.?.*.bhdr.proto.role == .response);
+    assert(recvMsg.?.*.bhdr.proto.opCode == .WelcomeResponse);
 
     // Run of the same listener should fail with status TBD
     if (runTheSame) {
@@ -465,8 +461,8 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     // For simplicity, use the same ChannelGroup for client and server.
@@ -518,9 +514,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
 
     // Since we sent a WelcomeRequest, the received message should be a WelcomeResponse
     // with listen status (success or failure).
-    // A WelcomeSignal would return a Signal with an error status for failed listen.
-    assert(welcomeResp.?.*.bhdr.proto.mtype == .welcome);
-    assert(welcomeResp.?.*.bhdr.proto.role == .response);
+    assert(welcomeResp.?.*.bhdr.proto.opCode == .WelcomeResponse);
 
     // Listener is started before connect for simplicity.
     // In production, check connect status and retry if needed.
@@ -574,8 +568,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     assert(connectedClientInfo.message_id == cltCorrInfo.message_id);
 
     // Use the same message to send HelloResponse back.
-    // Set role to .response for HelloResponse.
-    helloRequestOnServerSide.?.*.bhdr.proto.role = .response;
+    helloRequestOnServerSide.?.*.bhdr.proto.opCode = .HelloResponse;
     _ = try chnls.enqueueToPeer(&helloRequestOnServerSide);
 
     // On the client side:
@@ -593,17 +586,13 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     // Since we sent a HelloRequest, the received message should be a HelloResponse
     // - From engine with error status if failed.
     // - From server if connect and HelloRequest succeeded.
-    // A HelloSignal would return a Signal with an error status for failed connect.
-    assert(welcomeResp.?.*.bhdr.proto.mtype == .welcome);
-    assert(welcomeResp.?.*.bhdr.proto.role == .response);
+    assert(helloResp.?.*.bhdr.proto.opCode == .HelloResponse);
 
     // Close all three channels in 'force' mode using ByeSignal with oob = on.
     var closeListener: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // Prepare ByeSignal for the listener channel.
-    closeListener.?.*.bhdr.proto.mtype = .bye;
-    closeListener.?.*.bhdr.proto.role = .signal;
-    closeListener.?.*.bhdr.proto.oob = .on;
+    closeListener.?.*.bhdr.proto = .default(.ByeSignal);
 
     // Set channel number to close this channel.
     closeListener.?.*.bhdr.channel_number = srvCorrInfo.channel_number;
@@ -619,9 +608,7 @@ pub fn handleConnect(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configurato
     var closeClient: ?*Message = try ampe.get(tofu.AllocationStrategy.always);
 
     // Prepare ByeSignal for the client channel.
-    closeClient.?.*.bhdr.proto.mtype = .bye;
-    closeClient.?.*.bhdr.proto.role = .signal;
-    closeClient.?.*.bhdr.proto.oob = .on;
+    closeClient.?.*.bhdr.proto = .default(.ByeSignal);
 
     // Set channel number to close this channel.
     closeClient.?.*.bhdr.channel_number = cltCorrInfo.channel_number; // Client channel on client side.
@@ -652,8 +639,8 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
     const chnls: ChannelGroup = try ampe.create();
     defer tofu.DestroyChannels(ampe, chnls);
@@ -672,11 +659,11 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
     assert(attention.?.*.bhdr.message_id == 0);
     assert(attention.?.*.bhdr.channel_number == 0);
     assert(attention.?.*.bhdr.proto.origin == .engine);
-    assert(attention.?.*.bhdr.proto.role == .signal);
+    assert(attention.?.*.bhdr.proto.getRole() == .signal);
     assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 
     // Create update message from existing signal.
-    attention.?.*.bhdr.proto.role = .request;
+    attention.?.*.bhdr.proto.opCode = .Request;
     attention.?.*.bhdr.status = 0;
     attention.?.*.bhdr.message_id = 1;
 
@@ -687,7 +674,7 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
     assert(attention.?.*.bhdr.message_id == 1);
     assert(attention.?.*.bhdr.channel_number == 0);
     assert(attention.?.*.bhdr.proto.origin == .application);
-    assert(attention.?.*.bhdr.proto.role == .request);
+    assert(attention.?.*.bhdr.proto.getRole() == .request);
     assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 
     return status.raw_to_status(attention.?.*.bhdr.status);
@@ -719,8 +706,8 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         .maxPoolMsgs = 1024, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
 
     const TofuClient = struct {
@@ -761,17 +748,13 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     return;
                 }
 
-                if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
-                    assert(recvMsg.?.*.bhdr.proto.role == .response);
+                if (recvMsg.?.*.bhdr.proto.opCode == .HelloResponse) {
 
                     // Connected to server
                     self.*.result = .success;
 
                     // Disconnect from server
-                    recvMsg.?.*.bhdr.proto.mtype = .bye;
-                    recvMsg.?.*.bhdr.proto.origin = .application;
-                    recvMsg.?.*.bhdr.proto.role = .signal;
-                    recvMsg.?.*.bhdr.proto.oob = .on;
+                    recvMsg.?.*.bhdr.proto = .default(.ByeSignal);
                     _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
                     return;
                 }
@@ -808,7 +791,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return;
         }
 
-        pub fn Create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
+        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -913,13 +896,13 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     };
                 }
 
-                assert(recvMsg.?.*.bhdr.proto.role == .request);
+                assert(recvMsg.?.*.bhdr.proto.getRole() == .request);
 
-                if (recvMsg.?.*.bhdr.proto.mtype == .hello) {
+                if (recvMsg.?.*.bhdr.proto.getType() == .hello) {
                     self.*.result = .success;
                 }
                 // Echo
-                recvMsg.?.*.bhdr.proto.role = .response;
+                recvMsg.?.*.bhdr.proto.opCode = recvMsg.?.*.bhdr.proto.opCode.echo() catch unreachable;
                 recvMsg.?.*.bhdr.proto.origin = .application; // For sure
 
                 _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
@@ -931,7 +914,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
             return;
         }
 
-        pub fn Create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
+        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Configurator) !*Self {
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -966,7 +949,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
         }
     };
 
-    var clnt: *TofuClient = try TofuClient.Create(gpa, ampe, cltCfg);
+    var clnt: *TofuClient = try TofuClient.create(gpa, ampe, cltCfg);
     defer clnt.destroy();
 
     const clntThread: std.Thread =
@@ -976,7 +959,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
     sleep10MlSec();
     sleep10MlSec();
 
-    var srvr: *TofuServer = try TofuServer.Create(gpa, ampe, srvCfg);
+    var srvr: *TofuServer = try TofuServer.create(gpa, ampe, srvCfg);
     defer srvr.destroy();
 
     const srvrThread: std.Thread =
@@ -1035,12 +1018,12 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
     // Just for example - let's create two engines :-)
 
-    var engA: *Reactor = try Reactor.Create(gpa, options);
-    defer engA.Destroy();
+    var engA: *Reactor = try Reactor.create(gpa, options);
+    defer engA.destroy();
     const ampeA: Ampe = try engA.ampe();
 
-    var engB: *Reactor = try Reactor.Create(gpa, options);
-    defer engB.Destroy();
+    var engB: *Reactor = try Reactor.create(gpa, options);
+    defer engB.destroy();
     const ampeB: Ampe = try engB.ampe();
 
     const TofuServer = struct {
@@ -1164,10 +1147,10 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     };
                 }
 
-                assert(recvMsg.?.*.bhdr.proto.role == .request);
-                assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
+                assert(recvMsg.?.*.bhdr.proto.getRole() == .request);
+                assert(recvMsg.?.*.bhdr.proto.getType() == mtype);
 
-                recvMsg.?.*.bhdr.proto.role = .response;
+                recvMsg.?.*.bhdr.proto.opCode = try recvMsg.?.*.bhdr.proto.opCode.echo();
                 recvMsg.?.*.bhdr.proto.origin = .application; // For sure
 
                 _ = server.*.chnls.?.enqueueToPeer(&recvMsg) catch |err| {
@@ -1347,9 +1330,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
 
             // Don't forget set the same channel # returned after send HelloRequest
             byeRequest.?.*.bhdr.channel_number = client.*.helloBh.channel_number;
-            byeRequest.?.*.bhdr.proto.mtype = .bye;
-            byeRequest.?.*.bhdr.proto.role = .request;
-            byeRequest.?.*.bhdr.proto.origin = .application;
+            byeRequest.?.*.bhdr.proto = .default(.ByeRequest);
 
             _ = byeRequest.?.*.check_and_prepare() catch |err| {
                 byeRequest.?.*.bhdr.dumpMeta("wrong message ");
@@ -1410,8 +1391,8 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Configurator, cltCfg: *Configu
                     };
                 }
 
-                assert(recvMsg.?.*.bhdr.proto.role == .response);
-                assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
+                assert(recvMsg.?.*.bhdr.proto.getRole() == .response);
+                assert(recvMsg.?.*.bhdr.proto.getType() == mtype);
 
                 return true;
             }
@@ -1465,8 +1446,8 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
         .maxPoolMsgs = 32, // Example value.
     };
 
-    var rtr: *Reactor = try Reactor.Create(gpa, options);
-    defer rtr.Destroy();
+    var rtr: *Reactor = try Reactor.create(gpa, options);
+    defer rtr.destroy();
     const ampe: Ampe = try rtr.ampe();
     defer tofu.DestroyChannels(rtr, ampe);
 
@@ -1681,9 +1662,7 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Configurator, cltCfg
 
             // Don't forget set the same channel # returned after send HelloRequest
             byeRequest.?.*.bhdr.channel_number = client.*.helloBh.channel_number;
-            byeRequest.?.*.bhdr.proto.mtype = .bye;
-            byeRequest.?.*.bhdr.proto.role = .request;
-            byeRequest.?.*.bhdr.proto.origin = .application;
+            byeRequest.?.*.bhdr.proto.default(.ByeRequest);
 
             client.*.helloBh = client.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
 
@@ -1879,8 +1858,8 @@ pub const TofuEchoServer = struct {
                 };
             }
 
-            assert(recvMsg.?.*.bhdr.proto.role == .request);
-            assert(recvMsg.?.*.bhdr.proto.mtype == mtype);
+            assert(recvMsg.?.*.bhdr.proto.getRole() == .request);
+            assert(recvMsg.?.*.bhdr.proto.getType() == mtype);
 
             recvMsg.?.*.bhdr.proto.role = .response;
             recvMsg.?.*.bhdr.proto.origin = .application; // For sure

@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-// 2DO - Define error set(s) for errors returned by ChannelGroup and Ampe
-
 pub const Ampe = struct {
     ptr: ?*anyopaque,
     vtable: *const vtables.AmpeVTable,
@@ -61,7 +59,7 @@ pub const Ampe = struct {
         return ampe.vtable.destroy(ampe.ptr, chnls.ptr);
     }
 
-    /// I hope returns GPA-compatible allocator
+    /// I hope returns "GPA-compatible" allocator
     pub fn getAllocator(
         ampe: Ampe,
     ) Allocator {
@@ -73,8 +71,6 @@ pub const AllocationStrategy = enum {
     poolOnly, // Returns null if pool empty
     always, // Creates new if pool empty
 };
-
-// After handshake, both sides are peers.
 
 pub const ChannelGroup = struct {
     ptr: ?*anyopaque,

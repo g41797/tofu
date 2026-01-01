@@ -139,9 +139,13 @@ test {
 }
 
 test "send illegal messages" {
+    try send_illegal_messages();
+}
+
+fn send_illegal_messages() !void {
     std.testing.log_level = .debug;
     recipes.sendMessageFromThePool(gpa) catch |err| {
-        try testing.expect(err == AmpeError.InvalidMessageMode);
+        try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
 
     recipes.handleMessageWithWrongChannelNumber(gpa) catch |err| {

@@ -15,13 +15,7 @@ test "sequential message id" {
 test "BinaryHeader marshalling and demarshalling" {
     var header = message.BinaryHeader{
         .channel_number = 0x1234,
-        .proto = .{
-            .mtype = .hello,
-            .role = .request,
-            .origin = .application,
-            .more = .last,
-            .oob = .off,
-        },
+        .proto = .default(.Request),
         .status = 0xFF,
         .message_id = 0xAABBCCDDEEFF0011,
         .@"<thl>" = 0x5678,
@@ -35,8 +29,7 @@ test "BinaryHeader marshalling and demarshalling" {
     demarshaled.fromBytes(&buf);
 
     try std.testing.expectEqual(header.channel_number, demarshaled.channel_number);
-    try std.testing.expectEqual(header.proto.mtype, demarshaled.proto.mtype);
-    try std.testing.expectEqual(header.proto.role, demarshaled.proto.role);
+    try std.testing.expectEqual(header.proto.opCode, demarshaled.proto.opCode);
     try std.testing.expectEqual(header.status, demarshaled.status);
     try std.testing.expectEqual(header.message_id, demarshaled.message_id);
     try std.testing.expectEqual(header.@"<thl>", demarshaled.@"<thl>");
