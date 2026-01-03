@@ -153,7 +153,7 @@ fn send_illegal_messages() !void {
     };
 
     recipes.handleHelloWithoutConfiguration(gpa) catch |err| {
-        try testing.expect(err == AmpeError.WrongConfiguration);
+        try testing.expect(err == AmpeError.WrongAddress);
     };
 
     recipes.handleHelloWithWrongAddress(gpa) catch |err| {

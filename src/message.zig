@@ -625,8 +625,8 @@ pub const Message = struct {
         msg.bhdr.@"<thl>" = @intCast(actualHeadersLen);
 
         if ((msg.bhdr.@"<thl>" == 0) and ((oc == .WelcomeRequest) or (oc == .HelloRequest))) {
-            msg.bhdr.status = status_to_raw(.wrong_configuration);
-            return AmpeError.WrongConfiguration;
+            msg.bhdr.status = status_to_raw(.wrong_address);
+            return AmpeError.WrongAddress;
         }
 
         const actualBodyLen = msg.actual_body_len();

@@ -21,12 +21,12 @@ test "UDS exchanger " {
 
     log.debug("\r\nUDS path {s}\r\n", .{path});
 
-    const srvcnf: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(path),
+    const srvcnf: Address = .{
+        .uds_server_addr = UDSServerAddress.init(path),
     };
 
-    const clcnf: Configurator = .{
-        .uds_client = UDSClientConfigurator.init(path),
+    const clcnf: Address = .{
+        .uds_client_addr = UDSClientAddress.init(path),
     };
 
     for (1..3) |_| {
@@ -40,12 +40,12 @@ test "TCP/IP exchanger " {
 
     log.debug("Exchanger TCP/IP)\r\n", .{});
 
-    const srvcnf: Configurator = .{
-        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+    const srvcnf: Address = .{
+        .tcp_server_addr = TCPServerAddress.init(localIP, configurator.DefaultPort),
     };
 
-    const clcnf: Configurator = .{
-        .tcp_client = TCPClientConfigurator.init(localIP, configurator.DefaultPort),
+    const clcnf: Address = .{
+        .tcp_client_addr = TCPClientAddress.init(localIP, configurator.DefaultPort),
     };
 
     for (1..3) |_| {
@@ -54,7 +54,7 @@ test "TCP/IP exchanger " {
     return;
 }
 
-fn run(srvcnf: Configurator, clcnf: Configurator) !void {
+fn run(srvcnf: Address, clcnf: Address) !void {
     var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf, false);
     defer exc.*.deinit();
 
@@ -77,8 +77,8 @@ pub const Exchanger = struct {
     allocator: Allocator = undefined,
     pool: Pool = undefined,
 
-    srvcnf: Configurator = undefined,
-    clcnf: Configurator = undefined,
+    srvcnf: Address = undefined,
+    clcnf: Address = undefined,
 
     lstCN: CN = 10,
     srvCN: CN = 20,
@@ -96,7 +96,7 @@ pub const Exchanger = struct {
 
     srf: SendRecv = undefined,
 
-    pub fn init(allocator: Allocator, srvcnf: Configurator, clcnf: Configurator, usePoller: bool) !Exchanger {
+    pub fn init(allocator: Allocator, srvcnf: Address, clcnf: Address, usePoller: bool) !Exchanger {
         var ret: Exchanger = .{
             .allocator = allocator,
             .pool = try Pool.init(allocator, null, null, null),
@@ -160,7 +160,7 @@ pub const Exchanger = struct {
         var cl: TC = .{
             .exp = .{},
             .act = .{},
-            .tskt = try create_client(&exc.*.clcnf, &exc.*.pool),
+            .tskt = try create_client_addr(&exc.*.clcnf, &exc.*.pool),
             .acn = .{
                 .chn = exc.*.clCN,
                 .mid = exc.*.clCN,
@@ -444,11 +444,11 @@ pub const Exchanger = struct {
     }
 };
 
-fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
+fn create_listener(cnfr: *Address) !internal.TriggeredSkt {
     var wlcm: *Message = try Message.create(gpa);
     defer wlcm.*.destroy();
 
-    try cnfr.*.configure(wlcm);
+    try cnfr.*.format(wlcm);
 
     var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
 
@@ -464,10 +464,10 @@ fn create_listener(cnfr: *Configurator) !internal.TriggeredSkt {
     return tskt;
 }
 
-fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
+fn create_client_addr(cnfr: *Address, pool: *Pool) !internal.TriggeredSkt {
     var hello: *Message = try Message.create(gpa);
 
-    cnfr.*.configure(hello) catch |err| {
+    cnfr.*.format(hello) catch |err| {
         hello.*.destroy();
         return err;
     };
@@ -486,8 +486,8 @@ fn create_client(cnfr: *Configurator, pool: *Pool) !internal.TriggeredSkt {
     const utrg: internal.triggeredSkts.UnpackedTriggers = internal.triggeredSkts.UnpackedTriggers.fromTriggers(trgrs);
 
     const onTrigger: u8 = switch (cnfr.*) {
-        .tcp_client => utrg.connect,
-        .uds_client => utrg.send,
+        .tcp_client_addr => utrg.connect,
+        .uds_client_addr => utrg.send,
         else => unreachable,
     };
 
@@ -524,12 +524,12 @@ const Poller = poller.Poller;
 const Poll = poller.Poll;
 
 const configurator = tofu.configurator;
-const Configurator = configurator.Configurator;
-const TCPServerConfigurator = configurator.TCPServerConfigurator;
-const TCPClientConfigurator = configurator.TCPClientConfigurator;
-const UDSServerConfigurator = configurator.UDSServerConfigurator;
-const UDSClientConfigurator = configurator.UDSClientConfigurator;
-const WrongConfigurator = configurator.WrongConfigurator;
+const Address = configurator.Address;
+const TCPServerAddress = configurator.TCPServerAddress;
+const TCPClientAddress = configurator.TCPClientAddress;
+const UDSServerAddress = configurator.UDSServerAddress;
+const UDSClientAddress = configurator.UDSClientAddress;
+const WrongAddress = configurator.WrongAddress;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;

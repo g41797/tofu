@@ -4,7 +4,7 @@
 pub const AmpeStatus = enum(u8) {
     success = 0,
     not_implemented_yet,
-    wrong_configuration,
+    wrong_address,
     not_allowed,
     null_message,
     invalid_message,
@@ -40,7 +40,7 @@ pub const AmpeStatus = enum(u8) {
 
 pub const AmpeError = error{
     NotImplementedYet,
-    WrongConfiguration,
+    WrongAddress,
     NotAllowed,
     NullMessage,
     InvalidMessage,
@@ -77,13 +77,11 @@ pub const AmpeError = error{
 // Comptime mapping from AmpeStatus to AmpeError.
 var StatusToErrorMap = std.enums.EnumMap(AmpeStatus, AmpeError).init(.{
     .not_implemented_yet = AmpeError.NotImplementedYet,
-    .wrong_configuration = AmpeError.WrongConfiguration,
+    .wrong_address = AmpeError.WrongAddress,
     .not_allowed = AmpeError.NotAllowed,
     .null_message = AmpeError.NullMessage,
     .invalid_message = AmpeError.InvalidMessage,
     .invalid_op_code = AmpeError.InvalidOpCode,
-    // .invalid_message_type = AmpeError.InvalidMessageType,
-    // .invalid_message_role = AmpeError.InvalidMessageRole,
     .invalid_headers_len = AmpeError.InvalidHeadersLen,
     .invalid_body_len = AmpeError.InvalidBodyLen,
     .invalid_channel_number = AmpeError.InvalidChannelNumber,

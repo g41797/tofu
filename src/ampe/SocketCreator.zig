@@ -4,35 +4,35 @@
 pub const SocketCreator = @This();
 
 allocator: Allocator = undefined,
-cnfgr: Configurator = undefined,
+addrs: Address = undefined,
 
 pub fn init(allocator: Allocator) SocketCreator {
     return .{
         .allocator = allocator,
-        .cnfgr = .wrong,
+        .addrs = .wrong,
     };
 }
 
-pub fn fromMessage(sc: *SocketCreator, msg: *Message) AmpeError!Skt {
-    const cnfgr = Configurator.fromMessage(msg);
+pub fn parse(sc: *SocketCreator, msg: *Message) AmpeError!Skt {
+    const addrs = Address.parse(msg);
 
-    return sc.fromConfigurator(cnfgr);
+    return sc.fromAddress(addrs);
 }
 
-pub fn fromConfigurator(sc: *SocketCreator, cnfgr: Configurator) AmpeError!Skt {
-    sc.cnfgr = cnfgr;
+pub fn fromAddress(sc: *SocketCreator, addrs: Address) AmpeError!Skt {
+    sc.addrs = addrs;
 
-    switch (sc.cnfgr) {
+    switch (sc.addrs) {
         .wrong => return AmpeError.InvalidAddress,
-        .tcp_server => return sc.createTcpServer(),
-        .tcp_client => return sc.createTcpClient(),
-        .uds_server => return sc.createUdsServer(),
-        .uds_client => return sc.createUdsClient(),
+        .tcp_server_addr => return sc.createTcpServer(),
+        .tcp_client_addr => return sc.createTcpClient(),
+        .uds_server_addr => return sc.createUdsServer(),
+        .uds_client_addr => return sc.createUdsClient(),
     }
 }
 
 pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
-    const cnf: *TCPServerConfigurator = &sc.cnfgr.tcp_server;
+    const cnf: *TCPServerAddress = &sc.addrs.tcp_server_addr;
 
     const address = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
         log.info("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
@@ -53,7 +53,7 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
-    const cnf: *TCPClientConfigurator = &sc.cnfgr.tcp_client;
+    const cnf: *TCPClientAddress = &sc.addrs.tcp_client_addr;
 
     var list = std.net.getAddressList(sc.allocator, cnf.addrToSlice(), cnf.port.?) catch {
         return AmpeError.InvalidAddress;
@@ -75,7 +75,7 @@ pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
-    return createUdsListener(sc.allocator, sc.cnfgr.uds_server.addrToSlice());
+    return createUdsListener(sc.allocator, sc.addrs.uds_server_addr.addrToSlice());
 }
 
 pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
@@ -102,7 +102,7 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
 }
 
 pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
-    return createUdsSocket(sc.cnfgr.uds_client.addrToSlice());
+    return createUdsSocket(sc.addrs.uds_client_addr.addrToSlice());
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
@@ -147,12 +147,12 @@ pub fn createConnectSocket(address: *const std.net.Address) !Skt {
 const tofu = @import("../tofu.zig");
 
 const configurator = tofu.configurator;
-const Configurator = configurator.Configurator;
-const TCPServerConfigurator = configurator.TCPServerConfigurator;
-const TCPClientConfigurator = configurator.TCPClientConfigurator;
-const UDSServerConfigurator = configurator.UDSServerConfigurator;
-const UDSClientConfigurator = configurator.UDSClientConfigurator;
-const WrongConfigurator = configurator.WrongConfigurator;
+const Address = configurator.Address;
+const TCPServerAddress = configurator.TCPServerAddress;
+const TCPClientAddress = configurator.TCPClientAddress;
+const UDSServerAddress = configurator.UDSServerAddress;
+const UDSClientAddress = configurator.UDSClientAddress;
+const WrongAddress = configurator.WrongAddress;
 
 const message = tofu.message;
 const Message = message.Message;

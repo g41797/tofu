@@ -22,7 +22,7 @@ pub const ChannelGroup = tofu.ChannelGroup;
 pub const Options = tofu.Options;
 pub const DefaultOptions = tofu.DefaultOptions;
 pub const configurator = tofu.configurator;
-pub const Configurator = configurator.Configurator;
+pub const Address = configurator.Address;
 pub const status = tofu.status;
 pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
@@ -38,13 +38,13 @@ ampe: ?Ampe = null,
 allocator: ?Allocator = null,
 chnls: ?ChannelGroup = null,
 srvcs: Services = undefined,
-lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Configurator) = null,
+lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Address) = null,
 thread: ?std.Thread = null,
 msgq: message.MessageQueue = .{},
 ackMbox: MSGMailBox = .{},
 
 /// Call stop() to cleanup.
-pub fn run(ampe: Ampe, adrs: []Configurator, srvcs: Services) !*MultiHomed {
+pub fn run(ampe: Ampe, adrs: []Address, srvcs: Services) !*MultiHomed {
     if (adrs.len == 0) {
         return error.EmptyConfiguration;
     }
@@ -103,7 +103,7 @@ pub fn stop(mh: *MultiHomed) void {
     return;
 }
 
-pub fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
+pub fn init(mh: *MultiHomed, adrs: []Address) !*MultiHomed {
     for (adrs) |cnfg| {
         _ = try mh.*.startListener(cnfg);
     }
@@ -119,11 +119,11 @@ pub fn init(mh: *MultiHomed, adrs: []Configurator) !*MultiHomed {
     return mh;
 }
 
-pub fn startListener(mh: *MultiHomed, cnfg: Configurator) !void {
+pub fn startListener(mh: *MultiHomed, cnfg: Address) !void {
     var welcomeRequest: ?*Message = mh.*.ampe.?.get(tofu.AllocationStrategy.always) catch unreachable;
     defer mh.*.ampe.?.put(&welcomeRequest);
 
-    cnfg.configure(welcomeRequest.?) catch unreachable;
+    cnfg.format(welcomeRequest.?) catch unreachable;
 
     welcomeRequest.?.*.copyBh2Body();
     const wlcbh: BinaryHeader = try mh.*.chnls.?.enqueueToPeer(&welcomeRequest);

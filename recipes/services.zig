@@ -15,7 +15,7 @@ pub const Reactor = tofu.Reactor;
 pub const Ampe = tofu.Ampe;
 pub const ChannelGroup = tofu.ChannelGroup;
 pub const configurator = tofu.configurator;
-pub const Configurator = configurator.Configurator;
+pub const Address = configurator.Address;
 pub const status = tofu.status;
 pub const message = tofu.message;
 pub const BinaryHeader = message.BinaryHeader;
@@ -196,7 +196,7 @@ pub const EchoClient = struct {
     ampe: Ampe = undefined,
     gpa: Allocator = undefined,
     chnls: ?ChannelGroup = null,
-    cfg: Configurator = undefined,
+    cfg: Address = undefined,
     ack: *mailbox.MailBoxIntrusive(Self) = undefined,
     thread: ?std.Thread = null,
     count: u16 = 0, // number of successful echoes
@@ -206,7 +206,7 @@ pub const EchoClient = struct {
     helloBh: BinaryHeader = .{},
 
     /// Connects, spawns thread. Sends self to ack mailbox when done.
-    pub fn start(engine: Ampe, cfg: Configurator, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
+    pub fn start(engine: Ampe, cfg: Address, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
         const all: Allocator = engine.getAllocator();
 
         const result: *Self = all.create(Self) catch {
@@ -270,7 +270,7 @@ pub const EchoClient = struct {
         var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer self.*.ampe.put(&helloRequest);
 
-        self.*.cfg.configure(helloRequest.?) catch unreachable;
+        self.*.cfg.format(helloRequest.?) catch unreachable;
 
         helloRequest.?.*.copyBh2Body();
         self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
@@ -415,7 +415,7 @@ pub const EchoClient = struct {
             var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer self.*.ampe.put(&helloRequest);
 
-            self.*.cfg.configure(helloRequest.?) catch unreachable;
+            self.*.cfg.format(helloRequest.?) catch unreachable;
 
             helloRequest.?.*.copyBh2Body();
             self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
@@ -498,7 +498,7 @@ pub const EchoClientServer = struct {
     clcCount: u16 = 0,
     echoes: usize = 0,
 
-    pub fn init(allocator: Allocator, srvcfg: []Configurator) !EchoClientServer {
+    pub fn init(allocator: Allocator, srvcfg: []Address) !EchoClientServer {
         var ecs: EchoClientServer = .{
             .gpa = allocator,
         };
@@ -522,7 +522,7 @@ pub const EchoClientServer = struct {
         return ecs;
     }
 
-    pub fn run(ecs: *EchoClientServer, clncfg: []Configurator) !status.AmpeStatus {
+    pub fn run(ecs: *EchoClientServer, clncfg: []Address) !status.AmpeStatus {
         defer ecs.*.deinit();
 
         if (clncfg.len == 0) {

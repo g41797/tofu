@@ -14,8 +14,8 @@ pub const DefaultProto = TCPProto;
 pub const DefaultAddr = "127.0.0.1";
 pub const DefaultPort = LazyPTOP;
 
-const ConfigPrintFormatTCP = "{s}|{s}|{d}";
-const ConfigPrintFormatUDS = "{s}|{s}";
+const AddressFormatTCP = "{s}|{s}|{d}";
+const AddressFormatUDS = "{s}|{s}";
 
 /// Format: "tcp|127.0.0.1|7099" or "uds|/tmp/7099.port"
 pub const ConnectToHeader = "~connect_to";
@@ -23,12 +23,12 @@ pub const ConnectToHeader = "~connect_to";
 /// Format: "tcp|127.0.0.1|7099" (loopback) or "tcp||7099" (all interfaces) or "uds|/tmp/7099.port"
 pub const ListenOnHeader = "~listen_on";
 
-pub const TCPClientConfigurator = struct {
+pub const TCPClientAddress = struct {
     addrbuf: [256]u8 = undefined,
     port: ?u16 = null,
 
-    pub fn init(host_or_ip: ?[]const u8, port: ?u16) TCPClientConfigurator {
-        var cnf: TCPClientConfigurator = .{};
+    pub fn init(host_or_ip: ?[]const u8, port: ?u16) TCPClientAddress {
+        var cnf: TCPClientAddress = .{};
 
         cnf.toAddrBuf(host_or_ip);
 
@@ -40,32 +40,32 @@ pub const TCPClientConfigurator = struct {
         return cnf;
     }
 
-    pub fn configure(self: *const TCPClientConfigurator, msg: *Message) AmpeError!void {
+    pub fn format(self: *const TCPClientAddress, msg: *Message) AmpeError!void {
         prepareForClient(msg);
-        try self.toConfiguration(&msg.*.thdrs);
+        try self.toHeaders(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *const TCPClientConfigurator, config: *TextHeaders) AmpeError!void {
+    fn toHeaders(self: *const TCPClientAddress, config: *TextHeaders) AmpeError!void {
         const addrlen = self.addrLen();
 
         if ((addrlen == 0) or (self.port == null)) {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, AddressFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
         config.append(ConnectToHeader, confHeader) catch {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         };
         return;
     }
 
-    fn addrLen(self: *const TCPClientConfigurator) usize {
+    fn addrLen(self: *const TCPClientAddress) usize {
         const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
         return ret;
     }
 
-    fn toAddrBuf(self: *TCPClientConfigurator, host_or_ip: ?[]const u8) void {
+    fn toAddrBuf(self: *TCPClientAddress, host_or_ip: ?[]const u8) void {
         @memset(&self.addrbuf, 0);
         @memcpy(self.addrbuf[0..DefaultAddr.len], DefaultAddr);
 
@@ -84,18 +84,18 @@ pub const TCPClientConfigurator = struct {
         return;
     }
 
-    pub fn addrToSlice(self: *const TCPClientConfigurator) []const u8 {
+    pub fn addrToSlice(self: *const TCPClientAddress) []const u8 {
         const ret = self.addrbuf[0..self.addrLen()];
         return ret;
     }
 };
 
-pub const TCPServerConfigurator = struct {
+pub const TCPServerAddress = struct {
     addrbuf: [256]u8 = undefined,
     port: ?u16 = null,
 
-    pub fn init(ip: ?[]const u8, port: ?u16) TCPServerConfigurator {
-        var cnf: TCPServerConfigurator = .{};
+    pub fn init(ip: ?[]const u8, port: ?u16) TCPServerAddress {
+        var cnf: TCPServerAddress = .{};
 
         cnf.toAddrBuf(ip);
 
@@ -107,32 +107,32 @@ pub const TCPServerConfigurator = struct {
         return cnf;
     }
 
-    pub fn configure(self: *const TCPServerConfigurator, msg: *Message) AmpeError!void {
+    pub fn format(self: *const TCPServerAddress, msg: *Message) AmpeError!void {
         prepareForServer(msg);
-        try self.toConfiguration(&msg.*.thdrs);
+        try self.toHeaders(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *const TCPServerConfigurator, config: *TextHeaders) AmpeError!void {
+    fn toHeaders(self: *const TCPServerAddress, config: *TextHeaders) AmpeError!void {
         const addrlen = self.addrLen();
 
         if ((addrlen == 0) or (self.port == null)) {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         }
 
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, AddressFormatTCP, .{ TCPProto, self.addrbuf[0..addrlen], self.port.? }) catch unreachable;
         config.append(ListenOnHeader, confHeader) catch {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         };
         return;
     }
 
-    fn addrLen(self: *const TCPServerConfigurator) usize {
+    fn addrLen(self: *const TCPServerAddress) usize {
         const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
         return ret;
     }
 
-    fn toAddrBuf(self: *TCPServerConfigurator, host_or_ip: ?[]const u8) void {
+    fn toAddrBuf(self: *TCPServerAddress, host_or_ip: ?[]const u8) void {
         @memset(&self.addrbuf, 0);
 
         if (host_or_ip == null) {
@@ -150,44 +150,44 @@ pub const TCPServerConfigurator = struct {
         return;
     }
 
-    pub fn addrToSlice(self: *const TCPServerConfigurator) []const u8 {
+    pub fn addrToSlice(self: *const TCPServerAddress) []const u8 {
         const ret = self.addrbuf[0..self.addrLen()];
         return ret;
     }
 };
 
-pub const UDSClientConfigurator = struct {
+pub const UDSClientAddress = struct {
     addrbuf: [108]u8 = undefined,
 
-    pub fn init(path: []const u8) UDSClientConfigurator {
-        var ret: UDSClientConfigurator = .{};
+    pub fn init(path: []const u8) UDSClientAddress {
+        var ret: UDSClientAddress = .{};
         ret.toAddrBuf(path);
         return ret;
     }
 
-    pub fn configure(self: *const UDSClientConfigurator, msg: *Message) AmpeError!void {
+    pub fn format(self: *const UDSClientAddress, msg: *Message) AmpeError!void {
         prepareForClient(msg);
-        try self.toConfiguration(&msg.*.thdrs);
+        try self.toHeaders(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *const UDSClientConfigurator, config: *TextHeaders) AmpeError!void {
+    fn toHeaders(self: *const UDSClientAddress, config: *TextHeaders) AmpeError!void {
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{
+        const confHeader = std.fmt.bufPrint(&buffer, AddressFormatUDS, .{
             UDSProto,
             self.addrToSlice(),
         }) catch unreachable;
         config.append(ConnectToHeader, confHeader) catch {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         };
         return;
     }
 
-    fn addrLen(self: *const UDSClientConfigurator) usize {
+    fn addrLen(self: *const UDSClientAddress) usize {
         const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
         return ret;
     }
 
-    fn toAddrBuf(self: *UDSClientConfigurator, path: []const u8) void {
+    fn toAddrBuf(self: *UDSClientAddress, path: []const u8) void {
         @memset(&self.addrbuf, 0);
 
         const dest = self.addrbuf[0..@min(path.len, self.addrbuf.len)];
@@ -197,41 +197,41 @@ pub const UDSClientConfigurator = struct {
         return;
     }
 
-    pub fn addrToSlice(self: *const UDSClientConfigurator) []const u8 {
+    pub fn addrToSlice(self: *const UDSClientAddress) []const u8 {
         const ret = self.addrbuf[0..self.addrLen()];
         return ret;
     }
 };
 
-pub const UDSServerConfigurator = struct {
+pub const UDSServerAddress = struct {
     addrbuf: [108]u8 = undefined,
 
-    pub fn init(path: []const u8) UDSServerConfigurator {
-        var ret: UDSServerConfigurator = .{};
+    pub fn init(path: []const u8) UDSServerAddress {
+        var ret: UDSServerAddress = .{};
         ret.toAddrBuf(path);
         return ret;
     }
 
-    pub fn configure(self: *const UDSServerConfigurator, msg: *Message) AmpeError!void {
+    pub fn format(self: *const UDSServerAddress, msg: *Message) AmpeError!void {
         prepareForServer(msg);
-        try self.toConfiguration(&msg.*.thdrs);
+        try self.toHeaders(&msg.*.thdrs);
     }
 
-    pub fn toConfiguration(self: *const UDSServerConfigurator, config: *TextHeaders) AmpeError!void {
+    fn toHeaders(self: *const UDSServerAddress, config: *TextHeaders) AmpeError!void {
         var buffer: [256]u8 = undefined;
-        const confHeader = std.fmt.bufPrint(&buffer, ConfigPrintFormatUDS, .{ UDSProto, self.addrToSlice() }) catch unreachable;
+        const confHeader = std.fmt.bufPrint(&buffer, AddressFormatUDS, .{ UDSProto, self.addrToSlice() }) catch unreachable;
         config.append(ListenOnHeader, confHeader) catch {
-            return AmpeError.WrongConfiguration;
+            return AmpeError.WrongAddress;
         };
         return;
     }
 
-    fn addrLen(self: *const UDSServerConfigurator) usize {
+    fn addrLen(self: *const UDSServerAddress) usize {
         const ret = std.mem.indexOf(u8, &self.addrbuf, &[_]u8{0}) orelse self.addrbuf.len;
         return ret;
     }
 
-    fn toAddrBuf(self: *UDSServerConfigurator, path: []const u8) void {
+    fn toAddrBuf(self: *UDSServerAddress, path: []const u8) void {
         @memset(&self.addrbuf, 0);
 
         const dest = self.addrbuf[0..@min(path.len, self.addrbuf.len)];
@@ -241,39 +241,39 @@ pub const UDSServerConfigurator = struct {
         return;
     }
 
-    pub fn addrToSlice(self: *const UDSServerConfigurator) []const u8 {
+    pub fn addrToSlice(self: *const UDSServerAddress) []const u8 {
         const ret = self.addrbuf[0..self.addrLen()];
         return ret;
     }
 };
 
-pub const WrongConfigurator = struct {
-    pub fn configure(self: *const WrongConfigurator, msg: *Message) AmpeError!void {
+pub const WrongAddress = struct {
+    pub fn format(self: *const WrongAddress, msg: *Message) AmpeError!void {
         _ = self;
         _ = msg;
-        return AmpeError.WrongConfiguration;
+        return AmpeError.WrongAddress;
     }
 };
 
-pub const Configurator = union(enum) {
-    tcp_server: TCPServerConfigurator,
-    tcp_client: TCPClientConfigurator,
-    uds_server: UDSServerConfigurator,
-    uds_client: UDSClientConfigurator,
-    wrong: WrongConfigurator,
+pub const Address = union(enum) {
+    tcp_server_addr: TCPServerAddress,
+    tcp_client_addr: TCPClientAddress,
+    uds_server_addr: UDSServerAddress,
+    uds_client_addr: UDSClientAddress,
+    wrong: WrongAddress,
 
-    pub fn configure(self: *const Configurator, msg: *Message) AmpeError!void {
+    pub fn format(self: *const Address, msg: *Message) AmpeError!void {
         return switch (self.*) {
-            inline else => |conf| try conf.configure(msg),
+            inline else => |conf| try conf.format(msg),
         };
     }
 
-    pub fn eql(self: Configurator, other: Configurator) bool {
+    pub fn eql(self: Address, other: Address) bool {
         return activeTag(self) == activeTag(other);
     }
 
-    pub fn fromMessage(msg: *Message) Configurator {
-        const cftr: Configurator = .{
+    pub fn parse(msg: *Message) Address {
+        const cftr: Address = .{
             .wrong = .{},
         };
         if (msg.actual_headers_len() == 0) {
@@ -295,8 +295,8 @@ pub const Configurator = union(enum) {
         return cftr;
     }
 
-    fn clientFromString(string: []const u8) Configurator {
-        var cftr: Configurator = .{
+    fn clientFromString(string: []const u8) Address {
+        var cftr: Address = .{
             .wrong = .{},
         };
 
@@ -321,22 +321,22 @@ pub const Configurator = union(enum) {
                     break;
                 }
                 cftr = .{
-                    .uds_client = .init(parts[1]),
+                    .uds_client_addr = .init(parts[1]),
                 };
                 break;
             }
 
             const port = std.fmt.parseInt(u16, parts[2], 10) catch break :brk;
             cftr = .{
-                .tcp_client = .init(parts[1], port),
+                .tcp_client_addr = .init(parts[1], port),
             };
             break;
         }
         return cftr;
     }
 
-    fn serverFromString(string: []const u8) Configurator {
-        var cftr: Configurator = .{
+    fn serverFromString(string: []const u8) Address {
+        var cftr: Address = .{
             .wrong = .{},
         };
 
@@ -361,14 +361,14 @@ pub const Configurator = union(enum) {
                     break;
                 }
                 cftr = .{
-                    .uds_server = .init(parts[1]),
+                    .uds_server_addr = .init(parts[1]),
                 };
                 break;
             }
 
             const port = std.fmt.parseInt(u16, parts[2], 10) catch break :brk;
             cftr = .{
-                .tcp_server = .init(parts[1], port),
+                .tcp_server_addr = .init(parts[1], port),
             };
             break;
         }
@@ -376,7 +376,7 @@ pub const Configurator = union(enum) {
     }
 
     // Returns true if .wrong is active field
-    pub fn isWrong(self: *const Configurator) bool {
+    pub fn isWrong(self: *const Address) bool {
         switch (self.*) {
             .wrong => return true,
             inline else => return false,
@@ -403,4 +403,4 @@ pub const AmpeError = @import("status.zig").AmpeError;
 const std = @import("std");
 const activeTag = std.meta.activeTag;
 
-// 2DO configure - replace with prepare +
+// 2DO format - replace with prepare +

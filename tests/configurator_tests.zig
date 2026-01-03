@@ -19,11 +19,11 @@ test "base configurator test" {
         // var params = Map.init(allocator);
         // defer params.deinit();
 
-        var conf: Configurator = .{ .tcp_client = TCPClientConfigurator.init(null, null) };
+        var conf: Address = .{ .tcp_client_addr = TCPClientAddress.init(null, null) };
 
-        _ = try conf.configure(msg);
+        _ = try conf.format(msg);
 
-        const restored = Configurator.fromMessage(msg);
+        const restored = Address.parse(msg);
 
         try std.testing.expectEqual(true, conf.eql(restored));
     }
@@ -57,11 +57,11 @@ pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
 const configurator = @import("tofu").configurator;
-const Configurator = configurator.Configurator;
-const TCPClientConfigurator = configurator.TCPClientConfigurator;
-const TCPServerConfigurator = configurator.TCPServerConfigurator;
-const UDSClientConfigurator = configurator.UDSClientConfigurator;
-const UDSServerConfigurator = configurator.UDSServerConfigurator;
+const Address = configurator.Address;
+const TCPClientAddress = configurator.TCPClientAddress;
+const TCPServerAddress = configurator.TCPServerAddress;
+const UDSClientAddress = configurator.UDSClientAddress;
+const UDSServerAddress = configurator.UDSServerAddress;
 
 const DefaultProto = configurator.DefaultProto;
 const DefaultAddr = configurator.DefaultAddr;

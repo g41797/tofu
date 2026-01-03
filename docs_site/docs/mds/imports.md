@@ -47,8 +47,8 @@ pub const AmpeError = status.AmpeError;
 
 // Helpers - for convenient injection of socket addresses
 // to the message.
-pub const configurator = tofu.configurator;
-pub const Configurator = configurator.Configurator;
+pub const address = tofu.address;
+pub const Address = address.Address;
 ```
 
 And don't forget to assign suitable allocator, e.g.:

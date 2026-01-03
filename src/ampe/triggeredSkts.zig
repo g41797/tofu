@@ -255,7 +255,7 @@ pub const AcceptSkt = struct {
 
     pub fn init(wlcm: *Message, sc: *SocketCreator) AmpeError!AcceptSkt {
         return .{
-            .skt = try sc.fromMessage(wlcm),
+            .skt = try sc.parse(wlcm),
         };
     }
 
@@ -316,7 +316,7 @@ pub const IoSkt = struct {
         ios.pool = pool;
         ios.side = .client;
         ios.cn = hello.bhdr.channel_number;
-        ios.skt = try sc.fromMessage(hello);
+        ios.skt = try sc.parse(hello);
         ios.connected = false;
         ios.sendQ = .{};
         ios.currSend = MsgSender.init();
@@ -465,7 +465,7 @@ pub const IoSkt = struct {
                 }
             }
 
-            if ((received.?.bhdr.proto.getType() == .bye) and (received.?.bhdr.proto.getRole() == .response)) {
+            if (received.?.bhdr.proto.opCode == .ByeResponse) {
                 ioskt.byeResponseReceived = true;
             }
 

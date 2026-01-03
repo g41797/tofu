@@ -271,17 +271,17 @@ fn initTCP(allocator: Allocator) !Notifier {
     // Both server and client are on localhost.
     const port = try tofu.FindFreeTcpPort();
 
-    const srvCfg: Configurator = .{ .tcp_server = configurator.TCPServerConfigurator.init("127.0.0.1", port) };
-    const cltCfg: Configurator = .{ .tcp_client = configurator.TCPClientConfigurator.init("127.0.0.1", port) };
+    const srvCfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", port) };
+    const cltCfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", port) };
 
     var sc: SCreator.SocketCreator = SCreator.init(allocator);
-    sc.cnfgr = srvCfg;
+    sc.addrs = srvCfg;
 
     var listSkt: Skt = try sc.createTcpServer();
     defer listSkt.deinit();
 
     // Create sender(client) socket
-    sc.cnfgr = cltCfg;
+    sc.addrs = cltCfg;
     var senderSkt: Skt = try sc.createTcpClient();
     errdefer senderSkt.deinit();
 
@@ -317,7 +317,7 @@ const status = tofu.status;
 const AmpeError = status.AmpeError;
 
 pub const configurator = tofu.configurator;
-pub const Configurator = configurator.Configurator;
+pub const Address = configurator.Address;
 
 const Skt = internal.Skt;
 const SCreator = internal.SocketCreator;
