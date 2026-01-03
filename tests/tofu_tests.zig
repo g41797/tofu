@@ -9,7 +9,7 @@ test {
     _ = @import("ampe/Pool_tests.zig");
     _ = @import("ampe/Notifier_tests.zig");
     _ = @import("ampe/channels_tests.zig");
-    _ = @import("configurator_tests.zig");
+    _ = @import("address_tests.zig");
     _ = @import("message_tests.zig");
     _ = @import("reactor_tests.zig");
 

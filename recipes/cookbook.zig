@@ -35,8 +35,8 @@ pub const ValidForSend = message.ValidForSend;
 pub const status = tofu.status;
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
-pub const configurator = tofu.configurator;
-pub const Address = configurator.Address;
+pub const address = tofu.address;
+pub const Address = address.Address;
 pub const services = @import("services.zig");
 pub const MultiHomed = @import("MultiHomed.zig");
 
@@ -227,7 +227,7 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Example: TCP server address is "tofu.server.zig", port 3298.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
+    var cnfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.format(msg.?);
@@ -265,7 +265,7 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // Example: TCP server address is "127.0.0.1", port 32987.
     // Use helpers to create the configuration for a hello request.
 
-    var cnfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
+    var cnfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.format(msg.?);
@@ -304,7 +304,7 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     // Example: TCP server has an invalid IP address "192.128.4.5", port 3298.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("192.128.4.5", 3298) };
+    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("192.128.4.5", 3298) };
 
     // Adds configuration to the message's TextHeaders.
     try cnfg.format(msg.?);
@@ -326,7 +326,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
+    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, false);
 }
@@ -342,8 +342,8 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    // Create configurator for UDS server.
-    var cnfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
+    // Create address for UDS server.
+    var cnfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
 
     return handleStartOfListener(gpa, &cnfg, false);
 }
@@ -356,7 +356,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to create the configuration for a welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
+    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &cnfg, true);
 }
@@ -372,8 +372,8 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    // Create configurator for UDS server.
-    var cnfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
+    // Create address for UDS server.
+    var cnfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
 
     return handleStartOfListener(gpa, &cnfg, true);
 }
@@ -432,8 +432,8 @@ pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
 
-    var srvCfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", port) };
-    var cltCfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", port) };
+    var srvCfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", port) };
+    var cltCfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) };
 
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
@@ -443,8 +443,8 @@ pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    var srvCfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
-    var cltCfg: Address = .{ .uds_client_addr = configurator.UDSClientAddress.init(filePath) };
+    var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
 
     return handleConnect(gpa, &srvCfg, &cltCfg);
 }
@@ -683,8 +683,8 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
-    var srvCfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", port) };
-    var cltCfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", port) };
+    var srvCfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", port) };
+    var cltCfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) };
 
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
@@ -694,8 +694,8 @@ pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    var srvCfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
-    var cltCfg: Address = .{ .uds_client_addr = configurator.UDSClientAddress.init(filePath) };
+    var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
 
     return handleReConnectMT(gpa, &srvCfg, &cltCfg);
 }
@@ -990,8 +990,8 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     // Both server and client are on localhost.
     const port: u16 = try tofu.FindFreeTcpPort();
-    var srvCfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", port) };
-    var cltCfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", port) };
+    var srvCfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", port) };
+    var cltCfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) };
 
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
@@ -1001,8 +1001,8 @@ pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    var srvCfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
-    var cltCfg: Address = .{ .uds_client_addr = configurator.UDSClientAddress.init(filePath) };
+    var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
 
     return handleReConnectST(gpa, &srvCfg, &cltCfg);
 }
@@ -1434,8 +1434,8 @@ pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!
 
     const filePath: []u8 = try tup.buildPath(gpa);
 
-    var srvCfg: Address = .{ .uds_server_addr = configurator.UDSServerAddress.init(filePath) };
-    var cltCfg: Address = .{ .uds_client_addr = configurator.UDSClientAddress.init(filePath) };
+    var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
 
     return handleReConnectViaConnector(gpa, &srvCfg, &cltCfg);
 }
@@ -1895,13 +1895,13 @@ pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
     const udsPath: []u8 = try tup.buildPath(allocator);
 
     var mhCnfg: [2]Address = [_]Address{
-        .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", tcpPort) },
-        .{ .uds_server_addr = configurator.UDSServerAddress.init(udsPath) },
+        .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", tcpPort) },
+        .{ .uds_server_addr = address.UDSServerAddress.init(udsPath) },
     };
 
     var clntCnfgs: [2]Address = [_]Address{
-        .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", tcpPort) },
-        .{ .uds_client_addr = configurator.UDSClientAddress.init(udsPath) },
+        .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", tcpPort) },
+        .{ .uds_client_addr = address.UDSClientAddress.init(udsPath) },
     };
 
     var echoClSrv: services.EchoClientServer = try .init(allocator, mhCnfg[0..]);

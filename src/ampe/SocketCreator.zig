@@ -34,12 +34,12 @@ pub fn fromAddress(sc: *SocketCreator, addrs: Address) AmpeError!Skt {
 pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     const cnf: *TCPServerAddress = &sc.addrs.tcp_server_addr;
 
-    const address = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
+    const addr = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
         log.info("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
         return AmpeError.InvalidAddress;
     };
 
-    const skt = createListenerSocket(&address) catch |er| {
+    const skt = createListenerSocket(&addr) catch |er| {
         log.info("<{d}> createListenerSocket failed with error {s}", .{ getCurrentTid(), @errorName(er) });
 
         switch (er) {
@@ -89,11 +89,11 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
         };
     }
 
-    var address = std.net.Address.initUnix(udsPath) catch {
+    var addr = std.net.Address.initUnix(udsPath) catch {
         return AmpeError.InvalidAddress;
     };
 
-    const skt = createListenerSocket(&address) catch {
+    const skt = createListenerSocket(&addr) catch {
         log.info("createUDSListenerSocket failed", .{});
         return AmpeError.InvalidAddress;
     };
@@ -106,11 +106,11 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    var address = std.net.Address.initUnix(path) catch {
+    var addr = std.net.Address.initUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
 
-    const skt = createConnectSocket(&address) catch {
+    const skt = createConnectSocket(&addr) catch {
         return AmpeError.InvalidAddress;
     };
 
@@ -118,9 +118,9 @@ pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
 }
 
 // from IoUring.zig#L3473 (0.14.1), slightly changed
-fn createListenerSocket(address: *const std.net.Address) !Skt {
+fn createListenerSocket(addr: *const std.net.Address) !Skt {
     var ret: Skt = .{
-        .address = address.*,
+        .address = addr.*,
         .socket = null,
     };
 
@@ -132,9 +132,9 @@ fn createListenerSocket(address: *const std.net.Address) !Skt {
     return ret;
 }
 
-pub fn createConnectSocket(address: *const std.net.Address) !Skt {
+pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
     var ret: Skt = .{
-        .address = address.*,
+        .address = addr.*,
         .socket = null,
     };
 
@@ -146,13 +146,13 @@ pub fn createConnectSocket(address: *const std.net.Address) !Skt {
 
 const tofu = @import("../tofu.zig");
 
-const configurator = tofu.configurator;
-const Address = configurator.Address;
-const TCPServerAddress = configurator.TCPServerAddress;
-const TCPClientAddress = configurator.TCPClientAddress;
-const UDSServerAddress = configurator.UDSServerAddress;
-const UDSClientAddress = configurator.UDSClientAddress;
-const WrongAddress = configurator.WrongAddress;
+const address = tofu.address;
+const Address = address.Address;
+const TCPServerAddress = address.TCPServerAddress;
+const TCPClientAddress = address.TCPClientAddress;
+const UDSServerAddress = address.UDSServerAddress;
+const UDSClientAddress = address.UDSClientAddress;
+const WrongAddress = address.WrongAddress;
 
 const message = tofu.message;
 const Message = message.Message;

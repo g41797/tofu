@@ -8,7 +8,7 @@ test {
 
 const Map = std.StringHashMap([]const u8);
 
-test "base configurator test" {
+test "base address test" {
     // const allocator = testing.allocator;
 
     var msg = allocMsg();
@@ -56,22 +56,22 @@ pub const TextHeaderIterator = message.TextHeaderIterator;
 pub const TextHeaders = message.TextHeaders;
 pub const Message = message.Message;
 
-const configurator = @import("tofu").configurator;
-const Address = configurator.Address;
-const TCPClientAddress = configurator.TCPClientAddress;
-const TCPServerAddress = configurator.TCPServerAddress;
-const UDSClientAddress = configurator.UDSClientAddress;
-const UDSServerAddress = configurator.UDSServerAddress;
+const address = @import("tofu").address;
+const Address = address.Address;
+const TCPClientAddress = address.TCPClientAddress;
+const TCPServerAddress = address.TCPServerAddress;
+const UDSClientAddress = address.UDSClientAddress;
+const UDSServerAddress = address.UDSServerAddress;
 
-const DefaultProto = configurator.DefaultProto;
-const DefaultAddr = configurator.DefaultAddr;
-const DefaultPort = configurator.DefaultPort;
+const DefaultProto = address.DefaultProto;
+const DefaultAddr = address.DefaultAddr;
+const DefaultPort = address.DefaultPort;
 
-const TCPProto = configurator.TCPProto;
-const UDSProto = configurator.UDSProto;
+const TCPProto = address.TCPProto;
+const UDSProto = address.UDSProto;
 
-pub const ConnectToHeader = configurator.ConnectToHeader;
-pub const ListenOnHeader = configurator.ListenOnHeader;
+pub const ConnectToHeader = address.ConnectToHeader;
+pub const ListenOnHeader = address.ListenOnHeader;
 
 const std = @import("std");
 const testing = std.testing;

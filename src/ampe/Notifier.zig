@@ -271,8 +271,8 @@ fn initTCP(allocator: Allocator) !Notifier {
     // Both server and client are on localhost.
     const port = try tofu.FindFreeTcpPort();
 
-    const srvCfg: Address = .{ .tcp_server_addr = configurator.TCPServerAddress.init("127.0.0.1", port) };
-    const cltCfg: Address = .{ .tcp_client_addr = configurator.TCPClientAddress.init("127.0.0.1", port) };
+    const srvCfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", port) };
+    const cltCfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) };
 
     var sc: SCreator.SocketCreator = SCreator.init(allocator);
     sc.addrs = srvCfg;
@@ -316,8 +316,8 @@ const Oob = message.Oob;
 const status = tofu.status;
 const AmpeError = status.AmpeError;
 
-pub const configurator = tofu.configurator;
-pub const Address = configurator.Address;
+pub const address = tofu.address;
+pub const Address = address.Address;
 
 const Skt = internal.Skt;
 const SCreator = internal.SocketCreator;

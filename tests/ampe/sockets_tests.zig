@@ -41,11 +41,11 @@ test "TCP/IP exchanger " {
     log.debug("Exchanger TCP/IP)\r\n", .{});
 
     const srvcnf: Address = .{
-        .tcp_server_addr = TCPServerAddress.init(localIP, configurator.DefaultPort),
+        .tcp_server_addr = TCPServerAddress.init(localIP, address.DefaultPort),
     };
 
     const clcnf: Address = .{
-        .tcp_client_addr = TCPClientAddress.init(localIP, configurator.DefaultPort),
+        .tcp_client_addr = TCPClientAddress.init(localIP, address.DefaultPort),
     };
 
     for (1..3) |_| {
@@ -523,13 +523,13 @@ const poller = internal.poller;
 const Poller = poller.Poller;
 const Poll = poller.Poll;
 
-const configurator = tofu.configurator;
-const Address = configurator.Address;
-const TCPServerAddress = configurator.TCPServerAddress;
-const TCPClientAddress = configurator.TCPClientAddress;
-const UDSServerAddress = configurator.UDSServerAddress;
-const UDSClientAddress = configurator.UDSClientAddress;
-const WrongAddress = configurator.WrongAddress;
+const address = tofu.address;
+const Address = address.Address;
+const TCPServerAddress = address.TCPServerAddress;
+const TCPClientAddress = address.TCPClientAddress;
+const UDSServerAddress = address.UDSServerAddress;
+const UDSClientAddress = address.UDSClientAddress;
+const WrongAddress = address.WrongAddress;
 
 const status = tofu.status;
 const AmpeStatus = status.AmpeStatus;
