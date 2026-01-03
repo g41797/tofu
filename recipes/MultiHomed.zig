@@ -104,8 +104,8 @@ pub fn stop(mh: *MultiHomed) void {
 }
 
 pub fn init(mh: *MultiHomed, adrs: []Address) !*MultiHomed {
-    for (adrs) |cnfg| {
-        _ = try mh.*.startListener(cnfg);
+    for (adrs) |adr| {
+        _ = try mh.*.startListener(adr);
     }
 
     mh.*.thread = try std.Thread.spawn(.{}, onThread, .{mh});
@@ -119,11 +119,11 @@ pub fn init(mh: *MultiHomed, adrs: []Address) !*MultiHomed {
     return mh;
 }
 
-pub fn startListener(mh: *MultiHomed, cnfg: Address) !void {
+pub fn startListener(mh: *MultiHomed, adrs: Address) !void {
     var welcomeRequest: ?*Message = mh.*.ampe.?.get(tofu.AllocationStrategy.always) catch unreachable;
     defer mh.*.ampe.?.put(&welcomeRequest);
 
-    cnfg.format(welcomeRequest.?) catch unreachable;
+    adrs.format(welcomeRequest.?) catch unreachable;
 
     welcomeRequest.?.*.copyBh2Body();
     const wlcbh: BinaryHeader = try mh.*.chnls.?.enqueueToPeer(&welcomeRequest);
@@ -131,7 +131,7 @@ pub fn startListener(mh: *MultiHomed, cnfg: Address) !void {
     const lstChannel: message.ChannelNumber = wlcbh.channel_number;
     log.debug("listener channel {d}", .{lstChannel});
 
-    try mh.*.lstnChnls.?.put(wlcbh.channel_number, cnfg);
+    try mh.*.lstnChnls.?.put(wlcbh.channel_number, adrs);
 
     while (true) {
         var receivedMsg: ?*Message = mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -156,7 +156,7 @@ pub fn startListener(mh: *MultiHomed, cnfg: Address) !void {
             .success => {
                 assert(receivedMsg.?.*.bhdr.proto.opCode == .WelcomeResponse);
 
-                try mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, cnfg);
+                try mh.*.lstnChnls.?.put(receivedMsg.?.*.bhdr.channel_number, adrs);
                 return;
             },
 

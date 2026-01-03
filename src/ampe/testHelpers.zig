@@ -6,7 +6,7 @@
 /// Creates temp file path for UDS testing. Usage:
 /// var tup: tofu.TempUdsPath = .{};
 /// const filePath = try tup.buildPath(allocator);
-/// var cnfg: Address = .{ .uds_server_addr = UDSServerAddress.init(filePath) };
+/// var adrs: Address = .{ .uds_server_addr = UDSServerAddress.init(filePath) };
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
     socket_path: [108:0]u8 = undefined,

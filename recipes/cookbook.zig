@@ -222,15 +222,15 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // MessageType.hello needs a valid, resolvable peer (server) address.
     // For IP addresses, it must be valid.
 
-    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating configurations.
     // Example: TCP server address is "tofu.server.zig", port 3298.
-    // Use helpers to create the configuration for a hello request.
+    // Use helpers to format the address within  hello request.
 
-    var cnfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
+    var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.format(msg.?);
+    try adrs.format(msg.?);
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -260,15 +260,15 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // MessageType.hello needs a valid, resolvable peer (server) address.
     // For IP addresses, it must be valid.
 
-    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating configurations.
     // Example: TCP server address is "127.0.0.1", port 32987.
-    // Use helpers to create the configuration for a hello request.
+    // Use helpers to format the address within  hello request.
 
-    var cnfg: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
+    var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.format(msg.?);
+    try adrs.format(msg.?);
 
     // Store information for further processing.
     const bhdr: BinaryHeader = try chnls.enqueueToPeer(&msg);
@@ -299,15 +299,15 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 
     // MessageType.welcome needs the IP address and port of the listening server.
 
-    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating configurations.
     // Example: TCP server has an invalid IP address "192.128.4.5", port 3298.
-    // Use helpers to create the configuration for a welcome request.
+    // Use helpers to format the address within  welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("192.128.4.5", 3298) };
+    var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("192.128.4.5", 3298) };
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.format(msg.?);
+    try adrs.format(msg.?);
 
     _ = try chnls.enqueueToPeer(&msg);
 
@@ -321,14 +321,14 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
-    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating configurations.
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
-    // Use helpers to create the configuration for a welcome request.
+    // Use helpers to format the address within  welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
+    var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
-    return handleStartOfListener(gpa, &cnfg, false);
+    return handleStartOfListener(gpa, &adrs, false);
 }
 
 pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
@@ -343,22 +343,22 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
     const filePath: []u8 = try tup.buildPath(gpa);
 
     // Create address for UDS server.
-    var cnfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var adrs: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
 
-    return handleStartOfListener(gpa, &cnfg, false);
+    return handleStartOfListener(gpa, &adrs, false);
 }
 
 pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
-    // Configuration is a TextHeader added to the message's TextHeaders.
+    // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating configurations.
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
-    // Use helpers to create the configuration for a welcome request.
+    // Use helpers to format the address within  welcome request.
 
-    var cnfg: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
+    var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
-    return handleStartOfListener(gpa, &cnfg, true);
+    return handleStartOfListener(gpa, &adrs, true);
 }
 
 pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
@@ -373,12 +373,12 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
     const filePath: []u8 = try tup.buildPath(gpa);
 
     // Create address for UDS server.
-    var cnfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    var adrs: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
 
-    return handleStartOfListener(gpa, &cnfg, true);
+    return handleStartOfListener(gpa, &adrs, true);
 }
 
-pub fn handleStartOfListener(gpa: Allocator, cnfg: *Address, runTheSame: bool) !AmpeStatus {
+pub fn handleStartOfListener(gpa: Allocator, adrs: *Address, runTheSame: bool) !AmpeStatus {
     // Same code for TCP and UDS servers, only configuration differs.
 
     const options: Options = .{
@@ -397,7 +397,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Address, runTheSame: bool) !
     defer ampe.put(&msg);
 
     // Adds configuration to the message's TextHeaders.
-    try cnfg.format(msg.?);
+    try adrs.format(msg.?);
 
     const corrInfo: BinaryHeader = try chnls.enqueueToPeer(&msg);
 
@@ -417,7 +417,7 @@ pub fn handleStartOfListener(gpa: Allocator, cnfg: *Address, runTheSame: bool) !
 
     // Run of the same listener should fail with status TBD
     if (runTheSame) {
-        const lst: AmpeStatus = try handleStartOfListener(gpa, cnfg, false);
+        const lst: AmpeStatus = try handleStartOfListener(gpa, adrs, false);
         return lst;
     }
 
@@ -715,7 +715,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
         chnls: ?ChannelGroup = undefined,
-        cfg: Address = undefined,
+        adr: Address = undefined,
         result: ?AmpeStatus = undefined,
 
         pub fn runOnThread(self: *Self) void {
@@ -723,7 +723,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                 var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&helloRequest);
 
-                self.*.cfg.format(helloRequest.?) catch unreachable;
+                self.*.adr.format(helloRequest.?) catch unreachable;
 
                 _ = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
@@ -791,7 +791,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             return;
         }
 
-        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Address) !*Self {
+        pub fn create(allocator: Allocator, engine: Ampe, adr: *Address) !*Self {
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -800,7 +800,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             result.* = .{
                 .gpa = allocator,
                 .ampe = engine,
-                .cfg = cfg.*,
+                .adr = adr.*,
                 .chnls = try engine.create(),
                 .result = AmpeStatus.success,
             };
@@ -828,7 +828,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         gpa: Allocator = undefined,
         ampe: Ampe = undefined,
         chnls: ?ChannelGroup = undefined,
-        cfg: Address = undefined,
+        adr: Address = undefined,
         result: ?AmpeStatus = .unknown_error,
 
         pub fn runOnThread(self: *Self) void {
@@ -837,7 +837,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                 var welcomeRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                 defer self.*.ampe.put(&welcomeRequest);
 
-                self.*.cfg.format(welcomeRequest.?) catch unreachable;
+                self.*.adr.format(welcomeRequest.?) catch unreachable;
 
                 _ = self.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
@@ -914,7 +914,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             return;
         }
 
-        pub fn create(allocator: Allocator, engine: Ampe, cfg: *Address) !*Self {
+        pub fn create(allocator: Allocator, engine: Ampe, adr: *Address) !*Self {
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
@@ -923,7 +923,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             const srv: Self = .{
                 .gpa = allocator,
                 .ampe = engine,
-                .cfg = cfg.*,
+                .adr = adr.*,
                 .chnls = try engine.create(),
                 .result = AmpeStatus.unknown_error,
             };
@@ -1030,18 +1030,18 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         const Self = @This();
         ampe: Ampe = undefined,
         chnls: ?ChannelGroup = undefined,
-        cfg: Address = undefined,
+        adr: Address = undefined,
         helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn create(engine: Ampe, cfg: *Address) !*Self {
+        pub fn create(engine: Ampe, adr: *Address) !*Self {
             const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
-            result.* = try Self.init(engine, cfg);
+            result.* = try Self.init(engine, adr);
             errdefer result.*.deinit();
 
             try result.createListener();
@@ -1049,10 +1049,10 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             return result;
         }
 
-        pub fn init(engine: Ampe, cfg: *Address) !Self {
+        pub fn init(engine: Ampe, adr: *Address) !Self {
             return .{
                 .ampe = engine,
-                .cfg = cfg.*,
+                .adr = adr.*,
                 .chnls = try engine.create(),
                 .helloBh = .{},
                 .connected = false,
@@ -1078,7 +1078,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer server.*.ampe.put(&welcomeRequest);
 
-            server.*.cfg.format(welcomeRequest.?) catch unreachable;
+            server.*.adr.format(welcomeRequest.?) catch unreachable;
 
             var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 
@@ -1177,26 +1177,26 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         const Self = @This();
         ampe: Ampe = undefined,
         chnls: ?ChannelGroup = undefined,
-        cfg: Address = undefined,
+        adr: Address = undefined,
         helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn create(engine: Ampe, cfg: *Address) !*Self {
+        pub fn create(engine: Ampe, adr: *Address) !*Self {
             const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
             };
             errdefer allocator.destroy(result);
 
-            result.* = try Self.init(engine, cfg);
+            result.* = try Self.init(engine, adr);
             errdefer result.*.deinit();
             return result;
         }
 
-        pub fn init(engine: Ampe, cfg: *Address) !Self {
+        pub fn init(engine: Ampe, adr: *Address) !Self {
             return .{
                 .ampe = engine,
-                .cfg = cfg.*,
+                .adr = adr.*,
                 .chnls = try engine.create(),
                 .helloBh = .{},
                 .connected = false,
@@ -1231,7 +1231,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                         // Prepare and send HelloRequest
                         var helloRequest: ?*Message = client.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
                         defer client.*.ampe.put(&helloRequest);
-                        client.*.cfg.format(helloRequest.?) catch unreachable;
+                        client.*.adr.format(helloRequest.?) catch unreachable;
                         client.*.helloBh = client.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
 
                         assert(client.*.helloBh.channel_number != 0);
@@ -1460,11 +1460,11 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
         helloBh: ?BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn init(engine: Ampe, chnls: ChannelGroup, cfg: *Address) !Self {
+        pub fn init(engine: Ampe, chnls: ChannelGroup, adr: *Address) !Self {
             var helloRequest: ?*Message = try engine.get(tofu.AllocationStrategy.always);
             errdefer engine.put(&helloRequest);
 
-            try cfg.*.format(helloRequest.?);
+            try adr.*.format(helloRequest.?);
 
             return .{
                 .ampe = engine,
@@ -1559,12 +1559,12 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
         const Self = @This();
         ampe: Ampe = undefined,
         chnls: ?ChannelGroup = null,
-        cfg: Address = undefined,
+        adr: Address = undefined,
         cc: ?ClientConnector = null,
         helloBh: BinaryHeader = undefined,
         connected: bool = undefined,
 
-        pub fn create(engine: Ampe, cfg: *Address) !*Self {
+        pub fn create(engine: Ampe, adr: *Address) !*Self {
             const allocator: Allocator = engine.getAllocator();
             const result: *Self = allocator.create(Self) catch {
                 return AmpeError.AllocationFailed;
@@ -1573,20 +1573,20 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
 
             errdefer allocator.destroy(result);
 
-            result.* = try Self.init(engine, cfg);
+            result.* = try Self.init(engine, adr);
             errdefer result.*.deinit();
             return result;
         }
 
-        pub fn init(engine: Ampe, cfg: *Address) !Self {
+        pub fn init(engine: Ampe, adr: *Address) !Self {
             const chnls: ChannelGroup = try engine.create();
             errdefer tofu.DestroyChannels(engine, chnls);
-            const cc: ClientConnector = try ClientConnector.init(engine, chnls, cfg);
+            const cc: ClientConnector = try ClientConnector.init(engine, chnls, adr);
             errdefer cc.deinit();
 
             return .{
                 .ampe = engine,
-                .cfg = cfg.*,
+                .adr = adr.*,
                 .chnls = chnls,
                 .cc = cc,
                 .helloBh = .{},
@@ -1739,19 +1739,19 @@ pub const TofuEchoServer = struct {
     const Self = @This();
     ampe: Ampe = undefined,
     chnls: ?ChannelGroup = undefined,
-    cfg: Address = undefined,
+    adr: Address = undefined,
     listenerBh: BinaryHeader = undefined,
     helloBh: BinaryHeader = undefined,
     connected: bool = undefined,
 
-    pub fn create(engine: Ampe, cfg: *Address) !*Self {
+    pub fn create(engine: Ampe, adr: *Address) !*Self {
         const allocator: Allocator = engine.getAllocator();
         const result: *Self = allocator.create(Self) catch {
             return AmpeError.AllocationFailed;
         };
         errdefer allocator.destroy(result);
 
-        result.* = try Self.init(engine, cfg);
+        result.* = try Self.init(engine, adr);
         errdefer result.*.deinit();
 
         try result.createListener();
@@ -1759,10 +1759,10 @@ pub const TofuEchoServer = struct {
         return result;
     }
 
-    pub fn init(engine: Ampe, cfg: *Address) !Self {
+    pub fn init(engine: Ampe, adr: *Address) !Self {
         return .{
             .ampe = engine,
-            .cfg = cfg.*,
+            .adr = adr.*,
             .chnls = try engine.create(),
             .listenerBh = .{},
             .helloBh = .{},
@@ -1789,7 +1789,7 @@ pub const TofuEchoServer = struct {
         var welcomeRequest: ?*Message = server.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer server.*.ampe.put(&welcomeRequest);
 
-        server.*.cfg.format(welcomeRequest.?) catch unreachable;
+        server.*.adr.format(welcomeRequest.?) catch unreachable;
 
         var initialBh: BinaryHeader = server.*.chnls.?.enqueueToPeer(&welcomeRequest) catch unreachable;
 

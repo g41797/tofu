@@ -196,7 +196,7 @@ pub const EchoClient = struct {
     ampe: Ampe = undefined,
     gpa: Allocator = undefined,
     chnls: ?ChannelGroup = null,
-    cfg: Address = undefined,
+    adr: Address = undefined,
     ack: *mailbox.MailBoxIntrusive(Self) = undefined,
     thread: ?std.Thread = null,
     count: u16 = 0, // number of successful echoes
@@ -206,7 +206,7 @@ pub const EchoClient = struct {
     helloBh: BinaryHeader = .{},
 
     /// Connects, spawns thread. Sends self to ack mailbox when done.
-    pub fn start(engine: Ampe, cfg: Address, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
+    pub fn start(engine: Ampe, adr: Address, echoes: u16, ack: *mailbox.MailBoxIntrusive(EchoClient)) !void {
         const all: Allocator = engine.getAllocator();
 
         const result: *Self = all.create(Self) catch {
@@ -217,7 +217,7 @@ pub const EchoClient = struct {
         result.* = .{
             .ampe = engine,
             .gpa = all,
-            .cfg = cfg,
+            .adr = adr,
             .chnls = engine.create() catch unreachable,
             .ack = ack,
             .echoes = if (echoes == 0) 256 else echoes,
@@ -270,7 +270,7 @@ pub const EchoClient = struct {
         var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
         defer self.*.ampe.put(&helloRequest);
 
-        self.*.cfg.format(helloRequest.?) catch unreachable;
+        self.*.adr.format(helloRequest.?) catch unreachable;
 
         helloRequest.?.*.copyBh2Body();
         self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
@@ -415,7 +415,7 @@ pub const EchoClient = struct {
             var helloRequest: ?*Message = self.*.ampe.get(tofu.AllocationStrategy.always) catch unreachable;
             defer self.*.ampe.put(&helloRequest);
 
-            self.*.cfg.format(helloRequest.?) catch unreachable;
+            self.*.adr.format(helloRequest.?) catch unreachable;
 
             helloRequest.?.*.copyBh2Body();
             self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
@@ -530,8 +530,8 @@ pub const EchoClientServer = struct {
         }
 
         for (1..100) |_| {
-            for (clncfg) |clcnfg| {
-                _ = EchoClient.start(ecs.*.ampe, clcnfg, 100, &ecs.*.ack) catch |err| {
+            for (clncfg) |cladrs| {
+                _ = EchoClient.start(ecs.*.ampe, cladrs, 100, &ecs.*.ack) catch |err| {
                     log.info("start EchoClient error {s}", .{@errorName(err)});
                     continue;
                 };
