@@ -88,7 +88,7 @@ pub const ChannelGroup = struct {
     ///   also sets `msg.*` to null.
     ///
     /// Thread-safe.
-    pub fn enqueueToPeer(
+    pub fn post(
         chnls: ChannelGroup,
         msg: *?*message.Message,
     ) status.AmpeError!message.BinaryHeader {...}
@@ -98,7 +98,7 @@ pub const ChannelGroup = struct {
     /// Timeout is in nanoseconds. Returns `null` if no message arrives in time.
     ///
     /// Message sources:
-    /// - Remote peer (via `enqueueToPeer` on their side).
+    /// - Remote peer (via `post` on their side).
     /// - Application (via `updateReceiver` on this ChannelGroup).
     /// - Ampe (status/control messages).
     ///
@@ -140,7 +140,7 @@ pub const ChannelGroup = struct {
 
 Caller of every function/method has "non-formal" role:
 
- - enqueueToPeer caller → Producer
+ - post caller → Producer
  - waitReceive caller → Consumer
  - updateReceiver caller → Notifier
 

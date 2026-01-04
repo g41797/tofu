@@ -15,7 +15,7 @@ pub fn chnls(grp: *MchnGroup) ChannelGroup {
     const result: ChannelGroup = .{
         .ptr = grp,
         .vtable = &.{
-            .enqueueToPeer = enqueueToPeer,
+            .post = post,
             .waitReceive = waitReceive,
             .updateReceiver = updateReceiver,
         },
@@ -67,7 +67,7 @@ pub fn cleanMboxes(grp: *MchnGroup) void {
     }
 }
 
-pub fn enqueueToPeer(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
+pub fn post(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     const msgopt = amsg.*;
     if (msgopt == null) {
         return AmpeError.NullMessage;

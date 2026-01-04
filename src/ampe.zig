@@ -90,11 +90,11 @@ pub const ChannelGroup = struct {
     ///   also sets `msg.*` to null.
     ///
     /// Thread-safe.
-    pub fn enqueueToPeer(
+    pub fn post(
         chnls: ChannelGroup,
         msg: *?*message.Message,
     ) status.AmpeError!message.BinaryHeader {
-        return chnls.vtable.enqueueToPeer(chnls.ptr, msg);
+        return chnls.vtable.post(chnls.ptr, msg);
     }
 
     /// Waits for the next message from the internal queue.
@@ -102,7 +102,7 @@ pub const ChannelGroup = struct {
     /// Timeout is in nanoseconds. Returns `null` if no message arrives in time.
     ///
     /// Message sources:
-    /// - Remote peer (via `enqueueToPeer` on their side).
+    /// - Remote peer (via `post` on their side).
     /// - Application (via `updateReceiver` on this ChannelGroup).
     /// - Ampe (status/control messages).
     ///

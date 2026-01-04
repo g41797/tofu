@@ -126,7 +126,7 @@ pub fn startListener(mh: *MultiHomed, adrs: Address) !void {
     adrs.format(welcomeRequest.?) catch unreachable;
 
     welcomeRequest.?.*.copyBh2Body();
-    const wlcbh: BinaryHeader = try mh.*.chnls.?.enqueueToPeer(&welcomeRequest);
+    const wlcbh: BinaryHeader = try mh.*.chnls.?.post(&welcomeRequest);
 
     const lstChannel: message.ChannelNumber = wlcbh.channel_number;
     log.debug("listener channel {d}", .{lstChannel});
@@ -271,7 +271,7 @@ pub fn closeChannels(mh: *MultiHomed) void {
 //     // Set channel number to close this channel.
 //     closeMsg.?.*.bhdr.channel_number = lstChannel;
 //
-//     _ = try mh.*.chnls.?.enqueueToPeer(&closeMsg);
+//     _ = try mh.*.chnls.?.post(&closeMsg);
 //
 //     var closeListenerResp: ?*Message = try mh.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
 //     defer mh.*.ampe.?.put(&closeListenerResp);

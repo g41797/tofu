@@ -43,7 +43,7 @@ theme:
   features:
     - content.code.copy
     - content.code.annotate
-    - content.tabs.link
+#    - content.tabs.link          # Syncs tab selection across the entire site
     - navigation.top
     - navigation.instant
     - navigation.path
@@ -67,9 +67,9 @@ nav:
       - ChannelGroup: mds/channel-group.md
       - Message:
           - Overview: mds/message.md
-#          - Structure: mds/message-structure.md
-#          - Lifecycle: mds/message-lifecycle.md
-      - Configurators: mds/configurators.md
+      #          - Structure: mds/message-structure.md
+      #          - Lifecycle: mds/message-lifecycle.md
+      - Address: mds/address.md
       - Testers: mds/for-tests.md
   - Addendum:
       - NAQ: mds/naq.md
@@ -77,6 +77,7 @@ nav:
       - Allocator: mds/allocator.md
       - Coding style: mds/coding-style.md
       - Callback enabled: mds/callback-enabled.md
+
 plugins:
   - search
   - awesome-pages
@@ -85,6 +86,7 @@ plugins:
 
 extra:
   generator: false
+
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -99,7 +101,7 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - admonition
   - pymdownx.details
-  - pymdownx.tabbed:
+  - pymdownx.tabbed:             # Enables the tabbed interface
       alternate_style: true
   - attr_list
   - md_in_html

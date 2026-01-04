@@ -466,7 +466,7 @@ pub const Message = struct {
 
     /// Resets the message to its initial state,
     /// clearing headers , body and transient fields.
-    /// Pay attention - message is not valid for enqueueToPeer
+    /// Pay attention - message is not valid for post
     pub fn reset(msg: *Message) void {
         msg.bhdr = .{};
         msg.thdrs.reset();

@@ -159,8 +159,8 @@ pub const EchoService = struct {
 
         msg.*.?.*.copyBh2Body();
 
-        _ = echo.*.sendTo.?.enqueueToPeer(msg) catch |err| {
-            log.warn("enqueueToPeer error {s}", .{@errorName(err)});
+        _ = echo.*.sendTo.?.post(msg) catch |err| {
+            log.warn("post error {s}", .{@errorName(err)});
             return false;
         };
 
@@ -273,7 +273,7 @@ pub const EchoClient = struct {
         self.*.adr.format(helloRequest.?) catch unreachable;
 
         helloRequest.?.*.copyBh2Body();
-        self.*.helloBh = try self.*.chnls.?.enqueueToPeer(&helloRequest);
+        self.*.helloBh = try self.*.chnls.?.post(&helloRequest);
 
         while (true) { // Re-connect is not supported
             var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -326,7 +326,7 @@ pub const EchoClient = struct {
             echoRequest.?.*.bhdr.dumpMeta("echoRequest ");
 
             echoRequest.?.*.copyBh2Body();
-            _ = try self.*.chnls.?.enqueueToPeer(&echoRequest);
+            _ = try self.*.chnls.?.post(&echoRequest);
 
             while (true) { //
                 var recvMsgOpt: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
@@ -383,7 +383,7 @@ pub const EchoClient = struct {
         byeRequest.?.*.bhdr.proto = .default(.ByeSignal);
 
         byeRequest.?.*.copyBh2Body();
-        _ = self.*.chnls.?.enqueueToPeer(&byeRequest) catch unreachable;
+        _ = self.*.chnls.?.post(&byeRequest) catch unreachable;
 
         // Wait close of the channel
         while (true) {
@@ -418,7 +418,7 @@ pub const EchoClient = struct {
             self.*.adr.format(helloRequest.?) catch unreachable;
 
             helloRequest.?.*.copyBh2Body();
-            self.*.helloBh = self.*.chnls.?.enqueueToPeer(&helloRequest) catch unreachable;
+            self.*.helloBh = self.*.chnls.?.post(&helloRequest) catch unreachable;
 
             var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                 log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -451,7 +451,7 @@ pub const EchoClient = struct {
                 recvMsg.?.*.bhdr.proto.default(.ByeSignal);
 
                 recvMsg.?.*.copyBh2Body();
-                _ = self.*.chnls.?.enqueueToPeer(&recvMsg) catch unreachable;
+                _ = self.*.chnls.?.post(&recvMsg) catch unreachable;
                 return;
             }
         }
