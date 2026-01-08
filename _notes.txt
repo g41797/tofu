@@ -406,8 +406,18 @@ Check state of UDS
         # Check the default receive buffer size
         $ sysctl net.core.rmem_default
 
-    Static Website Server Generator in Zig
-        https://github.com/Mariuspersen/Ztatic/tree/multiwebsitehosting
+Static Website Server Generator in Zig
+    https://github.com/Mariuspersen/Ztatic/tree/multiwebsitehosting
 
-    Run web server on recipes
-        python3 -m http.server 8080 --directory zig-out/docs_site/docs/recipes/
+Run web server on recipes
+    python3 -m http.server 8080 --directory zig-out/docs_site/docs/recipes/
+
+Summ of all files under path
+    du -sh path
+    du -h --max-depth=1 path
+
+zig-routines
+        https://github.com/Edartruwu/zig-routines
+
+Zig vscode debugging
+    https://ziggit.dev/t/debugging-zig-with-a-debugger/7160/41?u=g41797

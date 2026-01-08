@@ -1250,7 +1250,7 @@ functionality and roles.</p>
 </details>
 <p>Simplest description of <strong><em>ChannelGroup</em></strong> you can get from its name - <em>Group Of Channels</em> <img alt="😄" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/1f604.svg" title=":smile:" />.</p>
 <h2 id="channel">Channel</h2>
-<p>Think of a <em>channel</em> as a <em>virtual socket</em>.</p>
+<p>Think of a <em>channel</em> as a <em>virtual connection/socket</em>.</p>
 <p>There are two kinds of channels:</p>
 <ul>
 <li>Listener – Analog of a listener socket.</li>
@@ -1373,12 +1373,6 @@ functionality and roles.</p>
 </span><span id="__span-1-65"><a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a><span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">AmpeError</span><span class="o">!</span><span class="kt">void</span><span class="w"> </span><span class="p">{...}</span>
 </span><span id="__span-1-66"><a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>Caller of every function/method has "non-formal" role:</p>
-<ul>
-<li>post caller → Producer</li>
-<li>waitReceive caller → Consumer</li>
-<li>updateReceiver caller → Notifier</li>
-</ul>
 <details class="question">
 <summary>NAQ: No methods use channel numbers. How to handle channels?</summary>
 <p>You also won't see IP addresses or port numbers. All this info is in the messages.</p>

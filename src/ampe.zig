@@ -80,9 +80,13 @@ pub const ChannelGroup = struct {
     /// - most cases: send to peer
     /// - others: internal network related processing
     ///
+    /// The message is not actually sent, or
+    /// handled, when this call returns
+    ///
     /// On success:
     /// - Sets `msg.*` to null (prevents reuse).
     /// - Returns `BinaryHeader` for tracking.
+    ///
     ///
     /// On error:
     /// - Returns an error.

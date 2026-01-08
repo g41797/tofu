@@ -9,7 +9,7 @@ Simplest description of **_ChannelGroup_** you can get from its name - _Group Of
 
 ## Channel
 
-Think of a _channel_ as a _virtual socket_.
+Think of a _channel_ as a _virtual connection/socket_.
 
 There are two kinds of channels:
 
@@ -137,12 +137,6 @@ pub const ChannelGroup = struct {
     ) status.AmpeError!void {...}
 }
 ```
-
-Caller of every function/method has "non-formal" role:
-
- - post caller → Producer
- - waitReceive caller → Consumer
- - updateReceiver caller → Notifier
 
 ??? question "NAQ: No methods use channel numbers. How to handle channels?"
     You also won't see IP addresses or port numbers. All this info is in the messages.
