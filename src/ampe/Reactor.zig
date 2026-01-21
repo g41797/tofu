@@ -284,7 +284,7 @@ fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) Ampe
     cmd.*.bhdr.channel_number = message.SpecialMaxChannelNumber;
     cmd.*.bhdr.proto.opCode = .Signal;
     cmd.*.bhdr.proto.origin = .engine;
-    cmd.*.bhdr.proto.oob = .on;
+    cmd.*.bhdr.proto._internalA = .on;
     cmd.*.bhdr.proto.more = .last;
 
     cmd.*.bhdr.channel_number = 0;
@@ -310,7 +310,7 @@ pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
         return AmpeError.NotificationDisabled;
     }
 
-    const oob = msg.bhdr.proto.oob;
+    const oob = msg.bhdr.proto._internalA;
 
     rtr.msgs[@intFromEnum(oob)].send(msg) catch {
         return AmpeError.NotAllowed;
@@ -886,7 +886,7 @@ fn sendBye(rtr: *Reactor) !void {
 
     const bye: *Message = rtr.currMsg.?;
 
-    if ((bye.bhdr.proto.getRole() == .signal) and (bye.bhdr.proto.oob == .on)) {
+    if ((bye.bhdr.proto.getRole() == .signal) and (bye.bhdr.proto._internalA == .on)) {
         // Initiate close of the channel
         rtr.responseFailure(AmpeStatus.channel_closed);
         return;

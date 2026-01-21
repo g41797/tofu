@@ -85,9 +85,6 @@ pub fn post(ptr: ?*anyopaque, amsg: *?*Message) AmpeError!BinaryHeader {
     if (sendMsg.*.bhdr.channel_number != 0) {
         try grp.engine.acns.check(sendMsg.*.bhdr.channel_number, ptr);
     } else {
-        var proto: message.ProtoFields = sendMsg.*.bhdr.proto;
-        proto._internal = 0; // As sign of the "local" hello/welcome
-
         const ach: channels.ActiveChannel = grp.engine.acns.createChannel(sendMsg.*.bhdr.message_id, sendMsg.*.bhdr.proto, grp);
         sendMsg.*.bhdr.channel_number = ach.chn;
         std.debug.assert(sendMsg.*.bhdr.channel_number != 0);

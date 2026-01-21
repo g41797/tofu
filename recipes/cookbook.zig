@@ -1,3 +1,11 @@
+//! Working examples - all are used in the tests.
+//!
+// ! ## Modules
+//!
+//! - **`cookbook`** - Examples from basic to advanced
+//! - **`services`** - Example of dumb message processing
+//! - **`MultiHomed`** - Multi-listener server (TCP + UDS on one thread)
+//!
 //! Tofu "cookbook" - useful examples
 //!
 //! 1. Engine lifecycle - `createDestroy*`
@@ -223,13 +231,12 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // For IP addresses, it must be valid.
 
     // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating configurations.
+    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server address is "tofu.server.zig", port 3298.
     // Use helpers to format the address within  hello request.
 
     var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
-    // Adds configuration to the message's TextHeaders.
     try adrs.format(msg.?);
 
     _ = try chnls.post(&msg);
@@ -261,13 +268,12 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // For IP addresses, it must be valid.
 
     // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating configurations.
+    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server address is "127.0.0.1", port 32987.
     // Use helpers to format the address within  hello request.
 
     var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
-    // Adds configuration to the message's TextHeaders.
     try adrs.format(msg.?);
 
     // Store information for further processing.
@@ -300,13 +306,12 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
     // MessageType.welcome needs the IP address and port of the listening server.
 
     // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating configurations.
+    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server has an invalid IP address "192.128.4.5", port 3298.
     // Use helpers to format the address within  welcome request.
 
     var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("192.128.4.5", 3298) };
 
-    // Adds configuration to the message's TextHeaders.
     try adrs.format(msg.?);
 
     _ = try chnls.post(&msg);
@@ -322,7 +327,7 @@ pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
     // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating configurations.
+    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to format the address within  welcome request.
 
@@ -352,7 +357,7 @@ pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
     // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating configurations.
+    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
     // Use helpers to format the address within  welcome request.
 
@@ -396,7 +401,6 @@ pub fn handleStartOfListener(gpa: Allocator, adrs: *Address, runTheSame: bool) !
     var msg: ?*Message = try ampe.get(tofu.AllocationStrategy.poolOnly);
     defer ampe.put(&msg);
 
-    // Adds configuration to the message's TextHeaders.
     try adrs.format(msg.?);
 
     const corrInfo: BinaryHeader = try chnls.post(&msg);
@@ -658,7 +662,7 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
 
     assert(attention.?.*.bhdr.message_id == 0);
     assert(attention.?.*.bhdr.channel_number == 0);
-    assert(attention.?.*.bhdr.proto.origin == .engine);
+    assert(attention.?.isFromEngine());
     assert(attention.?.*.bhdr.proto.getRole() == .signal);
     assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 
@@ -673,7 +677,7 @@ pub fn handleUpdateReceiver(gpa: Allocator) anyerror!AmpeStatus {
 
     assert(attention.?.*.bhdr.message_id == 1);
     assert(attention.?.*.bhdr.channel_number == 0);
-    assert(attention.?.*.bhdr.proto.origin == .application);
+    assert(attention.?.isFromApplication());
     assert(attention.?.*.bhdr.proto.getRole() == .request);
     assert(status.raw_to_status(attention.?.*.bhdr.status) == .receiver_update);
 

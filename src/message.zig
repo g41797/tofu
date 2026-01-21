@@ -86,20 +86,13 @@ pub const OpCode = enum(u4) {
     pub fn echo(oc: OpCode) error{
         InvalidOpCode,
     }!OpCode {
-        if (!oc.isValid()) {
-            return AmpeError.InvalidOpCode;
-        }
-
-        if (!oc.isRequest()) {
-            return AmpeError.InvalidOpCode;
-        }
-
         return switch (oc) {
             .Request => .Response,
+            .Signal => .Signal,
             .HelloRequest => .HelloResponse,
             .ByeRequest => .ByeResponse,
             .WelcomeRequest => .WelcomeResponse,
-            else => unreachable,
+            else => AmpeError.InvalidOpCode,
         };
     }
 };
@@ -114,25 +107,20 @@ pub const MoreMessagesFlag = enum(u1) {
     more = 1,
 };
 
-/// High priority. Goes to head of queue.
-pub const Oob = Trigger;
-
 pub const ProtoFields = packed struct(u8) {
     opCode: OpCode = .Request,
     origin: OriginFlag = .application,
     more: MoreMessagesFlag = .last,
-    oob: Oob = .off,
-    _internal: u1 = 0,
+    _internalA: Trigger = .off,
+    _internalB: Trigger = .off,
 
     pub fn default(oc: OpCode) ProtoFields {
         var pf: ProtoFields = .{
             .opCode = oc,
         };
 
-        switch (oc) {
-            .ByeSignal => pf.oob = .on,
-            .WelcomeResponse => pf.origin = .engine,
-            else => {},
+        if (oc == .ByeSignal) {
+            pf._internalA = .on;
         }
 
         return pf;
@@ -257,9 +245,8 @@ pub const BinaryHeader = packed struct {
         const oc = std.enums.tagName(OpCode, proto.opCode).?;
         const org = std.enums.tagName(OriginFlag, proto.origin).?;
         const mr = std.enums.tagName(MoreMessagesFlag, proto.more).?;
-        const ob = std.enums.tagName(Oob, proto.oob).?;
 
-        log.debug("    [mid {d}] ({d}) {s} {s} {s} {s} {s} {s}", .{ self.*.message_id, self.*.channel_number, txt, oc, org, mr, ob, @tagName(status.raw_to_status(self.*.status)) });
+        log.debug("    [mid {d}] ({d}) {s} {s} {s} {s} {s} ", .{ self.*.message_id, self.*.channel_number, txt, oc, org, mr, @tagName(status.raw_to_status(self.*.status)) });
 
         return;
     }
@@ -645,7 +632,7 @@ pub const Message = struct {
 
     /// Debug: channel_number == 0 means simultaneous usage.
     pub inline fn assert(msg: *Message) void {
-        if ((msg.*.bhdr.proto.origin == .application) and (msg.bhdr.channel_number == message.SpecialMinChannelNumber)) {
+        if (msg.isFromApplication() and (msg.bhdr.channel_number == message.SpecialMinChannelNumber)) {
             var bh: ?BinaryHeader = msg.bhVal();
             if (bh != null) {
                 bh.?.dumpMeta(" !!!!! former header ?????");
@@ -683,6 +670,18 @@ pub const Message = struct {
             return AmpeError.InvalidOpCode;
         }
         return oc;
+    }
+
+    pub inline fn isFromEngine(msg: *Message) bool {
+        return msg.*.bhdr.proto.origin == .engine;
+    }
+
+    pub inline fn isFromApplication(msg: *Message) bool {
+        return msg.*.bhdr.proto.origin == .application;
+    }
+
+    pub inline fn hasMore(msg: *Message) bool {
+        return msg.*.bhdr.proto.more == .more;
     }
 
     pub fn next_mid() MessageID {

@@ -7,7 +7,7 @@ repo_name: tofu on GitHub
 theme:
   name: material
   logo: assets/Ziggy_And_Zero_Are_Cooking_Tofu.png
-  custom_dir: overrides
+#  custom_dir: overrides
   icon:
     logo: material/forum
     repo: fontawesome/brands/github

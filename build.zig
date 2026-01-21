@@ -124,19 +124,30 @@ pub fn build(b: *std.Build) void {
         .install_subdir = "apidocs",
     });
 
-    const recipes_docs_lib = b.addObject(.{
-        .name = "recipes",
-        .root_module = recipesMod,
+    // Create cookbook module
+    const cookbookMod = b.createModule(.{
+        .root_source_file = b.path("recipes/cookbook.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = false,
+    });
+    cookbookMod.addImport("tofu", tofuMod);
+    cookbookMod.addImport("mailbox", mailbox.module("mailbox"));
+
+
+    const cookbook_docs_lib = b.addObject(.{
+        .name = "cookbook",
+        .root_module = cookbookMod,
         .use_llvm = true,
         .use_lld = true,
     });
 
-    const install_recipes_docs = b.addInstallDirectory(.{
-        .source_dir = recipes_docs_lib.getEmittedDocs(),
+    const install_cookbook_docs = b.addInstallDirectory(.{
+        .source_dir = cookbook_docs_lib.getEmittedDocs(),
         .install_dir = .{ .custom = "../docs_site/docs" },
         .install_subdir = "recipes",
     });
 
     docs_step.dependOn(&install_tofu_docs.step);
-    docs_step.dependOn(&install_recipes_docs.step);
+    docs_step.dependOn(&install_cookbook_docs.step);
 }

@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2025 <TBD>
-// SPDX-License-Identifier: <TBD>
-
 //! Server with multiple listeners (TCP/UDS) on one thread.
 //!
 //! Flow: Single `waitReceive()` loop handles all listeners and client connections.
@@ -266,7 +263,7 @@ pub fn closeChannels(mh: *MultiHomed) void {
 //     // Prepare ByeSignal for the listener channel.
 //     closeMsg.?.*.bhdr.proto.mtype = .bye;
 //     closeMsg.?.*.bhdr.proto.role = .signal;
-//     closeMsg.?.*.bhdr.proto.oob = .on;
+//     closeMsg.?.*.bhdr.proto._internalA = .on;
 //
 //     // Set channel number to close this channel.
 //     closeMsg.?.*.bhdr.channel_number = lstChannel;

@@ -22,6 +22,9 @@ pub const Alerter = struct {
     }
 };
 
+/// High priority. Goes to head of queue.
+pub const Oob = message.Trigger;
+
 pub const Notification = packed struct(u8) {
     kind: NotificationKind = undefined,
     oob: Oob = undefined,
@@ -311,7 +314,7 @@ const poll_SEC_TIMEOUT: i32 = @import("poller.zig").poll_SEC_TIMEOUT;
 const TempUdsPath = tofu.TempUdsPath;
 
 const message = tofu.message;
-const Oob = message.Oob;
+// const Oob = message.Oob;
 
 const status = tofu.status;
 const AmpeError = status.AmpeError;

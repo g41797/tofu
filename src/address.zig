@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! TCP/UDS address configuration for Hello/Welcome messages.
+//! TCP/UDS address for Hello/Welcome messages.
 
 pub const Proto = enum {
     tcp,

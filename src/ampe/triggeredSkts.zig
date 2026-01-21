@@ -385,7 +385,7 @@ pub const IoSkt = struct {
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
         sndmsg.assert();
 
-        if (sndmsg.bhdr.proto.oob == .on) {
+        if (sndmsg.bhdr.proto._internalA == .on) {
             ioskt.sendQ.pushFront(sndmsg);
         } else {
             ioskt.sendQ.enqueue(sndmsg);

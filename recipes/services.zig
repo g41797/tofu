@@ -129,7 +129,7 @@ pub const EchoService = struct {
         const sts: status.AmpeStatus = status.raw_to_status(msg.*.?.*.bhdr.status);
 
         // Check message origin
-        if (msg.*.?.*.bhdr.proto.origin == .engine) {
+        if (msg.*.?.isFromEngine()) {
             switch (sts) {
                 .pool_empty => return echo.*.addMessagesToPool(),
                 else => {
@@ -282,7 +282,7 @@ pub const EchoClient = struct {
             };
             defer self.*.ampe.put(&recvMsgOpt);
 
-            if (recvMsgOpt.?.*.bhdr.proto.origin == .engine) {
+            if (recvMsgOpt.?.isFromEngine()) {
                 const sts: status.AmpeStatus = status.raw_to_status((recvMsgOpt.?.*.bhdr.status));
 
                 if (sts == .pool_empty) {
@@ -335,7 +335,7 @@ pub const EchoClient = struct {
                 };
                 defer self.*.ampe.put(&recvMsgOpt);
 
-                if (recvMsgOpt.?.*.bhdr.proto.origin == .engine) {
+                if (recvMsgOpt.?.isFromEngine()) {
                     const sts: status.AmpeStatus = status.raw_to_status((recvMsgOpt.?.*.bhdr.status));
 
                     if (sts == .pool_empty) {
