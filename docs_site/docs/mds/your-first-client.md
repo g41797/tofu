@@ -26,9 +26,11 @@ const Address = tofu.address.Address;
 const address = tofu.address;
 
 pub fn main() !void {
-    const gpa = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    var rtr: *Reactor = try Reactor.create(gpa, tofu.DefaultOptions);
+    var rtr: *Reactor = try Reactor.create(allocator, tofu.DefaultOptions);
     defer rtr.destroy();
 
     const ampe: Ampe = try rtr.ampe();
@@ -96,7 +98,7 @@ req.?.bhdr.channel_number = server_ch;  // The channel from step 2
 req.?.bhdr.message_id = 1;  // Your job ID
 
 // Add data
-try req.?.body.appendSlice("Hello, server!");
+try req.?.body.append("Hello, server!");
 
 // Send
 _ = try chnls.post(&req);
@@ -231,7 +233,7 @@ pub fn runClient(gpa: std.mem.Allocator, host: []const u8, port: u16) !void {
 
     req.?.bhdr.proto.opCode = .Request;
     req.?.bhdr.channel_number = server_ch;
-    try req.?.body.appendSlice("ping");
+    try req.?.body.append("ping");
 
     _ = try chnls.post(&req);
 

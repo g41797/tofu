@@ -223,7 +223,7 @@ while (hasMoreChunks()) {
     msg.?.bhdr.message_id = job_id;  // Same for all chunks
     msg.?.bhdr.proto.more = if (hasMoreChunks()) .more else .last;
 
-    try msg.?.body.appendSlice(getNextChunk());
+    try msg.?.body.append(getNextChunk());
     _ = try chnls.post(&msg);
 }
 ```
@@ -271,7 +271,7 @@ Some messages require specific headers:
 Binary payload for your application data.
 
 ```zig title="Writing to body"
-try msg.?.body.appendSlice(my_data);
+try msg.?.body.append(my_data);
 ```
 
 ```zig title="Reading body"
@@ -280,6 +280,10 @@ const length = msg.?.actual_body_len();
 ```
 
 The body can hold any binary data. tofu doesn't interpret it.
+
+!!! warning "Size limit: 64 KiB - 1"
+    Body and TextHeaders share the same size limit: 65535 bytes (64 KiB - 1).
+    For larger data, use streaming with the `more` flag.
 
 ---
 
@@ -298,7 +302,7 @@ defer ampe.put(&msg);  // Always use defer
 msg.?.bhdr.proto.opCode = .Request;
 msg.?.bhdr.channel_number = peer_channel;
 msg.?.bhdr.message_id = my_job_id;
-try msg.?.body.appendSlice(my_data);
+try msg.?.body.append(my_data);
 ```
 
 ```zig title="HelloRequest (connecting)"

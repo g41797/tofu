@@ -26,10 +26,12 @@ const Address = tofu.address.Address;
 const address = tofu.address;
 
 pub fn main() !void {
-    const gpa = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
     // Create the engine
-    var rtr: *Reactor = try Reactor.create(gpa, tofu.DefaultOptions);
+    var rtr: *Reactor = try Reactor.create(allocator, tofu.DefaultOptions);
     defer rtr.destroy();
 
     // Get the ampe interface (message pool + channel factory)
@@ -153,7 +155,7 @@ Process incoming requests and send responses.
     msg.?.bhdr.proto.opCode = .Response;
     // channel_number and message_id stay the same
     msg.?.body.clear();
-    try msg.?.body.appendSlice(result);
+    try msg.?.body.append(result);
 
     _ = try chnls.post(&msg);
 },

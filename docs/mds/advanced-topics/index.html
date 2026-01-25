@@ -14,7 +14,7 @@
         <link rel="prev" href="../error-handling/">
       
       
-        <link rel="next" href="../naq/">
+        <link rel="next" href="../appendable/">
       
       
         
@@ -1456,6 +1456,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../appendable/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendable
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../naq/" class="md-nav__link">
         
   
@@ -2177,7 +2205,7 @@ Only one thread should call <code>waitReceive()</code> per ChannelGroup at a tim
 </span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1">// Reuse for response</span>
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">opCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">Response</span><span class="p">;</span>
 </span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">appendSlice</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
 </span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
 </span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="c1">// defer handles the now-null msg</span>
 </span></code></pre></div>
@@ -2319,13 +2347,13 @@ Only one thread should call <code>waitReceive()</code> per ChannelGroup at a tim
         
         
           
-          <a href="../naq/" class="md-footer__link md-footer__link--next" aria-label="Next: NAQ">
+          <a href="../appendable/" class="md-footer__link md-footer__link--next" aria-label="Next: Appendable">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                NAQ
+                Appendable
               </div>
             </div>
             <div class="md-footer__button md-icon">

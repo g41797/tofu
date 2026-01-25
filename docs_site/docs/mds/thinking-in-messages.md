@@ -99,7 +99,7 @@ defer ampe.put(&msg);
 // 2. Fill it in (set opCode, channel, data)
 msg.?.bhdr.proto.opCode = .Request;
 msg.?.bhdr.channel_number = peer_channel;
-try msg.?.body.appendSlice(my_data);
+try msg.?.body.append(my_data);
 
 // 3. Submit it
 const bhdr = try chnls.post(&msg);

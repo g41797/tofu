@@ -270,7 +270,7 @@ defer ampe.put(&msg);
 // Reuse for response
 msg.?.bhdr.proto.opCode = .Response;
 msg.?.body.clear();
-try msg.?.body.appendSlice(result);
+try msg.?.body.append(result);
 _ = try chnls.post(&msg);
 // defer handles the now-null msg
 ```

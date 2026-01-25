@@ -18,7 +18,7 @@ defer ampe.put(&req);
 req.?.bhdr.proto.opCode = .Request;
 req.?.bhdr.channel_number = server_ch;
 req.?.bhdr.message_id = job_id;
-try req.?.body.appendSlice(request_data);
+try req.?.body.append(request_data);
 
 _ = try chnls.post(&req);
 
@@ -43,7 +43,7 @@ if (msg.?.bhdr.proto.opCode == .Request) {
     // Reuse message for response
     msg.?.bhdr.proto.opCode = .Response;
     msg.?.body.clear();
-    try msg.?.body.appendSlice(result);
+    try msg.?.body.append(result);
 
     _ = try chnls.post(&msg);
 }
@@ -110,7 +110,7 @@ while (chunk_index < chunks.len) {
     const is_last = (chunk_index == chunks.len - 1);
     msg.?.bhdr.proto.more = if (is_last) .last else .more;
 
-    try msg.?.body.appendSlice(chunks[chunk_index]);
+    try msg.?.body.append(chunks[chunk_index]);
     _ = try chnls.post(&msg);
 
     chunk_index += 1;
@@ -140,7 +140,7 @@ while (true) {
             // Send response
             msg.?.bhdr.proto.opCode = .Response;
             msg.?.body.clear();
-            try msg.?.body.appendSlice(result);
+            try msg.?.body.append(result);
             _ = try chnls.post(&msg);
             break;
         }
@@ -174,7 +174,7 @@ while (chunk_index < result_chunks.len) {
     const is_last = (chunk_index == result_chunks.len - 1);
     resp.?.bhdr.proto.more = if (is_last) .last else .more;
 
-    try resp.?.body.appendSlice(result_chunks[chunk_index]);
+    try resp.?.body.append(result_chunks[chunk_index]);
     _ = try chnls.post(&resp);
 
     chunk_index += 1;
@@ -238,7 +238,7 @@ fn processWithProgress(chnls: ChannelGroup, ampe: Ampe, client_ch: u16, job_id: 
     resp.?.bhdr.proto.opCode = .Response;
     resp.?.bhdr.channel_number = client_ch;
     resp.?.bhdr.message_id = job_id;
-    try resp.?.body.appendSlice("done");
+    try resp.?.body.append("done");
 
     _ = try chnls.post(&resp);
 }
@@ -395,6 +395,45 @@ while (true) {
     }
 }
 ```
+
+---
+
+## Transport-Agnostic Code
+
+Write code that works with any transport (TCP, UDS) by accepting `*Address` as parameter.
+
+```zig
+// Same function works for TCP and UDS
+pub fn startListener(ampe: Ampe, chnls: ChannelGroup, addr: *Address) !u16 {
+    var msg: ?*Message = try ampe.get(.always);
+    defer ampe.put(&msg);
+
+    try addr.format(msg.?);  // Works with any address type
+
+    const bhdr = try chnls.post(&msg);
+    const listener_ch = bhdr.channel_number;
+
+    var resp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
+    defer ampe.put(&resp);
+
+    if (resp.?.bhdr.status != 0) {
+        return error.ListenerFailed;
+    }
+
+    return listener_ch;
+}
+
+// Usage
+var tcp_addr: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", 8080) };
+var uds_addr: Address = .{ .uds_server_addr = address.UDSServerAddress.init("/tmp/myapp.sock") };
+
+const tcp_ch = try startListener(ampe, chnls, &tcp_addr);
+const uds_ch = try startListener(ampe, chnls, &uds_addr);
+```
+
+??? tip "NAQ: Why pointer to Address?"
+    Address is a tagged union. Passing `*Address` lets the function work with any variant.
+    The `format()` method checks which variant it is and sets the correct header.
 
 ---
 

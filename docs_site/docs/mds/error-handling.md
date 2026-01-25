@@ -166,7 +166,7 @@ defer ampe.put(&req);
 
 req.?.bhdr.proto.opCode = .Request;
 req.?.bhdr.channel_number = server_ch;
-try req.?.body.appendSlice(data);
+try req.?.body.append(data);
 
 _ = try chnls.post(&req);
 

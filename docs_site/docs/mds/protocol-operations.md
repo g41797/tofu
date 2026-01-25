@@ -194,7 +194,7 @@ defer ampe.put(&msg);
 msg.?.bhdr.proto.opCode = .Request;
 msg.?.bhdr.channel_number = peer_ch;
 msg.?.bhdr.message_id = job_id;
-try msg.?.body.appendSlice(request_data);
+try msg.?.body.append(request_data);
 
 _ = try chnls.post(&msg);
 ```
@@ -220,7 +220,7 @@ defer ampe.put(&msg);
 msg.?.bhdr.proto.opCode = .Response;
 msg.?.bhdr.channel_number = requester_ch;
 msg.?.bhdr.message_id = request.?.bhdr.message_id;  // Same ID
-try msg.?.body.appendSlice(response_data);
+try msg.?.body.append(response_data);
 
 _ = try chnls.post(&msg);
 ```
@@ -246,7 +246,7 @@ defer ampe.put(&msg);
 msg.?.bhdr.proto.opCode = .Signal;
 msg.?.bhdr.channel_number = peer_ch;
 msg.?.bhdr.message_id = job_id;  // To correlate with a job
-try msg.?.body.appendSlice(progress_data);
+try msg.?.body.append(progress_data);
 
 _ = try chnls.post(&msg);
 ```
