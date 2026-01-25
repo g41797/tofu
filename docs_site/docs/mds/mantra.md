@@ -60,7 +60,7 @@ R: Why should I send an obsolete message? Are you expecting a graceful close?
 S: Of course.
 
 R: Then I'll send a ByeRequest with the same information, and you'll send me a
-   ByeResponse. After that connection will be autimatically aborted.
+   ByeResponse. After that connection will be automatically aborted.
 
 S: That's enough for today. Send me a short text file with this protocol —
    I'll save it in Git.
