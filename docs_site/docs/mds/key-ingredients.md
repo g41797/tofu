@@ -6,7 +6,7 @@ Tofu ingredients:
 - **ChannelGroup**
 - **Message**
 - **Errors** and **Statuses**
-- **Configurators**
+- **Addresses**
 - **Test Helpers**
 
 
@@ -48,7 +48,7 @@ It forwards messages between application and engine thread.
 
 I hope **Errors and Statuses** don't need explanation.
 
-**Configurators** are helpers for adding network information(ports, addresses, etc.) to Message.
+**Addresses** are helpers for adding network information(ports, addresses, etc.) to Message.
 
 **Test Helpers** create network information for safe testing.
 
