@@ -69,7 +69,7 @@ nav:
       - Message: mds/message.md
       - Address: mds/address.md
       - Protocol Operations: mds/protocol-operations.md
-      - Testers: mds/for-tests.md
+      - Test Helpers: mds/for-tests.md
   - Guides:
       - Your First Server: mds/your-first-server.md
       - Your First Client: mds/your-first-client.md

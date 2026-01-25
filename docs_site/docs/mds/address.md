@@ -4,7 +4,12 @@
 
 tofu supports two transport types: TCP and Unix Domain Sockets (UDS).
 
-Addresses tell tofu where to connect or listen.
+Address helpers do two things:
+
+1. Set the message opCode (HelloRequest or WelcomeRequest)
+2. Add the address header (~connect_to or ~listen_on)
+
+One call prepares a complete connection or listener message.
 
 ---
 
@@ -29,7 +34,7 @@ For connecting to a TCP server.
 var addr: Address = .{
     .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", 7099)
 };
-try addr.format(msg.?);  // Adds ~connect_to header, sets HelloRequest
+try addr.format(msg.?);  // Sets opCode=HelloRequest, adds ~connect_to header
 ```
 
 ### TCPServerAddress
@@ -40,7 +45,7 @@ For listening on a TCP port.
 var addr: Address = .{
     .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", 7099)
 };
-try addr.format(msg.?);  // Adds ~listen_on header, sets WelcomeRequest
+try addr.format(msg.?);  // Sets opCode=WelcomeRequest, adds ~listen_on header
 ```
 
 **Common IP values:**
@@ -67,7 +72,7 @@ Unix Domain Sockets use file paths instead of IP:port.
 var addr: Address = .{
     .uds_client_addr = address.UDSClientAddress.init("/tmp/my-app.sock")
 };
-try addr.format(msg.?);
+try addr.format(msg.?);  // Sets opCode=HelloRequest, adds ~connect_to header
 ```
 
 ### UDSServerAddress
@@ -76,7 +81,7 @@ try addr.format(msg.?);
 var addr: Address = .{
     .uds_server_addr = address.UDSServerAddress.init("/tmp/my-app.sock")
 };
-try addr.format(msg.?);
+try addr.format(msg.?);  // Sets opCode=WelcomeRequest, adds ~listen_on header
 ```
 
 !!! warning "UDS paths"
@@ -156,36 +161,12 @@ var cltAddr: Address = .{
 
 ---
 
-## Testing Helpers
-
-tofu provides helpers for testing without port conflicts.
-
-### Find free TCP port
-
-```zig
-const port = try tofu.FindFreeTcpPort();
-// Returns an available port number
-```
-
-### Temporary UDS path
-
-```zig
-var tup: tofu.TempUdsPath = .{};
-const path = try tup.buildPath(allocator);
-// Returns a unique temporary socket path
-```
-
-!!! tip "Avoid port conflicts"
-    Use these helpers in tests. They prevent "address already in use" errors.
-
----
-
 ## Quick Reference
 
-| What you want | Address type | Header created |
-|---------------|--------------|----------------|
-| Connect to TCP server | `TCPClientAddress` | `~connect_to: tcp\|...\|...` |
-| Listen on TCP port | `TCPServerAddress` | `~listen_on: tcp\|...\|...` |
-| Connect via UDS | `UDSClientAddress` | `~connect_to: uds\|...` |
-| Listen via UDS | `UDSServerAddress` | `~listen_on: uds\|...` |
+| Address type | OpCode set | Header added |
+|--------------|------------|--------------|
+| `TCPClientAddress` | HelloRequest | `~connect_to: tcp\|...\|...` |
+| `TCPServerAddress` | WelcomeRequest | `~listen_on: tcp\|...\|...` |
+| `UDSClientAddress` | HelloRequest | `~connect_to: uds\|...` |
+| `UDSServerAddress` | WelcomeRequest | `~listen_on: uds\|...` |
 

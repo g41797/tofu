@@ -5,7 +5,7 @@ Read this first. The rest of the docs assume you understand this.
 
 ---
 
-## The Mental Shift
+## Traditional vs tofu
 
 Traditional socket programming looks like this:
 
@@ -17,7 +17,7 @@ Traditional socket programming looks like this:
 5. Close socket
 ```
 
-**tofu thinking is different:**
+**tofu works differently:**
 
 ```
 1. Send HelloRequest (tofu connects for you)
@@ -32,20 +32,18 @@ You don't manage sockets. You send messages. tofu does the socket work.
 
 ## Messages Are Actions
 
-This is the core insight.
+??? tip "NAQ: Why does this matter?"
+    If you think "connect first, THEN send message" - you'll fight tofu.
+    If you think "send a message that means 'connect'" - you'll work with tofu.
+    Same result. Different approach. The second one is easier.
 
-??? tip "NAQ: Why is this so important?"
-    Because if you think "I need to connect, THEN send a message", you'll fight tofu.
-    If you think "I send a message that means 'connect'", you'll work WITH tofu.
-    Same result. Different mindset. The second one is easier.
-
-**Traditional thinking (wrong for tofu):**
+**Traditional approach (wrong for tofu):**
 ```
 socket = connect(address);
 send(socket, data);
 ```
 
-**tofu thinking (correct):**
+**tofu approach (correct):**
 ```zig
 // HelloRequest means "connect to this address"
 // You don't connect first. The message IS the connection request.
@@ -206,7 +204,7 @@ This is why the pattern is always: **post → waitReceive**.
 
 ## Example: Server Setup
 
-Here's how "start listening" works in tofu thinking:
+Here's how "start listening" works with tofu:
 
 ```zig title="Server becomes available"
 // Get message
@@ -260,9 +258,9 @@ You didn't call `connect()`. You sent a HelloRequest that contains the server ad
 
 ---
 
-## The Mindset Summary
+## Summary
 
-| Old thinking | tofu thinking |
+| Traditional | tofu |
 |--------------|---------------|
 | Connect, then send | Send (it connects) |
 | Manage sockets | Manage messages |
@@ -274,11 +272,11 @@ You didn't call `connect()`. You sent a HelloRequest that contains the server ad
 
 ## What's Next
 
-Now that you understand the mindset, you're ready to learn the details:
+Now you're ready to learn the details:
 
 - **[Message](message.md)** — The structure of a tofu message
 - **[Address](address.md)** — How to specify connection addresses
 - **[ChannelGroup](channel-group.md)** — Managing multiple channels
 
-The mental model: **Messages are actions. tofu does the network work.**
+**Messages are actions. tofu does the network work.**
 

@@ -325,7 +325,7 @@ const bhdr = try chnls.post(&msg);
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         YOUR CODE                                 │
+│                         YOUR CODE                                │
 ├──────────────────────────────────────────────────────────────────┤
 │  1. msg = ampe.get(.always)     ← Get from pool                  │
 │  2. Fill message (opCode, channel, body)                         │
