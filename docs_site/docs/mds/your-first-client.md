@@ -109,7 +109,7 @@ defer ampe.put(&resp);
 if (resp.?.bhdr.proto.opCode == .Response) {
     if (resp.?.bhdr.message_id == 1) {
         // This is the response to our request
-        const data = resp.?.body.slc();
+        const data = resp.?.body.body().?;
         // ... process response ...
     }
 }
@@ -239,7 +239,7 @@ pub fn runClient(gpa: std.mem.Allocator, host: []const u8, port: u16) !void {
     var resp: ?*Message = try chnls.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT);
     defer ampe.put(&resp);
 
-    std.debug.print("Got response: {s}\n", .{resp.?.body.slc()});
+    std.debug.print("Got response: {s}\n", .{resp.?.body.body().?});
 
     // Close
     var bye: ?*Message = try ampe.get(.always);

@@ -134,7 +134,6 @@ pub fn build(b: *std.Build) void {
     cookbookMod.addImport("tofu", tofuMod);
     cookbookMod.addImport("mailbox", mailbox.module("mailbox"));
 
-
     const cookbook_docs_lib = b.addObject(.{
         .name = "cookbook",
         .root_module = cookbookMod,

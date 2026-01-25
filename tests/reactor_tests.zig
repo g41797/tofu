@@ -152,7 +152,7 @@ fn send_illegal_messages() !void {
         try testing.expect(err == AmpeError.InvalidChannelNumber);
     };
 
-    recipes.handleHelloWithoutConfiguration(gpa) catch |err| {
+    recipes.handleHelloWithoutAddress(gpa) catch |err| {
         try testing.expect(err == AmpeError.WrongAddress);
     };
 

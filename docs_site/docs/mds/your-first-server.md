@@ -144,7 +144,7 @@ Process incoming requests and send responses.
     const job_id = msg.?.bhdr.message_id;
 
     // Read request body
-    const request_data = msg.?.body.slc();
+    const request_data = msg.?.body.body().?;
 
     // Process (your logic here)
     const result = processRequest(request_data);

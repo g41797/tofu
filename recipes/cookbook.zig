@@ -181,7 +181,7 @@ pub fn handleMessageWithWrongChannelNumber(gpa: Allocator) !void {
     return;
 }
 
-pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
+pub fn handleHelloWithoutAddress(gpa: Allocator) !void {
     const options: Options = .{
         .initialPoolMsgs = 1, // Example value.
         .maxPoolMsgs = 1, // Example value.
@@ -203,7 +203,7 @@ pub fn handleHelloWithoutConfiguration(gpa: Allocator) !void {
     // MessageType.hello needs the peer (server) address.
     // MessageType.welcome needs the server address for listening.
 
-    // Hello Request without server address (configuration).
+    // Hello Request without server address.
     msg.?.*.bhdr.proto.opCode = .HelloRequest;
 
     _ = try chnls.post(&msg);
@@ -233,8 +233,8 @@ pub fn handleHelloWithWrongAddress(gpa: Allocator) !void {
     // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server address is "tofu.server.zig", port 3298.
-    // Use helpers to format the address within  hello request.
 
+    // Use helper to create hello request with address in text headers
     var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("tofu.server.zig", try tofu.FindFreeTcpPort()) };
 
     try adrs.format(msg.?);
@@ -270,8 +270,8 @@ pub fn handleHelloToNonListeningServer(gpa: Allocator) !void {
     // Address is a TextHeader added to the message's TextHeaders.
     // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server address is "127.0.0.1", port 32987.
-    // Use helpers to format the address within  hello request.
 
+    // Use helper to create hello request with address in text headers
     var adrs: Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", try tofu.FindFreeTcpPort()) };
 
     try adrs.format(msg.?);
@@ -305,13 +305,10 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 
     // MessageType.welcome needs the IP address and port of the listening server.
 
-    // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server has an invalid IP address "192.128.4.5", port 3298.
-    // Use helpers to format the address within  welcome request.
 
+    // Use helper to create welcome request with address in text headers
     var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("192.128.4.5", 3298) };
-
     try adrs.format(msg.?);
 
     _ = try chnls.post(&msg);
@@ -326,10 +323,8 @@ pub fn handleWelcomeWithWrongAddress(gpa: Allocator) !void {
 pub fn handleStartOfTcpServerAkaListener(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
-    // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating special messages with addresses in the headers.
     // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
-    // Use helpers to format the address within  welcome request.
+    // Use Address helper create WelcomeRequest with address in text headers.
 
     var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
@@ -356,11 +351,7 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
 pub fn handleStartOfTcpListeners(gpa: Allocator) !AmpeStatus {
     // WelcomeRequest for a TCP server needs the IP address and port of the listening server.
 
-    // Address is a TextHeader added to the message's TextHeaders.
-    // Tofu provides helper structs for creating special messages with addresses in the headers.
-    // Example: TCP server listens on all interfaces (IPv4 "0.0.0.0"), port 32984.
-    // Use helpers to format the address within  welcome request.
-
+    // Use Address helper to create WelcomeRequest with address in text headers.
     var adrs: Address = .{ .tcp_server_addr = address.TCPServerAddress.init("0.0.0.0", try tofu.FindFreeTcpPort()) };
 
     return handleStartOfListener(gpa, &adrs, true);
@@ -384,7 +375,7 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
 }
 
 pub fn handleStartOfListener(gpa: Allocator, adrs: *Address, runTheSame: bool) !AmpeStatus {
-    // Same code for TCP and UDS servers, only configuration differs.
+    // Same code for TCP and UDS servers, only address differ.
 
     const options: Options = .{
         .initialPoolMsgs = 2, // Example value.
@@ -454,7 +445,7 @@ pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
 }
 
 pub fn handleConnect(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) anyerror!AmpeStatus {
-    // Same code for TCP and UDS client/server, only configurations differ.
+    // Same code for TCP and UDS client/server, only addresses differ.
     // Configurations must match (both TCP or both UDS).
 
     const options: Options = .{
@@ -1012,7 +1003,7 @@ pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
 }
 
 pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) anyerror!AmpeStatus {
-    // Same code for TCP and UDS client/server, only configurations differ.
+    // Same code for TCP and UDS client/server, only addresses differ.
     // Configurations must match (both TCP or both UDS).
 
     const options: Options = .{

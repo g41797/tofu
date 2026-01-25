@@ -275,7 +275,7 @@ try msg.?.body.appendSlice(my_data);
 ```
 
 ```zig title="Reading body"
-const data = msg.?.body.slc();
+const data = msg.?.body.body().?;
 const length = msg.?.actual_body_len();
 ```
 

@@ -38,7 +38,7 @@ defer ampe.put(&msg);
 
 if (msg.?.bhdr.proto.opCode == .Request) {
     // Process request
-    const result = process(msg.?.body.slc());
+    const result = process(msg.?.body.body().?);
 
     // Reuse message for response
     msg.?.bhdr.proto.opCode = .Response;
@@ -131,7 +131,7 @@ while (true) {
     defer ampe.put(&msg);
 
     if (msg.?.bhdr.proto.opCode == .Request) {
-        try buffer.appendSlice(msg.?.body.slc());
+        try buffer.appendSlice(msg.?.body.body().?);
 
         if (!msg.?.hasMore()) {
             // Last chunk - process complete data
@@ -191,7 +191,7 @@ while (true) {
     defer ampe.put(&resp);
 
     if (resp.?.bhdr.message_id == job_id) {
-        try buffer.appendSlice(resp.?.body.slc());
+        try buffer.appendSlice(resp.?.body.body().?);
 
         if (!resp.?.hasMore()) {
             // Complete response received
@@ -254,7 +254,7 @@ while (true) {
 
     switch (msg.?.bhdr.proto.opCode) {
         .Signal => {
-            const progress = msg.?.body.slc()[0];
+            const progress = msg.?.body.body().?[0];
             std.debug.print("Progress: {}%\n", .{progress});
         },
         .Response => {
