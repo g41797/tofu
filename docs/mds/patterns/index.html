@@ -1909,6 +1909,12 @@ Progress is a notification, not an answer. The answer comes at the end.</p>
 <p>After HelloRequest/HelloResponse, both sides are equal peers.
 Either can initiate requests. Your protocol decides who does what.</p>
 </div>
+<details class="tip">
+<summary>Bidirectional streaming</summary>
+<p>You saw client streaming (multiple requests → one response) and server streaming (one request → multiple responses).</p>
+<p>Both peers are symmetric. Both can use the <code>more</code> flag. Both can stream simultaneously.</p>
+<p>Bidirectional streaming? Combine what you learned. Good exercise for you.</p>
+</details>
 <hr />
 <h2 id="heartbeat">Heartbeat</h2>
 <p>Keep connection alive with periodic signals.</p>
@@ -2057,6 +2063,11 @@ The <code>format()</code> method checks which variant it is and sets the correct
 <td>Streaming (server)</td>
 <td>Request → Response (more=1) ... Response (more=0)</td>
 <td>Download file in chunks</td>
+</tr>
+<tr>
+<td>Streaming (bidi)</td>
+<td>Both use <code>more</code> flag simultaneously</td>
+<td>Real-time data exchange</td>
 </tr>
 <tr>
 <td>Progress</td>

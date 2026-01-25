@@ -296,6 +296,13 @@ _ = try chnls.post(&reqToA);
     After HelloRequest/HelloResponse, both sides are equal peers.
     Either can initiate requests. Your protocol decides who does what.
 
+??? tip "Bidirectional streaming"
+    You saw client streaming (multiple requests → one response) and server streaming (one request → multiple responses).
+
+    Both peers are symmetric. Both can use the `more` flag. Both can stream simultaneously.
+
+    Bidirectional streaming? Combine what you learned. Good exercise for you.
+
 ---
 
 ## Heartbeat
@@ -444,6 +451,7 @@ const uds_ch = try startListener(ampe, chnls, &uds_addr);
 | Request/Response | Request → Response | Single question/answer |
 | Streaming (client) | Request (more=1) ... Request (more=0) → Response | Upload file in chunks |
 | Streaming (server) | Request → Response (more=1) ... Response (more=0) | Download file in chunks |
+| Streaming (bidi) | Both use `more` flag simultaneously | Real-time data exchange |
 | Progress | Request → Signal ... Signal → Response | Long operation with updates |
 | Heartbeat | Signal (periodic) | Keep-alive |
 | Bidirectional | Request ↔ Request | Both sides initiate |
