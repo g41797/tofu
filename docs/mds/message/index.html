@@ -25,7 +25,7 @@
     
     
       
-        <title>Overview - Tofu - Sync your devs, Async your apps!</title>
+        <title>Message - Tofu - Sync your devs, Async your apps!</title>
       
     
     
@@ -142,6 +142,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#message" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -173,7 +178,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Message
             
           </span>
         </div>
@@ -469,6 +474,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thinking-in-messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thinking in Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -701,20 +734,16 @@
   
   
   
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" checked>
-        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
-            
   
   
   <span class="md-ellipsis">
@@ -728,33 +757,8 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Message
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -763,7 +767,7 @@
   <span class="md-ellipsis">
     
   
-    Overview
+    Message
   
 
     
@@ -773,13 +777,307 @@
 
       </a>
       
-    </li>
-  
+        
 
-              
-            
-          </ul>
-        </nav>
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#binaryheader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BinaryHeader
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BinaryHeader">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channel_number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channel_number
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proto-protofields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proto (ProtoFields)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#message_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        message_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpCode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpCode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grouping-by-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grouping by purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-opcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting OpCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#origin-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Origin Flag
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        More Flag
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#textheaders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextHeaders
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TextHeaders">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Body
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Messages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-from-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get from pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-up-for-sending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set up for sending
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-for-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submit for processing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check-message-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check message type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-origin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check origin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-if-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check if streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-helper-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get helper methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -801,6 +1099,34 @@
     
   
     Address
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../protocol-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Operations
   
 
     
@@ -874,7 +1200,7 @@
   <span class="md-ellipsis">
     
   
-    Addendum
+    Guides
   
 
     
@@ -890,11 +1216,233 @@
             <span class="md-nav__icon md-icon"></span>
             
   
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../your-first-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../your-first-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../message-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Addendum
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
     Addendum
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced-topics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1060,6 +1608,299 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#binaryheader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BinaryHeader
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BinaryHeader">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channel_number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channel_number
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proto-protofields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proto (ProtoFields)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#message_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        message_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpCode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpCode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grouping-by-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grouping by purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setting-opcode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting OpCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#origin-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Origin Flag
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        More Flag
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#textheaders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextHeaders
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TextHeaders">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Body
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Messages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-from-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get from pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-up-for-sending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set up for sending
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-for-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submit for processing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check-message-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check message type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-origin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check origin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#check-if-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check if streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-helper-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get helper methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1114,24 +1955,6 @@
   
 
       
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Message
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
     </ol>
   </nav>
 
@@ -1145,28 +1968,385 @@
   
 
 
-  <h1>Overview</h1>
-
-<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">C#</label><label for="__tabbed_1_2">C++</label><label for="__tabbed_1_3">C#</label><label for="__tabbed_1_4">C++</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="language-csharp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// C# specific code here</span>
+<h1 id="message">Message</h1>
+<p>A tofu message has three parts. Only the first is required.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  BinaryHeader   │  ← Always present (routing, type, status)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├─────────────────┤
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  TextHeaders    │  ← Optional (key-value metadata)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├─────────────────┤
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  Body           │  ← Optional (your data)
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>└─────────────────┘
 </span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// C++ specific code here</span>
+<hr />
+<h2 id="binaryheader">BinaryHeader</h2>
+<p>The fixed-size header that tofu uses for routing and processing.</p>
+<div class="language-zig highlight"><span class="filename">BinaryHeader structure</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">BinaryHeader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kr">packed</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">channel_number</span><span class="o">:</span><span class="w"> </span><span class="kt">u16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">    </span><span class="c1">// Which channel this message belongs to</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">proto</span><span class="o">:</span><span class="w"> </span><span class="n">ProtoFields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{},</span><span class="w">   </span><span class="c1">// Operation type, origin, more flag</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">status</span><span class="o">:</span><span class="w"> </span><span class="kt">u8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">             </span><span class="c1">// 0 = success, else error code</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">message_id</span><span class="o">:</span><span class="w"> </span><span class="kt">u64</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">        </span><span class="c1">// Your correlation ID</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="c1">// (internal length fields omitted)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">};</span>
 </span></code></pre></div>
+<h3 id="channel_number">channel_number</h3>
+<p>Identifies which channel this message belongs to.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Not assigned yet (used for HelloRequest, WelcomeRequest)</td>
+</tr>
+<tr>
+<td><code>1-65534</code></td>
+<td>Valid assigned channel</td>
+</tr>
+<tr>
+<td><code>65535</code></td>
+<td>Reserved for tofu internal use</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Only tofu assigns channel numbers</p>
+<p>You create messages with channel 0. tofu assigns a real number during <code>post()</code>.
+Save the returned number for future use.</p>
 </div>
-<div class="tabbed-block">
-<div class="language-csharp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// C# specific code here</span>
+<h3 id="proto-protofields">proto (ProtoFields)</h3>
+<p>Contains the operation type and flags.</p>
+<div class="language-zig highlight"><span class="filename">ProtoFields structure</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">ProtoFields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kr">packed</span><span class="w"> </span><span class="k">struct</span><span class="p">(</span><span class="kt">u8</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">opCode</span><span class="o">:</span><span class="w"> </span><span class="n">OpCode</span><span class="p">,</span><span class="w">           </span><span class="c1">// 4 bits: what type of message</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">origin</span><span class="o">:</span><span class="w"> </span><span class="n">OriginFlag</span><span class="p">,</span><span class="w">       </span><span class="c1">// 1 bit: from you or from tofu?</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">more</span><span class="o">:</span><span class="w"> </span><span class="n">MoreMessagesFlag</span><span class="p">,</span><span class="w">   </span><span class="c1">// 1 bit: more coming?</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="c1">// (internal bits omitted)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">};</span>
 </span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// C++ specific code here</span>
+<h3 id="status">status</h3>
+<p>The result code. Zero means success.</p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1">// Success</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="c1">// Check what went wrong</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">sts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">raw_to_status</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">status</span><span class="p">);</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
 </span></code></pre></div>
+<p>See <a href="../statuses/">Errors and Statuses</a> for the full list.</p>
+<h3 id="message_id">message_id</h3>
+<p>Your correlation ID. tofu preserves it but doesn't interpret it.</p>
+<p>Use it to:</p>
+<ul>
+<li>Match responses to requests</li>
+<li>Track jobs across multiple messages</li>
+<li>Correlate progress updates with their job</li>
+</ul>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Send request with job ID</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">request</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">message_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">job_id</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">request</span><span class="p">);</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1">// Later, match response</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">message_id</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">job_id</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="c1">// This is the response to our request</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<details class="tip">
+<summary>NAQ: What if I don't set message_id?</summary>
+<p>If you leave it at 0, tofu assigns a sequential process-unique number during <code>post()</code>.
+The assigned value is returned in the BinaryHeader from <code>post()</code>.</p>
+</details>
+<hr />
+<h2 id="opcode">OpCode</h2>
+<p>The operation type. This tells tofu (and your peer) what the message means.</p>
+<div class="language-zig highlight"><span class="filename">All OpCodes</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">OpCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="p">(</span><span class="n">u4</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">Request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Ask peer for something</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">Response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">          </span><span class="c1">// Answer to a request</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">Signal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">            </span><span class="c1">// One-way notification</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">HelloRequest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">      </span><span class="c1">// Client: &quot;I want to connect&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">HelloResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">     </span><span class="c1">// Server: &quot;Connection accepted&quot;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="n">ByeRequest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">        </span><span class="c1">// &quot;Let&#39;s close gracefully&quot;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="n">ByeResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">       </span><span class="c1">// &quot;OK, closing&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="n">ByeSignal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">         </span><span class="c1">// &quot;Close NOW&quot; (no response)</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="n">WelcomeRequest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">    </span><span class="c1">// Server: &quot;Start listening&quot;</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="n">WelcomeResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">   </span><span class="c1">// tofu: &quot;Listener ready&quot;</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="p">};</span>
+</span></code></pre></div>
+<h3 id="grouping-by-purpose">Grouping by purpose</h3>
+<p><strong>Setup messages:</strong></p>
+<table>
+<thead>
+<tr>
+<th>OpCode</th>
+<th>Who sends</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WelcomeRequest</td>
+<td>Server app</td>
+<td>Start listening for connections</td>
+</tr>
+<tr>
+<td>WelcomeResponse</td>
+<td>tofu</td>
+<td>Confirm listener is ready</td>
+</tr>
+<tr>
+<td>HelloRequest</td>
+<td>Client app</td>
+<td>Connect to a server</td>
+</tr>
+<tr>
+<td>HelloResponse</td>
+<td>Server app</td>
+<td>Accept the connection</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Data messages (after connection):</strong></p>
+<table>
+<thead>
+<tr>
+<th>OpCode</th>
+<th>Who sends</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Request</td>
+<td>Either peer</td>
+<td>Ask for something</td>
+</tr>
+<tr>
+<td>Response</td>
+<td>Either peer</td>
+<td>Answer a request</td>
+</tr>
+<tr>
+<td>Signal</td>
+<td>Either peer</td>
+<td>One-way notification</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Close messages:</strong></p>
+<table>
+<thead>
+<tr>
+<th>OpCode</th>
+<th>Who sends</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ByeRequest</td>
+<td>Either peer</td>
+<td>Start graceful close</td>
+</tr>
+<tr>
+<td>ByeResponse</td>
+<td>Either peer</td>
+<td>Acknowledge close</td>
+</tr>
+<tr>
+<td>ByeSignal</td>
+<td>Either peer</td>
+<td>Close immediately</td>
+</tr>
+</tbody>
+</table>
+<h3 id="setting-opcode">Setting OpCode</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// For regular messages</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">opCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">Request</span><span class="p">;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// For connection messages, use address helpers (they set opCode automatically)</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">tcp_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Sets opCode to .HelloRequest</span>
+</span></code></pre></div>
+<hr />
+<h2 id="origin-flag">Origin Flag</h2>
+<p>Tells you where the message came from.</p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">OriginFlag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="p">(</span><span class="n">u1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">application</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">  </span><span class="c1">// From your code or peer&#39;s code</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">       </span><span class="c1">// From tofu itself</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">};</span>
+</span></code></pre></div>
+<p><strong>Why this matters:</strong></p>
+<p>When you receive a message via <code>waitReceive()</code>, check origin first:</p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">waitReceive</span><span class="p">(</span><span class="n">timeout</span><span class="p">);</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">isFromEngine</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="c1">// This is a status notification from tofu</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="c1">// Check status field for what happened</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">sts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">raw_to_status</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">status</span><span class="p">);</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">sts</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">        </span><span class="p">.</span><span class="n">pool_empty</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">/*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="n">needs</span><span class="w"> </span><span class="n">messages</span><span class="w"> </span><span class="o">*/</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="p">.</span><span class="n">channel_closed</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">/*</span><span class="w"> </span><span class="n">channel</span><span class="w"> </span><span class="n">died</span><span class="w"> </span><span class="o">*/</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">        </span><span class="k">else</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{},</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="c1">// This is a message from your peer</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">    </span><span class="c1">// Process normally</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="p">}</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Always check origin first</p>
+<p>Engine messages mean something happened internally (pool empty, channel closed, send failed).
+Application messages are from your peer.</p>
 </div>
+<hr />
+<h2 id="more-flag">More Flag</h2>
+<p>For streaming multiple messages as one logical unit.</p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">MoreMessagesFlag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">enum</span><span class="p">(</span><span class="n">u1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">last</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">  </span><span class="c1">// This is the final message</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="n">more</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">  </span><span class="c1">// More messages coming with same message_id</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">};</span>
+</span></code></pre></div>
+<p><strong>Example: Sending a file in chunks</strong></p>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">job_id</span><span class="o">:</span><span class="w"> </span><span class="kt">u64</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getNextJobId</span><span class="p">();</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">hasMoreChunks</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(.</span><span class="n">always</span><span class="p">);</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">opCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">Request</span><span class="p">;</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">channel_number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">peer_channel</span><span class="p">;</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">message_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">job_id</span><span class="p">;</span><span class="w">  </span><span class="c1">// Same for all chunks</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">more</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">hasMoreChunks</span><span class="p">())</span><span class="w"> </span><span class="p">.</span><span class="n">more</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">.</span><span class="n">last</span><span class="p">;</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">appendSlice</span><span class="p">(</span><span class="n">getNextChunk</span><span class="p">());</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The receiver knows the stream is complete when <code>more == .last</code>.</p>
+<hr />
+<h2 id="textheaders">TextHeaders</h2>
+<p>Key-value pairs for structured metadata. Like HTTP headers.</p>
+<div class="language-zig highlight"><span class="filename">Adding a header</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">thdrs</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Content-Type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p">);</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">thdrs</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Job-ID&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12345&quot;</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="language-zig highlight"><span class="filename">Reading headers</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">thdrs</span><span class="p">.</span><span class="n">hiter</span><span class="p">();</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">it</span><span class="p">.</span><span class="n">next</span><span class="p">())</span><span class="w"> </span><span class="o">|</span><span class="n">header</span><span class="o">|</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="c1">// header.name, header.value</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="required-headers">Required headers</h3>
+<p>Some messages require specific headers:</p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Required Header</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HelloRequest</td>
+<td><code>~connect_to</code></td>
+<td><code>tcp\|127.0.0.1\|7099</code></td>
+</tr>
+<tr>
+<td>WelcomeRequest</td>
+<td><code>~listen_on</code></td>
+<td><code>tcp\|0.0.0.0\|7099</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Use address helpers</p>
+<p>Don't build these headers manually. Use the address helpers:
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">tcp_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Adds the header for you</span>
+</span></code></pre></div></p>
 </div>
+<hr />
+<h2 id="body">Body</h2>
+<p>Binary payload for your application data.</p>
+<div class="language-zig highlight"><span class="filename">Writing to body</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">appendSlice</span><span class="p">(</span><span class="n">my_data</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="language-zig highlight"><span class="filename">Reading body</span><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">slc</span><span class="p">();</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kr">const</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">actual_body_len</span><span class="p">();</span>
+</span></code></pre></div>
+<p>The body can hold any binary data. tofu doesn't interpret it.</p>
+<hr />
+<h2 id="creating-messages">Creating Messages</h2>
+<h3 id="get-from-pool">Get from pool</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(.</span><span class="n">always</span><span class="p">);</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span><span class="w">  </span><span class="c1">// Always use defer</span>
+</span></code></pre></div>
+<h3 id="set-up-for-sending">Set up for sending</h3>
+<div class="language-zig highlight"><span class="filename">Regular Request</span><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">opCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.</span><span class="n">Request</span><span class="p">;</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">channel_number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">peer_channel</span><span class="p">;</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">message_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">my_job_id</span><span class="p">;</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">try</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">body</span><span class="p">.</span><span class="n">appendSlice</span><span class="p">(</span><span class="n">my_data</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="language-zig highlight"><span class="filename">HelloRequest (connecting)</span><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">tcp_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Sets opCode and adds address header</span>
+</span></code></pre></div>
+<div class="language-zig highlight"><span class="filename">WelcomeRequest (listening)</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">tcp_server_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPServerAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;0.0.0.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Sets opCode and adds address header</span>
+</span></code></pre></div>
+<h3 id="submit-for-processing">Submit for processing</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">bhdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="c1">// msg is now null (tofu took it)</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="c1">// bhdr contains assigned channel_number and message_id</span>
+</span></code></pre></div>
+<hr />
+<h2 id="message-lifecycle">Message Lifecycle</h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>┌──────────────────────────────────────────────────────────────────┐
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>│                         YOUR CODE                                 │
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├──────────────────────────────────────────────────────────────────┤
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>│  1. msg = ampe.get(.always)     ← Get from pool                  │
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>│  2. Fill message (opCode, channel, body)                         │
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>│  3. bhdr = chnls.post(&amp;msg)     ← Submit (msg becomes null)      │
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>│  4. resp = chnls.waitReceive()  ← Wait for result                │
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>│  5. ampe.put(&amp;resp)             ← Return to pool                 │
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>└──────────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Memory rules</p>
+<ol>
+<li>Always <code>defer ampe.put(&amp;msg)</code> right after getting a message</li>
+<li>After <code>post()</code>, msg becomes null (tofu owns it)</li>
+<li>defer is still safe (put ignores null)</li>
+<li>Always return received messages to pool</li>
+</ol>
 </div>
+<hr />
+<h2 id="quick-reference">Quick Reference</h2>
+<h3 id="check-message-type">Check message type</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">opCode</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span><span class="p">.</span><span class="n">HelloRequest</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">/*</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">connection</span><span class="w"> </span><span class="o">*/</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="p">.</span><span class="n">Request</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">/*</span><span class="w"> </span><span class="n">peer</span><span class="w"> </span><span class="n">wants</span><span class="w"> </span><span class="n">something</span><span class="w"> </span><span class="o">*/</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="p">.</span><span class="n">Signal</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">/*</span><span class="w"> </span><span class="n">notification</span><span class="w"> </span><span class="o">*/</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="c1">// ...</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="check-origin">Check origin</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">isFromEngine</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">    </span><span class="c1">// From tofu (status notification)</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="c1">// From peer (application message)</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="check-if-streaming">Check if streaming</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">hasMore</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="c1">// More messages coming with same message_id</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="get-helper-methods">Get helper methods</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">getType</span><span class="p">()</span><span class="w">  </span><span class="c1">// MessageType: .welcome, .hello, .regular, .bye</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">.</span><span class="n">bhdr</span><span class="p">.</span><span class="n">proto</span><span class="p">.</span><span class="n">getRole</span><span class="p">()</span><span class="w">  </span><span class="c1">// MessageRole: .request, .response, .signal</span>
+</span></code></pre></div>
 
 
 

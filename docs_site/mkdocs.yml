@@ -58,6 +58,7 @@ nav:
       - Overview: mds/overview.md
       - Features: mds/features.md
       - Mantra: mds/mantra.md
+      - Thinking in Messages: mds/thinking-in-messages.md
   - Implementation:
       - Installation: mds/installation.md
       - Imports: mds/imports.md
@@ -65,13 +66,18 @@ nav:
       - Ampe: mds/ampe.md
       - Errors and Statuses: mds/statuses.md
       - ChannelGroup: mds/channel-group.md
-      - Message:
-          - Overview: mds/message.md
-      #          - Structure: mds/message-structure.md
-      #          - Lifecycle: mds/message-lifecycle.md
+      - Message: mds/message.md
       - Address: mds/address.md
+      - Protocol Operations: mds/protocol-operations.md
       - Testers: mds/for-tests.md
+  - Guides:
+      - Your First Server: mds/your-first-server.md
+      - Your First Client: mds/your-first-client.md
+      - Message Flows: mds/message-flows.md
+      - Patterns: mds/patterns.md
+      - Error Handling: mds/error-handling.md
   - Addendum:
+      - Advanced Topics: mds/advanced-topics.md
       - NAQ: mds/naq.md
       - Sockets 101: mds/sockets101.md
       - Allocator: mds/allocator.md

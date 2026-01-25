@@ -14,7 +14,7 @@
         <link rel="prev" href="../message/">
       
       
-        <link rel="next" href="../for-tests/">
+        <link rel="next" href="../protocol-operations/">
       
       
         
@@ -141,6 +141,11 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
+      
+        
+        <a href="#address" class="md-skip">
+          Skip to content
+        </a>
       
     </div>
     <div data-md-component="announce">
@@ -469,6 +474,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thinking-in-messages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Thinking in Messages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -699,53 +732,6 @@
   
   
   
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Message
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Message
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
       <a href="../message/" class="md-nav__link">
         
@@ -754,7 +740,7 @@
   <span class="md-ellipsis">
     
   
-    Overview
+    Message
   
 
     
@@ -763,14 +749,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -789,6 +767,26 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Address
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -807,6 +805,253 @@
 
       </a>
       
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#address-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Address Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tcp-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Addresses
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TCP Addresses">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tcpclientaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCPClientAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcpserveraddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCPServerAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uds-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDS Addresses
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UDS Addresses">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#udsclientaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDSClientAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#udsserveraddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDSServerAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wire-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wire Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tcp-client-connecting-to-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Client connecting to server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-server-starting-listener" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Server starting listener
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uds-for-same-machine-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDS for same-machine communication
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Helpers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Helpers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#find-free-tcp-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find free TCP port
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporary-uds-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporary UDS path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../protocol-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -872,7 +1117,7 @@
   <span class="md-ellipsis">
     
   
-    Addendum
+    Guides
   
 
     
@@ -888,11 +1133,233 @@
             <span class="md-nav__icon md-icon"></span>
             
   
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../your-first-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../your-first-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../message-flows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Flows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Addendum
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
     Addendum
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced-topics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1058,6 +1525,216 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#address-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Address Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tcp-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Addresses
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TCP Addresses">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tcpclientaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCPClientAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcpserveraddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCPServerAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uds-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDS Addresses
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UDS Addresses">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#udsclientaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDSClientAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#udsserveraddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDSServerAddress
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wire-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wire Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tcp-client-connecting-to-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Client connecting to server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp-server-starting-listener" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP Server starting listener
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uds-for-same-machine-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDS for same-machine communication
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Helpers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Helpers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#find-free-tcp-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find free TCP port
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporary-uds-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporary UDS path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1125,9 +1802,211 @@
   
 
 
-  <h1>Address</h1>
-
-
+<h1 id="address">Address</h1>
+<p>tofu supports two transport types: TCP and Unix Domain Sockets (UDS).</p>
+<p>Addresses tell tofu where to connect or listen.</p>
+<hr />
+<h2 id="address-types">Address Types</h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Use Case</th>
+<th>Format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TCP Client</td>
+<td>Connect to a server</td>
+<td>IP address + port</td>
+</tr>
+<tr>
+<td>TCP Server</td>
+<td>Listen for connections</td>
+<td>IP address + port</td>
+</tr>
+<tr>
+<td>UDS Client</td>
+<td>Connect via Unix socket</td>
+<td>File path</td>
+</tr>
+<tr>
+<td>UDS Server</td>
+<td>Listen via Unix socket</td>
+<td>File path</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="tcp-addresses">TCP Addresses</h2>
+<h3 id="tcpclientaddress">TCPClientAddress</h3>
+<p>For connecting to a TCP server.</p>
+<div class="language-zig highlight"><span class="filename">Connect to localhost:7099</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="p">.</span><span class="n">tcp_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">};</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Adds ~connect_to header, sets HelloRequest</span>
+</span></code></pre></div>
+<h3 id="tcpserveraddress">TCPServerAddress</h3>
+<p>For listening on a TCP port.</p>
+<div class="language-zig highlight"><span class="filename">Listen on all interfaces, port 7099</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">.</span><span class="n">tcp_server_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPServerAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;0.0.0.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7099</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">};</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Adds ~listen_on header, sets WelcomeRequest</span>
+</span></code></pre></div>
+<p><strong>Common IP values:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0.0.0.0</code></td>
+<td>All IPv4 interfaces (listen on all)</td>
+</tr>
+<tr>
+<td><code>127.0.0.1</code></td>
+<td>Localhost only (loopback)</td>
+</tr>
+<tr>
+<td><code>192.168.x.x</code></td>
+<td>Specific network interface</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="uds-addresses">UDS Addresses</h2>
+<p>Unix Domain Sockets use file paths instead of IP:port.</p>
+<details class="question">
+<summary>NAQ: When should I use UDS vs TCP?</summary>
+<p>Use UDS when both sides run on the same machine. No network overhead.
+Use TCP when sides run on different machines, or when you need standard ports.</p>
+</details>
+<h3 id="udsclientaddress">UDSClientAddress</h3>
+<div class="language-zig highlight"><span class="filename">Connect via Unix socket</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="p">.</span><span class="n">uds_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">UDSClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;/tmp/my-app.sock&quot;</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">};</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span>
+</span></code></pre></div>
+<h3 id="udsserveraddress">UDSServerAddress</h3>
+<div class="language-zig highlight"><span class="filename">Listen via Unix socket</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">.</span><span class="n">uds_server_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">UDSServerAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;/tmp/my-app.sock&quot;</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">};</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">UDS paths</p>
+<p>The socket file is created when the server starts listening.
+If the file already exists, <code>listen</code> may fail.
+Clean up old socket files before starting.</p>
+</div>
+<hr />
+<h2 id="wire-format">Wire Format</h2>
+<p>Address headers use pipe-separated format:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>~connect_to: &quot;tcp|127.0.0.1|7099&quot;
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>~connect_to: &quot;uds|/tmp/socket.sock&quot;
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>~listen_on: &quot;tcp|0.0.0.0|7099&quot;
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>~listen_on: &quot;uds|/tmp/socket.sock&quot;
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Use helpers, not strings</p>
+<p>Always use the address helpers (<code>TCPClientAddress</code>, etc.) instead of building
+header strings manually. The helpers handle formatting correctly.</p>
+</div>
+<hr />
+<h2 id="complete-examples">Complete Examples</h2>
+<h3 id="tcp-client-connecting-to-server">TCP Client connecting to server</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(.</span><span class="n">always</span><span class="p">);</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">.</span><span class="n">tcp_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;192.168.1.100&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">8080</span><span class="p">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">};</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kr">const</span><span class="w"> </span><span class="n">bhdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="kr">const</span><span class="w"> </span><span class="n">server_channel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bhdr</span><span class="p">.</span><span class="n">channel_number</span><span class="p">;</span>
+</span></code></pre></div>
+<h3 id="tcp-server-starting-listener">TCP Server starting listener</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(.</span><span class="n">always</span><span class="p">);</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kr">var</span><span class="w"> </span><span class="n">addr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">.</span><span class="n">tcp_server_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">TCPServerAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;0.0.0.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">8080</span><span class="p">)</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">};</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="kr">const</span><span class="w"> </span><span class="n">bhdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">msg</span><span class="p">);</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="kr">const</span><span class="w"> </span><span class="n">listener_channel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bhdr</span><span class="p">.</span><span class="n">channel_number</span><span class="p">;</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1">// Wait for confirmation</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="kr">var</span><span class="w"> </span><span class="n">resp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">waitReceive</span><span class="p">(</span><span class="n">timeout</span><span class="p">);</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">resp</span><span class="p">);</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1">// resp.bhdr.proto.opCode == .WelcomeResponse</span>
+</span></code></pre></div>
+<h3 id="uds-for-same-machine-communication">UDS for same-machine communication</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Server</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kr">var</span><span class="w"> </span><span class="n">srvAddr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="p">.</span><span class="n">uds_server_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">UDSServerAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;/var/run/myapp.sock&quot;</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">};</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1">// Client (same machine)</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="kr">var</span><span class="w"> </span><span class="n">cltAddr</span><span class="o">:</span><span class="w"> </span><span class="n">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="p">.</span><span class="n">uds_client_addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="n">UDSClientAddress</span><span class="p">.</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;/var/run/myapp.sock&quot;</span><span class="p">)</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">};</span>
+</span></code></pre></div>
+<hr />
+<h2 id="testing-helpers">Testing Helpers</h2>
+<p>tofu provides helpers for testing without port conflicts.</p>
+<h3 id="find-free-tcp-port">Find free TCP port</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kr">const</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">FindFreeTcpPort</span><span class="p">();</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">// Returns an available port number</span>
+</span></code></pre></div>
+<h3 id="temporary-uds-path">Temporary UDS path</h3>
+<div class="language-zig highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kr">var</span><span class="w"> </span><span class="n">tup</span><span class="o">:</span><span class="w"> </span><span class="n">tofu</span><span class="p">.</span><span class="n">TempUdsPath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{};</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kr">const</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">tup</span><span class="p">.</span><span class="n">buildPath</span><span class="p">(</span><span class="n">allocator</span><span class="p">);</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">// Returns a unique temporary socket path</span>
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Avoid port conflicts</p>
+<p>Use these helpers in tests. They prevent "address already in use" errors.</p>
+</div>
+<hr />
+<h2 id="quick-reference">Quick Reference</h2>
+<table>
+<thead>
+<tr>
+<th>What you want</th>
+<th>Address type</th>
+<th>Header created</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connect to TCP server</td>
+<td><code>TCPClientAddress</code></td>
+<td><code>~connect_to: tcp\|...\|...</code></td>
+</tr>
+<tr>
+<td>Listen on TCP port</td>
+<td><code>TCPServerAddress</code></td>
+<td><code>~listen_on: tcp\|...\|...</code></td>
+</tr>
+<tr>
+<td>Connect via UDS</td>
+<td><code>UDSClientAddress</code></td>
+<td><code>~connect_to: uds\|...</code></td>
+</tr>
+<tr>
+<td>Listen via UDS</td>
+<td><code>UDSServerAddress</code></td>
+<td><code>~listen_on: uds\|...</code></td>
+</tr>
+</tbody>
+</table>
 
 
 
@@ -1163,7 +2042,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../message/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Overview">
+          <a href="../message/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Message">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1173,20 +2052,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Overview
+                Message
               </div>
             </div>
           </a>
         
         
           
-          <a href="../for-tests/" class="md-footer__link md-footer__link--next" aria-label="Next: Testers">
+          <a href="../protocol-operations/" class="md-footer__link md-footer__link--next" aria-label="Next: Protocol Operations">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Testers
+                Protocol Operations
               </div>
             </div>
             <div class="md-footer__button md-icon">
