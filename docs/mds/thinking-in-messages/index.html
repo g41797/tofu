@@ -543,10 +543,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-mental-shift" class="md-nav__link">
+  <a href="#traditional-vs-tofu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Mental Shift
+        Traditional vs tofu
       
     </span>
   </a>
@@ -653,10 +653,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-mindset-summary" class="md-nav__link">
+  <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Mindset Summary
+        Summary
       
     </span>
   </a>
@@ -1003,7 +1003,7 @@
   <span class="md-ellipsis">
     
   
-    Testers
+    Test Helpers
   
 
     
@@ -1467,10 +1467,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-mental-shift" class="md-nav__link">
+  <a href="#traditional-vs-tofu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Mental Shift
+        Traditional vs tofu
       
     </span>
   </a>
@@ -1577,10 +1577,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-mindset-summary" class="md-nav__link">
+  <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Mindset Summary
+        Summary
       
     </span>
   </a>
@@ -1669,7 +1669,7 @@
 <h1 id="thinking-in-messages">Thinking in Messages</h1>
 <p>Read this first. The rest of the docs assume you understand this.</p>
 <hr />
-<h2 id="the-mental-shift">The Mental Shift</h2>
+<h2 id="traditional-vs-tofu">Traditional vs tofu</h2>
 <p>Traditional socket programming looks like this:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Create socket
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>2. Connect to server
@@ -1677,7 +1677,7 @@
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>4. Receive response
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>5. Close socket
 </span></code></pre></div>
-<p><strong>tofu thinking is different:</strong></p>
+<p><strong>tofu works differently:</strong></p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>1. Send HelloRequest (tofu connects for you)
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2. Send Request (tofu sends for you)
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>3. Receive Response (tofu receives for you)
@@ -1686,18 +1686,17 @@
 <p>You don't manage sockets. You send messages. tofu does the socket work.</p>
 <hr />
 <h2 id="messages-are-actions">Messages Are Actions</h2>
-<p>This is the core insight.</p>
 <details class="tip">
-<summary>NAQ: Why is this so important?</summary>
-<p>Because if you think "I need to connect, THEN send a message", you'll fight tofu.
-If you think "I send a message that means 'connect'", you'll work WITH tofu.
-Same result. Different mindset. The second one is easier.</p>
+<summary>NAQ: Why does this matter?</summary>
+<p>If you think "connect first, THEN send message" - you'll fight tofu.
+If you think "send a message that means 'connect'" - you'll work with tofu.
+Same result. Different approach. The second one is easier.</p>
 </details>
-<p><strong>Traditional thinking (wrong for tofu):</strong>
+<p><strong>Traditional approach (wrong for tofu):</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>socket = connect(address);
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>send(socket, data);
 </span></code></pre></div></p>
-<p><strong>tofu thinking (correct):</strong>
+<p><strong>tofu approach (correct):</strong>
 <div class="language-zig highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// HelloRequest means &quot;connect to this address&quot;</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">// You don&#39;t connect first. The message IS the connection request.</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kr">const</span><span class="w"> </span><span class="n">bhdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">helloRequest</span><span class="p">);</span>
@@ -1864,7 +1863,7 @@ Save it. You need it for all future messages to this peer.</p>
 <p>This is why the pattern is always: <strong>post → waitReceive</strong>.</p>
 <hr />
 <h2 id="example-server-setup">Example: Server Setup</h2>
-<p>Here's how "start listening" works in tofu thinking:</p>
+<p>Here's how "start listening" works with tofu:</p>
 <div class="language-zig highlight"><span class="filename">Server becomes available</span><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Get message</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kr">var</span><span class="w"> </span><span class="n">welcomeReq</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">get</span><span class="p">(.</span><span class="n">always</span><span class="p">);</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">defer</span><span class="w"> </span><span class="n">ampe</span><span class="p">.</span><span class="n">put</span><span class="p">(</span><span class="o">&amp;</span><span class="n">welcomeReq</span><span class="p">);</span>
@@ -1907,12 +1906,12 @@ Save it. You need it for all future messages to this peer.</p>
 </span></code></pre></div>
 <p>You didn't call <code>connect()</code>. You sent a HelloRequest that contains the server address. tofu connected and sent it.</p>
 <hr />
-<h2 id="the-mindset-summary">The Mindset Summary</h2>
+<h2 id="summary">Summary</h2>
 <table>
 <thead>
 <tr>
-<th>Old thinking</th>
-<th>tofu thinking</th>
+<th>Traditional</th>
+<th>tofu</th>
 </tr>
 </thead>
 <tbody>
@@ -1940,13 +1939,13 @@ Save it. You need it for all future messages to this peer.</p>
 </table>
 <hr />
 <h2 id="whats-next">What's Next</h2>
-<p>Now that you understand the mindset, you're ready to learn the details:</p>
+<p>Now you're ready to learn the details:</p>
 <ul>
 <li><strong><a href="../message/">Message</a></strong> — The structure of a tofu message</li>
 <li><strong><a href="../address/">Address</a></strong> — How to specify connection addresses</li>
 <li><strong><a href="../channel-group/">ChannelGroup</a></strong> — Managing multiple channels</li>
 </ul>
-<p>The mental model: <strong>Messages are actions. tofu does the network work.</strong></p>
+<p><strong>Messages are actions. tofu does the network work.</strong></p>
 
 
 
