@@ -1824,11 +1824,11 @@ Use TCP when sides run on different machines, or when you need standard ports.</
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">};</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">try</span><span class="w"> </span><span class="n">addr</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="o">?</span><span class="p">);</span><span class="w">  </span><span class="c1">// Sets opCode=WelcomeRequest, adds ~listen_on header</span>
 </span></code></pre></div>
-<div class="admonition warning">
+<div class="admonition info">
 <p class="admonition-title">UDS paths</p>
 <p>The socket file is created when the server starts listening.
 If the file already exists, <code>listen</code> may fail.
-Clean up old socket files before starting.</p>
+tofu cleans socket file before start of the listen.</p>
 </div>
 <hr />
 <h2 id="wire-format">Wire Format</h2>

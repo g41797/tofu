@@ -84,10 +84,10 @@ var addr: Address = .{
 try addr.format(msg.?);  // Sets opCode=WelcomeRequest, adds ~listen_on header
 ```
 
-!!! warning "UDS paths"
+!!! info "UDS paths"
     The socket file is created when the server starts listening.
     If the file already exists, `listen` may fail.
-    Clean up old socket files before starting.
+    tofu cleans socket file before start of the listen.
 
 ---
 
