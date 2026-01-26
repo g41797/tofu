@@ -97,7 +97,8 @@ tofu handles all memory:
 - Buffer is pre-allocated when message is created
 - `append()` grows buffer automatically if needed
 - `reset()` clears without freeing (efficient for reuse)
-- Buffer is freed when message returns to pool
+
+[//]: # (- Buffer is freed when message returns to pool) - consider add this functionality to pool
 
 You never need to call `init()` or `deinit()`.
 

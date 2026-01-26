@@ -1723,8 +1723,8 @@ For larger data, use streaming with the <code>more</code> flag.</p>
 <li>Buffer is pre-allocated when message is created</li>
 <li><code>append()</code> grows buffer automatically if needed</li>
 <li><code>reset()</code> clears without freeing (efficient for reuse)</li>
-<li>Buffer is freed when message returns to pool</li>
 </ul>
+<p>[//]: # (- Buffer is freed when message returns to pool) - consider add this functionality to pool</p>
 <p>You never need to call <code>init()</code> or <code>deinit()</code>.</p>
 <hr />
 <h2 id="common-patterns">Common Patterns</h2>
