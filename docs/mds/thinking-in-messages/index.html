@@ -554,10 +554,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#messages-are-actions" class="md-nav__link">
+  <a href="#messages-are-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Messages Are Actions
+        Messages Are Operations
       
     </span>
   </a>
@@ -576,10 +576,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-four-message-actions" class="md-nav__link">
+  <a href="#the-four-message-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Four Message Actions
+        The Four Message Operations
       
     </span>
   </a>
@@ -1384,34 +1384,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../allocator/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Allocator
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../coding-style/" class="md-nav__link">
         
   
@@ -1506,10 +1478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#messages-are-actions" class="md-nav__link">
+  <a href="#messages-are-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Messages Are Actions
+        Messages Are Operations
       
     </span>
   </a>
@@ -1528,10 +1500,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-four-message-actions" class="md-nav__link">
+  <a href="#the-four-message-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Four Message Actions
+        The Four Message Operations
       
     </span>
   </a>
@@ -1713,7 +1685,7 @@
 </span></code></pre></div>
 <p>You don't manage sockets. You send messages. tofu does the socket work.</p>
 <hr />
-<h2 id="messages-are-actions">Messages Are Actions</h2>
+<h2 id="messages-are-operations">Messages Are Operations</h2>
 <details class="tip">
 <summary>NAQ: Why does this matter?</summary>
 <p>If you think "connect first, THEN send message" - you'll fight tofu.
@@ -1729,7 +1701,7 @@ Same result. Different approach. The second one is easier.</p>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">// You don&#39;t connect first. The message IS the connection request.</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kr">const</span><span class="w"> </span><span class="n">bhdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">chnls</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="o">&amp;</span><span class="n">helloRequest</span><span class="p">);</span>
 </span></code></pre></div></p>
-<p>The HelloRequest doesn't just carry data. It IS the action. tofu sees it and thinks: "User wants to connect. Let me handle that."</p>
+<p>The HelloRequest doesn't just carry data. It IS the operation. tofu sees it and thinks: "User wants to connect. Let me handle that."</p>
 <hr />
 <h2 id="intent-vs-implementation">Intent vs Implementation</h2>
 <p>tofu separates what you want from how it happens.</p>
@@ -1751,7 +1723,7 @@ Same result. Different approach. The second one is easier.</p>
 </tr>
 <tr>
 <td>"I want to send this data"</td>
-<td>Serialization, write operations, retries</td>
+<td>Serialization, write operations</td>
 </tr>
 <tr>
 <td>"I want to close this connection"</td>
@@ -1761,7 +1733,7 @@ Same result. Different approach. The second one is easier.</p>
 </table>
 <p>You express <strong>intent</strong> through messages. tofu handles <strong>implementation</strong>.</p>
 <hr />
-<h2 id="the-four-message-actions">The Four Message Actions</h2>
+<h2 id="the-four-message-operations">The Four Message Operations</h2>
 <p>Every tofu operation maps to a message:</p>
 <table>
 <thead>
@@ -1793,7 +1765,7 @@ Same result. Different approach. The second one is easier.</p>
 <p class="admonition-title">There's no <code>connect()</code> function</p>
 <p>tofu doesn't have a connect function. You send a HelloRequest that contains
 the server address. tofu sees it, connects, and sends the message.
-One action, not two.</p>
+One operation, not two.</p>
 </div>
 <hr />
 <h2 id="the-basic-pattern">The Basic Pattern</h2>
@@ -1973,7 +1945,7 @@ Save it. You need it for all future messages to this peer.</p>
 <li><strong><a href="../address/">Address</a></strong> — How to specify connection addresses</li>
 <li><strong><a href="../channel-group/">ChannelGroup</a></strong> — Managing multiple channels</li>
 </ul>
-<p><strong>Messages are actions. tofu does the network work.</strong></p>
+<p><strong>Messages are operations. tofu does the network work.</strong></p>
 
 
 

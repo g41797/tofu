@@ -438,10 +438,6 @@ const tcp_ch = try startListener(ampe, chnls, &tcp_addr);
 const uds_ch = try startListener(ampe, chnls, &uds_addr);
 ```
 
-??? tip "NAQ: Why pointer to Address?"
-    Address is a tagged union. Passing `*Address` lets the function work with any variant.
-    The `format()` method checks which variant it is and sets the correct header.
-
 ---
 
 ## Summary

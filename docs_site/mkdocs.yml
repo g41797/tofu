@@ -81,7 +81,7 @@ nav:
       - Appendable: mds/appendable.md
       - NAQ: mds/naq.md
       - Sockets 101: mds/sockets101.md
-      - Allocator: mds/allocator.md
+#      - Allocator: mds/allocator.md
       - Coding style: mds/coding-style.md
       - Callback enabled: mds/callback-enabled.md
 

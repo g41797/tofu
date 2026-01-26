@@ -1362,34 +1362,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../allocator/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Allocator
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../coding-style/" class="md-nav__link">
         
   
@@ -2033,11 +2005,6 @@ Either can initiate requests. Your protocol decides who does what.</p>
 </span><span id="__span-13-25"><a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a><span class="kr">const</span><span class="w"> </span><span class="n">tcp_ch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">startListener</span><span class="p">(</span><span class="n">ampe</span><span class="p">,</span><span class="w"> </span><span class="n">chnls</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">tcp_addr</span><span class="p">);</span>
 </span><span id="__span-13-26"><a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a><span class="kr">const</span><span class="w"> </span><span class="n">uds_ch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">startListener</span><span class="p">(</span><span class="n">ampe</span><span class="p">,</span><span class="w"> </span><span class="n">chnls</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">uds_addr</span><span class="p">);</span>
 </span></code></pre></div>
-<details class="tip">
-<summary>NAQ: Why pointer to Address?</summary>
-<p>Address is a tagged union. Passing <code>*Address</code> lets the function work with any variant.
-The <code>format()</code> method checks which variant it is and sets the correct header.</p>
-</details>
 <hr />
 <h2 id="summary">Summary</h2>
 <table>

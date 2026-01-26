@@ -30,11 +30,6 @@ pub fn createDestroyAmpe(gpa: Allocator) !void {
 }
 ```
 
-where
-
-- gpa is [GPA Compatible Allocator](./allocator.md/#gpa-compatible-anchor)
-- [DefaultOptions](#default-configuration-anchor) 
-
 !!! note 
     You can create _multiple engines_ per process.
 
@@ -150,5 +145,29 @@ Pool configuration is used during creation of engine:
 ```
 
 Just clarification - you don't deal with pool destroy, it will be destroyed during destroy of engine. 
+
+## Allocator
+
+Tofu's relationship with Allocators is similar to Henry Ford's famous quote about car color:
+
+> "Customers can have any color they want, so long as it is black."
+
+Similarly, allocators for Tofu can be anything, provided they are '**GPA** compatible'.
+
+Allocator names in Zig change often. This reminds me of an old Unix joke:
+> "Unix is an operating system where nobody knows what the print command is called today"
+
+I'll use **GPA** (General Purpose Allocator) because I expect that the name GPA will persist in common use.
+
+<a id="gpa-compatible-anchor"></a>
+'**GPA** compatible' means:
+
+- It is **thread-safe**.
+- Its **life cycle** is the same as the life cycle of the process.
+- The memory it **releases** truly allows for further reuse of that released memory.
+
+For example, `std.heap.c_allocator` satisfies these requirements, but `std.heap.ArenaAllocator` does not.
+
+t's no surprise that ampe.getAllocator() returns GPA compatible allocator used during ampe's creation. 
 
 ---

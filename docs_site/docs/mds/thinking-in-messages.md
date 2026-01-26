@@ -30,7 +30,7 @@ You don't manage sockets. You send messages. tofu does the socket work.
 
 ---
 
-## Messages Are Actions
+## Messages Are Operations
 
 ??? tip "NAQ: Why does this matter?"
     If you think "connect first, THEN send message" - you'll fight tofu.
@@ -50,7 +50,7 @@ send(socket, data);
 const bhdr = try chnls.post(&helloRequest);
 ```
 
-The HelloRequest doesn't just carry data. It IS the action. tofu sees it and thinks: "User wants to connect. Let me handle that."
+The HelloRequest doesn't just carry data. It IS the operation. tofu sees it and thinks: "User wants to connect. Let me handle that."
 
 ---
 
@@ -62,14 +62,14 @@ tofu separates what you want from how it happens.
 |------------|--------------|
 | "I want to listen for connections" | Socket creation, binding, accepting |
 | "I want to connect to server X" | Socket creation, DNS lookup, TCP handshake |
-| "I want to send this data" | Serialization, write operations, retries |
+| "I want to send this data" | Serialization, write operations |
 | "I want to close this connection" | Graceful shutdown, socket cleanup |
 
 You express **intent** through messages. tofu handles **implementation**.
 
 ---
 
-## The Four Message Actions
+## The Four Message Operations
 
 Every tofu operation maps to a message:
 
@@ -83,7 +83,7 @@ Every tofu operation maps to a message:
 !!! note "There's no `connect()` function"
     tofu doesn't have a connect function. You send a HelloRequest that contains
     the server address. tofu sees it, connects, and sends the message.
-    One action, not two.
+    One operation, not two.
 
 ---
 
@@ -278,5 +278,5 @@ Now you're ready to learn the details:
 - **[Address](address.md)** — How to specify connection addresses
 - **[ChannelGroup](channel-group.md)** — Managing multiple channels
 
-**Messages are actions. tofu does the network work.**
+**Messages are operations. tofu does the network work.**
 

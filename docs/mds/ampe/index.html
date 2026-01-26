@@ -754,6 +754,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#allocator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocator
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1298,34 +1309,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../allocator/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Allocator
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../coding-style/" class="md-nav__link">
         
   
@@ -1456,6 +1439,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#allocator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocator
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1551,11 +1545,6 @@
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="c1">// It will be destroyed via  rtr.*.Destroy().</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>where</p>
-<ul>
-<li>gpa is <a href="../allocator/#gpa-compatible-anchor">GPA Compatible Allocator</a></li>
-<li><a href="#default-configuration-anchor">DefaultOptions</a> </li>
-</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>You can create <em>multiple engines</em> per process.</p>
@@ -1644,6 +1633,26 @@ In our case - Messages.</p>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">rtr</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">Reactor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Reactor</span><span class="p">.</span><span class="n">Create</span><span class="p">(</span><span class="n">gpa</span><span class="p">,</span><span class="w"> </span><span class="n">DefaultOptions</span><span class="p">);</span>
 </span></code></pre></div></p>
 <p>Just clarification - you don't deal with pool destroy, it will be destroyed during destroy of engine. </p>
+<h2 id="allocator">Allocator</h2>
+<p>Tofu's relationship with Allocators is similar to Henry Ford's famous quote about car color:</p>
+<blockquote>
+<p>"Customers can have any color they want, so long as it is black."</p>
+</blockquote>
+<p>Similarly, allocators for Tofu can be anything, provided they are '<strong>GPA</strong> compatible'.</p>
+<p>Allocator names in Zig change often. This reminds me of an old Unix joke:</p>
+<blockquote>
+<p>"Unix is an operating system where nobody knows what the print command is called today"</p>
+</blockquote>
+<p>I'll use <strong>GPA</strong> (General Purpose Allocator) because I expect that the name GPA will persist in common use.</p>
+<p><a id="gpa-compatible-anchor"></a>
+'<strong>GPA</strong> compatible' means:</p>
+<ul>
+<li>It is <strong>thread-safe</strong>.</li>
+<li>Its <strong>life cycle</strong> is the same as the life cycle of the process.</li>
+<li>The memory it <strong>releases</strong> truly allows for further reuse of that released memory.</li>
+</ul>
+<p>For example, <code>std.heap.c_allocator</code> satisfies these requirements, but <code>std.heap.ArenaAllocator</code> does not.</p>
+<p>t's no surprise that ampe.getAllocator() returns GPA compatible allocator used during ampe's creation. </p>
 <hr />
 
 

@@ -26,9 +26,9 @@ const Address = tofu.address.Address;
 const address = tofu.address;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var alc: std.heap.DebugAllocator(.{}) = .init;
+    defer _ = alc.deinit();
+    const allocator = alc.allocator();
 
     var rtr: *Reactor = try Reactor.create(allocator, tofu.DefaultOptions);
     defer rtr.destroy();
