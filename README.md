@@ -141,7 +141,12 @@ I hope you got the point without long smart descriptions or advertising.
 - **Simplest API** - you don't have to bother with or know the "guts" of socket interfaces
 
 
-Documentation and examples are available on the [Tofu documentation site](https://g41797.github.io/tofu/) (**_work in progress_**).
+Documentation and examples are available on the [Tofu documentation site](https://g41797.github.io/tofu/).
+
+For the impatient:
+
+- [your first server](https://g41797.github.io/tofu/mds/your-first-server/)
+- [your first client](https://g41797.github.io/tofu/mds/your-first-client/)
 
 ---
 
