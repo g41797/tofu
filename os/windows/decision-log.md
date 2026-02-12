@@ -10,37 +10,35 @@ This document tracks the settled architectural and technical decisions for the t
 - **Goal:** Port the `tofu` Reactor from Linux (POSIX poll) to Windows (IOCP + AFD_POLL).
 - **Zig Version:** 0.15.2.
 - **Target Scale:** < 1,000 connections.
-- **Message Size Limit:** 128 KiB per message.
-- **Transports:** TCP and Unix Domain Sockets (AF_UNIX).
+- **Transports:** TCP first; AF_UNIX later.
 - **Internal Model:** Single-threaded I/O thread (Reactor) with queue-based application interface (no public callbacks).
 
 ---
 
-## 2. Technical Decisions
+## 2. Technical Decisions (v6.1)
 
-- **Event Notification:** Use **IOCP** as the core mechanism.
+- **Event Notification:** Use **IOCP** as the core mechanism (`NtCreateIoCompletion`).
 - **Readiness Detection:** Use **AFD_POLL** issued directly on socket handles (no `\Device\Afd`).
-- **Timers:** Use the `timeout` parameter of the IOCP wait function (`NtRemoveIoCompletionEx`).
-- **Cross-thread Signaling:** Map `updateReceiver()` and engine notifications to manual IOCP completion packets (`NtSetIoCompletion`).
-- **Memory Management:** Utilize the existing `tofu` Message Pool to manage and limit memory usage.
-- **LSP Compatibility:** Attempt to use `SIO_BASE_HANDLE` to bypass Layered Service Providers; fail clearly if the base handle cannot be obtained for AFD operations.
-- **POC Infrastructure:** Use a dedicated `win_poc` module (defined in `os/windows/poc/poc.zig`) to manage Proof-of-Concept implementations. This avoids Zig module boundary violations when importing POCs into the main test suite.
+- **AFD_POLL Re-arming (Critical):** **Immediately re-issue** a new AFD_POLL upon completion, **before** processing any I/O. This ensures the readiness state is always tracked by the kernel.
+- **Cross-thread Signaling:** Map `updateReceiver()` and internal Notifier to manual IOCP completion packets (`NtSetIoCompletion`).
+- **LSP Compatibility:** Use `SIO_BASE_HANDLE` to obtain the real NT handle for AFD operations. **Fail loudly** if the base handle cannot be obtained.
+- **No Callbacks:** The Windows backend will populate `TriggeredChannel.act` flags directly, allowing the existing loop logic to remain platform-agnostic.
+- **POC Infrastructure:** Use a dedicated `win_poc` module (defined in `os/windows/poc/poc.zig`) for feasibility gates.
 
 ---
 
 ## 3. Implementation Philosophy
 
-- **NT-First:** Prefer Native NT APIs (`ntdll.dll`) over Win32 where feasible, following the Zig standard library's direction.
-- **Reactor Pattern Preservation:** Maintain the Reactor (readiness-based) model despite IOCP's native Proactor design to ensure minimal impact on the existing `tofu` messaging logic.
-- **Staged Validation:** Mandatory Proof-of-Concept (POC) phases for core primitives before integration into the production codebase.
+- **NT-First:** Prefer Native NT APIs (`ntdll.dll`) over Win32, following the Zig standard library and Spec v6.1.
+- **Reactor Pattern Preservation:** Do NOT switch to a native IOCP Proactor model.
+- **Consolidated Spec:** Spec v6.1 is the authoritative reference, superseding all previous analysis documents (001-003).
 
 ---
 
 ## 4. Pending Decisions (To be resolved during POC)
 
-- **Memory ownership for AFD_POLL_INFO:** Decision deferred until Stage 2 POC.
-- **Completion key design:** Decision deferred until Stage 2 POC.
-- **AF_UNIX Priority:** TCP implementation first; UDS implementation to follow once core IOCP logic is stable.
+- **Memory ownership for AFD_POLL_INFO:** To be finalized during Stage 2 POC (Full Echo).
+- **Completion key design:** To be finalized during Stage 2 POC.
 
 ---
 *End of Decision Log*
