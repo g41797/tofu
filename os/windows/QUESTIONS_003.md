@@ -8,7 +8,8 @@
 ## 1. Progress Update
 
 - **Stage 0 POC:** The IOCP wakeup mechanism has been implemented in `os/windows/poc/stage0_wake.zig`. It successfully uses `NtCreateIoCompletion`, `NtRemoveIoCompletionEx`, and `NtSetIoCompletion`.
-- **Infrastructure:** The `build.zig` has been updated to link `ntdll`, and a new test entry point `tests/os_windows_tests.zig` has been created.
+- **Infrastructure:** Resolved build errors by establishing the `win_poc` module in `os/windows/poc/poc.zig`. Linked `ntdll` in `build.zig`.
+- **Integration:** Integrated Windows-specific tests into `tests/tofu_tests.zig` via `tests/os_windows_tests.zig`.
 
 ---
 
@@ -29,5 +30,5 @@ Since the current environment is Linux, I cannot verify the Windows POC tests.
 ---
 
 ## 3. Notes for Developer
-- The `ACTIVE_KB.md` has been updated to Version 004.
+- The `ACTIVE_KB.md` has been updated to Version 005.
 - The next goal is Stage 1: Detecting an incoming connection via `AFD_POLL_ACCEPT`.

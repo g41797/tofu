@@ -24,6 +24,7 @@ This document tracks the settled architectural and technical decisions for the t
 - **Cross-thread Signaling:** Map `updateReceiver()` and engine notifications to manual IOCP completion packets (`NtSetIoCompletion`).
 - **Memory Management:** Utilize the existing `tofu` Message Pool to manage and limit memory usage.
 - **LSP Compatibility:** Attempt to use `SIO_BASE_HANDLE` to bypass Layered Service Providers; fail clearly if the base handle cannot be obtained for AFD operations.
+- **POC Infrastructure:** Use a dedicated `win_poc` module (defined in `os/windows/poc/poc.zig`) to manage Proof-of-Concept implementations. This avoids Zig module boundary violations when importing POCs into the main test suite.
 
 ---
 
