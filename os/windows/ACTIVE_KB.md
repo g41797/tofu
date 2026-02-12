@@ -16,13 +16,14 @@
 AI RESUME INSTRUCTIONS:
 1. Read this file to understand the current state.
 2. Read the Master Roadmap: ./master-roadmap.md
-3. Check the Decision Log for constraints: ./decision-log.md
-4. Proceed to the "Next Steps for AI" section at the bottom.
+3. Read the latest QUESTIONS_XXX.md for developer dialogue.
+4. Check the Decision Log for constraints: ./decision-log.md
+5. Proceed to the "Next Steps for AI" section at the bottom.
 -->
 
-**Current Version:** 002 (Successor to reactor-kb-001)
+**Current Version:** 005
 **Last Updated:** 2026-02-12
-**Current Focus:** Phase I (Feasibility POC) - Stage 0 (Wakeup)
+**Current Focus:** Phase I (Feasibility POC) - Stage 1 (Accept)
 
 ---
 
@@ -37,35 +38,36 @@ AI RESUME INSTRUCTIONS:
 ---
 
 ## 2. Technical State of Play
-- **Discovery Complete:** We have identified that `tofu` uses `std.posix.poll` on Linux and a socket-based `Notifier`.
-- **Strategy Change:** We will replace the loopback socket `Notifier` with a native `NtSetIoCompletion` wakeup on Windows.
-- **Feasibility Gate:** We are currently in the **POC Phase** to validate undocumented NT APIs before touching production `src/` code.
+- **Stage 0 POC Complete:** Implemented `os/windows/poc/stage0_wake.zig`.
+- **Module Infrastructure:** Created `os/windows/poc/poc.zig` as a module root and added it to `build.zig` as the `win_poc` module to resolve "import outside module path" errors.
+- **Test Infrastructure:** `tests/os_windows_tests.zig` now imports POCs via the `win_poc` module.
+- **Build System:** `build.zig` now correctly links `ws2_32` and `ntdll` to both the library and test modules on Windows.
 
 ---
 
 ## 3. Session Context & Hand-off
 
 ### Completed in Last Session:
-- Established the `/os/windows/` portfolio directory structure.
-- Consolidated all discovery Q&A into `decision-log.md`.
-- Refactored the Roadmap to align with the new directory structure.
-- Archived the original `reactor-kb-001.md` to `reference/`.
+- Resolved Linux build error by moving Windows POCs into a formal Zig module (`win_poc`).
+- Updated `build.zig` and `tests/os_windows_tests.zig` to use module-based imports.
+- Ensured proper library linkage for test artifacts on Windows.
+- Fixed "invalid byte" error in `stage0_wake.zig` caused by raw newlines in string literals.
 
 ### Current Blockers:
-- None. Ready to begin Stage 0 POC.
+- None. Ready to begin Stage 1 POC (Accept Test).
 
 ### Files of Interest:
-- `spec-base.md`: The original IOCP-as-Reactor specification.
-- `analysis/003-feasibility.md`: The detailed stages for the POC.
+- `os/windows/poc/stage0_wake.zig`: The reference for IOCP wakeup.
+- `analysis/003-feasibility.md`: For Stage 1 requirements.
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Initiate Stage 0 POC (Wakeup Test):**
-    - Create `/home/g41797/dev/root/github.com/g41797/tofu/os/windows/poc/stage0_wake.zig`.
-    - Implement a minimal loop using `NtCreateIoCompletion` and `NtRemoveIoCompletionEx`.
-    - Prove that `NtSetIoCompletion` from a separate thread can unblock the loop.
-2. **Success Criteria:** The loop must exit gracefully upon receiving a manual completion packet with a specific "Shutdown" key.
-
----
+1. **Initiate Stage 1 POC (Accept Test):**
+    - Create `os/windows/poc/stage1_accept.zig`.
+    - Use `AFD_POLL` to detect an incoming TCP connection.
+    - Obtain the base socket handle using `SIO_BASE_HANDLE`.
+    - Register for `AFD_POLL_ACCEPT` and verify completion.
+2. **Success Criteria:** The IOCP returns a completion for the listener socket when a client connects.
+3. **Dialogue:** Update `QUESTIONS_003.md` with any new technical questions regarding `SIO_BASE_HANDLE` or AFD structures.
 *End of Active KB*

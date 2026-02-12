@@ -57,14 +57,14 @@ Once the POC works, implement the code in `src/ampe/os/windows/` using the verif
 
 ## 4. Test Placement & Implementation
 
-### 1. POC Location: `tools/poc/windows/`
-- Completely separate from `src/`.
-- No dependencies on `tofu` internal structures (if possible).
-- Uses `std.debug.print` and `std.debug.assert`.
+### 1. POC Location: `os/windows/poc/`
+- Implement core logic in separate Zig files for each stage.
+- These implementations are "Proof of Concept" and will be refined during production integration.
 
-### 2. Implementation Tests: `src/ampe/os/windows/test.zig`
-- As you write the production `poller.zig` for Windows, add unit tests in the same file or a sibling file.
-- These tests verify the *wrapper* logic (e.g., "does my interest mask map correctly to AFD flags?").
+### 2. Implementation Tests: `tests/os_windows_tests.zig`
+- Create a dedicated test runner file in the `tests/` directory.
+- This file should conditionally import and run the POC tests when `builtin.os.tag == .windows`.
+- This ensures the `zig build test` command can run these tests in the Windows CI environment.
 
 ### 3. Integration Tests: `tests/ampe/`
 - Once the Windows backend is plugged in, run the **existing** Linux test suite.

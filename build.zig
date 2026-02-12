@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         libMod.link_libc = true;
         libMod.linkSystemLibrary("ws2_32", .{});
+        libMod.linkSystemLibrary("ntdll", .{});
     }
 
     const lib = b.addLibrary(.{
@@ -94,6 +95,22 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("mailbox", mailbox.module("mailbox"));
     testMod.addImport("temp", temp.module("temp"));
     testMod.addImport("datetime", datetime.module("datetime"));
+
+    // Create Windows POC module
+    const winPocMod = b.createModule(.{
+        .root_source_file = b.path("os/windows/poc/poc.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = false,
+    });
+    testMod.addImport("win_poc", winPocMod);
+
+    // Need libc for windows sockets
+    if (target.result.os.tag == .windows) {
+        testMod.link_libc = true;
+        testMod.linkSystemLibrary("ws2_32", .{});
+        testMod.linkSystemLibrary("ntdll", .{});
+    }
 
     // Creates unit testing artifact
     const lib_unit_tests = b.addTest(.{

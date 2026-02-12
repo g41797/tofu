@@ -120,9 +120,53 @@ fn createNotificationChannel(rtr: *Reactor) !void {
 - On Windows, the "Notification Channel" should be the IOCP completion itself.
 - Refactor `TriggeredChannel` to support a `.virtual` or `.iocp` trigger type that doesn't require a physical file descriptor.
 
+### 2.6 Socket Abstraction (Skt.zig)
+**File:** `src/ampe/Skt.zig`
+**Problem:** Hard-coded `std.posix` calls for `bind`, `listen`, `accept`, `connect`, and `setsockopt`. It also includes Linux-specific logic for `accept4` flags.
+**Advice:** 
+- Move `acceptPosix` and `connectPosix` to platform-specific backends.
+- Abstract socket option setting (Linger, Nagle, Reuse) into a platform-agnostic interface.
+- Replace `std.posix.socket_t` with an OS-agnostic `Socket` type.
+
+### 2.7 Socket Creation (SocketCreator.zig)
+**File:** `src/ampe/SocketCreator.zig`
+**Problem:** `createUdsListener` and `createUdsSocket` assume POSIX path handling. Windows `AF_UNIX` requires actual file paths and has different lifecycle rules (e.g., file must be deleted before bind).
+**Advice:** 
+- Implement platform-specific `UDSHelper` to handle path normalization and cleanup.
+- On Windows, ensure UDS paths are absolute and the file is unlinked before `bind`.
+
+### 2.8 Test Utilities (testHelpers.zig)
+**File:** `src/ampe/testHelpers.zig`
+**Problem:** `TempUdsPath` uses `temp.port` pattern and assumes POSIX file deletion. `FindFreeTcpPort` uses `std.posix.SO.REUSEPORT`, which is not available/behave differently on Windows.
+**Advice:** 
+- Refactor `FindFreeTcpPort` to use a more portable method or handle `SO_REUSEPORT` unavailability on Windows.
+- Update `TempUdsPath` to use a portable temp directory and handle Windows path separators.
+
 ---
 
-## 3. Recommended Refactoring Steps
+## 3. OS-Independent References & Paths
+
+To ensure compatibility between Linux, Windows, and Wine environments:
+
+1.  **Relative Paths Only:** All documentation (`.md`) and configuration files MUST use relative paths (e.g., `./analysis/001.md` instead of `/home/...`).
+2.  **Path Separators:** In Zig code, use `std.fs.path.sep` or `std.fs.path.join` instead of hard-coded `/` or `\\`.
+3.  **Environment Mapping:** Acknowledge that `/home/g41797/` on Linux may map to `Z:\home\g41797\` in Wine. Always refer to the **Project Root** as the anchor.
+4.  **Case Sensitivity:** Treat all filenames as case-sensitive to maintain Linux compatibility, even when developing on Windows.
+
+---
+
+## 4. Build System & CI Changes
+
+1.  **build.zig Updates:**
+    - Conditionally link `ws2_32` and `ntdll` for Windows targets.
+    - Ensure `use_llvm = true` and `use_lld = true` are used for cross-compilation stability.
+2.  **GitHub Actions:**
+    - The existing `windows.yml` uses `runs-on: windows-latest`. Ensure it correctly installs the specific Zig 0.15.2 version.
+    - Add a step to run the Windows-specific POC tests once implemented.
+
+---
+
+## 5. Recommended Refactoring Steps
 
 1.  **Stage A (Infrastructure):** Define OS-agnostic types in `src/ampe/internal.zig`.
 2.  **Stage B (Poller Extraction):** Move current `poll` logic to `os/linux/poller.zig` and verify Linux tests still pass.

@@ -1,0 +1,4 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
+// SPDX-License-Identifier: MIT
+
+pub const stage0 = @import("stage0_wake.zig");

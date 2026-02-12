@@ -13,6 +13,10 @@ test {
     _ = @import("message_tests.zig");
     _ = @import("reactor_tests.zig");
 
+    if (@import("builtin").os.tag == .windows) {
+        _ = @import("os_windows_tests.zig");
+    }
+
     @import("std").testing.refAllDecls(@This());
 }
 
