@@ -14,6 +14,11 @@
 
 **Goal:** Add native Windows 10+ support **without changing the public API or core philosophy**.
 
+**Development Environment:** 
+- Cross-platform development on **Linux** and **Windows 10**.
+- The codebase must always build and pass tests on Linux while Windows work is in progress.
+- Windows-specific artifacts (POCs, linkage, tests) must be **conditionally included** in `build.zig` to avoid breaking non-Windows environments.
+
 **Chosen approach:** Use **IOCP + AFD_POLL** to emulate Reactor semantics (readiness notifications) on top of Windows’ native Proactor model.
 
 **Non-negotiable constraints:**

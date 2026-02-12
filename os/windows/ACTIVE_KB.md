@@ -30,6 +30,7 @@ AI RESUME INSTRUCTIONS:
 
 ## 1. Project Context Summary
 - **Target:** Porting `tofu` (Zig messaging library) to Windows 10+ using IOCP + AFD_POLL while preserving the single-threaded Reactor pattern.
+- **Environment:** Development is performed across two OSes: **Linux** (primary development and existing Reactor) and **Windows 10** (target platform and port implementation).
 - **Mantra:** Maintain Reactor semantics (readiness-based, queue-driven, no public callbacks).
 - **Source of Truth:** 
     - [Spec v6.1](./spec-v6.1.md) — Consolidated authoritative specification

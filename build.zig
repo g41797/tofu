@@ -96,17 +96,16 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("temp", temp.module("temp"));
     testMod.addImport("datetime", datetime.module("datetime"));
 
-    // Create Windows POC module
-    const winPocMod = b.createModule(.{
-        .root_source_file = b.path("os/windows/poc/poc.zig"),
-        .target = target,
-        .optimize = optimize,
-        .single_threaded = false,
-    });
-    testMod.addImport("win_poc", winPocMod);
-
-    // Need libc for windows sockets
+    // Create Windows POC module (Windows only)
     if (target.result.os.tag == .windows) {
+        const winPocMod = b.createModule(.{
+            .root_source_file = b.path("os/windows/poc/poc.zig"),
+            .target = target,
+            .optimize = optimize,
+            .single_threaded = false,
+        });
+        testMod.addImport("win_poc", winPocMod);
+
         testMod.link_libc = true;
         testMod.linkSystemLibrary("ws2_32", .{});
         testMod.linkSystemLibrary("ntdll", .{});

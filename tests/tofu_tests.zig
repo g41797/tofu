@@ -6,15 +6,15 @@ test {
 
     std.log.debug("\r\n   ****  tofu TESTS  ****\r\n", .{});
 
-    _ = @import("ampe/Pool_tests.zig");
-    _ = @import("ampe/Notifier_tests.zig");
-    _ = @import("ampe/channels_tests.zig");
-    _ = @import("address_tests.zig");
-    _ = @import("message_tests.zig");
-    _ = @import("reactor_tests.zig");
-
     if (@import("builtin").os.tag == .windows) {
         _ = @import("os_windows_tests.zig");
+    } else {
+        _ = @import("ampe/Pool_tests.zig");
+        _ = @import("ampe/Notifier_tests.zig");
+        _ = @import("ampe/channels_tests.zig");
+        _ = @import("address_tests.zig");
+        _ = @import("message_tests.zig");
+        _ = @import("reactor_tests.zig");
     }
 
     @import("std").testing.refAllDecls(@This());
