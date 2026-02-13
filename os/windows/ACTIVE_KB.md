@@ -63,6 +63,11 @@ AI RESUME INSTRUCTIONS:
     - Corrected syntax for `std.net.Address` unwrapping in `SocketCreator.zig`.
     - Defined `extern` bindings for `CreateEventA` and `WaitForSingleObject` in `ntdllx.zig` and linked `kernel32.lib` in `build.zig`.
     - Added `WSAStartup` and `WSACleanup` calls to the client thread to properly initialize Winsock for that thread, resolving the "Client socket creation failed" error observed in GitHub Actions.
+    - Refactored server socket creation in `Stage1Accept.init()` to use `SocketCreator.fromAddress()`.
+    - Refactored client socket creation in the client thread to use `SocketCreator.fromAddress()`.
+    - Manually fixed client thread's `run` function return type (`!void`) and associated error handling.
+    - Implemented Windows-specific `Skt.setLingerAbort()`.
+    - Corrected `optlen` type in `Skt.setLingerAbort()` for Windows.
     - Addressed various compilation errors related to constants and types.
 - **Stage 1 POC (Accept Test) now passes with event-based completion.** This confirms the successful setup and detection of an incoming connection via `AFD_POLL_ACCEPT`.
 

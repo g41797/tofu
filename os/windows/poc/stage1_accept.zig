@@ -8,6 +8,7 @@ const ws2_32 = windows.ws2_32;
 const ntdllx = @import("ntdllx.zig");
 const Skt = @import("tofu").Skt; // Import Skt from tofu module
 const SocketCreator = @import("tofu").SocketCreator; // Import SocketCreator from tofu module
+const address = @import("tofu").address; // Import address module
 
 pub const Stage1Accept = struct {
     iocp: windows.HANDLE,
@@ -52,9 +53,12 @@ pub const Stage1Accept = struct {
             return error.EventCreateFailed; // Need to define this error
         }
 
-        // 2. Create Listener Socket using SocketCreator
-        var addr = try std.net.Address.resolveIp("127.0.0.1", self.listen_port);
-        self.listen_socket = try SocketCreator.createListenerSocket(&addr);
+        // 2. Create Listener Socket using SocketCreator.fromAddress
+        const server_addr_cfg = address.TCPServerAddress.init("127.0.0.1", self.listen_port);
+        const server_adrs: address.Address = .{ .tcp_server_addr = server_addr_cfg };
+
+        var sc = SocketCreator.init(std.heap.page_allocator);
+        self.listen_socket = sc.fromAddress(server_adrs) catch unreachable;
 
         return self;
     }
@@ -106,12 +110,18 @@ pub const Stage1Accept = struct {
                 }
                 defer _ = ws2_32.WSACleanup(); // Clean up Winsock for this thread on exit
 
-                const client_socket: ws2_32.SOCKET = ws2_32.socket(ws2_32.AF.INET, ws2_32.SOCK.STREAM, ws2_32.IPPROTO.TCP);
-                if (client_socket == ws2_32.INVALID_SOCKET) {
-                    std.debug.print("Client socket creation failed: {any}\n", .{ws2_32.WSAGetLastError()});
-                    return;
-                }
-                defer _ = ws2_32.closesocket(client_socket);
+                // Create client socket using SocketCreator.fromAddress
+                const client_addr_cfg = address.TCPClientAddress.init("127.0.0.1", port);
+                const client_adrs: address.Address = .{ .tcp_client_addr = client_addr_cfg };
+
+                var sc = SocketCreator.init(std.heap.page_allocator);
+                var client_skt: Skt = sc.fromAddress(client_adrs) catch unreachable;
+                defer client_skt.deinit();
+
+                const client_socket: ws2_32.SOCKET = client_skt.socket.?; // Extract raw socket
+
+                // ... rest of the client connection logic ...
+
 
                 const server_addr_in: ws2_32.sockaddr.in = .{
                     .family = ws2_32.AF.INET,

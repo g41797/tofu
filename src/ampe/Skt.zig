@@ -107,15 +107,29 @@ pub const Linger = extern struct {
 };
 
 pub fn setLingerAbort(skt: *Skt) AmpeError!void {
-    const linger_config = Linger{
-        .l_onoff = 1, // Enable linger
-        .l_linger = 0, // Set timeout to 0 (immediate abort)
-    };
+    if (builtin.os.tag == .windows) {
+        // Windows-specific setsockopt for SO_LINGER
+        const linger_config = Linger{
+            .l_onoff = 1, // Enable linger
+            .l_linger = 0, // Set timeout to 0 (immediate abort)
+        };
+        const optlen: i32 = @intCast(@sizeOf(Linger));
+        const setsockopt_res: i32 = ws2_32.setsockopt(skt.socket.?, 0xffff, 0x0080, @ptrCast(&linger_config), optlen);
+        if (setsockopt_res == ws2_32.SOCKET_ERROR) {
+            std.debug.print("setsockopt(SO_LINGER) failed: {any}\n", .{ws2_32.WSAGetLastError()});
+            return AmpeError.SetsockoptFailed;
+        }
+    } else {
+        // POSIX-specific setsockopt (existing code)
+        const linger_config = Linger{
+            .l_onoff = 1, // Enable linger
+            .l_linger = 0, // Set timeout to 0 (immediate abort)
+        };
 
-    _ = std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.LINGER, &std.mem.toBytes(linger_config)) catch {
-        return AmpeError.SetsockoptFailed;
-    };
-
+        _ = std.posix.setsockopt(skt.socket.?, std.posix.SOL.SOCKET, std.posix.SO.LINGER, &std.mem.toBytes(linger_config)) catch {
+            return AmpeError.SetsockoptFailed;
+        };
+    }
     return;
 }
 
