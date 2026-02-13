@@ -29,7 +29,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
     var addr: std.net.Address = undefined;
     var addr_len = askt.address.getOsSockLen();
 
-    skt.socket = acceptPosix(
+    skt.socket = acceptOs(
         askt.socket.?,
         &addr.any,
         &addr_len,
@@ -58,7 +58,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 pub fn connect(skt: *Skt) AmpeError!bool {
     var connected = true;
 
-    connectPosix(
+    connectOs(
         skt.socket.?,
         &skt.address.any,
         skt.address.getOsSockLen(),
@@ -76,7 +76,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
             return AmpeError.UDSPathNotFound;
         },
         else => {
-            log.warn("<{d}> connectPosix error {s}", .{ getCurrentTid(), @errorName(e) });
+            log.warn("<{d}> connectOs error {s}", .{ getCurrentTid(), @errorName(e) });
             return AmpeError.PeerDisconnected;
         },
     };
@@ -211,7 +211,25 @@ fn disable_nagle(socket: std.posix.socket_t) !void {
     }
 }
 
-pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len: posix.socklen_t) !void { //ConnectError
+pub fn connectOs(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len: posix.socklen_t) !void { //ConnectError
+
+    if (native_os == .windows) {
+        const rc = windows.ws2_32.connect(sock, sock_addr, @intCast(len));
+        if (rc == 0) return;
+        switch (windows.ws2_32.WSAGetLastError()) {
+            .WSAEWOULDBLOCK => return error.WouldBlock,
+            .WSAEADDRNOTAVAIL => return error.AddressNotAvailable,
+            .WSAECONNREFUSED => return error.ConnectionRefused,
+            .WSAECONNRESET => return error.ConnectionRefused,
+            .WSAETIMEDOUT => return error.ConnectionRefused,
+
+            else => error.Unexpected,
+        }
+        return;
+    }
+
+
+
     while (true) {
         const erStat = posix.errno(posix.system.connect(sock, sock_addr, len));
 
@@ -249,38 +267,11 @@ pub fn connectPosix(sock: posix.socket_t, sock_addr: *const posix.sockaddr, len:
 
         return error.Unexpected;
 
-        // switch (intErrStatus) {
-        //     @intFromEnum(E.SUCCESS) => return,
-        //     @intFromEnum(E.ACCES) => return connectError.AccessDenied,
-        //     @intFromEnum(E.PERM) => return error.PermissionDenied,
-        //     @intFromEnum(E.ADDRINUSE) => return error.AddressInUse,
-        //     @intFromEnum(E.ADDRNOTAVAIL) => return error.AddressNotAvailable,
-        //     @intFromEnum(E.AFNOSUPPORT) => return error.AddressFamilyNotSupported,
-        //     @intFromEnum(E.AGAIN), @intFromEnum(E.INPROGRESS) => return error.WouldBlock,
-        //     @intFromEnum(E.ALREADY) => return error.ConnectionPending,
-        //     @intFromEnum(E.BADF) => unreachable, // sockfd is not a valid open file descriptor.
-        //     @intFromEnum(E.CONNREFUSED) => return error.ConnectionRefused,
-        //     @intFromEnum(E.CONNRESET) => return error.ConnectionResetByPeer,
-        //     @intFromEnum(E.FAULT) => error.Unexpected, // The socket structure address is outside the user's address space.
-        //     @intFromEnum(E.INTR) => continue,
-        //     @intFromEnum(E.ISCONN) => return connectError.AlreadyConnected, // The socket is already connected.
-        //     @intFromEnum(E.HOSTUNREACH) => return error.NetworkUnreachable,
-        //     @intFromEnum(E.NETUNREACH) => return error.NetworkUnreachable,
-        //     @intFromEnum(E.NOTSOCK) => error.Unexpected, // The file descriptor sockfd does not refer to a socket.
-        //     @intFromEnum(E.PROTOTYPE) => error.Unexpected, // The socket type does not support the requested communications protocol.
-        //     @intFromEnum(E.TIMEDOUT) => return error.ConnectionTimedOut,
-        //     @intFromEnum(E.NOENT) => return error.FileNotFound, // Returned when socket is AF.UNIX and the given path does not exist.
-        //     @intFromEnum(E.CONNABORTED) => return connectError.ConnectedAborted,
-        //     // _ => return error.Unexpected,
-        //     // else => return error.Unexpected,
-        //     // else =>  | _ | return error.Unexpected,
-        //     else =>  |err| return posix.unexpectedErrno(@enumFromInt(err)),
-        // }
     }
 }
 
 /// Modified std.posix.accept for Linux. Returns error.WouldBlock for non-blocking.
-pub fn acceptPosix(
+pub fn acceptOs(
     sock: posix.socket_t,
     addr: ?*posix.sockaddr,
     addr_size: ?*posix.socklen_t,

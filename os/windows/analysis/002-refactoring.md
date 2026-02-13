@@ -124,7 +124,7 @@ fn createNotificationChannel(rtr: *Reactor) !void {
 **File:** `src/ampe/Skt.zig`
 **Problem:** Hard-coded `std.posix` calls for `bind`, `listen`, `accept`, `connect`, and `setsockopt`. It also includes Linux-specific logic for `accept4` flags.
 **Advice:** 
-- Move `acceptPosix` and `connectPosix` to platform-specific backends.
+- Move `acceptOs` and `connectOs` to platform-specific backends.
 - Abstract socket option setting (Linger, Nagle, Reuse) into a platform-agnostic interface.
 - Replace `std.posix.socket_t` with an OS-agnostic `Socket` type.
 

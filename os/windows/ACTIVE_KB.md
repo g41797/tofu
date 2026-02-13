@@ -61,6 +61,8 @@ AI RESUME INSTRUCTIONS:
 - **Decision Log Section 8.2 validated:** ApcContext non-null rule confirmed working — the returned `FILE_COMPLETION_INFORMATION.ApcContext` matches the pointer passed to `NtDeviceIoControlFile`.
 
 ### Completed in Prior Sessions:
+- **Analysis of `Skt.accept()` and `Skt.connect()` confirmed:** Both functions correctly support Linux and Windows through their underlying `posix` implementations (`posix.system.connect`, `windows.accept`) and platform-specific error handling.
+- **Architectural divergence noted:** The `iocp-reactor-complete-analysis-001.md` document strongly advocates for `AcceptEx` (Proactor model) for connection acceptance, while the current POC uses `AFD_POLL_ACCEPT` (Reactor-like readiness). This highlights a key architectural decision point for future phases.
 - **Critical bug fixed in `stage1_accept.zig`:** Separate input/output buffers for `NtDeviceIoControlFile(AFD_POLL)` caused the output buffer to never be populated. Fixed by using same buffer for both.
 - **Stage 1 POC (Accept Test) event-based completion verified.**
 - **Stage 0 POC (IOCP Wakeup) completed.**
