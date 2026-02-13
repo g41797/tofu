@@ -148,8 +148,10 @@ pub const Stage1Accept = struct {
         }.run, .{self.listen_port});
 
         // - Issue AFD_POLL
+        // Use the same buffer for both input and output (METHOD_BUFFERED IOCTL).
+        // This matches wepoll, c-ares, mio, and all reference implementations.
         var io_status_block: windows.IO_STATUS_BLOCK = undefined;
-        var afd_poll_info_input: ntdllx.AFD_POLL_INFO = .{
+        var afd_poll_info: ntdllx.AFD_POLL_INFO = .{
             .Timeout = 0, // No timeout, wait indefinitely
             .NumberOfHandles = 1,
             .Exclusive = 0, // 0 is FALSE, 1 is TRUE,
@@ -157,15 +159,14 @@ pub const Stage1Accept = struct {
                 .{ .Handle = base_socket_handle, .Events = ntdllx.AFD_POLL_ACCEPT, .Status = .SUCCESS },
             },
         };
-        var afd_poll_info_output: ntdllx.AFD_POLL_INFO = undefined; // For returned events
 
         const status_afd_poll: ntdllx.NTSTATUS = ntdll.NtDeviceIoControlFile(
             base_socket_handle,
             self.event_handle, null, null, // Event, ApcRoutine, ApcContext
             &io_status_block,
             ntdllx.IOCTL_AFD_POLL,
-            &afd_poll_info_input, @sizeOf(ntdllx.AFD_POLL_INFO),
-            &afd_poll_info_output, @sizeOf(ntdllx.AFD_POLL_INFO),
+            &afd_poll_info, @sizeOf(ntdllx.AFD_POLL_INFO),
+            &afd_poll_info, @sizeOf(ntdllx.AFD_POLL_INFO),
         );
 
         if (status_afd_poll != .SUCCESS and status_afd_poll != .PENDING) {
@@ -190,8 +191,8 @@ pub const Stage1Accept = struct {
             return error.AfdPollCompletionError;
         }
 
-        std.debug.print("AFD_POLL completed. Events returned: 0x{X}\n", .{afd_poll_info_output.Handles[0].Events});
-        if ((afd_poll_info_output.Handles[0].Events & ntdllx.AFD_POLL_ACCEPT) == 0) {
+        std.debug.print("AFD_POLL completed. Events returned: 0x{X}\n", .{afd_poll_info.Handles[0].Events});
+        if ((afd_poll_info.Handles[0].Events & ntdllx.AFD_POLL_ACCEPT) == 0) {
             std.debug.print("AFD_POLL_ACCEPT event not set in completion.\n", .{});
             return error.AfdPollAcceptNotSet;
         }

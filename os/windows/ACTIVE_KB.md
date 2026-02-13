@@ -32,10 +32,11 @@ AI RESUME INSTRUCTIONS:
 - **Target:** Porting `tofu` (Zig messaging library) to Windows 10+ using IOCP + AFD_POLL while preserving the single-threaded Reactor pattern.
 - **Environment:** Development is performed across two OSes: **Linux** (primary development and existing Reactor) and **Windows 10** (target platform and port implementation).
 - **Mantra:** Maintain Reactor semantics (readiness-based, queue-driven, no public callbacks).
-- **Source of Truth:** 
+- **Source of Truth:**
     - [Spec v6.1](./spec-v6.1.md) — Consolidated authoritative specification
     - [Master Roadmap](./master-roadmap.md)
     - [Decision Log](./decision-log.md)
+- **Mandatory Rules:** See Decision Log sections 6 (Build & Test Commands) and 7 (Mandatory Testing & Verification Rule). Always run `zig build` before `zig build test`. Always Debug first, then ReleaseFast. Both must pass.
 
 ---
 
@@ -52,7 +53,12 @@ AI RESUME INSTRUCTIONS:
 
 ## 3. Session Context & Hand-off
 
-### Completed in Last Session:
+### Completed in Current Session:
+- **`decision-log.md` updated:** Added sections 6 (Build & Test Commands) and 7 (Mandatory Testing & Verification Rule) — build-before-test ordering, Debug-first then ReleaseFast, both must pass.
+- **`ACTIVE_KB.md` updated:** Referenced new mandatory rules in Project Context Summary.
+- **Critical bug fixed in `stage1_accept.zig`:** Separate input/output buffers for `NtDeviceIoControlFile(AFD_POLL)` caused the output buffer to never be populated. Debug passed by accident (`0xAA` fill had `AFD_POLL_ACCEPT` bit set); ReleaseFast failed (`0x0`). Fixed by using the same buffer for both input and output, matching wepoll/c-ares/mio reference implementations. Now correctly returns `0x80` in both modes.
+
+### Completed in Prior Session:
 - **`decision-log.md` updated:** Added rule about preferring Zig Standard Library for OS-independent functionality.
 - **`stage1_accept.zig` refactored and debugged:**
     - Corrected Winsock initialization order (`WSAStartup`).
@@ -63,7 +69,7 @@ AI RESUME INSTRUCTIONS:
     - Corrected syntax for `std.net.Address` unwrapping in `SocketCreator.zig`.
     - Defined `extern` bindings for `CreateEventA` and `WaitForSingleObject` in `ntdllx.zig` and linked `kernel32.lib` in `build.zig`.
     - Added `WSAStartup` and `WSACleanup` calls to the client thread to properly initialize Winsock for that thread, resolving the "Client socket creation failed" error observed in GitHub Actions.
-    - **Increased client thread sleep duration to 2000ms and added detailed debug prints to `stage1_accept.zig` client thread to resolve GitHub Actions failure related to `AFD_POLL` events returning `0x0`.**
+    - **Increased client thread sleep duration to 2000ms and added detailed debug prints to `stage1_accept.zig` client thread to resolve GitHub Actions failure related to `AFD_POLL` events returning `0x0`. This increase was necessary to mitigate timing-sensitive race conditions in potentially slower CI environments, ensuring the non-blocking client connection had ample time to fully establish before the client socket was closed, thereby allowing the server's `AFD_POLL` to register the `AFD_POLL_ACCEPT` event.**
     - Refactored server socket creation in `Stage1Accept.init()` to use `SocketCreator.fromAddress()`.
     - Refactored client socket creation in the client thread to use `SocketCreator.fromAddress()`.
     - Manually fixed client thread's `run` function return type (`!void`) and associated error handling.

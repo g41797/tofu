@@ -51,4 +51,38 @@ This document tracks the settled architectural and technical decisions for the t
 - Git usage **disabled**
 
 ---
+
+## 6. Build & Test Commands
+
+All builds and tests MUST use the following commands from the project root:
+
+- **Build (Debug):** `zig build -Doptimize=Debug`
+- **Build (ReleaseFast):** `zig build -Doptimize=ReleaseFast`
+- **Test (Debug):** `zig build test -freference-trace --summary all -Doptimize=Debug`
+- **Test (ReleaseFast):** `zig build test -freference-trace --summary all -Doptimize=ReleaseFast`
+
+These are the only sanctioned build/test invocations. Do not omit flags or invent alternatives.
+
+---
+
+## 7. Mandatory Testing & Verification Rule
+
+**Every change** to the codebase MUST be validated against **both** optimization levels before being considered complete:
+
+1. **Build before test:** Always run `zig build` first. Only proceed to `zig build test` after the build succeeds. A failing build means tests must not be attempted.
+2. **Debug first:** Always build and test with `-Doptimize=Debug` first. Debug mode enables safety checks, bounds checking, and produces clear error messages. All debugging MUST be done in Debug mode.
+3. **ReleaseFast second:** After Debug passes, build and test with `-Doptimize=ReleaseFast` to catch optimization-sensitive issues (undefined behavior, uninitialized memory, miscompilations).
+4. **Both must pass:** A change is only valid if both Debug and ReleaseFast builds and tests succeed. If either fails, the change must be fixed before proceeding.
+5. **No exceptions:** This rule applies to POC code, production code, refactoring, and any other modification.
+
+**Full verification sequence (in order):**
+```
+zig build -Doptimize=Debug
+zig build test -freference-trace --summary all -Doptimize=Debug
+zig build -Doptimize=ReleaseFast
+zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+```
+Each step must succeed before proceeding to the next.
+
+---
 *End of Decision Log*
