@@ -48,7 +48,7 @@ This document tracks the settled architectural and technical decisions for the t
 
 ## 5. Git usage
 
-- Git usage **disabled**
+- Git usage **disabled** — MANDATORY RULE: AI agents MUST NOT execute any git commands (commit, push, add, status, etc.). The user manages version control manually.
 
 ---
 
@@ -83,6 +83,51 @@ zig build -Doptimize=ReleaseFast
 zig build test -freference-trace --summary all -Doptimize=ReleaseFast
 ```
 Each step must succeed before proceeding to the next.
+
+---
+
+## 8. Verified Technical Findings (from POC)
+
+### 8.1 AFD_POLL Buffer: Same Buffer for Input and Output (Verified 2026-02-13)
+
+`IOCTL_AFD_POLL` (0x00012024) uses `METHOD_BUFFERED`. All reference implementations (wepoll, c-ares, mio) pass the **same** `AFD_POLL_INFO` pointer for both the InputBuffer and OutputBuffer parameters of `NtDeviceIoControlFile`. Using separate buffers causes the output to never be populated — the kernel writes results back into the system buffer which maps to the input/output address. This was verified when Debug mode passed by accident (Zig `0xAA` undefined fill had the `AFD_POLL_ACCEPT` bit set) while ReleaseFast failed (`0x0`).
+
+**Rule:** Always use the same `AFD_POLL_INFO` variable for both input and output in `NtDeviceIoControlFile`.
+
+### 8.2 ApcContext Must Be Non-Null for IOCP Completion Posting (Verified 2026-02-13)
+
+In the NT I/O model, when a file handle is associated with an IOCP:
+- If `ApcContext` passed to `NtDeviceIoControlFile` is **non-null** → completion IS posted to IOCP.
+- If `ApcContext` is **null** → completion is NOT posted (skip completion port behavior).
+
+This is the NT equivalent of Win32's rule: pass an `OVERLAPPED*` for async I/O. The standard pattern is to pass `@ptrCast(&io_status_block)` as the ApcContext.
+
+The `FILE_COMPLETION_INFORMATION` entry returned by `NtRemoveIoCompletionEx` will contain:
+- `Key`: the CompletionKey set during `CreateIoCompletionPort` association.
+- `ApcContext`: the pointer passed to `NtDeviceIoControlFile`.
+- `IoStatus`: the completion status from the kernel.
+
+**Verified:** `stage1_accept_integrated_iocp.zig` confirmed that the `ApcContext` pointer round-trips correctly — the value returned in `FILE_COMPLETION_INFORMATION.ApcContext` matches the `&io_status_block` pointer passed to `NtDeviceIoControlFile`. Tested in both Debug and ReleaseFast.
+
+**Rule:** When issuing `NtDeviceIoControlFile` for AFD_POLL with IOCP completion, always pass a non-null `ApcContext` (typically `&io_status_block`). Pass `Event = null` so the completion goes to IOCP only.
+
+### 8.3 IOCP-Integrated AFD_POLL_ACCEPT End-to-End (Verified 2026-02-13)
+
+The full IOCP completion path for AFD_POLL_ACCEPT has been verified in `stage1_accept_integrated_iocp.zig`:
+
+1. **Setup:** Create IOCP via `NtCreateIoCompletion`, obtain base socket handle via `SIO_BASE_HANDLE`, associate with IOCP via `CreateIoCompletionPort`.
+2. **Issue AFD_POLL:** Call `NtDeviceIoControlFile` with `Event=null`, `ApcRoutine=null`, `ApcContext=@ptrCast(&io_status_block)`, same buffer for input/output.
+3. **Wait:** `NtRemoveIoCompletionEx` with a 10-second relative timeout (`LARGE_INTEGER = -10 * 10_000_000`).
+4. **Result:** Completion entry received with `Events=0x80` (AFD_POLL_ACCEPT), `IO_STATUS_BLOCK.Status=SUCCESS`, correct `ApcContext` round-trip.
+
+This confirms that IOCP is a viable sole completion mechanism for AFD_POLL — no event handles needed. Verified in both Debug and ReleaseFast modes.
+
+---
+
+## 9. Plans
+
+Implementation plans are stored as separate files for cross-agent reference:
+- [Stage 1 IOCP Reintegration Plan](./plan-stage1-iocp-reintegration.md) — **Completed** (2026-02-13)
 
 ---
 *End of Decision Log*

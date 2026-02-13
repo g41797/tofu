@@ -30,7 +30,7 @@ This roadmap coordinates the authoritative specification and supporting records:
 ### Phase I: Feasibility (POC)
 **Location:** `/os/windows/poc/`
 **Goal:** Prove `AFD_POLL` re-arming and `NtSetIoCompletion` wakeup logic works in Zig 0.15.2.
-*Status:* Stage 0 (Wakeup) Complete. Stage 1 (Accept) In Progress.
+*Status:* Stage 0 (Wakeup) Complete. Stage 1 (Accept) Complete — both event-based and IOCP-integrated verified. Stage 2 (Echo) next.
 
 ### Phase II: Structural Refactoring
 **Location:** `src/ampe/`
