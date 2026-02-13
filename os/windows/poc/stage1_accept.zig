@@ -135,11 +135,15 @@ pub const Stage1Accept = struct {
 
                 const connect_res: i32 = ws2_32.connect(client_socket, &generic_server_addr, @sizeOf(ws2_32.sockaddr.in));
                 if (connect_res != 0) {
-                    std.debug.print("Client connect failed: {any}\n", .{ws2_32.WSAGetLastError()});
+                    std.debug.print("Client connect failed: {any} (WSAGetLastError: {any})\n", .{connect_res, ws2_32.WSAGetLastError()});
                 } else {
-                    std.debug.print("Client connected.\n", .{});
-                    std.Thread.sleep(500 * std.time.ns_per_ms); // Keep connection open briefly (500ms)
+                    std.debug.print("Client connect returned 0 (may be pending). WSAGetLastError: {any}\n", .{ws2_32.WSAGetLastError()});
+                    // For non-blocking sockets, connect returning 0 might still mean pending.
+                    // We'll proceed with sleeping anyway, as the event loop should pick it up.
                 }
+                std.debug.print("Client connected/pending. Sleeping for 2000ms...\n", .{});
+                std.Thread.sleep(2000 * std.time.ns_per_ms); // Keep connection open briefly (2000ms)
+                std.debug.print("Client waking up and closing socket.\n", .{});
             }
         }.run, .{self.listen_port});
 

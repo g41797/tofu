@@ -63,6 +63,7 @@ AI RESUME INSTRUCTIONS:
     - Corrected syntax for `std.net.Address` unwrapping in `SocketCreator.zig`.
     - Defined `extern` bindings for `CreateEventA` and `WaitForSingleObject` in `ntdllx.zig` and linked `kernel32.lib` in `build.zig`.
     - Added `WSAStartup` and `WSACleanup` calls to the client thread to properly initialize Winsock for that thread, resolving the "Client socket creation failed" error observed in GitHub Actions.
+    - **Increased client thread sleep duration to 2000ms and added detailed debug prints to `stage1_accept.zig` client thread to resolve GitHub Actions failure related to `AFD_POLL` events returning `0x0`.**
     - Refactored server socket creation in `Stage1Accept.init()` to use `SocketCreator.fromAddress()`.
     - Refactored client socket creation in the client thread to use `SocketCreator.fromAddress()`.
     - Manually fixed client thread's `run` function return type (`!void`) and associated error handling.
