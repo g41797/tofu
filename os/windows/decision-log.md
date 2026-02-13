@@ -36,6 +36,8 @@ This document tracks the settled architectural and technical decisions for the t
 - **Binding Naming Convention:** For custom NT API bindings (e.g., in `ntdllx.zig`), `extern` declarations should use `camelCase` (e.g., `ntCreateIoCompletion`). These are then exposed publicly via wrappers using `PascalCase` (e.g., `NtCreateIoCompletion`) to maintain consistency with Zig's standard library conventions.
 - **Explicit Typing:** Always specify the type in a constant or variable declaration. Do not rely on type inference (e.g., `const x: u32 = 1;` instead of `const x = 1;`).
 - **Explicit Dereferencing:** Always dereference pointers explicitly with `.*`. Do not rely on implicit dereferencing.
+- **Standard Library First:** Before adding a new definition (struct, constant, or function) to a custom binding file (`ntdllx.zig`, `wsax.zig`), always check if it already exists in the Zig standard library (`std.os.windows.*`). Use the standard library definition if available. Custom files should only contain what is truly missing.
+- Prefer Zig Standard Library for OS-independent functionality: If an existing OS-independent standard library function can achieve the required functionality, use it instead of OS-dependent APIs (e.g., use `std.net` for sockets instead of `ws2_32`). Only resort to OS-dependent APIs when the standard library does not support the required functionality.
 
 ---
 

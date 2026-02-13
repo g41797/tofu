@@ -361,6 +361,7 @@ const native_os = builtin.os.tag;
 const os = builtin.os.tag;
 const linux = std.os.linux;
 const windows = std.os.windows;
+const ws2_32 = windows.ws2_32;
 const wasi = std.os.wasi;
 const system = posix.system;
 const E = system.E;
@@ -370,3 +371,6 @@ const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 
 const log = std.log;
+
+// ... (existing code)
+

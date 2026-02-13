@@ -12,3 +12,13 @@ test "Windows Stage 0: IOCP Wakeup" {
     const win_poc = @import("win_poc");
     try win_poc.stage0.runTest();
 }
+
+test "Windows Stage 1: Accept Test" {
+    if (builtin.os.tag != .windows) {
+        return error.SkipZigTest;
+    }
+
+    const win_poc = @import("win_poc");
+    try win_poc.stage1.runTest();
+}
+

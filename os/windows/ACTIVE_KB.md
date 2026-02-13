@@ -22,8 +22,8 @@ AI RESUME INSTRUCTIONS:
 6. Proceed to the "Next Steps for AI" section at the bottom.
 -->
 
-**Current Version:** 007
-**Last Updated:** 2026-02-12
+**Current Version:** 008
+**Last Updated:** 2026-02-13
 **Current Focus:** Phase I (Feasibility POC) — Stage 1 (Accept Test)
 
 ---
@@ -41,10 +41,11 @@ AI RESUME INSTRUCTIONS:
 
 ## 2. Technical State of Play
 - **Stage 0 POC Complete:** Implemented `os/windows/poc/stage0_wake.zig` (IOCP creation, `NtSetIoCompletion`, and wakeup verified).
-- **Module Infrastructure:** `os/windows/poc/poc.zig` created as `win_poc` module and integrated into `build.zig`.
+- **Module Infrastructure:** `os/windows/poc/poc.zig` created as `win_poc` module and integrated into `build.zig`. `tofu` module is now correctly imported by `win_poc`.
 - **Test Infrastructure:** `tests/os_windows_tests.zig` now imports POCs via the `win_poc` module.
-- **Build System:** `build.zig` correctly links `ws2_32` and `ntdll` for Windows targets.
-- **Extended NT Bindings:** Created `os/windows/poc/ntdllx.zig` to provide `extern` definitions for required NT APIs not found in the Zig standard library, resolving the initial build error.
+- **Build System:** `build.zig` correctly links `ws2_32`, `ntdll`, and `kernel32` for Windows targets.
+- **Extended NT Bindings:** `os/windows/poc/ntdllx.zig` updated to include `extern` definitions for `CreateEventA`, `WaitForSingleObject`, and related constants from `kernel32.dll`.
+- **AFD_POLL Logic Verified (Event-based):** The core logic for creating a listening socket, obtaining its base handle, issuing an `AFD_POLL_ACCEPT` request, and receiving its completion (via a manual reset event) has been successfully verified in `stage1_accept.zig`.
 - **Spec Status:** Spec v6.1 released — all prior contradictions resolved, including precise re-arming rule for AFD_POLL.
 
 ---
@@ -52,32 +53,39 @@ AI RESUME INSTRUCTIONS:
 ## 3. Session Context & Hand-off
 
 ### Completed in Last Session:
-- **Stage 0 POC Verified:** Successfully resolved all compilation and linker errors for the Stage 0 (IOCP Wakeup) test. This involved:
-    - Creating `ntdllx.zig` with correct `extern` function signatures for NT APIs.
-    - Correcting the calling convention to `.winapi`.
-    - Fixing the `build.zig` script to link the test executable against `ntdll`.
-    - Applying mandatory explicit typing rules to the POC code.
-- Stage 0 is now considered stable and complete.
+- **`decision-log.md` updated:** Added rule about preferring Zig Standard Library for OS-independent functionality.
+- **`stage1_accept.zig` refactored and debugged:**
+    - Corrected Winsock initialization order (`WSAStartup`).
+    - Implemented `SO_REUSEADDR` for the listening socket.
+    - Switched from IOCP completion wait (`NtRemoveIoCompletionEx`) to a temporary event-based wait (`CreateEventA`, `WaitForSingleObject`) for `AFD_POLL` completion verification. This successfully isolated and confirmed the `AFD_POLL_ACCEPT` event triggering.
+    - Updated `Skt.zig` and `SocketCreator.zig` to ensure `posix.socket` is used, as it handles cross-platform differences for sockets. This reverted previous `comptime if` changes.
+    - Resolved module import conflicts by making `Skt` and `SocketCreator` public in `src/tofu.zig` and correctly importing `tofu` into `winPocMod` in `build.zig`.
+    - Corrected syntax for `std.net.Address` unwrapping in `SocketCreator.zig`.
+    - Defined `extern` bindings for `CreateEventA` and `WaitForSingleObject` in `ntdllx.zig` and linked `kernel32.lib` in `build.zig`.
+    - Addressed various compilation errors related to constants and types.
+- **Stage 1 POC (Accept Test) now passes with event-based completion.** This confirms the successful setup and detection of an incoming connection via `AFD_POLL_ACCEPT`.
 
 ### Current Blockers:
-- None. Fully ready for Stage 1 POC.
+- None.
 
 ### Files of Interest:
 - `spec-v6.1.md` — Primary reference for all implementation details.
 - `os/windows/poc/stage0_wake.zig` — Reference for IOCP wakeup.
+- `os/windows/poc/stage1_accept.zig` — The working POC for AFD_POLL_ACCEPT.
 - `analysis/003-feasibility.md` — Stage definitions (still useful for context).
+- `src/ampe/Skt.zig` - Refactored for proper cross-platform socket handling via `std.posix`.
+- `src/ampe/SocketCreator.zig` - Uses `std.posix.socket` for creating sockets.
+- `os/windows/poc/ntdllx.zig` - Contains kernel32 function externs.
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Initiate Stage 1 POC (Accept Test):**
-   - Create `os/windows/poc/stage1_accept.zig`.
-   - Create listener socket, obtain base handle via `SIO_BASE_HANDLE`.
-   - Issue `AFD_POLL` with `AFD_POLL_ACCEPT`.
-   - Verify completion packet is received when a client connects.
-2. **Apply Spec v6.1 Re-arming Rule:** Re-arm AFD_POLL immediately upon completion (before processing I/O) to keep the unprotected window minimal.
-3. **Success Criteria:** IOCP returns a completion for the listener socket on incoming connection.
+1. **Reintegrate IOCP for Stage 1 POC (Accept Test):**
+   - In `os/windows/poc/stage1_accept.zig`, revert the temporary event-based waiting mechanism.
+   - Restore `ntdllx.NtRemoveIoCompletionEx` for waiting on IOCP completion.
+   - Ensure the `AFD_POLL` operation correctly posts its completion to the IOCP. This likely involves passing `self.iocp` and a `CompletionKey` to `ntdll.NtDeviceIoControlFile` instead of the event handle.
+   - Remove the `event_handle` field, its creation, and its closing.
+2. **Verify IOCP Completion:** Ensure `NtRemoveIoCompletionEx` successfully retrieves the completion packet for `AFD_POLL_ACCEPT`.
+3. **Apply Spec v6.1 Re-arming Rule:** Once IOCP completion is verified, implement the re-arming logic for `AFD_POLL` immediately upon completion (before processing I/O) to keep the unprotected window minimal.
 4. **Dialogue:** Update `QUESTIONS_003.md` (or create 004) with any new questions regarding `SIO_BASE_HANDLE`, AFD structures, or re-arming behavior.
 5. **Hand-off:** After completing Stage 1, update this ACTIVE_KB.md and mark progress.
-
-*End of Active KB*

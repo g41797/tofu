@@ -118,7 +118,7 @@ pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
 }
 
 // from IoUring.zig#L3473 (0.14.1), slightly changed
-fn createListenerSocket(addr: *const std.net.Address) !Skt {
+pub fn createListenerSocket(addr: *const std.net.Address) !Skt {
     var ret: Skt = .{
         .address = addr.*,
         .socket = null,
@@ -169,7 +169,10 @@ const Skt = internal.Skt;
 const std = @import("std");
 const posix = std.posix;
 const Allocator = std.mem.Allocator;
-const Socket = std.posix.socket_t;
+const Socket = std.posix.socket_t; // This will become platform-dependent later
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;
+const builtin = @import("builtin");
+const windows = std.os.windows;
+const ws2_32 = windows.ws2_32;

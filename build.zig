@@ -104,6 +104,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .single_threaded = false,
         });
+        winPocMod.addImport("tofu", tofuMod); // Make tofu module available to win_poc
         testMod.addImport("win_poc", winPocMod);
     }
 
@@ -118,6 +119,7 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         lib_unit_tests.linkSystemLibrary("ws2_32");
         lib_unit_tests.linkSystemLibrary("ntdll");
+        lib_unit_tests.linkSystemLibrary("kernel32"); // Link kernel32 for event functions
     }
 
     b.installArtifact(lib_unit_tests);
