@@ -22,8 +22,8 @@ AI RESUME INSTRUCTIONS:
 6. Proceed to the "Next Steps for AI" section at the bottom.
 -->
 
-**Current Version:** 006  
-**Last Updated:** 2026-02-12  
+**Current Version:** 007
+**Last Updated:** 2026-02-12
 **Current Focus:** Phase I (Feasibility POC) — Stage 1 (Accept Test)
 
 ---
@@ -44,6 +44,7 @@ AI RESUME INSTRUCTIONS:
 - **Module Infrastructure:** `os/windows/poc/poc.zig` created as `win_poc` module and integrated into `build.zig`.
 - **Test Infrastructure:** `tests/os_windows_tests.zig` now imports POCs via the `win_poc` module.
 - **Build System:** `build.zig` correctly links `ws2_32` and `ntdll` for Windows targets.
+- **Extended NT Bindings:** Created `os/windows/poc/ntdllx.zig` to provide `extern` definitions for required NT APIs not found in the Zig standard library, resolving the initial build error.
 - **Spec Status:** Spec v6.1 released — all prior contradictions resolved, including precise re-arming rule for AFD_POLL.
 
 ---
@@ -51,8 +52,12 @@ AI RESUME INSTRUCTIONS:
 ## 3. Session Context & Hand-off
 
 ### Completed in Last Session:
-- Released Spec v6.1 with clarified re-arming strategy and consolidated architecture decisions.
-- All previous analysis documents (001–003) are now superseded by Spec v6.1.
+- **Stage 0 POC Verified:** Successfully resolved all compilation and linker errors for the Stage 0 (IOCP Wakeup) test. This involved:
+    - Creating `ntdllx.zig` with correct `extern` function signatures for NT APIs.
+    - Correcting the calling convention to `.winapi`.
+    - Fixing the `build.zig` script to link the test executable against `ntdll`.
+    - Applying mandatory explicit typing rules to the POC code.
+- Stage 0 is now considered stable and complete.
 
 ### Current Blockers:
 - None. Fully ready for Stage 1 POC.

@@ -105,10 +105,6 @@ pub fn build(b: *std.Build) void {
             .single_threaded = false,
         });
         testMod.addImport("win_poc", winPocMod);
-
-        testMod.link_libc = true;
-        testMod.linkSystemLibrary("ws2_32", .{});
-        testMod.linkSystemLibrary("ntdll", .{});
     }
 
     // Creates unit testing artifact
@@ -117,6 +113,13 @@ pub fn build(b: *std.Build) void {
         .use_llvm = true,
         .use_lld = true,
     });
+
+    // Link libraries for Windows tests
+    if (target.result.os.tag == .windows) {
+        lib_unit_tests.linkSystemLibrary("ws2_32");
+        lib_unit_tests.linkSystemLibrary("ntdll");
+    }
+
     b.installArtifact(lib_unit_tests);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
