@@ -62,6 +62,7 @@ AI RESUME INSTRUCTIONS:
     - Resolved module import conflicts by making `Skt` and `SocketCreator` public in `src/tofu.zig` and correctly importing `tofu` into `winPocMod` in `build.zig`.
     - Corrected syntax for `std.net.Address` unwrapping in `SocketCreator.zig`.
     - Defined `extern` bindings for `CreateEventA` and `WaitForSingleObject` in `ntdllx.zig` and linked `kernel32.lib` in `build.zig`.
+    - Added `WSAStartup` and `WSACleanup` calls to the client thread to properly initialize Winsock for that thread, resolving the "Client socket creation failed" error observed in GitHub Actions.
     - Addressed various compilation errors related to constants and types.
 - **Stage 1 POC (Accept Test) now passes with event-based completion.** This confirms the successful setup and detection of an incoming connection via `AFD_POLL_ACCEPT`.
 

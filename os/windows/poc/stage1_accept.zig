@@ -97,9 +97,18 @@ pub const Stage1Accept = struct {
         // - Start client thread
         const client_thread: std.Thread = try std.Thread.spawn(.{}, struct {
             fn run(port: u16) void {
+                // Initialize WinSock for this thread
+                var wsa_data: ws2_32.WSADATA = undefined;
+                const wsa_startup_res: i32 = ws2_32.WSAStartup(0x0202, &wsa_data); // Request Winsock 2.2
+                if (wsa_startup_res != 0) {
+                    std.debug.print("Client WSAStartup failed with error: {any}\n", .{wsa_startup_res});
+                    return; // Cannot proceed without Winsock
+                }
+                defer _ = ws2_32.WSACleanup(); // Clean up Winsock for this thread on exit
+
                 const client_socket: ws2_32.SOCKET = ws2_32.socket(ws2_32.AF.INET, ws2_32.SOCK.STREAM, ws2_32.IPPROTO.TCP);
                 if (client_socket == ws2_32.INVALID_SOCKET) {
-                    std.debug.print("Client socket creation failed.\n", .{});
+                    std.debug.print("Client socket creation failed: {any}\n", .{ws2_32.WSAGetLastError()});
                     return;
                 }
                 defer _ = ws2_32.closesocket(client_socket);
