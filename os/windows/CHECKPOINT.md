@@ -1,25 +1,31 @@
 # AGENT HANDOVER CHECKPOINT
 **Current Date:** 2026-02-13
 **Last Agent:** Gemini-CLI
-**Active Phase:** Phase I (Feasibility POC)
-**Active Stage:** Stage 2 (Complete) -> Stage 3 (Pending)
+**Active Phase:** Phase II (Structural Refactoring) - STARTING
+**Active Stage:** Refactoring `src/ampe/poller.zig`
 
 ## 🎯 Current Status
-- **Stage 0, 1, 2 POCs are COMPLETE and VERIFIED** in both Debug and ReleaseFast.
-- **Stage 2 Echo POC** successfully demonstrated the IOCP + AFD_POLL lifecycle, including re-arming logic and multi-socket handling.
-- **Architectural Decision:** We are using **Reactor-over-IOCP (AFD_POLL)**, NOT `AcceptEx`.
-- **Inheritance:** We confirmed that Windows inherits non-blocking state from the listener, but we explicitly set it anyway for cross-platform safety in `Skt.zig`.
+- **Phase I (Feasibility POC) is COMPLETE.** All technical risks retired.
+- **Verified on Windows:**
+    - IOCP + AFD_POLL Reactor emulation.
+    - Re-arming AFTER I/O is optimal.
+    - `NtCancelIoFile` works for async cleanup.
+    - `STATUS_CANCELLED` handling verified.
+- **Zig 0.15.2 Compatibility:**
+    - `std.ArrayList(T).init(allocator)` syntax confirmed.
+    - Mandatory allocator passing for all `ArrayList` methods.
 
 ## 🚧 Interrupt Point
-- Ready to begin **Stage 3: Stress & Cancellation**.
-- No code has been written for Stage 3 yet.
+- **Phase I closed.**
+- Handing over at the start of **Phase II**.
+- No production code in `src/` has been modified yet.
 
 ## 🚀 Next Immediate Steps
-1.  **Add `NtCancelIoFileEx`** to `os/windows/poc/ntdllx.zig`.
-2.  **Create `os/windows/poc/stage3_stress.zig`** to handle multiple concurrent connections.
-3.  **Implement cancellation test** to verify `STATUS_CANCELLED` handling.
+1.  **Refactor `src/ampe/poller.zig`:** Convert it into a platform-agnostic facade that imports either `os/linux/poller.zig` or `os/windows/poller.zig` based on `builtin.os.tag`.
+2.  **Extract Linux Poll Logic:** Move the current `std.posix.poll` logic from `poller.zig` to a new file `src/ampe/os/linux/poller.zig`.
+3.  **Define Notifier Abstraction:** Refactor `src/ampe/Notifier.zig` to support the loopback socket pair (Linux) and `NtSetIoCompletion` (Windows).
 
 ## ⚠️ Critical Context for Successor
-- **Mandatory Testing:** Every change must pass `zig build` and `zig build test` in BOTH **Debug** and **ReleaseFast** before proceeding.
-- **ApcContext:** Use the context pointer (e.g., `self` or `Channel*`) as the `ApcContext` in `NtDeviceIoControlFile` for reliable context retrieval.
-- **Re-arming:** Arm `AFD_POLL` *after* performing the I/O operation to avoid immediate re-completions.
+- **Decision Log:** See Section 2 for verified re-arming timing.
+- **ApcContext:** Must pass the context/channel pointer for O(1) event dispatch.
+- **Verification Rule:** Always run `zig build` before `zig build test`. Verify Debug first, then ReleaseFast.

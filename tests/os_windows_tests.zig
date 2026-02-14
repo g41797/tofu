@@ -40,3 +40,12 @@ test "Windows Stage 2: Echo Test" {
     try win_poc.stage2.runTest();
 }
 
+test "Windows Stage 3: Stress & Cancellation Test" {
+    if (builtin.os.tag != .windows) {
+        return error.SkipZigTest;
+    }
+
+    const win_poc = @import("win_poc");
+    try win_poc.stage3.runTest();
+}
+

@@ -58,6 +58,17 @@ pub extern "ntdll" fn NtRemoveIoCompletionEx(
     Alertable: windows.BOOLEAN,
 ) callconv(.winapi) NTSTATUS;
 
+pub extern "ntdll" fn NtCancelIoFileEx(
+    FileHandle: HANDLE,
+    IoRequestToCancel: ?*windows.IO_STATUS_BLOCK,
+    IoStatusBlock: *windows.IO_STATUS_BLOCK,
+) callconv(.winapi) NTSTATUS;
+
+pub extern "ntdll" fn NtCancelIoFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *windows.IO_STATUS_BLOCK,
+) callconv(.winapi) NTSTATUS;
+
 // AFD (Ancillary Function Driver for WinSock) definitions
 // These are specific to AFD_POLL and not found in std.os.windows.ntdll.zig
 
@@ -74,6 +85,8 @@ pub const AFD_POLL_LOCAL_CLOSE: ULONG = 0x0020;
 pub const AFD_POLL_CONNECT: ULONG = 0x0040;
 pub const AFD_POLL_ACCEPT: ULONG = 0x0080;
 pub const AFD_POLL_CONNECT_FAIL: ULONG = 0x0100;
+
+pub const STATUS_CANCELLED: NTSTATUS = @enumFromInt(0xC0000120);
 
 pub const AFD_POLL_HANDLE_INFO = extern struct {
     Handle: HANDLE,
