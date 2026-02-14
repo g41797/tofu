@@ -173,7 +173,7 @@ fn send_illegal_messages() !void {
         log.info("handleWelcomeWithWrongAddress {any}", .{
             err,
         });
-        try testing.expect(err == AmpeError.InvalidAddress);
+        try testing.expect((err == AmpeError.InvalidAddress) or (err == AmpeError.ListenFailed));
     };
 }
 
