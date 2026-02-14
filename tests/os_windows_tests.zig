@@ -31,3 +31,12 @@ test "Windows Stage 1 IOCP: Accept Test" {
     try win_poc.stage1_iocp.runTest();
 }
 
+test "Windows Stage 2: Echo Test" {
+    if (builtin.os.tag != .windows) {
+        return error.SkipZigTest;
+    }
+
+    const win_poc = @import("win_poc");
+    try win_poc.stage2.runTest();
+}
+

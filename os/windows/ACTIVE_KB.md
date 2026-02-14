@@ -22,9 +22,9 @@ AI RESUME INSTRUCTIONS:
 6. Proceed to the "Next Steps for AI" section at the bottom.
 -->
 
-**Current Version:** 009
+**Current Version:** 010
 **Last Updated:** 2026-02-13
-**Current Focus:** Phase I (Feasibility POC) — Stage 2 (Echo)
+**Current Focus:** Phase I (Feasibility POC) — Stage 3 (Stress & Cancellation)
 
 ---
 
@@ -37,7 +37,9 @@ AI RESUME INSTRUCTIONS:
     - [Master Roadmap](./master-roadmap.md)
     - [Decision Log](./decision-log.md)
 - **Mandatory Rules:** See Decision Log sections 5 (Git disabled — NEVER use git commands), 6 (Build & Test Commands), and 7 (Mandatory Testing & Verification Rule). Always run `zig build` before `zig build test`. Always Debug first, then ReleaseFast. Both must pass.
-- **Completed Plan:** [Stage 1 IOCP Reintegration](./plan-stage1-iocp-reintegration.md) — implemented and verified (Decision Log section 9).
+- **Completed Plans:** 
+    - [Stage 1 IOCP Reintegration](./plan-stage1-iocp-reintegration.md) — implemented and verified.
+    - **Stage 2 Full Echo** — implemented and verified (Decision Log Section 8.4).
 
 ---
 
@@ -49,46 +51,40 @@ AI RESUME INSTRUCTIONS:
 - **Extended NT Bindings:** `os/windows/poc/ntdllx.zig` updated to include `extern` definitions for `CreateEventA`, `WaitForSingleObject`, and related constants from `kernel32.dll`.
 - **AFD_POLL Logic Verified (Event-based):** The core logic for creating a listening socket, obtaining its base handle, issuing an `AFD_POLL_ACCEPT` request, and receiving its completion (via a manual reset event) has been successfully verified in `stage1_accept.zig`.
 - **AFD_POLL via IOCP Verified:** `stage1_accept_integrated_iocp.zig` confirms that AFD_POLL completions post directly to IOCP when `Event=null` and `ApcContext=non-null` are passed to `NtDeviceIoControlFile`. `NtRemoveIoCompletionEx` successfully retrieves the completion with correct `ApcContext` and `Events=0x80` (AFD_POLL_ACCEPT). Verified in both Debug and ReleaseFast.
-- **Spec Status:** Spec v6.1 released — all prior contradictions resolved, including precise re-arming rule for AFD_POLL.
+- **Stage 2 Full Echo Verified:** `stage2_echo.zig` implemented a complete echo server/client using IOCP + AFD_POLL. Verified end-to-end data round-trip, multiple socket handling (listener + connection), and re-arming logic. Verified in both Debug and ReleaseFast.
+- **Decision Log Updated:** Memory ownership and completion key design finalized (Section 4). Re-arming timing refined to "After I/O" to avoid double completions (Section 2).
 
 ---
 
 ## 3. Session Context & Hand-off
 
 ### Completed in Current Session:
-- **IOCP-integrated accept test implemented:** Created `os/windows/poc/stage1_accept_integrated_iocp.zig` as a separate file (event-based `stage1_accept.zig` preserved untouched). Key differences: no event handle, `Event=null` + `ApcContext=@ptrCast(&io_status_block)` in `NtDeviceIoControlFile`, wait via `NtRemoveIoCompletionEx` with 10-second timeout. Successfully receives `AFD_POLL_ACCEPT` (0x80) via IOCP in both Debug and ReleaseFast modes.
-- **Test infrastructure updated:** Added `stage1_iocp` import in `poc.zig` and new test in `os_windows_tests.zig`.
-- **Decision Log Section 8.2 validated:** ApcContext non-null rule confirmed working — the returned `FILE_COMPLETION_INFORMATION.ApcContext` matches the pointer passed to `NtDeviceIoControlFile`.
+- **Stage 2 POC (Full Echo) implemented:** Created `os/windows/poc/stage2_echo.zig`. 
+- **End-to-end verification:** Server accepts connection via `AFD_POLL_ACCEPT`, then echoes data via `AFD_POLL_RECEIVE`. Client connects, sends data, and receives echo.
+- **Refined re-arming:** Demonstrated that re-arming AFTER I/O calls is efficient and avoids redundant completions.
+- **Verified in both modes:** All Stage 0, 1, and 2 POCs pass in Debug and ReleaseFast.
+- **Decision Log updated:** Finalized memory ownership (per-context ownership) and Completion Key design (Key 0 for I/O, Key 1 for Signals).
 
 ### Completed in Prior Sessions:
-- **Analysis of `Skt.accept()` and `Skt.connect()` confirmed:** Both functions correctly support Linux and Windows through their underlying `posix` implementations (`posix.system.connect`, `windows.accept`) and platform-specific error handling.
-- **Architectural divergence noted:** The `iocp-reactor-complete-analysis-001.md` document strongly advocates for `AcceptEx` (Proactor model) for connection acceptance, while the current POC uses `AFD_POLL_ACCEPT` (Reactor-like readiness). This highlights a key architectural decision point for future phases.
-- **Critical bug fixed in `stage1_accept.zig`:** Separate input/output buffers for `NtDeviceIoControlFile(AFD_POLL)` caused the output buffer to never be populated. Fixed by using same buffer for both.
-- **Stage 1 POC (Accept Test) event-based completion verified.**
-- **Stage 0 POC (IOCP Wakeup) completed.**
-- **Build system, module infrastructure, and extended NT bindings established.**
+- **IOCP-integrated accept test implemented:** Created `os/windows/poc/stage1_accept_integrated_iocp.zig`.
+- **Analysis of `Skt.accept()` and `Skt.connect()` confirmed.**
+- **Architectural divergence noted** regarding `AcceptEx`.
+- **Critical bug fixed in `stage1_accept.zig`** (same buffer for input/output).
 
 ### Current Blockers:
 - None.
 
 ### Files of Interest:
-- `spec-v6.1.md` — Primary reference for all implementation details.
-- `os/windows/poc/stage0_wake.zig` — Reference for IOCP wakeup.
-- `os/windows/poc/stage1_accept.zig` — The working POC for AFD_POLL_ACCEPT (event-based).
-- `os/windows/poc/stage1_accept_integrated_iocp.zig` — IOCP-integrated AFD_POLL_ACCEPT POC.
-- `analysis/003-feasibility.md` — Stage definitions (still useful for context).
-- `src/ampe/Skt.zig` - Refactored for proper cross-platform socket handling via `std.posix`.
-- `src/ampe/SocketCreator.zig` - Uses `std.posix.socket` for creating sockets.
-- `os/windows/poc/ntdllx.zig` - Contains kernel32 function externs.
+- `os/windows/poc/stage2_echo.zig` — Full echo POC (current reference).
+- `spec-v6.1.md` — Primary reference.
+- `decision-log.md` — Technical constraints and finalized designs.
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Stage 2 POC (Full Echo):** Implement a complete echo server/client test that exercises the full IOCP + AFD_POLL lifecycle:
-   - Accept a connection via IOCP-driven AFD_POLL_ACCEPT.
-   - Perform async read/write on the accepted connection using AFD_POLL_RECEIVE/AFD_POLL_SEND.
-   - Implement AFD_POLL re-arming immediately upon completion (before processing I/O) per Spec v6.1.
-   - Verify data round-trip (client sends data, server echoes it back).
-2. **Memory ownership for AFD_POLL_INFO:** Finalize during Stage 2 (Decision Log Section 4).
-3. **Completion key design:** Finalize during Stage 2 (Decision Log Section 4).
-4. **Hand-off:** After completing Stage 2, update this ACTIVE_KB.md and mark progress.
+1. **Stage 3 POC (Stress & Cancellation):** Implement a POC that handles:
+   - Multiple concurrent connections (e.g., 10-20).
+   - Async connection cancellation via `NtCancelIoFileEx`.
+   - Robust cleanup (closing handles, freeing context memory after completion).
+2. **Phase II (Refactoring) preparation:** Start planning the extraction of `Poller` and `Notifier` facades in `src/ampe/`.
+3. **Hand-off:** Update this ACTIVE_KB.md after Stage 3.

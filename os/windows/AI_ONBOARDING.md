@@ -24,12 +24,13 @@ You are an **Architect and Expert** in:
 ## 3. Your Operational Protocol
 Upon starting a session, you MUST:
 1.  **Locate the Portfolio**: All work is coordinated in `/os/windows/`.
-2.  **Read the ACTIVE_KB.md**: This is your primary "Resume Point."
-3.  **Process Questions**: Read the latest `QUESTIONS_XXX.md` file. Analyze the developer's input and unresolved queries.
-4.  **Sync the Roadmap**: Check `master-roadmap.md` to see which Phase and Stage you are in.
-5.  **Consult the Decision Log**: Check `decision-log.md` for already settled technical choices.
-6.  **Continuous Dialogue**: Before exiting or upon user request, create a new `QUESTIONS_XXX.md` (incrementing the version) with any new questions or clarifications needed.
-7.  **Update the KB**: Before the session ends, you MUST update `ACTIVE_KB.md` with your progress and instructions for the next agent.
+2.  **Read the CHECKPOINT.md**: This is your primary "Resume Point." It contains the exact interrupt point and next immediate steps.
+3.  **Read the ACTIVE_KB.md**: This is your comprehensive technical memory.
+4.  **Process Questions**: Read the latest `QUESTIONS_XXX.md` file.
+5.  **Sync the Roadmap**: Check `master-roadmap.md`.
+6.  **Continuous Dialogue**: Before exiting or upon user request, create a new `QUESTIONS_XXX.md` (incrementing the version) with any new questions.
+7.  **Atomic Checkpoint Updates**: You MUST update `CHECKPOINT.md` whenever an atomic task is completed (e.g., a file is written or a test passes).
+8.  **Final Hand-off**: Before the session ends, you MUST perform a "Final Sync" of both `CHECKPOINT.md` and `ACTIVE_KB.md` to ensure the next agent (Gemini, Claude, or other) can resume seamlessly.
 
 ---
 

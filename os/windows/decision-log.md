@@ -43,8 +43,14 @@ This document tracks the settled architectural and technical decisions for the t
 
 ## 4. Pending Decisions (To be resolved during POC)
 
-- **Memory ownership for AFD_POLL_INFO:** To be finalized during Stage 2 POC (Full Echo).
-- **Completion key design:** To be finalized during Stage 2 POC.
+- **Memory ownership for AFD_POLL_INFO:** Each `Channel` (or socket context) owns its own `AFD_POLL_INFO` and `IO_STATUS_BLOCK` structures. These must remain valid for the duration of the asynchronous operation. In the production implementation, these will be fields within the `WindowsChannel` or equivalent structure. (Finalized 2026-02-13)
+- **Completion key design:** (Finalized 2026-02-13)
+  - **CompletionKey:** Used to distinguish between different sources of completion.
+    - `0`: AFD_POLL readiness notifications.
+    - `1`: Internal Reactor signals (Wakeup, Notifier) via `NtSetIoCompletion`.
+  - **ApcContext:** Used to pass the pointer to the specific `Channel` or context structure for the operation. This allows direct access to the `AFD_POLL_INFO` and `IO_STATUS_BLOCK` for re-arming.
+
+- **Re-arming Timing (Refined 2026-02-13):** While Spec v6.1 suggested re-arming BEFORE I/O processing, Stage 2 POC showed that re-arming AFTER the I/O call (`accept`, `recv`) is more efficient as it avoids "double completions" (where the new poll completes immediately because the condition wasn't cleared yet). Since AFD_POLL is level-triggered in semantics, re-arming AFTER still catches any events that occurred during the I/O call.
 
 ## 5. Git usage
 
@@ -65,7 +71,19 @@ These are the only sanctioned build/test invocations. Do not omit flags or inven
 
 ---
 
-## 7. Mandatory Testing & Verification Rule
+## 7. Mandatory Multi-Agent Coordination Rule
+
+To ensure seamless handover between different AI agents (Gemini, Claude, etc.):
+
+1.  **Shared State:** `CHECKPOINT.md` is the authoritative "short-term memory" for current task progress.
+2.  **Read-Before-Act:** Every session MUST begin by reading `CHECKPOINT.md`.
+3.  **Atomic Updates:** Update `CHECKPOINT.md` immediately after completing an atomic sub-task (e.g., successful compilation of a new POC).
+4.  **Final Hand-off:** On session end, update `CHECKPOINT.md` with the "Interrupt Point" and "Next Immediate Steps".
+5.  **Synchronization:** Ensure `ACTIVE_KB.md` is updated for long-term technical state, while `CHECKPOINT.md` stays focused on the immediate task loop.
+
+---
+
+## 8. Mandatory Testing & Verification Rule
 
 **Every change** to the codebase MUST be validated against **both** optimization levels before being considered complete:
 

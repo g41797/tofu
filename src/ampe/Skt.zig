@@ -169,10 +169,14 @@ pub fn deinit(skt: *Skt) void {
 
 pub fn close(skt: *Skt) void {
     if (skt.socket) |socket| {
-        posix.close(socket);
+        if (native_os == .windows) {
+            windows.closesocket(socket) catch {};
+        }
+        else {
+            posix.close(socket);
+        }
         skt.socket = null;
-    }
-}
+    }}
 
 pub fn knock(socket: std.posix.socket_t) bool {
     const slice: [1]u8 = .{0};
