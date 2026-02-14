@@ -1,17 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-const std = @import("std");
-const windows = std.os.windows;
-const ws2_32 = windows.ws2_32;
-const poc = @import("poc.zig");
-const afd = poc.afd;
-const ntdllx = poc.ntdllx;
-const tofu = @import("tofu");
-const Skt = tofu.Skt;
-const SocketCreator = tofu.SocketCreator;
-const address = tofu.address;
-
 pub const Stage3Stress = struct {
     poller: afd.AfdPoller,
     listen_socket: Skt,
@@ -304,3 +293,14 @@ pub fn runTest() !void {
         return err;
     };
 }
+
+const std = @import("std");
+const windows = std.os.windows;
+const ws2_32 = windows.ws2_32;
+const poc = @import("poc.zig");
+const afd = poc.afd;
+const ntdllx = poc.ntdllx;
+const tofu = @import("tofu");
+const Skt = tofu.Skt;
+const SocketCreator = tofu.SocketCreator;
+const address = tofu.address;

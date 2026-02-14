@@ -4,10 +4,6 @@
 pub const poll_INFINITE_TIMEOUT: u32 = std.math.maxInt(i32);
 pub const poll_SEC_TIMEOUT: i32 = 1_000;
 
-pub const afd = @import("afd.zig");
-pub const ntdllx = @import("ntdllx.zig");
-pub const AfdPoller = afd.AfdPoller;
-
 pub const Poller = union(enum) {
     afd: AfdPoller,
 
@@ -26,6 +22,10 @@ pub const Poller = union(enum) {
         return;
     }
 };
+
+pub const afd = @import("afd.zig");
+pub const ntdllx = @import("ntdllx.zig");
+pub const AfdPoller = afd.AfdPoller;
 
 const std = @import("std");
 const tofu = @import("../../../tofu.zig");
