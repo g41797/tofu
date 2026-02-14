@@ -15,7 +15,11 @@
 *This section contains notes, requirements, and advice directly from the project author. AI agents must follow these instructions over any conflicting defaults.*
 
 **Current Notes:**
-- (Author: Add your notes, requirements, and advice here. These will be preserved across all AI sessions.)
+- **Architecture:** All OS-dependent functionality must be refactored using a "comptime redirection" pattern.
+- **Redirection Pattern:** Files like `Skt.zig`, `poller.zig`, and `Notifier.zig` in `src/ampe/` will act as facades that `@import` their respective implementations from `src/ampe/os/linux/` or `src/ampe/os/windows/`.
+- **File Location:** All implementation and POC code must reside under `src/ampe/os/`. Specifically, Windows POCs and implementation now reside in `src/ampe/os/windows/`. The root `os/windows/` directory is strictly for documentation (`.md`).
+- **Standard:** `ntdllx.zig` is located at `src/ampe/os/windows/ntdllx.zig`.
+- **Workflow:** The next steps will likely be performed on Linux to establish the `os/linux/` backend and the facade structure.
 
 ---
 

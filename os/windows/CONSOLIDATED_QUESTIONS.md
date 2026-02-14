@@ -38,7 +38,7 @@ What constitutes the absolute minimum "Working on Windows" milestone?
 - [ ] Reactor starts/stops
 - [ ] Single TCP echo
 - [ ] Multiple concurrent connections
-- [ ] Full parity with Linux test suite
+- [+] Full parity with Linux test suite
 
 ---
 *Last Updated: 2026-02-13*

@@ -174,5 +174,3 @@ const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;
 const builtin = @import("builtin");
-const windows = std.os.windows;
-const ws2_32 = windows.ws2_32;
