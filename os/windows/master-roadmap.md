@@ -30,7 +30,16 @@ This roadmap coordinates the authoritative specification and supporting records:
 ### Phase I: Feasibility (POC)
 **Location:** `/os/windows/poc/`
 **Goal:** Prove `AFD_POLL` re-arming and `NtSetIoCompletion` wakeup logic works in Zig 0.15.2.
-*Status:* **COMPLETE (2026-02-13)**. Stages 0, 1, 2, and 3 verified in Debug and ReleaseFast.
+*Status:* **COMPLETE (2026-02-14)**.
+- [x] Stage 0: Basic Wakeup (IOCP + NtSetIoCompletion)
+- [x] Stage 1: TCP Listener Readiness (AFD_POLL)
+- [x] **Stage 1U: Unix Domain Sockets (UDS)**
+    - [x] 1U.1: UDS Listener Readiness (Event-based)
+    - [x] 1U.2: UDS Echo (Integrated IOCP)
+    - [x] 1U.3: UDS Stress (Full Reactor parity)
+- [x] Stage 2: Concurrent TCP Connections
+- [x] Stage 3: Full Stress (Non-blocking Send/Recv)
+*Note:* Phase I Stages 0-3 are complete for TCP. 1U is added to verify UDS parity before Phase II completion.
 
 ### Phase II: Structural Refactoring
 **Location:** `src/ampe/`

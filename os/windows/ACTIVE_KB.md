@@ -37,12 +37,12 @@
 ---
 
 ## 2. Technical State of Play
-- **Phase I Complete:** Proven that Reactor-over-IOCP is stable under stress.
+- **Phase I (Feasibility) Complete:** Full parity between TCP and UDS verified on Windows using AFD Reactor pattern.
 - **Key Verified Findings:**
-    - `AFD_POLL` + IOCP correctly emulates level-triggered Reactor semantics.
-    - Optimal re-arming timing is **after** the non-blocking I/O call.
-    - `ApcContext` reliably routes completion packets to socket-specific structures.
-    - `NtCancelIoFile` enables safe asynchronous resource cleanup.
+    - `AFD_POLL` + IOCP correctly emulates level-triggered Reactor semantics for all socket types.
+    - **UDS Base Handle Rule:** Accepted UDS sockets return a layered WinSock handle. You MUST call `SIO_BASE_HANDLE` before associating with an IOCP to avoid missing completion packets.
+    - **Connect Precision:** UDS `connect()` on Windows requires a `namelen` of exactly `2 + path.len + 1`.
+    - **Non-blocking connect:** `AF_UNIX` connect returns `WSAEWOULDBLOCK` similarly to TCP; re-arming for `AFD_POLL_OUT` or `AFD_POLL_CONNECT` is required.
 - **Zig 0.15.2:** Confirmed `std.ArrayList` requires explicit allocator passing for all operations.
 
 ---
@@ -50,9 +50,10 @@
 ## 3. Session Context & Hand-off
 
 ### Completed in Current Session:
-- **Consolidated Questions:** Merged all `QUESTIONS_XXX.md` into `CONSOLIDATED_QUESTIONS.md`.
-- **Infrastructure:** Added **Author's Directive** to `ACTIVE_KB.md`.
-- **Rule Enforcement:** Updated `AI_ONBOARDING.md` with mandatory reading rules.
+- **UDS Extension:** Expanded Stage 1U to include full Echo and Stress testing.
+- **UDS Discovery:** Identified and documented the "Base Handle Rule" for accepted UDS connections.
+- **Troubleshooting:** Successfully used the "Event Trick" to resolve a hang in the IOCP loop.
+- **Final Sync:** All Phase I feasibility requirements are met.
 
 ### Current Blockers:
 - None.

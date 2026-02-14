@@ -114,6 +114,10 @@ pub extern "kernel32" fn WaitForSingleObject(
     dwMilliseconds: ULONG, // ULONG (u32) for milliseconds
 ) callconv(.winapi) ULONG;
 
+pub extern "kernel32" fn ResetEvent(
+    hEvent: HANDLE,
+) callconv(.winapi) windows.BOOL;
+
 // Constants for WaitForSingleObject return values
 pub const WAIT_OBJECT_0: ULONG = 0x00000000;
 pub const WAIT_ABANDONED: ULONG = 0x00000080;

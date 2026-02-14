@@ -1,35 +1,23 @@
-# AGENT HANDOVER CHECKPOINT
-**Current Date:** 2026-02-13
+**AGENT HANDOVER CHECKPOINT**
+**Current Date:** 2026-02-14
 **Last Agent:** Gemini-CLI
-**Active Phase:** Phase II (Structural Refactoring) - STARTING
+**Active Phase:** Phase II (Structural Refactoring)
 **Active Stage:** Moving Linux logic to `src/ampe/os/linux/`
 
 ## 🎯 Current Status
-- **Phase I (Feasibility) is COMPLETE and VERIFIED.** All POCs pass in Debug and ReleaseFast.
-- **Structural Simplification COMPLETE:**
-    - All Windows POC files and `ntdllx.zig` are now directly in `src/ampe/os/windows/`.
-    - The redundant `src/ampe/os/windows/poc/` directory has been **removed**.
-    - `build.zig` updated to point `win_poc` module to `src/ampe/os/windows/poc.zig`.
-    - `src/ampe/os/linux/` created (currently empty).
-- **Verified Build:** `zig build` and `zig build test` pass in **Debug** and **ReleaseFast**.
+- **TCP Feasibility (Stages 0-3) COMPLETE.**
+- **UDS Feasibility (Stage 1U) COMPLETE.** Full parity (Accept, Echo, Stress) verified.
+- **Key Discovery:** UDS accepted sockets *must* have base handles extracted for IOCP routing.
+- **Structural Refactoring (Phase II) is IN PROGRESS.**
 
 ## 🚧 Interrupt Point
-- Structural preparation for Phase II is complete.
-- All technical risks for the Windows Reactor are retired.
-- Handing over for **refactoring on Linux**.
+- Full feasibility for the Windows Reactor (TCP + UDS) is now proven.
+- Ready to move forward with the Linux extraction refactor.
 
-## 🚀 Next Immediate Steps (Linux Session)
+## 🚀 Next Immediate Steps
 1.  **Extract Linux Skt:** Move current Linux-specific code from `src/ampe/Skt.zig` to `src/ampe/os/linux/Skt.zig`.
-2.  **Implement Skt Facade:** Update `src/ampe/Skt.zig` to use `comptime` redirection:
-    ```zig
-    const impl = switch (builtin.os.tag) {
-        .windows => @import("os/windows/Skt.zig"),
-        .linux => @import("os/linux/Skt.zig"),
-        else => @compileError("Unsupported OS"),
-    };
-    ```
-3.  **Repeat for Poller:** Move existing `std.posix.poll` logic to `src/ampe/os/linux/poller.zig` and establish the facade in `src/ampe/poller.zig`.
-4.  **Notifier:** Establish the `Notifier` abstraction.
+2.  **Implement Skt Facade:** Update `src/ampe/Skt.zig` to use `comptime` redirection.
+3.  **Modularize Poller:** Extract POSIX `poll` logic to `src/ampe/os/linux/poller.zig`.
 
 ## ⚠️ Critical Context for Successor
 - **Author's Directive:** Read **Section 0** of `os/windows/ACTIVE_KB.md` first.
