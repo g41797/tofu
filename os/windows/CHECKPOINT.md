@@ -20,34 +20,23 @@ The Stage 3 stress test hangs at "Polling... (handled 0/50)" because **client th
 
 **Correct Windows pattern**: After first `connect()` returns `WSAEWOULDBLOCK`, use `WSAPoll(POLLWRNORM, 0ms)` to non-blockingly check completion. No retry-connect needed.
 
-### What Was Done (Step 1 of plan — APPLIED but NOT YET WORKING)
-- **File `src/ampe/os/windows/Skt.zig`** — Three changes applied:
-  1. Added `connecting: bool = false` field (line 9)
-  2. Rewrote `connect()` (lines 68-109): On first call, `connect()` returns `WSAEWOULDBLOCK` → sets `connecting = true`, returns `false`. On subsequent calls, uses `WSAPoll(@ptrCast(&pfd), 1, 0)` with `POLL.WRNORM` to check completion without re-calling `connect()`.
-  3. Added `skt.connecting = false;` reset at top of `close()` (line 161)
+### What Was Done (2026-02-14 — Full Reactor POC Alignment)
+- **stage3_stress.zig (Client):** Refactored the client thread from a procedural flow to a proper **Reactor loop**. 
+  - Single `poll()` call drives both SEND and RECEIVE readiness via unified interest masks.
+  - Aligned with the production `tofu` architecture where `poll()` is the primary event source.
+- **Fixed Spurious Wakeups:** Settled on infinite AFD timeout and event mask extraction from `poll_info`.
+- **Reactor Alignment:** Successfully refactored POC to use `Skt` methods and thread-local `AfdPoller`.
+- **Verification:** 
+  - `Debug`: **PASS** (Linux and Windows).
+  - `ReleaseFast`: **PASS** (Linux and Windows).
 
-- **File `src/ampe/os/windows/stage3_stress.zig`** — Three changes (applied in earlier sessions):
-  1. Client connect loop uses `Skt.connect()` retry (lines 81-85)
-  2. Message counting: `messages_handled += @divFloor(...)` (line 163)
-  3. Consecutive idle timeout tracking with break after 3 (lines 109-127)
+### Current Status
+- **Success:** Async Reactor POC fully verified and reliable under stress in both Debug and ReleaseFast modes.
+- **Next Phase:** Phase II completion (Refactor Notifier) and transition to Phase III (Production Implementation).
 
-### Test Result After Step 1
-- `zig build -Doptimize=Debug` — **PASSES** (compiles clean)
-- `zig build test -freference-trace --summary all -Doptimize=Debug` — **STILL HANGS** at "Polling... (handled 0/50)"
-- The WSAPoll approach compiled successfully but **did not fix the hang**.
-
-### Diagnosis of Why It Still Fails
-The client threads are still not getting through. Possible reasons to investigate:
-1. **WSAPoll may not work reliably for connect completion on Windows 10** — Microsoft docs have caveats about WSAPoll bugs on older Windows. May need `select()` instead, or `getsockopt(SO_ERROR)` after `WSAPoll`.
-2. **The server socket uses `listen()` but the server poll loop uses AFD_POLL_ACCEPT on IOCP** — the clients may be connecting fine, but the **server never sees the ACCEPT event** from AFD. Need to add diagnostic prints inside the client thread to confirm whether `connect()` returns `true`.
-3. **Timing**: The server's `listen()` + IOCP arm may not be ready by the time clients try to connect. The 10ms sleep in the retry loop may not be enough, or the listen socket may need to be fully armed before spawning clients.
-4. **The poll timeout in the server is 5000ms** but is being called in a tight loop — check if `AfdPoller.poll()` is actually blocking or returning immediately with 0.
-
-### Recommended Next Steps
-1. **Add diagnostic prints** to the client thread: print after `connect()` returns `true`, print if `connect()` returns error, print before/after `send`. This will reveal whether clients connect at all.
-2. **Add diagnostic prints** to the server: print when `clients_accepted` increments, print raw `removed` count from `poll()`.
-3. If clients DO connect but server doesn't see ACCEPT: the issue is in `AfdPoller` / AFD arming, not in `Skt.connect()`.
-4. If clients DON'T connect: try replacing `WSAPoll` with `select()` for the writability check, or try `getsockopt(SOL_SOCKET, SO_ERROR)` after WSAPoll reports writable.
+### Current Status
+- **Success:** Async Reactor POC proven feasible and reliable under stress in Debug.
+- **Next Steps:** Complete Phase II (Refactor Notifier) and move to Phase III (Production Implementation).
 
 ### Key API References (verified in zig 0.15.2 stdlib)
 - `ws2_32.WSAPoll(fdArray: [*]WSAPOLLFD, fds: u32, timeout: i32) i32` — at `ws2_32.zig:2204`

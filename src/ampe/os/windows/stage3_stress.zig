@@ -70,52 +70,116 @@ pub const Stage3Stress = struct {
                     _ = ws2_32.WSAStartup(0x0202, &wsa_data);
                     defer _ = ws2_32.WSACleanup();
 
-                    var sc: SocketCreator = SocketCreator.init(std.heap.page_allocator);
-                    var client_skt: Skt = sc.fromAddress(.{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) }) catch {
+                    const allocator = std.heap.page_allocator;
+
+                    var local_poller = afd.AfdPoller.init(allocator) catch {
+                        std.debug.print("[Client-{d}] Poller init failed\n", .{id});
+                        return;
+                    };
+                    defer local_poller.deinit();
+
+                    var sc: SocketCreator = SocketCreator.init(allocator);
+                    const client_skt_val: Skt = sc.fromAddress(.{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) }) catch {
                         std.debug.print("[Client-{d}] Creation failed\n", .{id});
                         return;
                     };
-                    defer client_skt.deinit();
-
-                    // Use Skt.connect() retry loop — handles WSAEWOULDBLOCK/WSAEISCONN safely
-                    var connected: bool = client_skt.connect() catch |err| {
-                        std.debug.print("[Client-{d}] connect error: {any}\n", .{id, err});
-                        return;
-                    };
-                    while (!connected) {
-                        std.Thread.sleep(10 * std.time.ns_per_ms);
-                        connected = client_skt.connect() catch |err| {
-                            std.debug.print("[Client-{d}] retry connect error: {any}\n", .{id, err});
-                            return;
-                        };
+                    // Move Skt to heap so we can point to it in SocketContext
+                    const client_skt = allocator.create(Skt) catch return;
+                    client_skt.* = client_skt_val;
+                    defer {
+                        client_skt.deinit();
+                        allocator.destroy(client_skt);
                     }
 
-                    std.debug.print("[Client-{d}] Connected!\n", .{id});
+                    _ = local_poller.register(client_skt) catch {
+                         std.debug.print("[Client-{d}] Register failed\n", .{id});
+                         return;
+                    };
 
-                    for (0..10) |m| {
-                        const sent = ws2_32.send(client_skt.socket.?, "Ping", 4, 0);
-                        if (sent == ws2_32.SOCKET_ERROR) {
-                            std.debug.print("[Client-{d}] send error: {any}\n", .{id, ws2_32.WSAGetLastError()});
-                            break;
+                    var ctx = poc.SocketContext.init(client_skt);
+                    var entries: [1]ntdllx.FILE_COMPLETION_INFORMATION = undefined;
+
+                    // 1. Initial Connection Reactor step
+                    std.debug.print("[Client-{d}] Starting connect...\n", .{id});
+                    if (client_skt.connect() catch |err| {
+                        std.debug.print("[Client-{d}] Connect error: {any}\n", .{id, err});
+                        return;
+                    }) {
+                         std.debug.print("[Client-{d}] Connected immediately!\n", .{id});
+                    } else {
+                         while (true) {
+                             ctx.arm(ntdllx.AFD_POLL_CONNECT, &ctx) catch return;
+                             _ = local_poller.poll(5000, &entries) catch return;
+                             if (ctx.poll_info.Handles[0].Events == 0) continue;
+                             if (client_skt.connect() catch |err| {
+                                 std.debug.print("[Client-{d}] connect retry error: {any}\n", .{id, err});
+                                 return;
+                             }) {
+                                 std.debug.print("[Client-{d}] Connected async!\n", .{id});
+                                 break;
+                             }
+                         }
+                    }
+
+                    // 2. Data Exchange Reactor Loop
+                    var pings_sent: usize = 0;
+                    var pongs_recvd: usize = 0;
+                    const TOTAL_PINGS: usize = 10;
+
+                    while (pongs_recvd < TOTAL_PINGS) {
+                        // Determine what we are interested in
+                        var interest: u32 = ntdllx.AFD_POLL_RECEIVE;
+                        if (pings_sent < TOTAL_PINGS and pings_sent == pongs_recvd) {
+                            interest |= ntdllx.AFD_POLL_SEND;
                         }
-                        
-                        var buf: [16]u8 = undefined;
-                        const recvd = ws2_32.recv(client_skt.socket.?, &buf, buf.len, 0);
-                        if (recvd <= 0) {
-                            if (ws2_32.WSAGetLastError() == .WSAEWOULDBLOCK) {
-                                std.Thread.sleep(10 * std.time.ns_per_ms);
-                                // Simple retry for POC
-                                const recvd2 = ws2_32.recv(client_skt.socket.?, &buf, buf.len, 0);
-                                if (recvd2 <= 0) {
-                                    std.debug.print("[Client-{d}] recv retry failed: {any}\n", .{id, ws2_32.WSAGetLastError()});
+
+                        ctx.arm(interest, &ctx) catch |err| {
+                            std.debug.print("[Client-{d}] Arm error: {any}\n", .{id, err});
+                            break;
+                        };
+
+                        const removed = local_poller.poll(5000, &entries) catch |err| {
+                            std.debug.print("[Client-{d}] Poll error: {any}\n", .{id, err});
+                            break;
+                        };
+
+                        if (removed == 0) continue;
+
+                        const events = ctx.poll_info.Handles[0].Events;
+                        if (events == 0) continue;
+
+                        // Process SEND readiness
+                        if ((events & ntdllx.AFD_POLL_SEND) != 0) {
+                            if (pings_sent < TOTAL_PINGS and pings_sent == pongs_recvd) {
+                                _ = client_skt.send("Ping") catch |err| {
+                                    std.debug.print("[Client-{d}] Send error: {any}\n", .{id, err});
                                     break;
-                                }
-                            } else {
-                                std.debug.print("[Client-{d}] recv error: {any}\n", .{id, ws2_32.WSAGetLastError()});
-                                break;
+                                };
+                                std.debug.print("[Client-{d}] Sent ping {d}\n", .{id, pings_sent});
+                                pings_sent += 1;
                             }
                         }
-                        _ = m;
+
+                        // Process RECEIVE readiness
+                        if ((events & ntdllx.AFD_POLL_RECEIVE) != 0) {
+                            var buf: [16]u8 = undefined;
+                            const bytes = client_skt.recv(&buf) catch |err| {
+                                if (err == error.WouldBlock) continue;
+                                std.debug.print("[Client-{d}] Recv error: {any}\n", .{id, err});
+                                break;
+                            };
+                            
+                            if (bytes > 0) {
+                                std.debug.print("[Client-{d}] Received pong {d} ({d} bytes)\n", .{id, pongs_recvd, bytes});
+                                pongs_recvd += 1;
+                            }
+                        }
+
+                        // Handle errors/disconnects
+                        if ((events & (ntdllx.AFD_POLL_ABORT | ntdllx.AFD_POLL_LOCAL_CLOSE)) != 0) {
+                            std.debug.print("[Client-{d}] Disconnected by peer\n", .{id});
+                            break;
+                        }
                     }
                     std.debug.print("[Client-{d}] Finished\n", .{id});
                 }
@@ -149,49 +213,72 @@ pub const Stage3Stress = struct {
 
             for (entries[0..removed]) |entry| {
                 const ctx: *poc.SocketContext = @ptrCast(@alignCast(entry.ApcContext.?));
-                const events: u32 = @intCast(entry.IoStatus.Information);
+                // Real events are in the poll_info structure
+                const events: u32 = ctx.poll_info.Handles[0].Events;
+
+                if (events == 0) {
+                    // Spurious wakeup (AFD timeout)
+                    // Re-arm immediately with original mask
+                    if (ctx == &listen_ctx) {
+                        try ctx.*.arm(ntdllx.AFD_POLL_ACCEPT, ctx);
+                    } else {
+                        try ctx.*.arm(ntdllx.AFD_POLL_RECEIVE, ctx);
+                    }
+                    continue;
+                }
 
                 if (ctx == &listen_ctx) {
-                    var addr: ws2_32.sockaddr = undefined;
-                    var addr_len: i32 = @sizeOf(ws2_32.sockaddr);
-                    const client_sock: ws2_32.SOCKET = ws2_32.accept(ctx.*.skt.*.socket.?, &addr, &addr_len);
-                    if (client_sock == ws2_32.INVALID_SOCKET) {
-                        std.debug.print("[Stress-POC] Accept returned INVALID_SOCKET, error: {any}\n", .{ws2_32.WSAGetLastError()});
+                    std.debug.print("[Stress-POC] Listen event: {X}\n", .{events});
+                    while (true) {
+                        const client_skt = ctx.skt.accept() catch |err| {
+                            std.debug.print("[Stress-POC] Accept error: {any}\n", .{err});
+                            break;
+                        };
+                        
+                        if (client_skt) |skt| {
+                            std.debug.print("[Stress-POC] Accepted new client socket: {any}\n", .{skt.socket.?});
+                            const s: *Skt = try self.*.allocator.create(Skt);
+                            s.* = skt;
+                            try self.*.skts.append(self.*.allocator, s);
+                            _ = try self.*.poller.register(s);
+                            
+                            const c: *poc.SocketContext = try self.*.allocator.create(poc.SocketContext);
+                            c.* = poc.SocketContext.init(s);
+                            try self.*.connections.append(self.*.allocator, c);
+                            try c.*.arm(ntdllx.AFD_POLL_RECEIVE, c);
+                            clients_accepted += 1;
+                        } else {
+                            break; // WouldBlock
+                        }
                     }
                     try ctx.*.arm(ntdllx.AFD_POLL_ACCEPT, ctx);
-
-                    if (client_sock != ws2_32.INVALID_SOCKET) {
-                        std.debug.print("[Stress-POC] Accepted new client socket: {any}\n", .{client_sock});
-                        const s: *Skt = try self.*.allocator.create(Skt);
-                        s.* = .{ .socket = client_sock, .address = undefined, .server = false };
-                        try self.*.skts.append(self.*.allocator, s);
-                        _ = try self.*.poller.register(s);
-                        
-                        const c: *poc.SocketContext = try self.*.allocator.create(poc.SocketContext);
-                        c.* = poc.SocketContext.init(s);
-                        try self.*.connections.append(self.*.allocator, c);
-                        try c.*.arm(ntdllx.AFD_POLL_RECEIVE, c);
-                        clients_accepted += 1;
-                    }
                 } else {
                     if ((events & (ntdllx.AFD_POLL_ABORT | ntdllx.AFD_POLL_LOCAL_CLOSE | ntdllx.AFD_POLL_CONNECT_FAIL)) != 0) {
+                        std.debug.print("[Stress-POC] Client closed/error event: {X}\n", .{events});
                         continue; 
                     }
 
                     var buf: [1024]u8 = undefined;
-                    const bytes: i32 = ws2_32.recv(ctx.*.skt.*.socket.?, &buf, buf.len, 0);
+                    const bytes = ctx.skt.recv(&buf) catch |err| {
+                        if (err != error.PeerDisconnected) {
+                            std.debug.print("[Stress-POC] recv error: {any}\n", .{err});
+                        } else {
+                            std.debug.print("[Stress-POC] Peer disconnected\n", .{});
+                        }
+                        continue;
+                    };
                     
                     if (bytes > 0) {
-                        _ = ws2_32.send(ctx.*.skt.*.socket.?, &buf, @intCast(bytes), 0);
-                        messages_handled += @divFloor(@as(usize, @intCast(bytes)), 4); // each "Ping" = 4 bytes
+                        std.debug.print("[Stress-POC] Received {d} bytes, sending pong...\n", .{bytes});
+                        _ = ctx.skt.send(buf[0..bytes]) catch |err| {
+                            std.debug.print("[Stress-POC] send error: {any}\n", .{err});
+                        };
+                        messages_handled += @divFloor(bytes, 4); // each "Ping" = 4 bytes
                         try ctx.*.arm(ntdllx.AFD_POLL_RECEIVE, ctx);
-                    } else if (bytes == 0) {
-                        // Client closed
                     } else {
-                        const err = ws2_32.WSAGetLastError();
-                        if (err == .WSAEWOULDBLOCK) {
-                            try ctx.*.arm(ntdllx.AFD_POLL_RECEIVE, ctx);
-                        }
+                        // WouldBlock (spurious)
+                        std.debug.print("[Stress-POC] recv returned WouldBlock (0) despite event mask {X}\n", .{events});
+                        try ctx.*.arm(ntdllx.AFD_POLL_RECEIVE, ctx);
                     }
                 }
             }

@@ -122,7 +122,7 @@ pub const SocketContext = struct {
 
     pub fn arm(self: *SocketContext, events: u32, apc_context: ?*anyopaque) !void {
         self.*.poll_info = ntdllx.AFD_POLL_INFO{
-            .Timeout = -1,
+            .Timeout = @as(windows.LARGE_INTEGER, 0x7FFFFFFFFFFFFFFF), // Infinite wait at AFD level
             .NumberOfHandles = 1,
             .Exclusive = 0,
             .Handles = [_]ntdllx.AFD_POLL_HANDLE_INFO{

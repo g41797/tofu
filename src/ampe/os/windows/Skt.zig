@@ -6,7 +6,6 @@ pub const Skt = @This();
 socket: ?ws2_32.SOCKET = null,
 address: std.net.Address = undefined,
 server: bool = false,
-connecting: bool = false,
 
 // Windows-specific state for AFD polling
 base_handle: windows.HANDLE = windows.INVALID_HANDLE_VALUE,
@@ -66,40 +65,13 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 }
 
 pub fn connect(skt: *Skt) AmpeError!bool {
-    if (skt.connecting) {
-        // Connection already initiated — check completion via WSAPoll (0ms non-blocking)
-        var pfd: ws2_32.pollfd = .{
-            .fd = skt.socket.?,
-            .events = ws2_32.POLL.WRNORM,
-            .revents = 0,
-        };
-        const poll_rc = ws2_32.WSAPoll(@ptrCast(&pfd), 1, 0);
-        if (poll_rc < 0) {
-            skt.connecting = false;
-            return AmpeError.CommunicationFailed;
-        }
-        if (poll_rc == 0) return false; // still connecting
-        if ((pfd.revents & (ws2_32.POLL.ERR | ws2_32.POLL.HUP)) != 0) {
-            skt.connecting = false;
-            return AmpeError.PeerDisconnected;
-        }
-        if ((pfd.revents & ws2_32.POLL.WRNORM) != 0) {
-            skt.connecting = false;
-            return true;
-        }
-        return false; // unexpected, treat as still connecting
-    }
-
     const rc: i32 = ws2_32.connect(skt.socket.?, &skt.address.any, @intCast(skt.address.getOsSockLen()));
     if (rc == 0) return true;
 
     const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
     switch (err) {
         .WSAEISCONN => return true,
-        .WSAEWOULDBLOCK => {
-            skt.connecting = true;
-            return false;
-        },
+        .WSAEWOULDBLOCK => return false,
         .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => return AmpeError.PeerDisconnected,
         else => {
             log.warn("<{d}> connect error {any}", .{ getCurrentTid(), err });
@@ -158,7 +130,6 @@ pub fn deinit(skt: *Skt) void {
 }
 
 pub fn close(skt: *Skt) void {
-    skt.connecting = false;
     if (skt.*.socket) |socket| {
         _ = ws2_32.closesocket(socket);
         skt.*.socket = null;
@@ -170,6 +141,37 @@ pub fn knock(socket: ws2_32.SOCKET) bool {
     // Knock is used for readiness check in some POSIX implementations.
     // In our Windows AFD/IOCP model, we rely on the poller events.
     return true; 
+}
+
+pub fn send(skt: *Skt, buf: []const u8) AmpeError!usize {
+    const rc: i32 = ws2_32.send(skt.socket.?, buf.ptr, @intCast(buf.len), 0);
+    if (rc >= 0) return @intCast(rc);
+
+    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+    switch (err) {
+        .WSAEWOULDBLOCK => return 0,
+        .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+        else => {
+            log.warn("<{d}> send error {any}", .{ getCurrentTid(), err });
+            return AmpeError.CommunicationFailed;
+        },
+    }
+}
+
+pub fn recv(skt: *Skt, buf: []u8) AmpeError!usize {
+    const rc: i32 = ws2_32.recv(skt.socket.?, buf.ptr, @intCast(buf.len), 0);
+    if (rc > 0) return @intCast(rc);
+    if (rc == 0) return AmpeError.PeerDisconnected;
+
+    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+    switch (err) {
+        .WSAEWOULDBLOCK => return 0,
+        .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+        else => {
+            log.warn("<{d}> recv error {any}", .{ getCurrentTid(), err });
+            return AmpeError.CommunicationFailed;
+        },
+    }
 }
 
 const std = @import("std");

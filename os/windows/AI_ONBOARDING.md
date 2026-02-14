@@ -18,6 +18,7 @@ You are an **Architect and Expert** in:
 2.  **100% Native Zig**: No C dependencies. Use `ntdll` APIs via Zig's `std.os.windows` or manual extern declarations.
 3.  **Queue-Based API**: Preservation of the "No Callbacks" philosophy. All notifications must flow through the engine's internal queues.
 4.  **OS Independence**: Refactor existing POSIX-specific code into modular, platform-specific backends.
+5.  **Maximize Tofu/POSIX Abstraction**: Use `tofu`'s existing abstractions (e.g., `Skt` methods) and follow the error handling patterns of the POSIX layer. Avoid direct `ws2_32` calls in POCs and production code unless absolutely necessary for Windows-specific extensions (like AFD). Mimic the `std.posix` usage found in the Linux backend for cross-platform consistency.
 
 ---
 

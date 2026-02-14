@@ -24,6 +24,7 @@
 - **Sandwich Verification (MANDATORY):** If changes are made to fix one platform, the other platform MUST be re-verified immediately. Sequence: `Success(A) -> Fix(B) -> Re-verify(A)`.
 - **Log File Analysis (MANDATORY):** Build/Test outputs must be redirected to `zig-out/` log files. Analyze logs via files, not shell stdout.
 - **Artifact Location (MANDATORY):** All temporary logs, build outputs, and session artifacts MUST be placed in `zig-out/`. Never pollute the project root.
+- **Maximize Tofu/POSIX Abstraction (MANDATORY):** Use `tofu`'s existing abstractions (e.g., `Skt` methods) and follow the error handling patterns of the POSIX layer. Avoid direct `ws2_32` calls.
 - **Architecture:** All OS-dependent functionality must be refactored using a "comptime redirection" pattern.
 - **Redirection Pattern:** Files like `Skt.zig`, `poller.zig`, and `Notifier.zig` in `src/ampe/` will act as facades that `@import` their respective implementations from `src/ampe/os/linux/` or `src/ampe/os/windows/`.
 - **File Location:** All implementation and POC code must reside under `src/ampe/os/`. Specifically, Windows POCs and implementation now reside in `src/ampe/os/windows/`. The root `os/windows/` directory is strictly for documentation (`.md`).
@@ -36,7 +37,7 @@
 
 ---
 
-**Current Version:** 015
+**Current Version:** 016
 **Last Updated:** 2026-02-14
 **Current Focus:** Phase II — Structural Refactoring
 
@@ -56,31 +57,30 @@
     - **Redirection:** `src/ampe/internal.zig` acts as the primary redirection point.
     - **Encapsulation:** `Skt` on Windows now holds the pinned `IO_STATUS_BLOCK` and `base_handle`.
 - **Build & Verification Status:**
-    - **Linux:** Compiles and tests pass.
-    - **Windows:** Compiles (Debug). Most POC tests pass, but **Stage 3 Stress Test hangs**.
-    - **Sandwich Verification:** Active rule—always verify Linux after Windows fixes.
-- **Log Management:** All outputs must go to `zig-out/` log files.
+    - **Linux:** Compiles and tests pass (Sandwich Verification active).
+    - **Windows:** ALL POC tests pass (including Stage 3 Stress) in both **Debug** and **ReleaseFast** modes.
+- **Log Management:** All outputs go to `zig-out/` log files.
 
 ---
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-14, Claude Code Opus 4.6):
-- **Implemented WSAPoll-based `connect()` in `src/ampe/os/windows/Skt.zig`:**
-  - Added `connecting: bool = false` field to track in-progress connections
-  - Rewrote `connect()`: first call does `ws2_32.connect()`, gets `WSAEWOULDBLOCK`, sets `connecting=true`. Subsequent calls use `WSAPoll(POLLWRNORM, 0ms)` to check completion without re-calling `connect()`.
-  - Added `connecting` reset in `close()`
-- **Debug build passes** — WSAPoll compiles clean
-- **Debug test STILL HANGS** — Stage 3 stress test still stuck at "handled 0/50"
+### Completed This Session (2026-02-14, Gemini CLI Agent):
+- **Full Reactor POC Alignment:**
+  - Refactored `stage3_stress.zig` client thread to a proper **Reactor loop**.
+  - Fixed spurious wakeups by using infinite AFD timeout and extracting events from `poll_info`.
+- **Verification Sequence (PASS):**
+  - `Linux Debug` -> `Windows Debug` -> `Windows ReleaseFast` -> `Linux ReleaseFast`.
+  - All Stage 3 Stress tests passed (50/50 messages) without hangs.
+- **Abstraction Mandate:** Aligned `Skt.zig` and POCs with the "Maximize Tofu Abstraction" rule (returning 0 for WouldBlock).
 
-### Current Blockers:
-- **Stage 3 Hang persists** despite WSAPoll fix. The connect-side fix alone is insufficient. See `CHECKPOINT.md` for detailed diagnosis and next steps.
-- Key question: Are clients connecting but server not seeing ACCEPT events, or are clients not connecting at all? Need diagnostic prints to determine.
+### Current State:
+- Feasibility phase is officially CLOSED.
+- Next: Production implementation of `Poller.waitTriggers` using the verified `AfdPoller` engine.
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Debug Stage 3 hang** — Add diagnostic prints to client threads and server accept path. See detailed recommendations in `CHECKPOINT.md`.
-2. **Production Windows Poller:** Implement `waitTriggers` in `src/ampe/os/windows/poller.zig` using `AfdPoller`.
-3. **Notifier Refactoring:** Extract `Notifier.zig` into a platform-agnostic facade.
-4. **Verification:** Run full sequence once Stage 3 passes.
+1. **Production Windows Poller:** Implement `waitTriggers` in `src/ampe/os/windows/poller.zig` using `AfdPoller`.
+2. **Notifier Refactoring:** Extract `Notifier.zig` into a platform-agnostic facade.
+3. **Phase III Transition:** Start building `WindowsReactor`.
