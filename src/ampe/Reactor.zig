@@ -1167,7 +1167,7 @@ pub const Iterator = struct {
     }
 };
 
-const TriggeredChannel = struct {
+pub const TriggeredChannel = struct {
     engine: *Reactor = undefined,
     acn: channels.ActiveChannel = undefined,
     resp2ac: bool = undefined,
@@ -1384,7 +1384,7 @@ const internal = tofu.@"internal usage";
 const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
-const Skt = @import("Skt.zig");
+const Skt = internal.Skt;
 
 const Pool = internal.Pool;
 

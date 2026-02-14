@@ -44,10 +44,12 @@ This roadmap coordinates the authoritative specification and supporting records:
 ### Phase II: Structural Refactoring
 **Location:** `src/ampe/`
 **Goal:** Prepare the codebase for multiple OS backends.
-*Status:* **IN PROGRESS**.
-*   Extract `poller.zig` into a platform-agnostic facade.
-*   Move Linux `poll` logic to `os/linux/`.
-*   Implement `Notifier.zig` abstraction (Windows uses IOCP posting).
+*Status:* **IN PROGRESS (Stage 1 Complete)**.
+- [x] **Implement `os/windows/afd.zig`**: Create a reusable AFD/IOCP engine.
+- [x] **Refactor Skt Facade**: Extract Linux/Windows backends and encapsulate state.
+- [x] **Refactor Poller Facade**: Extract Linux/Windows backends.
+- [x] **Genericize Windows POCs**: Verify the abstraction with existing proofs.
+- [ ] Implement `Notifier.zig` abstraction (Windows uses IOCP posting).
 
 ### Phase III: Windows Implementation
 **Location:** `src/ampe/os/windows/`

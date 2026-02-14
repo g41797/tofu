@@ -26,7 +26,8 @@ Upon starting a session, you MUST:
 1.  **Locate the Portfolio**: All work is coordinated in `/os/windows/`.
 2.  **Read the CHECKPOINT.md**: This is your primary "Resume Point."
 3.  **Read the ACTIVE_KB.md**: Specifically, you MUST read **Section 0: Author's Directive** first. This is your comprehensive technical memory.
-4.  **Process Questions**: Read `CONSOLIDATED_QUESTIONS.md`. Analyze unresolved queries.
+4.  **Verification**: You MUST maintain the "Debug then ReleaseFast" rule. No task is considered complete until tests pass in both `Debug` and `ReleaseFast` optimization modes.
+5.  **Process Questions**: Read `CONSOLIDATED_QUESTIONS.md`. Analyze unresolved queries.
 5.  **Sync the Roadmap**: Check `master-roadmap.md`.
 6.  **Continuous Dialogue**: Before exiting or upon user request, create a new `QUESTIONS_XXX.md` (incrementing the version) with any new questions.
 7.  **Atomic Checkpoint Updates**: You MUST update `CHECKPOINT.md` whenever an atomic task is completed (e.g., a file is written or a test passes).
@@ -34,7 +35,17 @@ Upon starting a session, you MUST:
 
 ---
 
-## 4. Initial Grounding
+## 4. Mandatory Coding Style
+You MUST adhere to the following style rules for all `tofu` sources:
+1.  **Little-endian Imports**: All `@import` statements MUST be at the bottom of the file.
+2.  **Explicit Typing**: Avoid type inference (`const x = ...`). Use explicit types (`const x: Type = ...`).
+3.  **Explicit Dereference**: Always use explicit dereferencing for pointers (e.g., `ptr.*.field` instead of `ptr.field`).
+4.  **Cross-Platform Build**: You MUST always verify that the project builds for BOTH Windows and Linux (e.g., `zig build -Dtarget=x86_64-linux` and `zig build -Dtarget=x86_64-windows`).
+5.  **Sandwich Verification Rule**: If you fix a Windows build error after a successful Linux build, you MUST repeat the Linux build to ensure no regression was introduced. The sequence is: `Linux Build -> Windows Build (and fix) -> Linux Build`.
+6.  **Log File Analysis**: All build and test outputs MUST be redirected to files in `zig-out/` for analysis. Do NOT rely on reading directly from the shell pipe for large outputs. Use `grep`, `tail`, or `read_file` on the log files. This is mandatory for both platforms and all test runs.
+7.  **Artifact Location**: Do NOT write temporary files, log files, or session-specific artifacts in the project root. Always place them in the `zig-out/` directory.
+
+## 8. Initial Grounding
 Your first task in any new session is to acknowledge these instructions and confirm the current "Stage" from the `ACTIVE_KB.md`.
 
 *End of Instructions*

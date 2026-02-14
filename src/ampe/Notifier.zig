@@ -104,7 +104,7 @@ fn initUDS(allocator: Allocator) !Notifier {
     const receiver_fd = try posix.accept(listSkt.socket.?, null, null, posix.SOCK.NONBLOCK);
     errdefer posix.close(receiver_fd);
 
-    log.info(" notifier sender {d} receiver {d}", .{ senderSkt.socket.?, receiver_fd });
+    log.info(" notifier sender {any} receiver {any}", .{ senderSkt.socket.?, receiver_fd });
 
     return .{
         .sender = senderSkt.socket.?,
@@ -156,7 +156,7 @@ pub fn _isReadyToSend(sender: socket_t) bool {
     };
 
     const pollstatus = posix.poll(&spoll, poll_SEC_TIMEOUT * 2) catch |err| {
-        log.warn(" !!! notifier {d} poll error {s}", .{ spoll[0].fd, @errorName(err) });
+        log.warn(" !!! notifier {any} poll error {s}", .{ spoll[0].fd, @errorName(err) });
         return false;
     };
 
@@ -165,7 +165,7 @@ pub fn _isReadyToSend(sender: socket_t) bool {
     }
 
     if (spoll[0].revents & std.posix.POLL.HUP != 0) {
-        log.warn(" !!! notifier socket {d} error HUP", .{spoll[0].fd});
+        log.warn(" !!! notifier socket {any} error HUP", .{spoll[0].fd});
         return false;
     }
 
@@ -238,7 +238,7 @@ pub fn send_notification(sender: socket_t, notif: Notification) !void {
 pub inline fn sendByte(sender: socket_t, notif: u8) AmpeError!void {
     var byte_array = [_]u8{notif};
     _ = std.posix.send(sender, &byte_array, 0) catch |err| {
-        log.warn(" !!! notifier {d} send error {s}", .{ sender, @errorName(err) });
+        log.warn(" !!! notifier {any} send error {s}", .{ sender, @errorName(err) });
         return AmpeError.NotificationFailed;
     };
     return;
@@ -296,7 +296,7 @@ fn initTCP(allocator: Allocator) !Notifier {
     const receiver_fd = try posix.accept(listSkt.socket.?, null, null, posix.SOCK.NONBLOCK);
     errdefer posix.close(receiver_fd);
 
-    log.info(" notifier sender {d} receiver {d}", .{ senderSkt.socket.?, receiver_fd });
+    log.info(" notifier sender {any} receiver {any}", .{ senderSkt.socket.?, receiver_fd });
 
     return .{
         .sender = senderSkt.socket.?,

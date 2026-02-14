@@ -3,7 +3,8 @@
 
 const std = @import("std");
 const windows = std.os.windows;
-const ntdllx = @import("ntdllx.zig");
+const poc = @import("poc.zig");
+const ntdllx = poc.ntdllx;
 
 /// Manual completion key for shutdown
 pub const SHUTDOWN_KEY: usize = 0xDEADBEEF;

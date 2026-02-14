@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
+const tofu = @import("tofu");
+pub const afd = tofu.@"internal usage".poller.backend.afd;
+pub const ntdllx = tofu.@"internal usage".poller.backend.ntdllx;
+pub const SocketContext = afd.SocketContext;
 pub const stage0 = @import("stage0_wake.zig");
 pub const stage1 = @import("stage1_accept.zig");
 pub const stage1U = @import("stage1U_uds.zig");

@@ -39,14 +39,10 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
         return AmpeError.InvalidAddress;
     };
 
-    const skt = createListenerSocket(&addr) catch |er| {
+    const skt: Skt = createListenerSocket(&addr) catch |er| {
         log.info("<{d}> createListenerSocket failed with error {s}", .{ getCurrentTid(), @errorName(er) });
 
-        switch (er) {
-            error.AddressNotAvailable => return AmpeError.InvalidAddress,
-            error.AddressInUse, error.FileDescriptorNotASocket, error.OperationNotSupported => return AmpeError.ListenFailed,
-            else => return AmpeError.UnknownError,
-        }
+        return AmpeError.ListenFailed;
     };
 
     return skt;
@@ -79,7 +75,8 @@ pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
-    var udsPath = path;
+    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
+    var udsPath: []const u8 = path;
 
     if (udsPath.len == 0) {
         var tup: TempUdsPath = .{};
@@ -106,7 +103,8 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    var addr = std.net.Address.initUnix(path) catch {
+    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
+    var addr: std.net.Address = std.net.Address.initUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
 
@@ -162,14 +160,14 @@ const AmpeError = tofu.status.AmpeError;
 
 const TempUdsPath = tofu.TempUdsPath;
 
-const Notifier = @import("Notifier.zig");
 const internal = @import("internal.zig");
+const Notifier = internal.Notifier;
 const Skt = internal.Skt;
 
 const std = @import("std");
 const posix = std.posix;
 const Allocator = std.mem.Allocator;
-const Socket = std.posix.socket_t; // This will become platform-dependent later
+const Socket = internal.Socket;
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;

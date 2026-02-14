@@ -912,9 +912,9 @@ const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 const AmpeStatus = tofu.status.AmpeStatus;
 
-const SocketCreator = @import("SocketCreator.zig");
-const Skt = @import("Skt.zig");
-const Notifier = @import("Notifier.zig");
+const SocketCreator = internal.SocketCreator;
+const Skt = internal.Skt;
+const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
 const std = @import("std");

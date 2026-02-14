@@ -182,7 +182,8 @@ const AllocationStrategy = tofu.AllocationStrategy;
 const DefaultOptions = tofu.DefaultOptions;
 const AmpeError = tofu.status.AmpeError;
 
-const Notifier = @import("Notifier.zig");
+const internal = @import("internal.zig");
+const Notifier = internal.Notifier;
 const Alert = Notifier.Alert;
 
 const std = @import("std");

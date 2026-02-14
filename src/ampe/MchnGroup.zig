@@ -210,8 +210,9 @@ const AllocationStrategy = tofu.AllocationStrategy;
 const AmpeError = tofu.status.AmpeError;
 const AmpeStatus = tofu.status.AmpeStatus;
 
-const Notifier = @import("Notifier.zig");
-const channels = @import("channels.zig");
+const internal = @import("internal.zig");
+const Notifier = internal.Notifier;
+const channels = internal.channels;
 const ActiveChannels = channels.ActiveChannels;
 
 const Appendable = @import("Appendable");
