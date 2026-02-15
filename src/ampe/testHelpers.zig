@@ -16,6 +16,8 @@ pub const TempUdsPath = struct {
         tup.tempFile.retain = false;
         defer tup.tempFile.deinit();
 
+        @memset(&tup.*.socket_path, 0);
+
         const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..108]) catch {
             return AmpeError.UnknownError;
         };
@@ -31,8 +33,12 @@ pub fn FindFreeTcpPort() !u16 {
     const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
     defer posix.close(sockfd); // Ensure socket is closed immediately after use
 
-    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
+    if(builtin.os.tag == .linux) {
+        try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
+    }
+
     try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
+
 
     // Set up sockaddr_in structure with port 0 (ephemeral port)
     var addr: posix.sockaddr.in = .{
@@ -86,3 +92,5 @@ const std = @import("std");
 const posix = std.posix;
 const Allocator = std.mem.Allocator;
 const log = std.log;
+
+const builtin = @import("builtin");
