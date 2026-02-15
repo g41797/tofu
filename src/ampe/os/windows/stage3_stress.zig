@@ -4,26 +4,25 @@
 pub const Stage3Stress = struct {
     poller: afd.AfdPoller,
     listen_socket: Skt,
-    listen_port: u16,
+    client_addr: address.Address,
     allocator: std.mem.Allocator,
     connections: std.ArrayList(*poc.SocketContext),
     skts: std.ArrayList(*Skt),
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator) !Self {
+    pub fn init(allocator: std.mem.Allocator, server_addr: address.Address, client_addr: address.Address) !Self {
         var self: Self = .{
             .poller = try afd.AfdPoller.init(allocator),
             .listen_socket = undefined,
-            .listen_port = 23460,
+            .client_addr = client_addr,
             .allocator = allocator,
             .connections = try std.ArrayList(*poc.SocketContext).initCapacity(allocator, 16),
             .skts = try std.ArrayList(*Skt).initCapacity(allocator, 16),
         };
 
-        const server_adrs: address.Address = address.Address{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", self.listen_port) };
         var sc: SocketCreator = SocketCreator.init(allocator);
-        self.listen_socket = try sc.fromAddress(server_adrs);
+        self.listen_socket = try sc.fromAddress(server_addr);
 
         return self;
     }
@@ -54,11 +53,7 @@ pub const Stage3Stress = struct {
         var client_threads: [NUM_CLIENTS]std.Thread = undefined;
         for (0..NUM_CLIENTS) |i| {
             client_threads[i] = try std.Thread.spawn(.{}, struct {
-                fn run(port: u16, id: usize) void {
-                    var wsa_data: ws2_32.WSADATA = undefined;
-                    _ = ws2_32.WSAStartup(0x0202, &wsa_data);
-                    defer _ = ws2_32.WSACleanup();
-
+                fn run(client_addr: address.Address, id: usize) void {
                     const allocator = std.heap.page_allocator;
 
                     var local_poller = afd.AfdPoller.init(allocator) catch {
@@ -68,7 +63,7 @@ pub const Stage3Stress = struct {
                     defer local_poller.deinit();
 
                     var sc: SocketCreator = SocketCreator.init(allocator);
-                    const client_skt_val: Skt = sc.fromAddress(.{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) }) catch {
+                    const client_skt_val: Skt = sc.fromAddress(client_addr) catch {
                         std.debug.print("[Client-{d}] Creation failed\n", .{id});
                         return;
                     };
@@ -172,7 +167,7 @@ pub const Stage3Stress = struct {
                     }
                     std.debug.print("[Client-{d}] Finished\n", .{id});
                 }
-            }.run, .{ self.*.listen_port, i });
+            }.run, .{ self.*.client_addr, i });
         }
 
         var entries: [32]ntdllx.FILE_COMPLETION_INFORMATION = undefined;
@@ -278,20 +273,34 @@ pub const Stage3Stress = struct {
     }
 };
 
-pub fn runTest() !void {
+pub fn runStressTest(allocator: std.mem.Allocator, server_addr: address.Address, client_addr: address.Address) !void {
+    var stage: Stage3Stress = try Stage3Stress.init(allocator, server_addr, client_addr);
+    defer stage.deinit();
+    try stage.run();
+}
+
+pub fn runTcpTest(allocator: std.mem.Allocator) !void {
+    const port: u16 = try tofu.FindFreeTcpPort();
+    const server_addr: address.Address = .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", port) };
+    const client_addr: address.Address = .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", port) };
+    try runStressTest(allocator, server_addr, client_addr);
+}
+
+pub fn runUdsTest(allocator: std.mem.Allocator) !void {
+    var tup: tofu.TempUdsPath = .{};
+    const filePath: []u8 = try tup.buildPath(allocator);
+    const server_addr: address.Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
+    const client_addr: address.Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
+    try runStressTest(allocator, server_addr, client_addr);
+}
+
+pub fn runTest(allocator: std.mem.Allocator) !void {
     var wsa_data: ws2_32.WSADATA = undefined;
     _ = ws2_32.WSAStartup(0x0202, &wsa_data);
     defer _ = ws2_32.WSACleanup();
 
-    var gpa: std.heap.GeneralPurposeAllocator(.{}) = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    var stage: Stage3Stress = try Stage3Stress.init(gpa.allocator());
-    defer stage.deinit();
-    stage.run() catch |err| {
-        std.debug.print("[Stress-POC] Failed with error: {s}\n", .{@errorName(err)});
-        return err;
-    };
+    try runTcpTest(allocator);
+    try runUdsTest(allocator);
 }
 
 const std = @import("std");

@@ -76,7 +76,7 @@ test "Windows Stage 3: Stress & Cancellation Test" {
     }
 
     const win_poc = @import("win_poc");
-    try win_poc.stage3.runTest();
+    try win_poc.stage3.runTest(std.testing.allocator);
 }
 
 

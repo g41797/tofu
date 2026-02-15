@@ -75,7 +75,7 @@ pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
-    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
+    // if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
     var udsPath: []const u8 = path;
 
     if (udsPath.len == 0) {
@@ -103,7 +103,7 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
+    // if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
     var addr: std.net.Address = std.net.Address.initUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
