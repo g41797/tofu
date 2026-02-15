@@ -41,4 +41,44 @@ What constitutes the absolute minimum "Working on Windows" milestone?
 - [+] Full parity with Linux test suite
 
 ---
-*Last Updated: 2026-02-13*
+
+## 4. Phase III: Production Integration
+
+### Q4.1: WSAStartup/WSACleanup Ownership
+In production tofu on Windows, who owns WSAStartup/WSACleanup?
+
+Recommended pattern (from Microsoft docs):
+- Main thread start: call WSAStartup once
+- Worker threads: use sockets freely, no extra init
+- Main thread exit: after all threads finished, call WSACleanup once
+- WARNING: Never call from DllMain (deadlock risk from loader lock)
+
+Options:
+1. **Application responsibility** — caller must init before creating Reactor
+2. **Reactor.create() / Reactor.destroy()** — Reactor owns platform init
+3. **Dedicated tofu.init() / tofu.deinit()** — separate platform init API
+
+---
+
+## 5. Architectural Review Clarifications (External AI Review Brief)
+
+### Q5.1: AFD_POLL Trigger Semantics (Level vs Edge)
+**Question:** Has the "immediate firing on existing data" behavior been empirically verified?
+**Answer:** **Yes (Architectural Confirmation).** `AFD_POLL` is inherently Level-Triggered (Condition Met). If `AFD_POLL_RECEIVE` is issued on a socket with buffered data, the I/O Manager completes the IRP immediately.
+**Impact:** The "Backpressure/Re-arm" logic is **SAFE**. We will not lose wakeups if we disable read interest while data remains buffered.
+
+### Q5.2: The "Partial Drain" Scenario
+**Question:** If memory is full, does the Reactor **disable read interest** completely?
+**Answer:** **Yes.** Code analysis of `src/ampe/triggeredSkts.zig` (`IoSkt.triggers`) confirms that when `recvIsPossible()` returns false (due to empty pool), `ret.recv` is NOT set. Consequently, the Linux backend removes `POLLIN`.
+**Implication:** The Windows backend must mimic this by **NOT issuing** `AFD_POLL_RECEIVE` in this state.
+
+### Q5.3: Concurrency Model Details
+**Question:** Is the state change strictly serial?
+**Answer:** **Yes.** All I/O and state logic runs on a single dedicated thread. There are no cross-thread race conditions regarding interest management.
+
+### Q5.4: Epoll Motivation
+**Question:** Migrate to epoll now?
+**Answer:** **No.** Postpone. `poll()` (stateless) maps more cleanly to the "Declarative Interest" model than `epoll` (stateful). Migrating to `epoll` now would add unnecessary state-diffing complexity.
+
+---
+*Last Updated: 2026-02-15*

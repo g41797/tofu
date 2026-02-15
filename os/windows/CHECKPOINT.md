@@ -1,42 +1,34 @@
 **AGENT HANDOVER CHECKPOINT**
-**Current Date:** 2026-02-14
-**Last Agent:** Claude Code (Opus 4.6)
+**Current Date:** 2026-02-15
+**Last Agent:** Gemini CLI (Architectural Review)
 **Active Phase:** Phase II (Structural Refactoring)
-**Active Stage:** Fixing Stage 3 Stress Test Hang
+**Active Stage:** Architecture Approved — Ready for Poller Implementation
 
 ## Current Status
-- **Phase I (Feasibility) COMPLETE for TCP and UDS.**
+- **Phase I (Feasibility) COMPLETE.**
 - **Structural Refactoring (Phase II) STAGE 1 COMPLETE.**
-- **Architecture:** `Skt` and `Poller` are fully modularized. Windows-specific state (`IO_STATUS_BLOCK`, `base_handle`) is encapsulated inside `Skt`.
-- **Cross-Platform Compilation:** Previously verified for BOTH Linux and Windows.
-- **POCs:** Stages 0-2 pass. **Stage 3 still hangs** (see below).
+- **Architecture:** `Skt` and `Poller` facades established.
+- **Architectural Verdict:** **APPROVED**. The "External AI Review" concerns (lost wakeups, backpressure) were analyzed and resolved. `AFD_POLL` level-triggered semantics confirm safety.
+- **Documentation:** Glossary added to Spec v6.1; Conceptual Dictionary added to KB.
 
-## Interrupt Point — Stage 3 Hang Fix (INCOMPLETE)
+## Latest Work (2026-02-15 — Architectural Verification)
 
-### Root Cause Analysis (CONFIRMED)
-The Stage 3 stress test hangs at "Polling... (handled 0/50)" because **client threads silently fail to connect**. On Windows, calling `connect()` again on a non-blocking socket mid-connection returns `WSAEALREADY` (or other implementation-dependent errors). The old `Skt.connect()` didn't handle this — the error fell to the `else` branch, returned `PeerDisconnected`, the client caught it and silently returned, so 0 messages were ever sent.
-
-**Microsoft warning**: "error codes returned from connect while a connection is already pending may vary among implementations. It is not recommended that applications use multiple calls to connect to detect connection completion."
-
-**Correct Windows pattern**: After first `connect()` returns `WSAEWOULDBLOCK`, use `WSAPoll(POLLWRNORM, 0ms)` to non-blockingly check completion. No retry-connect needed.
-
-### What Was Done (2026-02-14 — Full Reactor POC Alignment)
-- **stage3_stress.zig (Client):** Refactored the client thread from a procedural flow to a proper **Reactor loop**. 
-  - Single `poll()` call drives both SEND and RECEIVE readiness via unified interest masks.
-  - Aligned with the production `tofu` architecture where `poll()` is the primary event source.
-- **Fixed Spurious Wakeups:** Settled on infinite AFD timeout and event mask extraction from `poll_info`.
-- **Reactor Alignment:** Successfully refactored POC to use `Skt` methods and thread-local `AfdPoller`.
-- **Verification:** 
-  - `Debug`: **PASS** (Linux and Windows).
-  - `ReleaseFast`: **PASS** (Linux and Windows).
+### What Was Done
+- **Architectural Analysis:**
+  - Analyzed `External-AI-Review-Brief.md`.
+  - Verified `AFD_POLL` trigger semantics (Level-Triggered) and partial-drain behavior.
+  - Produced `os/windows/analysis/ARCHITECTURAL_VERDICT.md` (Approved).
+- **Documentation Updates:**
+  - Updated `CONSOLIDATED_QUESTIONS.md` with definitive answers to architectural queries.
+  - Added **Section 8: Glossary of Architectural Terms** to `spec-v6.1.md` (Interest, Re-arm, Drain, etc.).
+  - Added **Section 5: Conceptual Dictionary** to `ACTIVE_KB.md`.
+- **Status Confirmation:**
+  - No changes to code this session.
+  - Previous build/test status remains valid (Windows Debug/ReleaseFast + Linux Cross-compile PASS).
 
 ### Current Status
-- **Success:** Async Reactor POC fully verified and reliable under stress in both Debug and ReleaseFast modes.
-- **Next Phase:** Phase II completion (Refactor Notifier) and transition to Phase III (Production Implementation).
-
-### Current Status
-- **Success:** Async Reactor POC proven feasible and reliable under stress in Debug.
-- **Next Steps:** Complete Phase II (Refactor Notifier) and move to Phase III (Production Implementation).
+- **Architecture is now strictly defined.** No ambiguity on "Level vs Edge" or "Backpressure" handling.
+- **Next Steps:** Implement `src/ampe/os/windows/poller.zig` (waitTriggers) using the `AfdPoller` logic.
 
 ### Key API References (verified in zig 0.15.2 stdlib)
 - `ws2_32.WSAPoll(fdArray: [*]WSAPOLLFD, fds: u32, timeout: i32) i32` — at `ws2_32.zig:2204`
@@ -53,7 +45,9 @@ zig build -Dtarget=x86_64-linux
 ```
 
 ## Critical Context for Successor
-- **Author's Directive:** Read **Section 0** of `os/windows/ACTIVE_KB.md` first.
-- **NEVER use git commands** — user manages version control manually.
-- **Verification:** Maintain the "Debug build -> Debug test -> ReleaseFast build -> ReleaseFast test" rule.
-- **Sandwich verification:** Also verify Linux cross-compile after Windows fixes.
+- **Read `os/windows/analysis/ARCHITECTURAL_VERDICT.md`**: This is your safety manual.
+- **Glossary:** Refer to `spec-v6.1.md` Section 8 for term definitions.
+- **Task:** You are cleared to implement `Poller.waitTriggers` in `src/ampe/os/windows/poller.zig`. The logic is:
+  1. `NtRemoveIoCompletionEx` (get events)
+  2. Map AFD events to `Triggers`
+  3. **Re-arm immediately** if interest persists (as per Spec v6.1 Rule 4.4).

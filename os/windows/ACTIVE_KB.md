@@ -37,8 +37,8 @@
 
 ---
 
-**Current Version:** 016
-**Last Updated:** 2026-02-14
+**Current Version:** 017
+**Last Updated:** 2026-02-15
 **Current Focus:** Phase II — Structural Refactoring
 
 ---
@@ -65,18 +65,35 @@
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-14, Gemini CLI Agent):
-- **Full Reactor POC Alignment:**
-  - Refactored `stage3_stress.zig` client thread to a proper **Reactor loop**.
-  - Fixed spurious wakeups by using infinite AFD timeout and extracting events from `poll_info`.
+### Completed This Session (2026-02-15, Gemini CLI - Architectural Review):
+- **Analyzed External AI Review:**
+  - Resolved concerns about "lost wakeups" and "backpressure deadlock" via architectural analysis.
+  - Confirmed `AFD_POLL` Level-Triggered semantics make current design safe.
+  - Produced `os/windows/analysis/ARCHITECTURAL_VERDICT.md` (Verdict: APPROVED).
+- **Documentation:**
+  - Updated `CONSOLIDATED_QUESTIONS.md` with definitive answers (Q5.1-Q5.4).
+  - Added **Section 8: Glossary of Architectural Terms** to `spec-v6.1.md`.
+  - Added **Section 5: Conceptual Dictionary** to `ACTIVE_KB.md`.
+
+### Previous Session (2026-02-15, Claude Code Agent):
+- **Stage 3 Stress TCP/UDS Genericity Refactoring:**
+  - Replaced hardcoded TCP (port 23460, "127.0.0.1") with `address.Address` tagged union.
+  - `Stage3Stress.init()` now takes `(allocator, server_addr, client_addr)`.
+  - Client threads receive `Address` instead of `port: u16`, use `SocketCreator.fromAddress()`.
+  - Removed per-thread WSAStartup/WSACleanup — entry point owns it.
+  - Added cookbook-pattern upper functions: `runTcpTest()`, `runUdsTest()`, `runStressTest()`.
+  - `runTest()` now accepts allocator from caller (no internal GPA).
+  - Test updated to pass `std.testing.allocator`.
+- **Deferred Question Recorded:**
+  - Q4.1 (WSAStartup/WSACleanup ownership in production) added to `os/windows/CONSOLIDATED_QUESTIONS.md`.
 - **Verification Sequence (PASS):**
-  - `Linux Debug` -> `Windows Debug` -> `Windows ReleaseFast` -> `Linux ReleaseFast`.
-  - All Stage 3 Stress tests passed (50/50 messages) without hangs.
-- **Abstraction Mandate:** Aligned `Skt.zig` and POCs with the "Maximize Tofu Abstraction" rule (returning 0 for WouldBlock).
+  - `Windows Debug build+test` -> `Windows ReleaseFast build+test` -> `Linux cross-compile`.
+  - Both TCP and UDS stress tests passed (50/50 messages each) in both modes.
 
 ### Current State:
+- **Architecture VERIFIED & APPROVED.**
 - Feasibility phase is officially CLOSED.
-- Next: Production implementation of `Poller.waitTriggers` using the verified `AfdPoller` engine.
+- Next: Production implementation of `Poller.waitTriggers` using the confirmed architectural pattern.
 
 ---
 
@@ -84,3 +101,16 @@
 1. **Production Windows Poller:** Implement `waitTriggers` in `src/ampe/os/windows/poller.zig` using `AfdPoller`.
 2. **Notifier Refactoring:** Extract `Notifier.zig` into a platform-agnostic facade.
 3. **Phase III Transition:** Start building `WindowsReactor`.
+
+---
+
+## 5. Conceptual Dictionary
+*Key terms used in coordination docs and source comments. See full definitions in [spec-v6.1.md](./spec-v6.1.md#8-glossary-of-architectural-terms).*
+
+- **Declarative Interest:** Re-calculating "what we want" from business state every loop.
+- **One-Shot / Re-arm:** Mandatory cycle for `AFD_POLL` to emulate persistent polling.
+- **Level-Triggered (LT):** Safety net that ensures `AFD_POLL` completes if data is left in buffers.
+- **Backpressure:** Stopping `AFD_POLL_RECEIVE` requests when memory is full.
+- **Readiness-over-Completion:** Using IOCP to build a Reactor, not a Proactor.
+
+---

@@ -143,4 +143,16 @@ Run full test suite on Windows.
 **This document (v6.1) supersedes all previous specifications, questions, and analysis files.**  
 All future work must align with it.
 
+## 8. Glossary of Architectural Terms
+
+To ensure consistent implementation across backends, the following terms are strictly defined:
+
+- **Interest (Declarative Interest):** The set of events (READ, WRITE, etc.) the business logic *currently* desires for a socket. In `tofu`, interest is recalculated from scratch every loop iteration. If the message pool is full, read interest is not declared (**Backpressure**).
+- **One-Shot:** A notification mechanism (like `AFD_POLL`) that is consumed upon completion. The kernel provides no further updates until a new request is issued.
+- **Re-arm:** The act of issuing a new `AFD_POLL` request immediately after a completion. This "re-arms" the notification for the next event.
+- **Level-Triggered (LT):** A trigger that fires as long as the condition is met (e.g., data is in the buffer). `AFD_POLL` is LT; if re-armed while data remains, it completes immediately.
+- **Edge-Triggered (ET):** A trigger that fires only when state *changes* (e.g., new data arrives). Requires **Draining** the socket to avoid "missing" the next trigger.
+- **Drain:** The process of calling `recv`/`send` repeatedly until it returns `WouldBlock` or `EAGAIN`.
+- **Readiness vs. Completion:** `tofu` is a **Readiness** (Reactor) system. It uses Windows **Completion** (IOCP) primitives solely to deliver readiness notifications via `AFD_POLL`, rather than using overlapped I/O.
+
 *End of Specification v6.1*
