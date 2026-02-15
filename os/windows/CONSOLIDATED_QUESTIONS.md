@@ -81,4 +81,50 @@ Options:
 **Answer:** **No.** Postpone. `poll()` (stateless) maps more cleanly to the "Declarative Interest" model than `epoll` (stateful). Migrating to `epoll` now would add unnecessary state-diffing complexity.
 
 ---
+
+## 6. Notifier Refactoring (Socket vs. Native Signal)
+
+### Q6.1: The "Notification" Payload in IOCP
+On Windows, when using `NtSetIoCompletion` to signal the Reactor, should we pack the 8-bit `Notification` struct into the `CompletionKey` or `ApcContext`?
+- **Option A:** Pack in CompletionKey. The Reactor gets the data immediately upon `NtRemoveIoCompletionEx` return.
+- **Option B:** Emulate a socket. The Reactor sees a "Signal" and then must call a dummy `recv` to get the byte. (Less efficient, more similar to Linux).
+
+### Q6.2: "Ready to Send" Semantic
+Is the `isReadyToSend()` check strictly required for business logic (e.g., to throttle senders), or is it an artifact of socket buffer management? If it's a socket-only concern, the Windows (IOCP) backend will always return `true`.
+
+### Q6.3: Interface Alignment
+Should the `Notifier` interface be split into `Sender` and `Receiver` components? On Windows, the "Receiver" is just a registration on the IOCP, while on Linux it is a physical socket.
+
+---
+
+## 7. Notifier Refactoring (Socket-Pair & Poller Integration)
+
+### Q7.1: Creation Refinement via `Skt` Facade
+Should `Notifier.initTCP` be refactored to use the `Skt` abstraction (e.g., `listSkt.accept()`) instead of raw `std.posix` calls? 
+- **Reason:** Ensures the `receiver_fd` is correctly configured for Windows (non-blocking, handle inheritance) without duplicating logic.
+
+### Q7.2: Notifier as a `TriggeredChannel`
+Should the Notifier's receiver socket be encapsulated in a `NotificationSkt` within the `TriggeredSkt` union?
+- **Reason:** Allows the `Poller.waitTriggers` loop to process the Notifier handle generically alongside network sockets.
+
+### Q7.3: Windows Re-arming for Notifier
+Since `AFD_POLL` is one-shot, the Notifier's receiver must be re-armed. Should the Notifier have "Permanent Interest" (always armed for `RECEIVE`) to avoid deadlocks? 
+- **Contrast:** Network sockets may have interest disabled for backpressure; the Notifier never should.
+
+### Q7.4: Sender-side `poll` on Windows
+The sender uses `poll` to check readiness. On Windows, this means `ws2_32.WSAPoll`. Is this acceptable for local-loopback signaling, or should we wrap the readiness check?
+
+---
+
+## 8. Future Tasks (Phase II Continuation)
+
+### Q4.2: Windows Poller `waitTriggers` Implementation
+Implement AfdPoller-based `waitTriggers` for the Windows Poller. This handles ALL sockets including the notification receiver. The Poller owns socket interaction, not the Reactor or Notifier.
+- **Reference:** `os/linux/poller.zig` lines 107-111 (notify trigger), 141-147 (poll call).
+- **Key:** The notification receiver socket must be included in the AfdPoller's poll set alongside network sockets.
+
+### Q4.3: Refactor Skt/Poller Shared Types to Facade Pattern
+Refactor Skt and poller shared types to use the facade pattern (like Notifier). Currently `internal.zig` handles Skt with a manual switch; this should follow the same `backend` + re-export pattern established by `Notifier.zig` and `poller.zig`.
+
+---
 *Last Updated: 2026-02-15*

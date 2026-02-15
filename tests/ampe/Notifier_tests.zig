@@ -36,9 +36,10 @@ test "base Notifier" {
 }
 const tofu = @import("tofu");
 
-const Notifier = tofu.@"internal usage".Notifier;
-const NotificationKind = Notifier.NotificationKind;
-const Notification = Notifier.Notification;
+const NtfrModule = tofu.@"internal usage".Notifier;
+const Notifier = NtfrModule.Notifier;
+const NotificationKind = NtfrModule.NotificationKind;
+const Notification = NtfrModule.Notification;
 
 const temp = @import("temp");
 

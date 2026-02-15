@@ -117,6 +117,7 @@ pub fn build(b: *std.Build) void {
 
     // Link libraries for Windows tests
     if (target.result.os.tag == .windows) {
+        lib_unit_tests.linkLibC();
         lib_unit_tests.linkSystemLibrary("ws2_32");
         lib_unit_tests.linkSystemLibrary("ntdll");
         lib_unit_tests.linkSystemLibrary("kernel32"); // Link kernel32 for event functions

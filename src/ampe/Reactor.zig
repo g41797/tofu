@@ -18,8 +18,8 @@ pub fn ampe(rtr: *Reactor) !Ampe {
     return result;
 }
 
-fn alerter(rtr: *Reactor) Notifier.Alerter {
-    const result: Notifier.Alerter = .{
+fn alerter(rtr: *Reactor) NtfrModule.Alerter {
+    const result: NtfrModule.Alerter = .{
         .ptr = rtr,
         .func = send_alert,
     };
@@ -51,14 +51,14 @@ chnlsGroup_map: ChannelsGroupMap = undefined,
 loopTrgrs: Triggers = undefined, // Summary of triggers after poller
 
 // Notification flow
-currNtfc: Notifier.Notification = undefined,
+currNtfc: Notification = undefined,
 currMsg: ?*Message = undefined,
 currBhdr: BinaryHeader = undefined,
 
 // Iteration flow
 currTcopt: ?*TriggeredChannel = undefined,
 
-unpnt: Notifier.UnpackedNotification,
+unpnt: NtfrModule.UnpackedNotification,
 
 m4delCnt: usize = undefined,
 
@@ -326,19 +326,19 @@ pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
     return;
 }
 
-fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
+fn send_alert(ptr: ?*anyopaque, alert: NtfrModule.Alert) AmpeError!void {
     const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.sendAlert(alert);
 }
 
-fn sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
+fn sendAlert(rtr: *Reactor, alrt: NtfrModule.Alert) AmpeError!void {
     // rtr.mutex.lock();
     // defer rtr.mutex.unlock();
 
     return rtr._sendAlert(alrt);
 }
 
-fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
+fn _sendAlert(rtr: *Reactor, alrt: NtfrModule.Alert) AmpeError!void {
     rtr.sndMtx.lock();
     defer rtr.sndMtx.unlock();
 
@@ -364,7 +364,7 @@ fn createNotificationChannel(rtr: *Reactor) !void {
     ntcn.acn.chn = message.SpecialMaxChannelNumber;
     ntcn.resp2ac = true;
     ntcn.tskt = .{
-        .notification = internal.triggeredSkts.NotificationSkt.init(rtr.ntfr.receiver),
+        .notification = internal.triggeredSkts.NotificationSkt.init(&rtr.ntfr.receiver),
     };
 
     try rtr.addChannel(ntcn);
@@ -606,7 +606,7 @@ fn processNotify(rtr: *Reactor) !void {
     assert(notfTrChn.act.notify == .on);
 
     rtr.currNtfc = try notfTrChn.tryRecvNotification();
-    rtr.unpnt = Notifier.UnpackedNotification.fromNotification(rtr.currNtfc);
+    rtr.unpnt = NtfrModule.UnpackedNotification.fromNotification(rtr.currNtfc);
 
     notfTrChn.act = .{}; // Disable obsolete processing during iteration
 
@@ -1142,7 +1142,7 @@ inline fn vchns(rtr: *Reactor) void {
     const notfTrChnOpt: ?*TriggeredChannel = rtr.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
     assert(notfTrChnOpt != null);
 
-    assert(notfTrChnOpt.?.*.tskt.notification.getSocket() == rtr.*.ntfr.receiver);
+    assert(notfTrChnOpt.?.*.tskt.notification.getSocket() == rtr.*.ntfr.receiver.socket.?);
 
     return;
 }
@@ -1388,8 +1388,9 @@ const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
 const internal = tofu.@"internal usage";
-const Notifier = internal.Notifier;
-const Notification = Notifier.Notification;
+const NtfrModule = internal.Notifier;
+const Notifier = NtfrModule.Notifier;
+const Notification = NtfrModule.Notification;
 
 const Skt = internal.Skt;
 

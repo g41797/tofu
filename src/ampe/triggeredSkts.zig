@@ -218,11 +218,11 @@ const NotificationTriggers: Triggers = .{
 };
 
 pub const NotificationSkt = struct {
-    socket: Socket = undefined,
+    skt: *Skt = undefined,
 
-    pub fn init(socket: Socket) NotificationSkt {
+    pub fn init(skt: *Skt) NotificationSkt {
         return .{
-            .socket = socket,
+            .skt = skt,
         };
     }
 
@@ -232,11 +232,11 @@ pub const NotificationSkt = struct {
     }
 
     pub inline fn getSocket(self: *NotificationSkt) Socket {
-        return self.socket;
+        return self.skt.socket.?;
     }
 
     pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
-        return Notifier.recv_notification(nskt.socket);
+        return Notifier.recv_notification(nskt.skt.socket.?);
     }
 
     pub fn deinit(nskt: *NotificationSkt) void {
@@ -920,6 +920,6 @@ const Notification = Notifier.Notification;
 const std = @import("std");
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
-const Socket = std.posix.socket_t;
+const Socket = internal.Socket;
 const log = std.log;
 const assert = std.debug.assert;

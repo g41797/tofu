@@ -142,7 +142,21 @@ This confirms that IOCP is a viable sole completion mechanism for AFD_POLL — n
 
 ---
 
-## 9. Plans
+## 9. Notifier Refactoring (Decided 2026-02-15)
+
+- **Facade Pattern:** `src/ampe/Notifier.zig` is a facade exporting shared types (`Notification`, `Alerter`, `Alert`, etc.) and switching to platform backend via `builtin.os.tag`. Same pattern as `poller.zig`.
+- **Backend Location:** `src/ampe/os/linux/Notifier.zig` and `src/ampe/os/windows/Notifier.zig`.
+- **Skt Storage:** Both backends store `Skt` objects (not raw `socket_t`). Uniform resource management via `Skt.deinit()`.
+- **UDS Restored:** Both platforms use UDS socket pairs. Linux uses abstract sockets (`socket_file[0] = 0`). Windows uses filesystem paths (no abstract namespace support).
+- **Windows Connect Ordering:** On Windows, `Skt.connect()` must be called BEFORE `waitConnect()` (initiates non-blocking connect, then poll for completion). On Linux, `waitConnect()` before `posix.connect()` works because POLLOUT fires on non-connected sockets.
+- **Windows Accept:** Use `listSkt.accept()` (returns `?Skt`) instead of raw `posix.accept()`. Handles Windows non-blocking accept correctly.
+- **TCP Removed:** `initTCP` removed. Both platforms use `initUDS` exclusively.
+- **NotificationSkt:** Takes `*Skt` (pointer to receiver Skt) instead of raw `Socket`. `Socket` type in `triggeredSkts.zig` fixed to `internal.Socket`.
+- **WSAStartup:** Required before any Windows socket test. Every test entry point must call `WSAStartup(0x0202, &wsa_data)` with matching `WSACleanup()`.
+
+---
+
+## 10. Plans
 
 Implementation plans are stored as separate files for cross-agent reference:
 - [Stage 1 IOCP Reintegration Plan](./plan-stage1-iocp-reintegration.md) — **Completed** (2026-02-13)

@@ -37,9 +37,9 @@
 
 ---
 
-**Current Version:** 017
+**Current Version:** 018
 **Last Updated:** 2026-02-15
-**Current Focus:** Phase II — Structural Refactoring
+**Current Focus:** Phase II — Structural Refactoring (Notifier complete, Poller next)
 
 ---
 
@@ -52,55 +52,60 @@
 
 ## 2. Technical State of Play
 - **Phase I (Feasibility) Complete:** Full parity between TCP and UDS verified on Windows.
-- **Architectural Shift (Phase II) - STAGE 1 COMPLETE:** 
-    - **Backends:** `Skt` and `Poller` moved to `src/ampe/os/linux/` and `src/ampe/os/windows/`.
-    - **Redirection:** `src/ampe/internal.zig` acts as the primary redirection point.
+- **Architectural Shift (Phase II) - STAGE 2 COMPLETE:**
+    - **Backends:** `Skt`, `Poller`, and `Notifier` moved to `src/ampe/os/linux/` and `src/ampe/os/windows/`.
+    - **Facades:** `src/ampe/Notifier.zig` and `src/ampe/poller.zig` use `builtin.os.tag` switch pattern. `src/ampe/internal.zig` acts as the primary redirection point for `Skt`.
     - **Encapsulation:** `Skt` on Windows now holds the pinned `IO_STATUS_BLOCK` and `base_handle`.
+    - **Notifier:** Both platforms store `Skt` objects (not raw `socket_t`). UDS restored on both platforms. Linux uses abstract sockets; Windows uses filesystem paths. `NotificationSkt` in `triggeredSkts.zig` takes `*Skt`. `Socket` type fixed to `internal.Socket`.
 - **Build & Verification Status:**
-    - **Linux:** Compiles and tests pass (Sandwich Verification active).
-    - **Windows:** ALL POC tests pass (including Stage 3 Stress) in both **Debug** and **ReleaseFast** modes.
+    - **Linux:** Compiles (cross-compile) — Sandwich Verification active.
+    - **Windows:** ALL tests pass (POC Stages 0-3 + Notifier) in both **Debug** and **ReleaseFast** modes (11 tests total).
 - **Log Management:** All outputs go to `zig-out/` log files.
 
 ---
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-15, Gemini CLI - Architectural Review):
+### Completed This Session (2026-02-15, Claude Code Agent — Notifier Refactoring):
+- **Notifier Platform Split:**
+  - Created `src/ampe/os/linux/Notifier.zig` — Linux backend (UDS with abstract sockets, `posix.connect`/`posix.accept`).
+  - Created `src/ampe/os/windows/Notifier.zig` — Windows backend (UDS without abstract sockets, `Skt.connect()`/`listSkt.accept()`).
+  - Rewrote `src/ampe/Notifier.zig` as facade (shared types + `backend` switch, same pattern as `poller.zig`).
+  - Both backends store `Skt` objects instead of raw `socket_t`.
+  - Removed `initTCP`, unused `nats` import from old monolithic Notifier.
+- **Consumer Updates:**
+  - `triggeredSkts.zig`: `NotificationSkt` now takes `*Skt` instead of raw `Socket`. Fixed `Socket` type alias to `internal.Socket`.
+  - `Reactor.zig`: `createNotificationChannel` passes `&rtr.ntfr.receiver` (Skt pointer). Assertion in `vchns` updated. `NtfrModule` alias for facade types vs `Notifier` for backend struct.
+  - `tests/ampe/Notifier_tests.zig`: Import path adjusted for facade pattern.
+- **Windows Notifier Test Added** (`tests/os_windows_tests.zig`):
+  - Includes `WSAStartup`/`WSACleanup` (required before any Winsock calls).
+  - Tests init, send, recv via UDS socket pair.
+- **Windows-Specific Fix:** Connect-before-waitConnect ordering (Linux polls POLLOUT on non-connected socket; Windows UDS needs connect initiated first).
+- **Future Tasks Recorded** in `CONSOLIDATED_QUESTIONS.md`:
+  - Q4.2: Windows Poller `waitTriggers` implementation (AfdPoller-based).
+  - Q4.3: Refactor Skt/poller shared types to facade pattern.
+- **Verification Sequence (PASS):**
+  - `Windows Debug build+test (10/10)` -> `Windows ReleaseFast build+test (10/10)` -> `Linux cross-compile`.
+
+### Previous Session (2026-02-15, Gemini CLI - Architectural Review):
 - **Analyzed External AI Review:**
   - Resolved concerns about "lost wakeups" and "backpressure deadlock" via architectural analysis.
   - Confirmed `AFD_POLL` Level-Triggered semantics make current design safe.
   - Produced `os/windows/analysis/ARCHITECTURAL_VERDICT.md` (Verdict: APPROVED).
-- **Documentation:**
-  - Updated `CONSOLIDATED_QUESTIONS.md` with definitive answers (Q5.1-Q5.4).
-  - Added **Section 8: Glossary of Architectural Terms** to `spec-v6.1.md`.
-  - Added **Section 5: Conceptual Dictionary** to `ACTIVE_KB.md`.
-
-### Previous Session (2026-02-15, Claude Code Agent):
-- **Stage 3 Stress TCP/UDS Genericity Refactoring:**
-  - Replaced hardcoded TCP (port 23460, "127.0.0.1") with `address.Address` tagged union.
-  - `Stage3Stress.init()` now takes `(allocator, server_addr, client_addr)`.
-  - Client threads receive `Address` instead of `port: u16`, use `SocketCreator.fromAddress()`.
-  - Removed per-thread WSAStartup/WSACleanup — entry point owns it.
-  - Added cookbook-pattern upper functions: `runTcpTest()`, `runUdsTest()`, `runStressTest()`.
-  - `runTest()` now accepts allocator from caller (no internal GPA).
-  - Test updated to pass `std.testing.allocator`.
-- **Deferred Question Recorded:**
-  - Q4.1 (WSAStartup/WSACleanup ownership in production) added to `os/windows/CONSOLIDATED_QUESTIONS.md`.
-- **Verification Sequence (PASS):**
-  - `Windows Debug build+test` -> `Windows ReleaseFast build+test` -> `Linux cross-compile`.
-  - Both TCP and UDS stress tests passed (50/50 messages each) in both modes.
 
 ### Current State:
 - **Architecture VERIFIED & APPROVED.**
 - Feasibility phase is officially CLOSED.
-- Next: Production implementation of `Poller.waitTriggers` using the confirmed architectural pattern.
+- **Notifier refactoring COMPLETE** — facade pattern established for Notifier.
+- Next: Production implementation of `Poller.waitTriggers` using AfdPoller (Q4.2).
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Production Windows Poller:** Implement `waitTriggers` in `src/ampe/os/windows/poller.zig` using `AfdPoller`.
-2. **Notifier Refactoring:** Extract `Notifier.zig` into a platform-agnostic facade.
-3. **Phase III Transition:** Start building `WindowsReactor`.
+1. **Production Windows Poller:** Implement `waitTriggers` in `src/ampe/os/windows/poller.zig` using `AfdPoller`. Handles ALL sockets including notification receiver. Reference: `os/linux/poller.zig` lines 107-111, 141-147.
+2. ~~**Notifier Refactoring:**~~ **DONE** — Facade pattern established.
+3. **Skt/Poller Facade Refactoring:** Refactor `Skt` and poller shared types to facade pattern (like Notifier). Currently `internal.zig` handles `Skt` with a manual switch.
+4. **Phase III Transition:** Start building `WindowsReactor`.
 
 ---
 

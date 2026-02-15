@@ -79,6 +79,33 @@ test "Windows Stage 3: Stress & Cancellation Test" {
     try win_poc.stage3.runTest(std.testing.allocator);
 }
 
+test "Windows Notifier" {
+    if (builtin.os.tag != .windows) {
+        return error.SkipZigTest;
+    }
+
+    const ws2_32 = std.os.windows.ws2_32;
+    var wsa_data: ws2_32.WSADATA = undefined;
+    _ = ws2_32.WSAStartup(0x0202, &wsa_data);
+    defer _ = ws2_32.WSACleanup();
+
+    std.testing.log_level = .debug;
+    const Notifier = tofu.@"internal usage".Notifier.Notifier;
+    const Notification = tofu.@"internal usage".Notifier.Notification;
+
+    var ntfr: Notifier = try Notifier.init(std.testing.allocator);
+    defer ntfr.deinit();
+
+    try std.testing.expectEqual(true, ntfr.isReadyToSend());
+    try std.testing.expectEqual(false, ntfr.isReadyToRecv());
+
+    const notif: Notification = .{ .kind = .message, .oob = .on };
+    try ntfr.sendNotification(notif);
+    try std.testing.expectEqual(true, ntfr.isReadyToRecv());
+
+    const ntfc: Notification = try ntfr.recvNotification();
+    try std.testing.expectEqual(notif, ntfc);
+}
 
 const tofu = @import("tofu");
 
