@@ -144,12 +144,11 @@ This confirms that IOCP is a viable sole completion mechanism for AFD_POLL — n
 
 ## 9. Notifier Refactoring (Decided 2026-02-15)
 
-- **Facade Pattern:** `src/ampe/Notifier.zig` is a facade exporting shared types (`Notification`, `Alerter`, `Alert`, etc.) and switching to platform backend via `builtin.os.tag`. Same pattern as `poller.zig`.
-- **Backend Location:** `src/ampe/os/linux/Notifier.zig` and `src/ampe/os/windows/Notifier.zig`.
-- **Skt Storage:** Both backends store `Skt` objects (not raw `socket_t`). Uniform resource management via `Skt.deinit()`.
-- **UDS Restored:** Both platforms use UDS socket pairs. Linux uses abstract sockets (`socket_file[0] = 0`). Windows uses filesystem paths (no abstract namespace support).
-- **Windows Connect Ordering:** On Windows, `Skt.connect()` must be called BEFORE `waitConnect()` (initiates non-blocking connect, then poll for completion). On Linux, `waitConnect()` before `posix.connect()` works because POLLOUT fires on non-connected sockets.
-- **Windows Accept:** Use `listSkt.accept()` (returns `?Skt`) instead of raw `posix.accept()`. Handles Windows non-blocking accept correctly.
+- **Single Unified File:** `src/ampe/Notifier.zig` is a single file using `@This()` pattern with comptime branches for 2 platform differences. NOT a facade — no separate backend files.
+- **Why Not Facade:** Initially implemented as facade + backends (`os/linux/Notifier.zig`, `os/windows/Notifier.zig`), but the two backends had only 2 trivial differences (abstract sockets, connect ordering). Collapsed back to single file to avoid unnecessary complexity.
+- **Comptime Branches:** (1) `if (builtin.os.tag != .windows) socket_file[0] = 0;` — abstract sockets on Linux only. (2) Connect ordering: Windows calls `Skt.connect()` before `waitConnect()`; Linux calls `waitConnect()` before `posix.connect()`.
+- **Skt Storage:** Stores `Skt` objects (not raw `socket_t`). Uniform resource management via `Skt.deinit()`.
+- **UDS Restored:** Both platforms use UDS socket pairs. Linux uses abstract sockets. Windows uses filesystem paths (no abstract namespace support).
 - **TCP Removed:** `initTCP` removed. Both platforms use `initUDS` exclusively.
 - **NotificationSkt:** Takes `*Skt` (pointer to receiver Skt) instead of raw `Socket`. `Socket` type in `triggeredSkts.zig` fixed to `internal.Socket`.
 - **WSAStartup:** Required before any Windows socket test. Every test entry point must call `WSAStartup(0x0202, &wsa_data)` with matching `WSACleanup()`.

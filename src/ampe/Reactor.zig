@@ -18,8 +18,8 @@ pub fn ampe(rtr: *Reactor) !Ampe {
     return result;
 }
 
-fn alerter(rtr: *Reactor) NtfrModule.Alerter {
-    const result: NtfrModule.Alerter = .{
+fn alerter(rtr: *Reactor) Notifier.Alerter {
+    const result: Notifier.Alerter = .{
         .ptr = rtr,
         .func = send_alert,
     };
@@ -51,14 +51,14 @@ chnlsGroup_map: ChannelsGroupMap = undefined,
 loopTrgrs: Triggers = undefined, // Summary of triggers after poller
 
 // Notification flow
-currNtfc: Notification = undefined,
+currNtfc: Notifier.Notification = undefined,
 currMsg: ?*Message = undefined,
 currBhdr: BinaryHeader = undefined,
 
 // Iteration flow
 currTcopt: ?*TriggeredChannel = undefined,
 
-unpnt: NtfrModule.UnpackedNotification,
+unpnt: Notifier.UnpackedNotification,
 
 m4delCnt: usize = undefined,
 
@@ -326,19 +326,19 @@ pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
     return;
 }
 
-fn send_alert(ptr: ?*anyopaque, alert: NtfrModule.Alert) AmpeError!void {
+fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
     const rtr: *Reactor = @ptrCast(@alignCast(ptr));
     return rtr.sendAlert(alert);
 }
 
-fn sendAlert(rtr: *Reactor, alrt: NtfrModule.Alert) AmpeError!void {
+fn sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
     // rtr.mutex.lock();
     // defer rtr.mutex.unlock();
 
     return rtr._sendAlert(alrt);
 }
 
-fn _sendAlert(rtr: *Reactor, alrt: NtfrModule.Alert) AmpeError!void {
+fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
     rtr.sndMtx.lock();
     defer rtr.sndMtx.unlock();
 
@@ -606,7 +606,7 @@ fn processNotify(rtr: *Reactor) !void {
     assert(notfTrChn.act.notify == .on);
 
     rtr.currNtfc = try notfTrChn.tryRecvNotification();
-    rtr.unpnt = NtfrModule.UnpackedNotification.fromNotification(rtr.currNtfc);
+    rtr.unpnt = Notifier.UnpackedNotification.fromNotification(rtr.currNtfc);
 
     notfTrChn.act = .{}; // Disable obsolete processing during iteration
 
@@ -1388,9 +1388,8 @@ const raw_to_error = status.raw_to_error;
 const status_to_raw = status.status_to_raw;
 
 const internal = tofu.@"internal usage";
-const NtfrModule = internal.Notifier;
-const Notifier = NtfrModule.Notifier;
-const Notification = NtfrModule.Notification;
+const Notifier = internal.Notifier;
+const Notification = Notifier.Notification;
 
 const Skt = internal.Skt;
 

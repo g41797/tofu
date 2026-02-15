@@ -26,7 +26,7 @@
 - **Artifact Location (MANDATORY):** All temporary logs, build outputs, and session artifacts MUST be placed in `zig-out/`. Never pollute the project root.
 - **Maximize Tofu/POSIX Abstraction (MANDATORY):** Use `tofu`'s existing abstractions (e.g., `Skt` methods) and follow the error handling patterns of the POSIX layer. Avoid direct `ws2_32` calls.
 - **Architecture:** All OS-dependent functionality must be refactored using a "comptime redirection" pattern.
-- **Redirection Pattern:** Files like `Skt.zig`, `poller.zig`, and `Notifier.zig` in `src/ampe/` will act as facades that `@import` their respective implementations from `src/ampe/os/linux/` or `src/ampe/os/windows/`.
+- **Redirection Pattern:** Files like `Skt.zig` and `poller.zig` in `src/ampe/` act as facades that `@import` their respective implementations from `src/ampe/os/linux/` or `src/ampe/os/windows/`. `Notifier.zig` uses comptime branches instead (only 2 trivial platform differences).
 - **File Location:** All implementation and POC code must reside under `src/ampe/os/`. Specifically, Windows POCs and implementation now reside in `src/ampe/os/windows/`. The root `os/windows/` directory is strictly for documentation (`.md`).
 - **Standard:** `ntdllx.zig` is located at `src/ampe/os/windows/ntdllx.zig`.
 - **Workflow:** The next steps will likely be performed on Linux to establish the `os/linux/` backend and the facade structure.
@@ -37,7 +37,7 @@
 
 ---
 
-**Current Version:** 018
+**Current Version:** 019
 **Last Updated:** 2026-02-15
 **Current Focus:** Phase II — Structural Refactoring (Notifier complete, Poller next)
 
@@ -54,9 +54,9 @@
 - **Phase I (Feasibility) Complete:** Full parity between TCP and UDS verified on Windows.
 - **Architectural Shift (Phase II) - STAGE 2 COMPLETE:**
     - **Backends:** `Skt`, `Poller`, and `Notifier` moved to `src/ampe/os/linux/` and `src/ampe/os/windows/`.
-    - **Facades:** `src/ampe/Notifier.zig` and `src/ampe/poller.zig` use `builtin.os.tag` switch pattern. `src/ampe/internal.zig` acts as the primary redirection point for `Skt`.
+    - **Facades:** `src/ampe/poller.zig` uses `builtin.os.tag` switch pattern. `src/ampe/internal.zig` acts as the primary redirection point for `Skt`.
     - **Encapsulation:** `Skt` on Windows now holds the pinned `IO_STATUS_BLOCK` and `base_handle`.
-    - **Notifier:** Both platforms store `Skt` objects (not raw `socket_t`). UDS restored on both platforms. Linux uses abstract sockets; Windows uses filesystem paths. `NotificationSkt` in `triggeredSkts.zig` takes `*Skt`. `Socket` type fixed to `internal.Socket`.
+    - **Notifier:** Single unified file (`src/ampe/Notifier.zig`) with comptime branches for 2 platform differences (abstract sockets, connect ordering). Stores `Skt` objects (not raw `socket_t`). UDS on both platforms. `NotificationSkt` in `triggeredSkts.zig` takes `*Skt`. `Socket` type fixed to `internal.Socket`.
 - **Build & Verification Status:**
     - **Linux:** Compiles (cross-compile) — Sandwich Verification active.
     - **Windows:** ALL tests pass (POC Stages 0-3 + Notifier) in both **Debug** and **ReleaseFast** modes (11 tests total).
@@ -66,21 +66,20 @@
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-15, Claude Code Agent — Notifier Refactoring):
-- **Notifier Platform Split:**
-  - Created `src/ampe/os/linux/Notifier.zig` — Linux backend (UDS with abstract sockets, `posix.connect`/`posix.accept`).
-  - Created `src/ampe/os/windows/Notifier.zig` — Windows backend (UDS without abstract sockets, `Skt.connect()`/`listSkt.accept()`).
-  - Rewrote `src/ampe/Notifier.zig` as facade (shared types + `backend` switch, same pattern as `poller.zig`).
-  - Both backends store `Skt` objects instead of raw `socket_t`.
-  - Removed `initTCP`, unused `nats` import from old monolithic Notifier.
+### Completed This Session (2026-02-15, Claude Code Agent — Notifier Refactoring + Collapse):
+- **Notifier Refactoring (unified single file):**
+  - Rewrote `src/ampe/Notifier.zig` as single unified file with `@This()` pattern and Skt fields.
+  - Two comptime branches handle platform differences: (1) abstract sockets on Linux only, (2) connect ordering (Windows: `Skt.connect()` before `waitConnect()`; Linux: `waitConnect()` before `posix.connect()`).
+  - Removed `initTCP`, unused `nats` import.
+  - Initially split into facade+backends (`os/linux/Notifier.zig`, `os/windows/Notifier.zig`), then collapsed back after discovering only 2 trivial differences.
 - **Consumer Updates:**
   - `triggeredSkts.zig`: `NotificationSkt` now takes `*Skt` instead of raw `Socket`. Fixed `Socket` type alias to `internal.Socket`.
-  - `Reactor.zig`: `createNotificationChannel` passes `&rtr.ntfr.receiver` (Skt pointer). Assertion in `vchns` updated. `NtfrModule` alias for facade types vs `Notifier` for backend struct.
-  - `tests/ampe/Notifier_tests.zig`: Import path adjusted for facade pattern.
+  - `Reactor.zig`: `createNotificationChannel` passes `&rtr.ntfr.receiver` (Skt pointer). Assertion in `vchns` updated.
+  - `tests/ampe/Notifier_tests.zig`: Uses `Notifier` directly (no `NtfrModule` indirection).
 - **Windows Notifier Test Added** (`tests/os_windows_tests.zig`):
   - Includes `WSAStartup`/`WSACleanup` (required before any Winsock calls).
   - Tests init, send, recv via UDS socket pair.
-- **Windows-Specific Fix:** Connect-before-waitConnect ordering (Linux polls POLLOUT on non-connected socket; Windows UDS needs connect initiated first).
+- **Deleted Files:** `src/ampe/os/linux/Notifier.zig`, `src/ampe/os/windows/Notifier.zig` (collapsed into single file).
 - **Future Tasks Recorded** in `CONSOLIDATED_QUESTIONS.md`:
   - Q4.2: Windows Poller `waitTriggers` implementation (AfdPoller-based).
   - Q4.3: Refactor Skt/poller shared types to facade pattern.
@@ -96,7 +95,7 @@
 ### Current State:
 - **Architecture VERIFIED & APPROVED.**
 - Feasibility phase is officially CLOSED.
-- **Notifier refactoring COMPLETE** — facade pattern established for Notifier.
+- **Notifier refactoring COMPLETE** — single unified file with comptime branches (not facade).
 - Next: Production implementation of `Poller.waitTriggers` using AfdPoller (Q4.2).
 
 ---

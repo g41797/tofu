@@ -90,8 +90,8 @@ test "Windows Notifier" {
     defer _ = ws2_32.WSACleanup();
 
     std.testing.log_level = .debug;
-    const Notifier = tofu.@"internal usage".Notifier.Notifier;
-    const Notification = tofu.@"internal usage".Notifier.Notification;
+    const Notifier = tofu.@"internal usage".Notifier;
+    const Notification = Notifier.Notification;
 
     var ntfr: Notifier = try Notifier.init(std.testing.allocator);
     defer ntfr.deinit();
