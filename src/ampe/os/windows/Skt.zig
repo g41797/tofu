@@ -17,7 +17,7 @@ pub fn listen(skt: *Skt) !void {
 
     const kernel_backlog: c_int = 1024;
     try skt.*.setREUSE();
-    
+
     const bind_res: i32 = ws2_32.bind(skt.*.socket.?, &skt.*.address.any, @intCast(skt.*.address.getOsSockLen()));
     if (bind_res == ws2_32.SOCKET_ERROR) {
         return error.BindFailed;
@@ -45,7 +45,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
     var addr_len: i32 = @intCast(askt.*.address.getOsSockLen());
 
     skt.socket = ws2_32.accept(askt.*.socket.?, &addr.any, &addr_len);
-    
+
     if (skt.socket == ws2_32.INVALID_SOCKET) {
         const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
         switch (err) {
@@ -140,7 +140,7 @@ pub fn knock(socket: ws2_32.SOCKET) bool {
     _ = socket;
     // Knock is used for readiness check in some POSIX implementations.
     // In our Windows AFD/IOCP model, we rely on the poller events.
-    return true; 
+    return true;
 }
 
 pub fn send(skt: *Skt, buf: []const u8) AmpeError!usize {

@@ -81,8 +81,8 @@ pub const Stage3Stress = struct {
                     }
 
                     _ = local_poller.register(client_skt) catch {
-                         std.debug.print("[Client-{d}] Register failed\n", .{id});
-                         return;
+                        std.debug.print("[Client-{d}] Register failed\n", .{id});
+                        return;
                     };
 
                     var ctx = poc.SocketContext.init(client_skt);
@@ -91,23 +91,23 @@ pub const Stage3Stress = struct {
                     // 1. Initial Connection Reactor step
                     std.debug.print("[Client-{d}] Starting connect...\n", .{id});
                     if (client_skt.connect() catch |err| {
-                        std.debug.print("[Client-{d}] Connect error: {any}\n", .{id, err});
+                        std.debug.print("[Client-{d}] Connect error: {any}\n", .{ id, err });
                         return;
                     }) {
-                         std.debug.print("[Client-{d}] Connected immediately!\n", .{id});
+                        std.debug.print("[Client-{d}] Connected immediately!\n", .{id});
                     } else {
-                         while (true) {
-                             ctx.arm(ntdllx.AFD_POLL_CONNECT, &ctx) catch return;
-                             _ = local_poller.poll(5000, &entries) catch return;
-                             if (ctx.poll_info.Handles[0].Events == 0) continue;
-                             if (client_skt.connect() catch |err| {
-                                 std.debug.print("[Client-{d}] connect retry error: {any}\n", .{id, err});
-                                 return;
-                             }) {
-                                 std.debug.print("[Client-{d}] Connected async!\n", .{id});
-                                 break;
-                             }
-                         }
+                        while (true) {
+                            ctx.arm(ntdllx.AFD_POLL_CONNECT, &ctx) catch return;
+                            _ = local_poller.poll(5000, &entries) catch return;
+                            if (ctx.poll_info.Handles[0].Events == 0) continue;
+                            if (client_skt.connect() catch |err| {
+                                std.debug.print("[Client-{d}] connect retry error: {any}\n", .{ id, err });
+                                return;
+                            }) {
+                                std.debug.print("[Client-{d}] Connected async!\n", .{id});
+                                break;
+                            }
+                        }
                     }
 
                     // 2. Data Exchange Reactor Loop
@@ -123,12 +123,12 @@ pub const Stage3Stress = struct {
                         }
 
                         ctx.arm(interest, &ctx) catch |err| {
-                            std.debug.print("[Client-{d}] Arm error: {any}\n", .{id, err});
+                            std.debug.print("[Client-{d}] Arm error: {any}\n", .{ id, err });
                             break;
                         };
 
                         const removed = local_poller.poll(5000, &entries) catch |err| {
-                            std.debug.print("[Client-{d}] Poll error: {any}\n", .{id, err});
+                            std.debug.print("[Client-{d}] Poll error: {any}\n", .{ id, err });
                             break;
                         };
 
@@ -141,10 +141,10 @@ pub const Stage3Stress = struct {
                         if ((events & ntdllx.AFD_POLL_SEND) != 0) {
                             if (pings_sent < TOTAL_PINGS and pings_sent == pongs_recvd) {
                                 _ = client_skt.send("Ping") catch |err| {
-                                    std.debug.print("[Client-{d}] Send error: {any}\n", .{id, err});
+                                    std.debug.print("[Client-{d}] Send error: {any}\n", .{ id, err });
                                     break;
                                 };
-                                std.debug.print("[Client-{d}] Sent ping {d}\n", .{id, pings_sent});
+                                std.debug.print("[Client-{d}] Sent ping {d}\n", .{ id, pings_sent });
                                 pings_sent += 1;
                             }
                         }
@@ -154,12 +154,12 @@ pub const Stage3Stress = struct {
                             var buf: [16]u8 = undefined;
                             const bytes = client_skt.recv(&buf) catch |err| {
                                 if (err == error.WouldBlock) continue;
-                                std.debug.print("[Client-{d}] Recv error: {any}\n", .{id, err});
+                                std.debug.print("[Client-{d}] Recv error: {any}\n", .{ id, err });
                                 break;
                             };
-                            
+
                             if (bytes > 0) {
-                                std.debug.print("[Client-{d}] Received pong {d} ({d} bytes)\n", .{id, pongs_recvd, bytes});
+                                std.debug.print("[Client-{d}] Received pong {d} ({d} bytes)\n", .{ id, pongs_recvd, bytes });
                                 pongs_recvd += 1;
                             }
                         }
@@ -172,7 +172,7 @@ pub const Stage3Stress = struct {
                     }
                     std.debug.print("[Client-{d}] Finished\n", .{id});
                 }
-            }.run, .{self.*.listen_port, i});
+            }.run, .{ self.*.listen_port, i });
         }
 
         var entries: [32]ntdllx.FILE_COMPLETION_INFORMATION = undefined;
@@ -223,14 +223,14 @@ pub const Stage3Stress = struct {
                             std.debug.print("[Stress-POC] Accept error: {any}\n", .{err});
                             break;
                         };
-                        
+
                         if (client_skt) |skt| {
                             std.debug.print("[Stress-POC] Accepted new client socket: {any}\n", .{skt.socket.?});
                             const s: *Skt = try self.*.allocator.create(Skt);
                             s.* = skt;
                             try self.*.skts.append(self.*.allocator, s);
                             _ = try self.*.poller.register(s);
-                            
+
                             const c: *poc.SocketContext = try self.*.allocator.create(poc.SocketContext);
                             c.* = poc.SocketContext.init(s);
                             try self.*.connections.append(self.*.allocator, c);
@@ -244,7 +244,7 @@ pub const Stage3Stress = struct {
                 } else {
                     if ((events & (ntdllx.AFD_POLL_ABORT | ntdllx.AFD_POLL_LOCAL_CLOSE | ntdllx.AFD_POLL_CONNECT_FAIL)) != 0) {
                         std.debug.print("[Stress-POC] Client closed/error event: {X}\n", .{events});
-                        continue; 
+                        continue;
                     }
 
                     var buf: [1024]u8 = undefined;
@@ -256,7 +256,7 @@ pub const Stage3Stress = struct {
                         }
                         continue;
                     };
-                    
+
                     if (bytes > 0) {
                         std.debug.print("[Stress-POC] Received {d} bytes, sending pong...\n", .{bytes});
                         _ = ctx.skt.send(buf[0..bytes]) catch |err| {
@@ -274,7 +274,7 @@ pub const Stage3Stress = struct {
         }
 
         for (client_threads) |t| t.join();
-        std.debug.print("[Stress-POC] Finished. Handled {d} messages.\n", .{ messages_handled });
+        std.debug.print("[Stress-POC] Finished. Handled {d} messages.\n", .{messages_handled});
     }
 };
 

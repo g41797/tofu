@@ -64,10 +64,10 @@ pub const Stage2Echo = struct {
                     .zero = .{0} ** 8,
                 };
                 _ = ws2_32.connect(client_skt.socket.?, @ptrCast(&server_addr_in), @sizeOf(ws2_32.sockaddr.in));
-                
+
                 std.Thread.sleep(100 * std.time.ns_per_ms);
                 _ = ws2_32.send(client_skt.socket.?, "Tofu Engine", 11, 0);
-                
+
                 var buf: [1024]u8 = undefined;
                 _ = ws2_32.recv(client_skt.socket.?, &buf, buf.len, 0);
             }
@@ -92,7 +92,7 @@ pub const Stage2Echo = struct {
 
             for (entries[0..removed]) |entry| {
                 const ctx: *poc.SocketContext = @ptrCast(@alignCast(entry.ApcContext.?));
-                
+
                 if (ctx == &listen_ctx) {
                     var addr: ws2_32.sockaddr = undefined;
                     var addr_len: i32 = @sizeOf(ws2_32.sockaddr);
@@ -107,7 +107,7 @@ pub const Stage2Echo = struct {
                             .server = false,
                         };
                         _ = try self.*.poller.register(connection_skt.?);
-                        
+
                         connection_ctx = try self.*.allocator.create(poc.SocketContext);
                         connection_ctx.?.* = poc.SocketContext.init(connection_skt.?);
                         try connection_ctx.?.arm(ntdllx.AFD_POLL_RECEIVE, connection_ctx.?);
@@ -116,7 +116,7 @@ pub const Stage2Echo = struct {
                 } else {
                     const events: u32 = @intCast(entry.IoStatus.Information); // This is actually the triggered events for AFD_POLL
                     _ = events;
-                    
+
                     var buf: [1024]u8 = undefined;
                     const bytes: i32 = ws2_32.recv(ctx.*.skt.*.socket.?, &buf, buf.len, 0);
                     if (bytes == ws2_32.SOCKET_ERROR) {
@@ -146,7 +146,7 @@ pub fn runTest() !void {
 
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    
+
     var stage: Stage2Echo = try Stage2Echo.init(gpa.allocator());
     defer stage.deinit();
     try stage.run();

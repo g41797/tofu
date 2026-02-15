@@ -38,6 +38,7 @@ acns: ActiveChannels = undefined,
 maxid: u32 = undefined,
 ntfcsEnabled: bool = undefined,
 thread: ?Thread = null,
+cmpl: Semaphore = undefined,
 plr: poller.Poller = undefined,
 //
 // Accessible from the thread - don't lock/unlock
@@ -92,6 +93,7 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
         .currBhdr = .{},
         .currTcopt = null,
         .m4delCnt = 0,
+        .cmpl = Semaphore{},
     };
 
     rtr.acns = ActiveChannels.init(rtr.allocator, 1024) catch { // was 255
@@ -407,7 +409,7 @@ fn createThread(rtr: *Reactor) !void {
 
     rtr.thread = try std.Thread.spawn(.{}, runOnThread, .{rtr});
 
-    _ = try rtr.ntfr.recvAck();
+    _ = try rtr.*.recv_ack();
 
     return;
 }
@@ -465,7 +467,12 @@ fn runOnThread(rtr: *Reactor) void {
 }
 
 inline fn ack(rtr: *Reactor) void {
-    rtr.ntfr.sendAck(0) catch unreachable;
+    rtr.*.cmpl.post();
+}
+
+inline fn recv_ack(rtr: *Reactor) !void {
+    _ = try rtr.*.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT);
+    return;
 }
 
 fn loop(rtr: *Reactor) void {
@@ -1413,6 +1420,7 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const Mutex = std.Thread.Mutex;
 const Thread = std.Thread;
+const Semaphore = std.Thread.Semaphore;
 const getCurrentTid = Thread.getCurrentId;
 const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;

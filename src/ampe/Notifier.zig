@@ -244,24 +244,24 @@ pub inline fn sendByte(sender: socket_t, notif: u8) AmpeError!void {
     return;
 }
 
-pub fn sendAck(ntfr: *Notifier, ack: u8) !void {
-    for (0..10) |_| {
-        if (_isReadyToSend(ntfr.receiver)) {
-            return sendByte(ntfr.receiver, ack);
-        }
-    }
-
-    return AmpeError.NotificationFailed;
-}
-
-pub fn recvAck(ntfr: *Notifier) !u8 {
-    for (0..10) |_| {
-        if (_isReadyToRecv(ntfr.sender)) {
-            return recvByte(ntfr.sender);
-        }
-    }
-    return AmpeError.NotificationFailed;
-}
+// pub fn sendAck(ntfr: *Notifier, ack: u8) !void {
+//     for (0..10) |_| {
+//         if (_isReadyToSend(ntfr.receiver)) {
+//             return sendByte(ntfr.receiver, ack);
+//         }
+//     }
+//
+//     return AmpeError.NotificationFailed;
+// }
+//
+// pub fn recvAck(ntfr: *Notifier) !u8 {
+//     for (0..10) |_| {
+//         if (_isReadyToRecv(ntfr.sender)) {
+//             return recvByte(ntfr.sender);
+//         }
+//     }
+//     return AmpeError.NotificationFailed;
+// }
 
 pub fn deinit(ntfr: *Notifier) void {
     log.warn("!!! notifiers will be destroyed !!!", .{});

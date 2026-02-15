@@ -33,12 +33,6 @@ test "base Notifier" {
 
     const ntfc: Notification = try ntfr.recvNotification();
     try testing.expectEqual(notif, ntfc);
-
-    try ntfr.sendAck(0xFF);
-
-    const ack: u8 = try ntfr.recvAck();
-
-    try testing.expectEqual(0xFF, ack);
 }
 const tofu = @import("tofu");
 

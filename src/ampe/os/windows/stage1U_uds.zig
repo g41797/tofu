@@ -98,7 +98,7 @@ pub const Stage1UUds = struct {
                         s.* = .{ .socket = client_sock, .address = undefined, .server = false };
                         try self.*.skts.append(self.*.allocator, s);
                         _ = try self.*.poller.register(s);
-                        
+
                         const c: *poc.SocketContext = try self.*.allocator.create(poc.SocketContext);
                         c.* = poc.SocketContext.init(s);
                         try self.*.connections.append(self.*.allocator, c);

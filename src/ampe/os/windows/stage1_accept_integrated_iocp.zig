@@ -47,7 +47,7 @@ pub const Stage1AcceptIocp = struct {
         const base_handle: windows.HANDLE = try self.*.poller.register(&self.*.listen_socket);
         _ = base_handle;
         var listen_ctx: poc.SocketContext = poc.SocketContext.init(&self.*.listen_socket);
-        
+
         // Arm for ACCEPT
         try listen_ctx.arm(ntdllx.AFD_POLL_ACCEPT, &listen_ctx);
         std.debug.print("[Accept-IOCP] Listener registered and armed. Waiting for client...\n", .{});

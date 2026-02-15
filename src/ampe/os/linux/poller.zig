@@ -156,7 +156,7 @@ pub const Poll = struct {
 
         while (tcptr != null) : (indx += 1) {
             const tc: *TriggeredChannel = tcptr.?;
-            
+
             tcptr = pl.*.it.?.next();
 
             tc.*.act = .{

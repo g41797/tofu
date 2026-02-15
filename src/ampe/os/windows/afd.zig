@@ -37,11 +37,13 @@ pub const AfdPoller = struct {
         const ioctl_res: i32 = ws2_32.WSAIoctl(
             skt.*.socket.?,
             ws2_32.SIO_BASE_HANDLE,
-            null, 0,
+            null,
+            0,
             @ptrCast(&base_handle),
             @sizeOf(windows.HANDLE),
             &bytes_returned,
-            null, null,
+            null,
+            null,
         );
         if (ioctl_res != 0) {
             // std.debug.print("[AfdPoller] WSAIoctl(SIO_BASE_HANDLE) failed: {any}\n", .{ws2_32.WSAGetLastError()});
@@ -49,18 +51,18 @@ pub const AfdPoller = struct {
         }
 
         _ = try windows.CreateIoCompletionPort(base_handle, self.*.iocp, 0, 0);
-        
+
         skt.*.base_handle = base_handle;
-        
+
         // std.debug.print("[AfdPoller] Registered socket {any} (base: {any}) with IOCP {any}\n", .{skt.*.socket.?, base_handle, self.*.iocp});
         return base_handle;
     }
 
     pub fn poll(self: *AfdPoller, timeout_ms: i32, out_entries: []ntdllx.FILE_COMPLETION_INFORMATION) !u32 {
         var removed: u32 = 0;
-        var timeout: windows.LARGE_INTEGER = if (timeout_ms < 0) 
-            undefined 
-        else 
+        var timeout: windows.LARGE_INTEGER = if (timeout_ms < 0)
+            undefined
+        else
             @as(i64, timeout_ms) * -10_000;
 
         const status: ntdllx.NTSTATUS = ntdllx.NtRemoveIoCompletionEx(

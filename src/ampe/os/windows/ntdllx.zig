@@ -20,7 +20,6 @@ pub const ULONG = windows.ULONG;
 pub const ULONG_PTR = windows.ULONG_PTR;
 pub const PVOID = ?*anyopaque; // Often used for opaque pointers or optional void*
 
-
 /// FILE_COMPLETION_INFORMATION structure as used by NtRemoveIoCompletionEx
 /// This structure is not directly in std.os.windows.ntdll.zig, although IO_COMPLETION_INFORMATION is.
 /// This specific structure matches the format expected by NtRemoveIoCompletionEx for the returned completion information.

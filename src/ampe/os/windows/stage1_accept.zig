@@ -90,8 +90,10 @@ pub const Stage1Accept = struct {
             null,
             &ctx.skt.*.io_status,
             ntdllx.IOCTL_AFD_POLL,
-            &poll_info, @sizeOf(ntdllx.AFD_POLL_INFO),
-            &poll_info, @sizeOf(ntdllx.AFD_POLL_INFO),
+            &poll_info,
+            @sizeOf(ntdllx.AFD_POLL_INFO),
+            &poll_info,
+            @sizeOf(ntdllx.AFD_POLL_INFO),
         );
 
         if (status != .SUCCESS and status != .PENDING) return error.AfdPollFailed;
