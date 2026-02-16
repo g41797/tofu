@@ -28,59 +28,47 @@
 
 ---
 
-**Current Version:** 024
+**Current Version:** 025
 **Last Updated:** 2026-02-16
-**Current Focus:** Phase III — PinnedState Implementation (Plan Complete, Execution Pending)
+**Current Focus:** Phase III — wepoll Integration & epoll Unification (Strategic Shift)
 
 ---
 
 ## 1. Project Context Summary
-- **Target:** Porting `tofu` to Windows 10+ using IOCP + AFD_POLL.
-- **Mantra:** Maintain Reactor semantics (readiness-based, queue-driven).
-- **Core Challenge:** Resolving memory instability in the async Windows backend.
+- **Target:** Porting `tofu` to Windows 10+ using `wepoll` (C library shim over AFD_POLL).
+- **Mantra:** Unify Linux/Windows under the `epoll` model (Stateful Reactor).
+- **Core Challenge:** Managing the transition from stateless `poll()` to stateful `epoll` without breaking Reactor OS-independence.
 
 ---
 
 ## 2. Technical State of Play
-- **Repository Reorganization:** POC code moved to `poc/windows/`. Future ports follow the same pattern.
-- **Platform Lifecycle Encapsulation:** Integrated Winsock `WSAStartup`/`WSACleanup` into `initPlatform()` and `deinitPlatform()` helper functions in `Reactor.zig`.
-- **Windows Poller Implementation:** `waitTriggers` currently uses asynchronous `AFD_POLL` via IOCP.
-- **CRITICAL BUG IDENTIFIED:** `std.AutoArrayHashMap` moves `TriggeredChannel` objects, invalidating pointers held by the Windows kernel.
-- **APPROVED FIX:** "Indirection via Channel Numbers + Stable Poller Pool".
-- **DETAILED IMPLEMENTATION PLAN:** `os/windows/analysis/claude-plan-pinned-state.md`.
-- **ADDITIONAL BUG:** `SocketContext.arm()` in `afd.zig` passes stack-local `io_status` to kernel — use-after-return.
-- **Build Status:** ALL active tests pass (35/35) on Windows (Debug/ReleaseFast) and Linux cross-compiles.
-- **Sources of Truth:** `docs_site/docs/mds/` added — tofu user-facing documentation for channel semantics.
+- **Strategic Pivot:** native IOCP/AFD_POLL implementation postponed. 
+- **Intermediate Goal:** Use `wepoll` (C library) as a git submodule to reach parity quickly.
+- **Linux Goal:** Migrate Linux backend to native `epoll`.
+- **PinnedState Analysis:** Completed and saved (Gemini Verdict). This logic will be used when replacing `wepoll` with a native Zig shim later.
+- **CI Status:** Windows GitHub CI disabled.
+- **External AI Brief:** Created for "Incarnation Safety" and "Zombie Lifecycle" logic (for future native shim).
 
 ---
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-16, Claude Code — PinnedState Planning):
-- **Full codebase audit** for PinnedState implementation readiness.
-- **Read all documentation** under `os/windows/` and `docs_site/docs/mds/` recursively.
-- **Analyzed** `plan-investigation-reactor-poller.md` — confirmed diagnosis is correct, solution is architecturally sound.
-- **Identified additional bug:** `SocketContext.arm()` io_status stack-local (afd.zig:85).
-- **Gathered user decisions:** POC approach (both new+rewrite), memory strategy (simple now, pool later), base_handle location (stays in Skt), PinnedState lifecycle.
-- **Created detailed implementation plan:** `os/windows/analysis/claude-plan-pinned-state.md` — 4 phases, code examples, risk assessment.
-- **Updated CHECKPOINT.md** with plan summary and next steps.
-- **No code changes made** — planning and analysis session only.
-
-### Previous Session (2026-02-16, Gemini CLI — Reorganization & Lifecycle):
-- Implemented repo reorganization (POCs to `poc/windows/`).
-- Encapsulated platform setup (`initPlatform`/`deinitPlatform` in Reactor.zig).
-- Root cause diagnosis confirmed. Full verification passed (35/35).
+### Completed This Session (2026-02-16, Gemini CLI — Strategic Shift):
+- **Analyzed PinnedState plan** and identified critical ID-reuse race condition.
+- **Created Gemini Verdict** document with "Zombie List" and "MessageID" safety logic.
+- **Created External AI Brief** for high-level architectural review.
+- **Decision:** Shift to `wepoll` submodule to unify Linux/Windows backends under `epoll` interface.
+- **Disabled Windows CI** on GitHub.
+- **Documented Migration Strategy** in `os/windows/analysis/wepoll-migration-strategy.md`.
+- **No code changes made** to core logic yet.
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Execute PinnedState Plan:** Follow `os/windows/analysis/claude-plan-pinned-state.md`.
-   - Start with Phase 0 (POC): Fix SocketContext bug, create stage4_pinned.zig.
-   - Then Phase 1 (Production): Iterator extension, PinnedState in Poller, thin Skt, refactor arm/process.
-   - Each step has its own verification gate (4-step + Linux cross-compile).
-2. **Enable Reactor Tests on Windows:** After PinnedState is in place.
-3. **Memory Strategy Decision (Documented):** Simple heap alloc now. Block-based pool (~128/block) required for "ready" status — implement as separate future task.
-4. **Skt Facade Refactoring (Q4.3):** Lower priority. After reactor tests pass.
+1. **Linux epoll Migration:** Start implementing native `epoll` for Linux in `src/ampe/os/linux/poller.zig`.
+2. **wepoll Submodule:** Add `wepoll` as a git submodule.
+3. **Windows wepoll Backend:** Implement a new poller backend for Windows that calls the `wepoll` C API.
+4. **Unified Poller Interface:** Ensure `Poll` struct hides the differences between real `epoll` and `wepoll`.
 
 ---
 

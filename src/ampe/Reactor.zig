@@ -1157,11 +1157,20 @@ inline fn vchns(rtr: *Reactor) void {
 
 pub const Iterator = struct {
     itrtr: ?Reactor.TriggeredChannelsMap.Iterator = null,
+    map: ?*Reactor.TriggeredChannelsMap = null,
 
     pub fn init(tcm: *Reactor.TriggeredChannelsMap) Iterator {
         return .{
             .itrtr = tcm.iterator(),
+            .map = tcm,
         };
+    }
+
+    pub fn getPtr(itr: *Iterator, key: channels.ChannelNumber) ?*TriggeredChannel {
+        if (itr.map) |m| {
+            return m.getPtr(key);
+        }
+        return null;
     }
 
     pub fn next(itr: *Iterator) ?*TriggeredChannel {

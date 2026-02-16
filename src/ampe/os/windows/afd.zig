@@ -72,6 +72,7 @@ pub const AfdPoller = struct {
 pub const SocketContext = struct {
     skt: *Skt,
     poll_info: ntdllx.AFD_POLL_INFO,
+    io_status: windows.IO_STATUS_BLOCK = undefined,
     is_pending: bool = false,
 
     pub fn init(skt: *Skt) SocketContext {
@@ -82,7 +83,6 @@ pub const SocketContext = struct {
     }
 
     pub fn arm(self: *SocketContext, events: u32, apc_context: ?*anyopaque) !void {
-        var io_status: windows.IO_STATUS_BLOCK = undefined;
         self.*.poll_info = ntdllx.AFD_POLL_INFO{
             .Timeout = @as(windows.LARGE_INTEGER, @bitCast(@as(u64, 0x7FFFFFFFFFFFFFFF))),
             .NumberOfHandles = 1,
@@ -97,7 +97,7 @@ pub const SocketContext = struct {
             null,
             null,
             apc_context,
-            &io_status,
+            &self.*.io_status,
             ntdllx.IOCTL_AFD_POLL,
             &self.*.poll_info,
             @sizeOf(ntdllx.AFD_POLL_INFO),

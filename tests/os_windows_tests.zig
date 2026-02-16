@@ -79,6 +79,15 @@ test "Windows Stage 3: Stress & Cancellation Test" {
     try win_poc.stage3.runTest(std.testing.allocator);
 }
 
+test "Windows Stage 4: PinnedState Indirection Test" {
+    if (builtin.os.tag != .windows) {
+        return error.SkipZigTest;
+    }
+
+    const win_poc = @import("win_poc");
+    try win_poc.stage4.runTest(std.testing.allocator);
+}
+
 test "Windows Notifier" {
     if (builtin.os.tag != .windows) {
         return error.SkipZigTest;

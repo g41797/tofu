@@ -28,11 +28,19 @@ pub const Poller = union(enum) {
     }
 };
 
+pub const PinnedState = struct {
+    io_status: windows.IO_STATUS_BLOCK = undefined,
+    poll_info: ntdllx.AFD_POLL_INFO = undefined,
+    is_pending: bool = false,
+    expected_events: u32 = 0,
+};
+
 pub const Poll = struct {
     allocator: Allocator = undefined,
     afd_poller: AfdPoller = undefined,
     it: ?Reactor.Iterator = null,
     entries: std.ArrayList(ntdllx.FILE_COMPLETION_INFORMATION) = undefined,
+    pinned_states: std.AutoArrayHashMap(ChannelNumber, *PinnedState) = undefined,
 
     pub fn init(allocator: Allocator) !Poll {
         return Poll{
@@ -40,10 +48,15 @@ pub const Poll = struct {
             .afd_poller = try AfdPoller.init(allocator),
             .it = null,
             .entries = try std.ArrayList(ntdllx.FILE_COMPLETION_INFORMATION).initCapacity(allocator, 256),
+            .pinned_states = std.AutoArrayHashMap(ChannelNumber, *PinnedState).init(allocator),
         };
     }
 
     pub fn deinit(pl: *Poll) void {
+        for (pl.*.pinned_states.values()) |state| {
+            pl.*.allocator.destroy(state);
+        }
+        pl.*.pinned_states.deinit();
         pl.*.afd_poller.deinit();
         pl.*.entries.deinit(pl.*.allocator);
         return;
@@ -60,7 +73,7 @@ pub const Poll = struct {
 
         pl.*.it.?.reset();
 
-        // Step 1: Arm/Re-arm AFD_POLL for all channels with interest
+        // Step 1: Clean up orphaned PinnedStates, then arm/re-arm AFD_POLL
         pl.*.armFds() catch |err| {
             log.err("armFds failed with error {any}", .{err});
             return AmpeError.CommunicationFailed;
@@ -84,6 +97,8 @@ pub const Poll = struct {
     }
 
     fn armFds(pl: *Poll) !void {
+        pl.*.cleanupOrphans();
+
         var tcptr: ?*TriggeredChannel = pl.*.it.?.next();
 
         while (tcptr != null) {
@@ -108,22 +123,29 @@ pub const Poll = struct {
             // Register if not already registered
             if (skt.*.base_handle == windows.INVALID_HANDLE_VALUE) {
                 _ = try pl.*.afd_poller.register(skt);
-                skt.*.is_pending = false;
-                skt.*.expected_events = 0;
             }
 
-            const events = afd.toAfdEvents(exp);
+            const chn: ChannelNumber = tc.*.acn.chn;
+            const events: u32 = afd.toAfdEvents(exp);
+
+            // Get or create PinnedState
+            const gop = try pl.*.pinned_states.getOrPut(chn);
+            if (!gop.found_existing) {
+                gop.value_ptr.* = try pl.*.allocator.create(PinnedState);
+                gop.value_ptr.*.* = PinnedState{};
+            }
+            const state: *PinnedState = gop.value_ptr.*;
 
             // Arm if not pending or if interest changed
-            if (!skt.*.is_pending or skt.*.expected_events != events) {
-                try pl.*.armSkt(skt, events, tc);
+            if (!state.*.is_pending or state.*.expected_events != events) {
+                try pl.*.armSkt(skt, events, chn, state);
             }
         }
     }
 
-    fn armSkt(pl: *Poll, skt: *Skt, events: u32, tc: *TriggeredChannel) !void {
+    fn armSkt(pl: *Poll, skt: *Skt, events: u32, chn: ChannelNumber, state: *PinnedState) !void {
         _ = pl;
-        skt.*.poll_info = ntdllx.AFD_POLL_INFO{
+        state.*.poll_info = ntdllx.AFD_POLL_INFO{
             .Timeout = @as(windows.LARGE_INTEGER, @bitCast(@as(u64, 0x7FFFFFFFFFFFFFFF))),
             .NumberOfHandles = 1,
             .Exclusive = 0,
@@ -136,20 +158,20 @@ pub const Poll = struct {
             skt.*.base_handle,
             null,
             null,
-            tc, // ApcContext = TriggeredChannel pointer
-            &skt.*.io_status,
+            @ptrFromInt(@as(usize, chn)),
+            &state.*.io_status,
             ntdllx.IOCTL_AFD_POLL,
-            &skt.*.poll_info,
+            &state.*.poll_info,
             @sizeOf(ntdllx.AFD_POLL_INFO),
-            &skt.*.poll_info,
+            &state.*.poll_info,
             @sizeOf(ntdllx.AFD_POLL_INFO),
         );
 
         if (status != .SUCCESS and status != .PENDING) {
             return AmpeError.CommunicationFailed;
         }
-        skt.*.is_pending = true;
-        skt.*.expected_events = events;
+        state.*.is_pending = true;
+        state.*.expected_events = events;
     }
 
     fn poll(pl: *Poll, timeout_ms: i32) !u32 {
@@ -162,38 +184,50 @@ pub const Poll = struct {
         for (pl.*.entries.allocatedSlice()[0..removed]) |entry| {
             if (entry.ApcContext == null) continue;
 
-            const tc: *TriggeredChannel = @ptrCast(@alignCast(entry.ApcContext.?));
-            
-            // Critical check: Skip stale completions for deinitialized channels.
-            // Since everything is sequential, if the tag is .dumb, it was closed 
-            // in a previous iteration but the completion just arrived.
-            if (tc.*.tskt == .dumb) continue;
+            const chn: ChannelNumber = @intCast(@intFromPtr(entry.ApcContext.?));
 
-            const skt: *Skt = switch (tc.*.tskt) {
-                .notification => tc.*.tskt.notification.skt,
-                .accept => &tc.*.tskt.accept.skt,
-                .io => &tc.*.tskt.io.skt,
-                .dumb => unreachable, // Handled by check above
+            // Look up PinnedState (stable heap memory)
+            const state: *PinnedState = pl.*.pinned_states.get(chn) orelse continue;
+            state.*.is_pending = false;
+
+            // Look up TriggeredChannel by ID (safe — gets current address)
+            const tc: *TriggeredChannel = pl.*.it.?.getPtr(chn) orelse {
+                // Channel was removed — free orphaned PinnedState
+                pl.*.allocator.destroy(state);
+                _ = pl.*.pinned_states.swapRemove(chn);
+                continue;
             };
 
-            // Always clear pending state if we got a completion
-            skt.*.is_pending = false;
+            if (tc.*.tskt == .dumb) continue;
 
             if (entry.IoStatus.u.Status != .SUCCESS) {
-                // If the poll failed (e.g. cancelled), report error
                 tc.*.act = Triggers{ .err = .on };
                 ret = ret.lor(tc.*.act);
                 continue;
             }
 
-            const events: u32 = skt.*.poll_info.Handles[0].Events;
+            const events: u32 = state.*.poll_info.Handles[0].Events;
             const act: Triggers = afd.fromAfdEvents(events, tc.*.exp);
-            
+
             tc.*.act = act.lor(.{ .pool = tc.*.exp.pool });
             ret = ret.lor(tc.*.act);
         }
 
         return ret;
+    }
+
+    fn cleanupOrphans(pl: *Poll) void {
+        var i: usize = 0;
+        const keys = pl.*.pinned_states.keys();
+        const vals = pl.*.pinned_states.values();
+        while (i < pl.*.pinned_states.count()) {
+            if (!vals[i].*.is_pending and pl.*.it.?.getPtr(keys[i]) == null) {
+                pl.*.allocator.destroy(vals[i]);
+                pl.*.pinned_states.swapRemoveAt(i);
+            } else {
+                i += 1;
+            }
+        }
     }
 };
 
@@ -212,6 +246,7 @@ const tofu = @import("../../../tofu.zig");
 const DBG = tofu.DBG;
 const AmpeError = tofu.status.AmpeError;
 const message = tofu.message;
+const ChannelNumber = message.ChannelNumber;
 const Reactor = tofu.Reactor;
 const TriggeredChannel = Reactor.TriggeredChannel;
 
