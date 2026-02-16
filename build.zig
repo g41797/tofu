@@ -99,7 +99,7 @@ pub fn build(b: *std.Build) void {
     // Create Windows POC module (Windows only)
     if (target.result.os.tag == .windows) {
         const winPocMod = b.createModule(.{
-            .root_source_file = b.path("src/ampe/os/windows/poc.zig"),
+            .root_source_file = b.path("poc/windows/poc.zig"),
             .target = target,
             .optimize = optimize,
             .single_threaded = false,

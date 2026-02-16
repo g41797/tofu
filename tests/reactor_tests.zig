@@ -139,8 +139,7 @@ test {
 }
 
 test "send illegal messages" {
-    wsaInit();
-    defer wsaCleanup();
+
     try send_illegal_messages();
 }
 
@@ -182,8 +181,7 @@ fn send_illegal_messages() !void {
 }
 
 test "find free TCP/IP port" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
 
     log.info("start find free TCP/IP port ", .{});
@@ -196,8 +194,7 @@ test "find free TCP/IP port" {
 }
 
 test "update receiver" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
 
     log.info("start handleUpdateReceiver ", .{});
@@ -212,36 +209,31 @@ test "update receiver" {
 }
 
 test "ampe just create/destroy" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
     try test_ampe_just_create_destroy();
 }
 
 test "connect_disconnect" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
     try test_connect_disconnect();
 }
 
 test "handle reconnect single threaded" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
     try test_handle_reconnect_single_threaded();
 }
 
 test "handle reconnect multithreaded" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
     try test_handle_reconnect_multithreaded();
 }
 
 test "loop tests" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
 
     for (0..5) |i| {
@@ -265,8 +257,7 @@ test "loop tests" {
 }
 
 test "simm test" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
 
     const tests = &[_]*const fn () void{
@@ -282,8 +273,7 @@ test "simm test" {
 }
 
 test "echo client/server test" {
-    wsaInit();
-    defer wsaCleanup();
+
     std.testing.log_level = .debug;
 
     const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
@@ -328,15 +318,4 @@ const testing = std.testing;
 const gpa = std.testing.allocator;
 const log = std.log;
 
-fn wsaInit() void {
-    if (builtin.os.tag == .windows) {
-        var wsa_data: std.os.windows.ws2_32.WSADATA = undefined;
-        _ = std.os.windows.ws2_32.WSAStartup(0x0202, &wsa_data);
-    }
-}
 
-fn wsaCleanup() void {
-    if (builtin.os.tag == .windows) {
-        _ = std.os.windows.ws2_32.WSACleanup();
-    }
-}

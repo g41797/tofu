@@ -151,7 +151,11 @@ This confirms that IOCP is a viable sole completion mechanism for AFD_POLL — n
 - **UDS Restored:** Both platforms use UDS socket pairs. Linux uses abstract sockets. Windows uses filesystem paths (no abstract namespace support).
 - **TCP Removed:** `initTCP` removed. Both platforms use `initUDS` exclusively.
 - **NotificationSkt:** Takes `*Skt` (pointer to receiver Skt) instead of raw `Socket`. `Socket` type in `triggeredSkts.zig` fixed to `internal.Socket`.
-- **WSAStartup:** Required before any Windows socket test. Every test entry point must call `WSAStartup(0x0202, &wsa_data)` with matching `WSACleanup()`.
+- **WSAStartup Ownership (v2):** In production, the `Reactor` owns `WSAStartup` and `WSACleanup`. 
+    - `Reactor.create` calls `WSAStartup(0x0202, &wsa_data)` on Windows.
+    - `Reactor.destroy` calls `WSACleanup()`.
+    - This ensures that any application using tofu doesn't need to manually manage Winsock lifecycle.
+    - Tests using the `Reactor` MUST NOT call `WSAStartup` manually. POCs and tests that use raw sockets without a `Reactor` still require manual setup.
 
 ---
 

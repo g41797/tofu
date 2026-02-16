@@ -44,19 +44,10 @@ What constitutes the absolute minimum "Working on Windows" milestone?
 
 ## 4. Phase III: Production Integration
 
-### Q4.1: WSAStartup/WSACleanup Ownership
+### Q4.1: WSAStartup/WSACleanup Ownership (RESOLVED)
 In production tofu on Windows, who owns WSAStartup/WSACleanup?
 
-Recommended pattern (from Microsoft docs):
-- Main thread start: call WSAStartup once
-- Worker threads: use sockets freely, no extra init
-- Main thread exit: after all threads finished, call WSACleanup once
-- WARNING: Never call from DllMain (deadlock risk from loader lock)
-
-Options:
-1. **Application responsibility** — caller must init before creating Reactor
-2. **Reactor.create() / Reactor.destroy()** — Reactor owns platform init
-3. **Dedicated tofu.init() / tofu.deinit()** — separate platform init API
+**Verdict:** The `Reactor` owns it. `Reactor.create` initializes Winsock, and `Reactor.destroy` cleans it up. Tests using the Reactor MUST NOT initialize it manually.
 
 ---
 

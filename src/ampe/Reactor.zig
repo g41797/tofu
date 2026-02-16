@@ -65,10 +65,15 @@ m4delCnt: usize = undefined,
 allChnN: std.ArrayList(message.ChannelNumber) = undefined,
 
 pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
+    try initPlatform();
+
     const rtr: *Reactor = gpa.create(Reactor) catch {
         return AmpeError.AllocationFailed;
     };
-    errdefer gpa.destroy(rtr);
+    errdefer {
+        deinitPlatform();
+        gpa.destroy(rtr);
+    }
 
     // 2DO add here comptime creation based on os
     const plru: poller.Poller = .{
@@ -174,6 +179,9 @@ pub fn destroy(rtr: *Reactor) void {
     rtr.releaseToPool(&rtr.currMsg);
     rtr.plr.deinit();
     rtr.deinitTrgrdChns();
+
+    deinitPlatform();
+
     rtr.* = undefined;
 }
 
@@ -1360,6 +1368,20 @@ pub const TriggeredChannel = struct {
         return tchn.tskt.detach();
     }
 };
+
+inline fn initPlatform() AmpeError!void {
+    if (builtin.os.tag == .windows) {
+        const ws2_32 = std.os.windows.ws2_32;
+        var wsa_data: ws2_32.WSADATA = undefined;
+        if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
+    }
+}
+
+inline fn deinitPlatform() void {
+    if (builtin.os.tag == .windows) {
+        _ = std.os.windows.ws2_32.WSACleanup();
+    }
+}
 
 const tofu = @import("../tofu.zig");
 const message = tofu.message;
