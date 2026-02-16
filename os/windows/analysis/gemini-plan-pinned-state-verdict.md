@@ -29,13 +29,53 @@ While `ActiveChannels` (in `channels.zig`) maintains a "Recently Removed" buffer
 6. **Race Result:** The IOCP now potentially has TWO pending entries for `ApcContext 42` (the cancellation from A and the new poll from B).
 7. **The Crash/Bug:** The completion for **Connection A** (likely `STATUS_CANCELLED`) arrives. The Poller receives `ApcContext 42`, looks up the *current* occupant of ID 42 (**Connection B**), and incorrectly applies the cancellation status or stale events to the new connection. This can lead to **Connection B** being closed prematurely or hanging because its actual "Ready" signal was masked by the stale completion.
 
+#### Why the 1024-Number Gap is Not Enough
+
+While a 1024-number gap (`rrchn`) sounds like a large buffer, it is insufficient for a deterministic high-performance reactor for several reasons:
+
+1.  **High Connection Churn:** At 10,000 connections per second (common for microservices or stress tests), the 1,024-ID buffer is exhausted in **~100 milliseconds**. If a kernel `AFD_POLL` completion is delayed by just 0.1 seconds (due to scheduling, driver load, or network timeouts), the ID *will* be reused before the old completion is cleared.
+2.  **Unpredictable Kernel Latency:** The Windows I/O Manager and the `AFD.sys` driver do not guarantee completion timing. A "stuck" I/O request (e.g., a socket in `FIN_WAIT_2` or a hardware-level delay) could keep an `AFD_POLL` pending for seconds, while the Reactor cycles through its entire 16-bit ID space (65,535) multiple times.
+3.  **Scale vs. Buffer Size:** The buffer is fixed at 1024, but the load is variable. A safety mechanism that relies on "being fast enough to avoid a race" is a **probabilistic defense**, not a structural one. Tofu's architecture demands a **deterministic** guarantee that a completion *always* belongs to the socket that issued it.
+4.  **The "Zombie" Problem:** When a socket is closed, its `AFD_POLL` is canceled, but the memory (`io_status`, `poll_info`) and the `ApcContext` must remain valid until the kernel actually posts the `STATUS_CANCELLED` completion to the IOCP. If we rely on the 1024-gap to "assume" the kernel is done, we risk a use-after-free if the kernel is slower than our reuse cycle.
+
 #### Why Pointer Indirection is Safer
 By using `*PinnedState` as the `ApcContext`:
 - **Unique Memory:** Each connection attempt gets a unique heap-allocated `PinnedState`.
 - **Deterministic Routing:** When a completion arrives, it points to the specific `PinnedState` created for that socket.
 - **Validation:** By checking the `MessageID` inside the `PinnedState` against the `TriggeredChannel`, we can definitively detect if the completion belongs to the current "incarnation" of that ID.
 
-### 2. Suboptimal Indirection
+#### The "Pointer" Confusion: Moving vs. Fixed Targets
+
+It is important to distinguish between the **unstable pointer** used previously and the **stable pointer** proposed now:
+
+1.  **Old Implementation (Broken):** Pointed to `TriggeredChannel` objects stored *inline* in `AutoArrayHashMap`. These objects **move** whenever the map resizes or performs a `swapRemove`. The pointer becomes dangling immediately upon any map mutation.
+2.  **New Implementation (Proposed):** Points to a `PinnedState` object allocated via `allocator.create()`. This object is **pinned in memory** (on the heap) and its address is guaranteed never to change for its entire lifecycle, regardless of what happens to the HashMap.
+
+By using the **stable heap pointer** as the `ApcContext` instead of an ID:
+- We avoid the complexity and overhead of an ID-to-Pointer lookup in the completion loop.
+- We achieve **Incarnation Safety**: Even if a `ChannelNumber` is reused, the pointer to the old `PinnedState` remains unique and valid until the kernel is finished with it.
+
+#### The "Pointer Recycling" Risk (ABA Problem)
+
+A valid criticism of using pointers is that memory addresses are recycled. If we `destroy` a `PinnedState` and then `create` a new one, the allocator may return the same address. If the kernel still had a pending I/O on that address, we would have a collision.
+
+**The Tofu solution requires two layers of defense:**
+
+1.  **Layer 1: The Zombie List (Physical Safety):** We must never call `allocator.destroy()` on a `PinnedState` while its `is_pending` flag is true. If a channel is removed, its `PinnedState` moves to a "Zombie" list. This keeps the memory address "reserved" so the allocator cannot give it to a new connection while the kernel still holds a reference. Only when the `STATUS_CANCELLED` completion arrives do we truly free the memory.
+2.  **Layer 2: MessageID Verification (Logical Safety):** Even with Layer 1, a logic bug could lead to recycling. By storing the `mid: MessageID` (a unique 64-bit generation counter) in the `PinnedState`, we can verify every completion:
+    ```zig
+    if (state.mid != tc.acn.mid) {
+        // This completion is for a previous connection that occupied this ChannelNumber.
+        // It is a "stale" or "ghost" completion. Discard it.
+        return;
+    }
+    ```
+
+This combination makes the system **deterministic** and immune to the race conditions present in the original plan.
+
+---
+
+## 2. Suboptimal Indirection
 Using `u16 -> usize -> PVOID` and then performing a `HashMap.get(chn)` lookup on completion is less efficient than using the pointer to the `PinnedState` itself. Since `PinnedState` is heap-allocated and stable, it is the ideal candidate for the `ApcContext`.
 
 ---
