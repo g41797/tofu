@@ -116,4 +116,53 @@ Implemented in `src/ampe/os/windows/poller.zig` using `AfdPoller` and `NtRemoveI
 Refactor Skt and poller shared types to use the facade pattern (like Notifier). Currently `internal.zig` handles Skt with a manual switch; this should follow the same `backend` + re-export pattern established by `Notifier.zig` and `poller.zig`.
 
 ---
-*Last Updated: 2026-02-15*
+
+## 9. Phase III: PinnedState Implementation
+
+### Q9.1: SocketContext.arm() io_status Stack-Local Bug (IDENTIFIED)
+`afd.zig` line 85: `var io_status: windows.IO_STATUS_BLOCK = undefined;` is a stack local passed to
+`NtDeviceIoControlFile`. The kernel holds `&io_status` for async operations, but it goes out of scope
+when `arm()` returns. Works in POC by luck (synchronous completion or stack not overwritten yet).
+**Fix:** Move `io_status` to a struct field in `SocketContext`. Scheduled as Step 0a.
+
+### Q9.2: PinnedState Memory Strategy (DECIDED)
+**Phase 1:** Simple `allocator.create(PinnedState)` / `allocator.destroy(state)`. One heap allocation
+per channel.
+**Phase 2 (required for "ready"):** Block-based pool allocator. Allocate PinnedState objects in blocks
+of ~128. Track per-block usage count. Free empty blocks.
+**Decision:** Start simple, optimize later. Project not "ready" until block-based pool is implemented.
+
+### Q9.3: base_handle Location (DECIDED)
+`base_handle` stays in `Skt`. PinnedState does NOT store a reference to Skt. During `armSkt()`, the
+`*Skt` pointer is obtained from TriggeredChannel in the same `armFds()` iteration (no map mutations
+happen during this pass). PinnedState reads `skt.base_handle` once to populate `poll_info` and pass
+to `NtDeviceIoControlFile`.
+
+### Q9.4: PinnedState Deferred Cleanup (DECIDED)
+When a channel is removed, `closesocket()` triggers kernel cancellation. Rather than freeing
+PinnedState immediately (risk of kernel still writing to io_status), wait for STATUS_CANCELLED
+completion in next `poll()` cycle, then free. Non-pending orphans cleaned up at start of `armFds()`.
+
+### Q9.5: docs_site/docs/mds/ as Source of Truth (ADDED)
+`docs_site/docs/mds/` added as source of truth for tofu channel semantics, message format, and
+architectural overview. Key files: `channel-group.md`, `message.md`, `key-ingredients.md`,
+`advanced-topics.md`.
+
+---
+
+## 10. Phase III: PinnedState Refinements (Gemini Review)
+
+### Q10.1: ApcContext Collision Safety
+Given that `ChannelNumber` can be reused, shouldn't we use the heap-allocated `*PinnedState` address as the `ApcContext` instead of the `ChannelNumber` itself? 
+- **Benefit:** Direct access to context memory without HashMap lookup.
+- **Verification:** Can we reliably use `MessageID` (mid) to detect completions belonging to a previous connection on the same ID?
+
+### Q10.2: Decoupled PinnedState Lifecycle
+If a channel is removed and its ID is immediately reused, how do we ensure the `PinnedState` for the *new* connection doesn't conflict with the pending `STATUS_CANCELLED` completion of the *old* one?
+- **Proposed Solution:** Decouple `PinnedState` from the `ChannelNumber` map upon removal, but keep it alive in a "Zombie" list until the kernel posts the completion.
+
+### Q10.3: SocketContext vs PinnedState in afd.zig
+The current `afd.zig` uses a `SocketContext` struct. Should this struct be merged with the `PinnedState` used by the Poller to avoid duplicate definitions of kernel-facing memory (io_status, poll_info)?
+
+---
+*Last Updated: 2026-02-16*

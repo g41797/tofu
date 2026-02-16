@@ -163,6 +163,44 @@ This confirms that IOCP is a viable sole completion mechanism for AFD_POLL — n
 
 Implementation plans are stored as separate files for cross-agent reference:
 - [Stage 1 IOCP Reintegration Plan](./plan-stage1-iocp-reintegration.md) — **Completed** (2026-02-13)
+- [PinnedState Implementation Plan](./analysis/claude-plan-pinned-state.md) — **Proposed** (2026-02-16)
+
+---
+
+## 11. PinnedState Design Decisions (2026-02-16)
+
+### 11.1 PinnedState Struct
+- **Location:** Defined in `src/ampe/os/windows/poller.zig`.
+- **Fields:** `io_status: IO_STATUS_BLOCK`, `poll_info: AFD_POLL_INFO`, `is_pending: bool`, `expected_events: u32`.
+- **Allocation:** Heap-allocated per channel via `allocator.create(PinnedState)`.
+- **Lookup:** `AutoArrayHashMap(ChannelNumber, *PinnedState)` in `Poll` struct.
+- **Rationale:** These fields must have stable addresses while the kernel holds references. Heap allocation guarantees stability regardless of `trgrd_map` mutations.
+
+### 11.2 ChannelNumber as ApcContext
+- **Encoding:** `@ptrFromInt(@as(usize, chn))` where `chn` is `u16` (ChannelNumber).
+- **Decoding:** `@as(ChannelNumber, @intCast(@intFromPtr(entry.ApcContext.?)))`.
+- **Rationale:** Replaces `*TriggeredChannel` pointer which becomes stale on map growth/swapRemove.
+
+### 11.3 Iterator Extension
+- **Change:** Add `map: ?*TriggeredChannelsMap` field and `getPtr(key)` method to `Reactor.Iterator`.
+- **Purpose:** Allows Windows `processCompletions` to look up `TriggeredChannel` by `ChannelNumber`.
+- **Impact:** Backward-compatible addition. Linux poller does not use `getPtr`.
+
+### 11.4 PinnedState Lifecycle
+- **Created:** In `armFds()` via `getOrPut` when a channel first needs to be armed.
+- **Freed (deferred):** In `processCompletions()` when completion arrives for a channel no longer in `trgrd_map`.
+- **Freed (orphan):** In `cleanupOrphans()` at start of `armFds()` for non-pending states whose channel is gone.
+- **Freed (shutdown):** In `Poll.deinit()` — frees all remaining states.
+- **NOT freed eagerly:** On channel removal, the kernel may still hold a reference to `io_status`. Deferred cleanup avoids use-after-free.
+
+### 11.5 Memory Strategy
+- **Phase 1 (current):** Simple `allocator.create/destroy` per PinnedState.
+- **Phase 2 (required for "ready"):** Block-based pool allocator (~128 objects per block). Free empty blocks. This is a MANDATORY future optimization — the project is not "ready" until it is implemented.
+
+### 11.6 Thin Skt
+- **Removed from Skt:** `io_status`, `poll_info`, `is_pending`, `expected_events`.
+- **Retained in Skt:** `socket`, `address`, `server`, `base_handle`.
+- **Rationale:** Kernel-facing async state belongs in PinnedState (owned by Poller), not in Skt (owned by TriggeredChannel in the moving map).
 
 ---
 *End of Decision Log*
