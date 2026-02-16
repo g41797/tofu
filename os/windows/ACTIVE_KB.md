@@ -28,7 +28,7 @@
 
 ---
 
-**Current Version:** 022
+**Current Version:** 023
 **Last Updated:** 2026-02-16
 **Current Focus:** Phase III — Windows Implementation (Stability Fixes)
 
@@ -42,19 +42,12 @@
 ---
 
 ## 2. Technical State of Play
-- **Repository Reorganization:** POC (Proof of Concept) code moved from production source tree to a dedicated top-level `poc/` directory.
-    - Production: `src/ampe/os/windows/` (contains `poller.zig`, `Skt.zig`, `afd.zig`, `ntdllx.zig`).
-    - POC: `poc/windows/` (contains `poc.zig` and stage files).
-    - Future Platforms: All new ports MUST follow this pattern (e.g., production code in `src/ampe/os/mac/` and POC code in `poc/mac/`).
-    - Build System: `build.zig` updated to point `win_poc` module to the new location.
-- **Winsock Lifecycle Management:**
-    - `Reactor.create` now handles `WSAStartup` on Windows.
-    - `Reactor.destroy` now handles `WSACleanup` on Windows.
-    - **MANDATORY:** Manual Winsock initialization is strictly forbidden in tests using the `Reactor`.
+- **Repository Reorganization:** POC code moved to `poc/windows/`. Future ports follow the same pattern.
+- **Platform Lifecycle Encapsulation:** Integrated Winsock `WSAStartup`/`WSACleanup` into `initPlatform()` and `deinitPlatform()` helper functions in `Reactor.zig`.
 - **Windows Poller Implementation:** `waitTriggers` currently uses asynchronous `AFD_POLL` via IOCP.
-- **CRITICAL BUG IDENTIFIED:** `std.AutoArrayHashMap` in `Reactor.zig` moves `TriggeredChannel` objects during growth/shrinkage. The Windows kernel holds pointers to these moving objects (`ApcContext` and `IoStatusBlock`), leading to memory corruption and panics.
-- **APPROVED FIX:** "Indirection via Channel Numbers + Stable Poller Pool". (Implemented Next).
-- **Build Status:** ALL tests pass (35/35) on Windows native (Debug/ReleaseFast) and Linux cross-compiles successfully.
+- **CRITICAL BUG IDENTIFIED:** `std.AutoArrayHashMap` moves `TriggeredChannel` objects, invalidating pointers held by the Windows kernel.
+- **APPROVED FIX:** "Indirection via Channel Numbers + Stable Poller Pool".
+- **Build Status:** ALL active tests pass (35/35) on Windows (Debug/ReleaseFast) and Linux cross-compiles.
 
 ---
 
@@ -62,16 +55,9 @@
 
 ### Completed This Session (2026-02-16, Gemini CLI):
 - **Implemented Repo Reorganization:** Moved test-only POCs to `poc/windows/`.
-- **Integrated Winsock Init:** Moved `WSAStartup`/`WSACleanup` into `Reactor.create`/`destroy`.
-- **Fixed Registration Bug:** Resolved `base_handle` registration failure in `afd.zig`.
-- **Full Verification (PASS):**
-    - Windows Debug (35/35)
-    - Windows ReleaseFast (35/35)
-    - Linux Cross-compile (Build)
-
-### Current State:
-- **Architecture Finalized:** Decoupled `TriggeredChannel` (moves) from Kernel State (must be pinned).
-- **Ready for Stabilization:** The next agent should implement the Stable Pool + Indirection ID logic to fix the random panics in the 1000-cycle reconnect tests.
+- **Encapsulated Platform Setup:** Created `initPlatform`/`deinitPlatform` in `Reactor.zig` to handle Winsock cleanly.
+- **Root Cause Diagnosis:** Confirmed pointer instability from map moves is the cause of random panics.
+- **Full Verification (PASS):** Windows Debug (35/35), Windows ReleaseFast (35/35), Linux Cross-compile.
 
 ---
 
