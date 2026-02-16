@@ -99,23 +99,47 @@ This leads to the "union field access" panics: the poller receives a completion,
 My initial thought was to add an `allocator` to the `Skt` struct. This would allow each socket to heap-allocate its own `PinnedState` (the `IO_STATUS_BLOCK` and `AFD_POLL_INFO`) during `init`. Since the `Skt` would only hold a pointer to this heap memory, the `Skt` itself could move (inside the map) while the addresses held by the Kernel remained stable.
 **Status:** Rejected by Author. `Skt` should remain a simple, allocator-free struct to preserve the existing abstraction.
 
-### Possible Approved Directions (For Discussion)
-Any solution must provide **Address Stability** for the data the Kernel touches without breaking the `tofu` architectural boundaries.
+### Approved Direction: Indirection via Channel Numbers + Stable Poller Pool
 
-1.  **Stable Storage Pool in Poller:**
-    The `Poller` struct (which already has an allocator) could maintain a private pool of `PinnedState` objects. When a socket is registered, the poller assigns it a slot in this stable pool. The `ApcContext` would point to the pool slot, not the `TriggeredChannel`.
-    *   *Pros:* `Skt` and `TriggeredChannel` remain OS-independent and value-typed.
-    *   *Cons:* Requires mapping between Sockets and Pool slots.
+The core of the fix is to decouple the life cycle of the `TriggeredChannel` (which moves) from the life cycle of the kernel's asynchronous request (which must be pinned).
 
-2.  **Indirection via Channel Numbers:**
-    Instead of passing pointers as `ApcContext`, we pass the `ChannelNumber` (as an integer cast to a pointer). Upon completion, we look up the *current* address of the `TriggeredChannel` in the `Reactor.trgrd_map`.
-    *   *Pros:* Completely immune to memory moves.
-    *   *Cons:* `IO_STATUS_BLOCK` still needs a stable home. The kernel *must* write to a pointer. We still need a stable place to store the status block for every pending request.
+**1. Encapsulation of Kernel State:**
+`io_status` and `poll_info` are strictly requirements of the Windows `AFD_POLL` implementation. They will be removed from the `Skt` struct. This restores the "Thin Skt" abstraction, making the Windows `Skt` structurally similar to the Linux one.
 
-3.  **Segmented Map/Stable Pointers in Reactor:**
-    Change how the Reactor stores channels (e.g., store `*TriggeredChannel` or use a structure that doesn't move elements).
-    *   *Pros:* Solves the problem at the root.
-    *   *Cons:* Major architectural change to core `tofu` logic (Author approval mandatory).
+**2. Stable Storage Pool in Poller:**
+The `Poller` struct already has an allocator. It will maintain an internal storage (e.g., a `std.AutoHashMap(ChannelNumber, PinnedState)`) where `PinnedState` is a heap-allocated (or pool-allocated) structure containing:
+*   `io_status: windows.IO_STATUS_BLOCK`
+*   `poll_info: ntdllx.AFD_POLL_INFO`
+
+**3. Indirection via ApcContext:**
+When calling `NtDeviceIoControlFile`, the `ApcContext` will no longer be a pointer to the `TriggeredChannel`. Instead, it will be the `ChannelNumber` itself (cast to `PVOID`).
+
+**4. The Completion Workflow:**
+1.  **Event Occurs:** The kernel writes to the stable `io_status` address in the Poller's pool.
+2.  **Completion Returned:** `NtRemoveIoCompletionEx` returns the `ChannelNumber` in `ApcContext`.
+3.  **Safe Lookup:** The `Poller` uses the `ChannelNumber` to:
+    *   Find the `PinnedState` in its own stable pool to read the result.
+    *   Find the `TriggeredChannel` in the `Reactor.trgrd_map`. Even if the map moved the channel, the `ChannelNumber` remains a valid key to find its *current* location.
+4.  **Update:** The `Poller` updates `tc.act` at its current address and resets the `PinnedState` for the next loop.
+
+**Example (Indirection Workflow):**
+```zig
+// In Poller.armSkt:
+const state = try pl.getOrCreateStableState(tc.acn.chn);
+try NtDeviceIoControlFile(
+    skt.socket,
+    pl.iocp, 
+    @ptrFromInt(tc.acn.chn), // ApcContext is ID, not pointer
+    &state.io_status,        // Stable address in Poller pool
+    ...
+);
+
+// In Poller.processCompletions:
+const chn = @as(ChannelNumber, @intFromPtr(entry.ApcContext));
+const state = pl.getStableState(chn);
+const tc = pl.it.map.getPtr(chn).?; // Safe lookup of current address
+tc.act = afd.fromAfdEvents(state.poll_info.Handles[0].Events, tc.exp);
+```
 
 ## 6. Conclusion
-The Windows port cannot proceed reliably until we have a stable home for the asynchronous state that the kernel requires. We must decide on a mechanism that provides this stability while respecting the author's constraint on allocators in core structures.
+By moving the pinned state into the `Poller` and using `ChannelNumber` as an indirect key, we satisfy the Windows Kernel's need for memory stability while allowing the `Reactor` to maintain its high-performance dynamic memory model. This fix preserves the architectural integrity of the `tofu` library.
