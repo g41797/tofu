@@ -73,6 +73,14 @@ A valid criticism of using pointers is that memory addresses are recycled. If we
 
 This combination makes the system **deterministic** and immune to the race conditions present in the original plan.
 
+### 3. Industry Parallels (wepoll, mio, libuv)
+
+Research into established libraries confirms this "Safe Pointer + Deferred Cleanup" approach is the industry standard for `AFD_POLL` on Windows:
+
+- **wepoll:** Uses a heap-allocated `sock_state_t`. It explicitly uses `NtCancelIoFileEx` and refuses to free the state memory until a completion with `STATUS_CANCELLED` is received from the IOCP.
+- **mio (Rust):** Employs a similar "InternalState" that is pinned in memory. Rust's ownership model is used to ensure the state lives long enough, but the underlying mechanic is the same: the kernel context must be stable and its cleanup must be deferred until the kernel confirms release.
+- **ApcContext Usage:** These libraries use the pointer itself as the context. This solves the "Incarnation Problem" where IDs or Handles are reused by the OS or the application; the pointer remains a unique handle to a specific allocation.
+
 ---
 
 ## 2. Suboptimal Indirection
