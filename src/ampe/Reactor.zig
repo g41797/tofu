@@ -453,7 +453,7 @@ fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
     return;
 }
 
-const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
+pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
 
 const ChannelsGroupMap = std.AutoArrayHashMap(u32, *MchnGroup);
 

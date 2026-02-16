@@ -118,10 +118,8 @@ The sender uses `poll` to check readiness. On Windows, this means `ws2_32.WSAPol
 
 ## 8. Future Tasks (Phase II Continuation)
 
-### Q4.2: Windows Poller `waitTriggers` Implementation
-Implement AfdPoller-based `waitTriggers` for the Windows Poller. This handles ALL sockets including the notification receiver. The Poller owns socket interaction, not the Reactor or Notifier.
-- **Reference:** `os/linux/poller.zig` lines 107-111 (notify trigger), 141-147 (poll call).
-- **Key:** The notification receiver socket must be included in the AfdPoller's poll set alongside network sockets.
+### Q4.2: Windows Poller `waitTriggers` Implementation (DONE)
+Implemented in `src/ampe/os/windows/poller.zig` using `AfdPoller` and `NtRemoveIoCompletionEx`. Verified via unit tests in `tests/windows_poller_tests.zig`. Handles ALL sockets including notification receiver.
 
 ### Q4.3: Refactor Skt/Poller Shared Types to Facade Pattern
 Refactor Skt and poller shared types to use the facade pattern (like Notifier). Currently `internal.zig` handles Skt with a manual switch; this should follow the same `backend` + re-export pattern established by `Notifier.zig` and `poller.zig`.

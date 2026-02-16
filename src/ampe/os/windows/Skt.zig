@@ -10,6 +10,9 @@ server: bool = false,
 // Windows-specific state for AFD polling
 base_handle: windows.HANDLE = windows.INVALID_HANDLE_VALUE,
 io_status: windows.IO_STATUS_BLOCK = undefined,
+poll_info: ntdllx.AFD_POLL_INFO = undefined,
+is_pending: bool = false,
+expected_events: u32 = 0,
 
 pub fn listen(skt: *Skt) !void {
     skt.*.server = true;
@@ -178,6 +181,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const windows = std.os.windows;
 const ws2_32 = windows.ws2_32;
+const ntdllx = @import("ntdllx.zig");
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;

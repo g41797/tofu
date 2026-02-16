@@ -8,6 +8,7 @@ test {
 
     if (@import("builtin").os.tag == .windows) {
         _ = @import("os_windows_tests.zig");
+        _ = @import("windows_poller_tests.zig");
     } else {
         _ = @import("ampe/Pool_tests.zig");
         _ = @import("ampe/Notifier_tests.zig");
