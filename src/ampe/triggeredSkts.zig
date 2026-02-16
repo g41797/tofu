@@ -126,12 +126,12 @@ pub const TriggeredSkt = union(enum) {
         return ret;
     }
 
-    pub inline fn getSocket(tsk: *TriggeredSkt) Socket {
+    pub inline fn getSocket(tsk: *TriggeredSkt) ?Socket {
         return switch (tsk.*) {
             .notification => tsk.*.notification.getSocket(),
             .accept => tsk.*.accept.getSocket(),
             .io => tsk.*.io.getSocket(),
-            inline else => return 0, // For Linux
+            inline else => return null,
         };
     }
 
@@ -918,6 +918,7 @@ const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
 const std = @import("std");
+const builtin = @import("builtin");
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const Socket = internal.Socket;

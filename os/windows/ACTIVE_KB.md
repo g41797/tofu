@@ -34,12 +34,13 @@
     1. **Little-endian Imports:** Imports at the bottom of the file.
     2. **Explicit Typing:** No `const x = ...` where type is known/fixed. Use `const x: T = ...`.
     3. **Explicit Dereference:** Use `ptr.*.field` for pointer access.
+- **Architectural Approval (MANDATORY):** Any change to important architecture parts (e.g., changing the memory model, adding allocators to core structures like `Skt`, or shifting from IOCP to Sync Poll) MUST be explicitly approved by the author. Provide an explanation and intent for discussion before applying such changes.
 
 ---
 
-**Current Version:** 019
-**Last Updated:** 2026-02-15
-**Current Focus:** Phase II — Structural Refactoring (Notifier complete, Poller next)
+**Current Version:** 020
+**Last Updated:** 2026-02-16
+**Current Focus:** Phase III — Windows Implementation (Stability Fixes)
 
 ---
 
@@ -51,64 +52,42 @@
 ---
 
 ## 2. Technical State of Play
-- **Phase I (Feasibility) Complete:** Full parity between TCP and UDS verified on Windows.
-- **Architectural Shift (Phase II) - STAGE 2 COMPLETE:**
-    - **Backends:** `Skt`, `Poller`, and `Notifier` moved to `src/ampe/os/linux/` and `src/ampe/os/windows/`.
-    - **Facades:** `src/ampe/poller.zig` uses `builtin.os.tag` switch pattern. `src/ampe/internal.zig` acts as the primary redirection point for `Skt`.
-    - **Encapsulation:** `Skt` on Windows now holds the pinned `IO_STATUS_BLOCK` and `base_handle`.
-    - **Notifier:** Single unified file (`src/ampe/Notifier.zig`) with comptime branches for 2 platform differences (abstract sockets, connect ordering). Stores `Skt` objects (not raw `socket_t`). UDS on both platforms. `NotificationSkt` in `triggeredSkts.zig` takes `*Skt`. `Socket` type fixed to `internal.Socket`.
+- **Windows Poller Implementation:** `waitTriggers` implemented in `src/ampe/os/windows/poller.zig` using asynchronous `AFD_POLL` via IOCP.
+- **CRITICAL ARCHITECTURAL CONFLICT:** Identified that `std.AutoArrayHashMap` in `Reactor.zig` moves `TriggeredChannel` objects during growth or `swapRemove`. This invalidates the pointers (`ApcContext` and `IoStatusBlock`) held by the Windows kernel for pending `AFD_POLL` requests, causing random panics and corruption.
+- **Documentation:** `os/windows/analysis/doc-reactor-poller-negotiation.md` explains the stability issue and proposed fixes.
 - **Build & Verification Status:**
     - **Linux:** Compiles (cross-compile) — Sandwich Verification active.
-    - **Windows:** ALL tests pass (POC Stages 0-3 + Notifier) in both **Debug** and **ReleaseFast** modes (11 tests total).
-- **Log Management:** All outputs go to `zig-out/` log files.
+    - **Windows:** Production tests (reconnect tests) are failing with random panics due to pointer instability.
 
 ---
 
 ## 3. Session Context & Hand-off
 
-### Completed This Session (2026-02-15, Gemini CLI — Windows Poller Implementation):
-- **Implemented `Poller.waitTriggers` for Windows:**
-  - Full production-grade implementation in `src/ampe/os/windows/poller.zig`.
-  - Uses `AfdPoller` (IOCP + `AFD_POLL`) with "Declarative Interest" logic.
-  - Sockets are armed/re-armed based on real-time business interest calculated in the loop.
-  - Successfully handles `ApcContext` mapping completions back to `TriggeredChannel` objects.
-- **Refactored Windows `Skt` State:**
-  - Added pinned `poll_info` and tracking fields (`is_pending`, `expected_events`) to `src/ampe/os/windows/Skt.zig`.
-- **Verified via New Unit Tests:**
-  - Created `tests/windows_poller_tests.zig` with 2 tests:
-    1. Basic wakeup via `Notifier`.
-    2. Full TCP Echo flow (Connect -> Accept -> Recv -> Send).
-  - All tests follow "Author's Directives" for coding style.
-- **Verification Sequence (PASS):**
-  - `Windows Debug build+test (12/12)` -> `Windows ReleaseFast build+test (12/12)` -> `Linux cross-compile (Build)`.
-
-### Previous Session (2026-02-15, Claude Code Agent — Notifier Refactoring + Collapse):
-- **Notifier Refactoring (unified single file):**
-  - Rewrote `src/ampe/Notifier.zig` as single unified file with `@This()` pattern and Skt fields.
-  - Two comptime branches handle platform differences (abstract sockets, connect ordering).
+### Completed This Session (2026-02-16, Gemini CLI — Investigation & Planning):
+- **Root Cause Investigation:** Discovered why Windows port was panicking during stress/reconnect tests. The "single threaded" reactor actually moves memory when map state changes, breaking the async contract of `AFD_POLL`.
+- **Architectural Analysis:** Created detailed documentation comparing Linux (stateless) and Windows (stateful) poller negotiations.
+- **Indirection/Stable Pointer Plan:** Proposed two paths forward: heap-allocating channels for a stable map, or using indirection IDs for completions.
+- **Restored Baseline:** Cleaned up the poller code to use a dynamic `std.ArrayList` for completions while maintaining the IOCP architecture.
 
 ### Current State:
-- **Phase II (Structural Refactoring) is now officially COMPLETE.**
-- **Windows Poller `waitTriggers` is DONE and VERIFIED.**
-- All 12 tests (POCs + Notifier + Poller) pass on Windows native.
-- Next: Phase III — Implementation of `WindowsReactor` or integration into generic `Reactor.zig`.
+- **Phase III is in a critical stabilization stage.**
+- The core Windows `Poller` logic is correct, but the *storage* of the data it points to is unstable.
+- Next: Implement a solution for pointer stability (Stable Pointers or Indirection).
 
 ---
 
 ## 4. Next Steps for AI Agent
-1. **Phase III: Windows Implementation:** Start building the `WindowsReactor` or integrate the new `Poller.waitTriggers` into the main `Reactor.zig` loop logic.
-2. **Skt Facade Refactoring (Q4.3):** Refactor `Skt` to use the same facade pattern as `Poller` (currently handled via a switch in `internal.zig`).
-3. **Phase IV Verification:** Run the full `tests/ampe/` suite on Windows to ensure complete parity.
+1. **Solve Pointer Instability:** Choose and implement a fix from `doc-reactor-poller-negotiation.md`.
+    - Recommendation: **Indirection via Channel Numbers** for `ApcContext` is likely most idiomatic for Zig, combined with a stable storage for `IO_STATUS_BLOCK` if necessary.
+2. **Verify Stability:** Use `zig build test --summary all -- -f "reconnect"` to verify that 1000 sequential reconnects no longer panic.
+3. **Refactor Skt Facade (Q4.3):** Move `Skt` into the same facade pattern as `Poller`.
 
 ---
 
 ## 5. Conceptual Dictionary
-*Key terms used in coordination docs and source comments. See full definitions in [spec-v6.1.md](./spec-v6.1.md#8-glossary-of-architectural-terms).*
-
-- **Declarative Interest:** Re-calculating "what we want" from business state every loop.
-- **One-Shot / Re-arm:** Mandatory cycle for `AFD_POLL` to emulate persistent polling.
-- **Level-Triggered (LT):** Safety net that ensures `AFD_POLL` completes if data is left in buffers.
-- **Backpressure:** Stopping `AFD_POLL_RECEIVE` requests when memory is full.
-- **Readiness-over-Completion:** Using IOCP to build a Reactor, not a Proactor.
+- **Pointer Stability:** The requirement that a memory address remains valid and belongs to the same object for the duration of an asynchronous kernel request.
+- **Indirection ID:** Using a non-pointer value (like an integer index) to reference an object, allowing the object to move while the ID remains a valid lookup key.
+- **ApcContext:** An opaque pointer passed to the kernel and returned upon completion; currently misused as a direct `*TriggeredChannel`.
+- **swapRemove:** The `ArrayHashMap` operation that destroys pointer stability by moving the last element into a middle slot.
 
 ---

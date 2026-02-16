@@ -17,6 +17,15 @@ test "create file for address of uds socket" {
 test "base Notifier" {
     std.testing.log_level = .debug;
 
+    if (builtin.os.tag == .windows) {
+        var wsa_data: std.os.windows.ws2_32.WSADATA = undefined;
+        _ = std.os.windows.ws2_32.WSAStartup(0x0202, &wsa_data);
+        // WSACleanup deferred at end of test
+    }
+    defer if (builtin.os.tag == .windows) {
+        _ = std.os.windows.ws2_32.WSACleanup();
+    };
+
     var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
 
@@ -43,6 +52,7 @@ const Notification = Notifier.Notification;
 const temp = @import("temp");
 
 const std = @import("std");
+const builtin = @import("builtin");
 const posix = std.posix;
 const testing = std.testing;
 const Allocator = std.mem.Allocator;

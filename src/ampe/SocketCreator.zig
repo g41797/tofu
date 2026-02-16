@@ -137,7 +137,7 @@ pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
     };
 
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
-    errdefer posix.close(ret.socket.?);
+    errdefer ret.close();
     try ret.setLingerAbort();
     return ret;
 }

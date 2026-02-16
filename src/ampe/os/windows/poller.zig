@@ -32,18 +32,20 @@ pub const Poll = struct {
     allocator: Allocator = undefined,
     afd_poller: AfdPoller = undefined,
     it: ?Reactor.Iterator = null,
-    entries: [256]ntdllx.FILE_COMPLETION_INFORMATION = undefined,
+    entries: std.ArrayList(ntdllx.FILE_COMPLETION_INFORMATION) = undefined,
 
     pub fn init(allocator: Allocator) !Poll {
         return Poll{
             .allocator = allocator,
             .afd_poller = try AfdPoller.init(allocator),
             .it = null,
+            .entries = try std.ArrayList(ntdllx.FILE_COMPLETION_INFORMATION).initCapacity(allocator, 256),
         };
     }
 
     pub fn deinit(pl: *Poll) void {
         pl.*.afd_poller.deinit();
+        pl.*.entries.deinit(pl.*.allocator);
         return;
     }
 
@@ -96,7 +98,6 @@ pub const Poll = struct {
 
             if (exp.off()) continue;
 
-            const events: u32 = AfdPoller.toAfdEvents(exp);
             const skt: *Skt = switch (tc.*.tskt) {
                 .notification => tc.*.tskt.notification.skt,
                 .accept => &tc.*.tskt.accept.skt,
@@ -104,30 +105,17 @@ pub const Poll = struct {
                 .dumb => continue,
             };
 
-            // Register if not already registered (base_handle is INVALID_HANDLE_VALUE initially)
+            // Register if not already registered
             if (skt.*.base_handle == windows.INVALID_HANDLE_VALUE) {
                 _ = try pl.*.afd_poller.register(skt);
                 skt.*.is_pending = false;
                 skt.*.expected_events = 0;
             }
 
+            const events = afd.toAfdEvents(exp);
+
             // Arm if not pending or if interest changed
             if (!skt.*.is_pending or skt.*.expected_events != events) {
-                // If interest changed but we have a pending poll, we ideally should cancel it.
-                // For now, following the v6.1 spec: "immediately re-issue a new AFD_POLL... before processing I/O events"
-                // and "Never leave a socket without a pending AFD_POLL unless intentionally removed."
-                
-                // If it's already pending, arming again for the same handle with the same IO_STATUS_BLOCK
-                // might be problematic or it might just update the request.
-                // POCs showed we arm when we need to.
-                
-                // If interest is disabled (exp.off()), we don't arm.
-                // If interest is changed, we re-arm.
-
-                // In Windows Reactor implementation, if we arm again, AFD might return STATUS_PORT_UNREACHABLE or similar if already pending?
-                // Actually, NtDeviceIoControlFile with AFD_POLL usually replaces or fails if already pending.
-                // Stage 3 stress re-arms after every event.
-
                 try pl.*.armSkt(skt, events, tc);
             }
         }
@@ -136,7 +124,7 @@ pub const Poll = struct {
     fn armSkt(pl: *Poll, skt: *Skt, events: u32, tc: *TriggeredChannel) !void {
         _ = pl;
         skt.*.poll_info = ntdllx.AFD_POLL_INFO{
-            .Timeout = @as(windows.LARGE_INTEGER, @bitCast(@as(u64, 0x7FFFFFFFFFFFFFFF))), // Infinite wait at AFD level
+            .Timeout = @as(windows.LARGE_INTEGER, @bitCast(@as(u64, 0x7FFFFFFFFFFFFFFF))),
             .NumberOfHandles = 1,
             .Exclusive = 0,
             .Handles = [_]ntdllx.AFD_POLL_HANDLE_INFO{
@@ -165,27 +153,41 @@ pub const Poll = struct {
     }
 
     fn poll(pl: *Poll, timeout_ms: i32) !u32 {
-        return pl.*.afd_poller.poll(timeout_ms, &pl.*.entries);
+        return pl.*.afd_poller.poll(timeout_ms, pl.*.entries.allocatedSlice());
     }
 
     fn processCompletions(pl: *Poll, removed: u32) !Triggers {
         var ret: Triggers = .{};
 
-        for (pl.*.entries[0..removed]) |entry| {
+        for (pl.*.entries.allocatedSlice()[0..removed]) |entry| {
             if (entry.ApcContext == null) continue;
 
             const tc: *TriggeredChannel = @ptrCast(@alignCast(entry.ApcContext.?));
+            
+            // Critical check: Skip stale completions for deinitialized channels.
+            // Since everything is sequential, if the tag is .dumb, it was closed 
+            // in a previous iteration but the completion just arrived.
+            if (tc.*.tskt == .dumb) continue;
+
             const skt: *Skt = switch (tc.*.tskt) {
                 .notification => tc.*.tskt.notification.skt,
                 .accept => &tc.*.tskt.accept.skt,
                 .io => &tc.*.tskt.io.skt,
-                else => unreachable,
+                .dumb => unreachable, // Handled by check above
             };
 
+            // Always clear pending state if we got a completion
             skt.*.is_pending = false;
 
+            if (entry.IoStatus.u.Status != .SUCCESS) {
+                // If the poll failed (e.g. cancelled), report error
+                tc.*.act = Triggers{ .err = .on };
+                ret = ret.lor(tc.*.act);
+                continue;
+            }
+
             const events: u32 = skt.*.poll_info.Handles[0].Events;
-            const act: Triggers = AfdPoller.fromAfdEvents(events, tc.*.exp);
+            const act: Triggers = afd.fromAfdEvents(events, tc.*.exp);
             
             tc.*.act = act.lor(.{ .pool = tc.*.exp.pool });
             ret = ret.lor(tc.*.act);

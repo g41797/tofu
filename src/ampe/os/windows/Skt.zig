@@ -6,8 +6,6 @@ pub const Skt = @This();
 socket: ?ws2_32.SOCKET = null,
 address: std.net.Address = undefined,
 server: bool = false,
-
-// Windows-specific state for AFD polling
 base_handle: windows.HANDLE = windows.INVALID_HANDLE_VALUE,
 io_status: windows.IO_STATUS_BLOCK = undefined,
 poll_info: ntdllx.AFD_POLL_INFO = undefined,
@@ -75,10 +73,10 @@ pub fn connect(skt: *Skt) AmpeError!bool {
     switch (err) {
         .WSAEISCONN => return true,
         .WSAEWOULDBLOCK => return false,
-        .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => return AmpeError.PeerDisconnected,
+        .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => return AmpeError.ConnectFailed,
         else => {
             log.warn("<{d}> connect error {any}", .{ getCurrentTid(), err });
-            return AmpeError.PeerDisconnected;
+            return AmpeError.ConnectFailed;
         },
     }
 }

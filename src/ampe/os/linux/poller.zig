@@ -126,7 +126,8 @@ pub const Poll = struct {
                 }
             }
 
-            pl.*.pollfdVtor.append(pl.*.allocator, .{ .fd = tc.*.tskt.getSocket(), .events = events, .revents = 0 }) catch {
+            const fd = tc.*.tskt.getSocket() orelse -1;
+            pl.*.pollfdVtor.append(pl.*.allocator, .{ .fd = fd, .events = events, .revents = 0 }) catch {
                 return AmpeError.AllocationFailed;
             };
         }
