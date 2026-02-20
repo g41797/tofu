@@ -39,10 +39,10 @@ maxid: u32 = undefined,
 ntfcsEnabled: bool = undefined,
 thread: ?Thread = null,
 cmpl: Semaphore = undefined,
-plr: poller.Poller = undefined,
 //
 // Accessible from the thread - don't lock/unlock
 //
+plr: poller.Poller = undefined,
 trgrd_map: TriggeredChannelsMap = undefined,
 cnmapChanged: bool = undefined,
 chnlsGroup_map: ChannelsGroupMap = undefined,
@@ -59,10 +59,6 @@ currBhdr: BinaryHeader = undefined,
 currTcopt: ?*TriggeredChannel = undefined,
 
 unpnt: Notifier.UnpackedNotification,
-
-m4delCnt: usize = undefined,
-
-allChnN: std.ArrayList(message.ChannelNumber) = undefined,
 
 pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     try initPlatform();
@@ -97,7 +93,6 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
         .currMsg = null,
         .currBhdr = .{},
         .currTcopt = null,
-        .m4delCnt = 0,
         .cmpl = Semaphore{},
     };
 
@@ -116,13 +111,7 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     };
     errdefer rtr.pool.close();
 
-    var trgrd_map = TriggeredChannelsMap.init(rtr.allocator);
-    errdefer trgrd_map.deinit();
-    trgrd_map.ensureTotalCapacity(256) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    rtr.trgrd_map = trgrd_map;
+    _ = try rtr.*.initMap();
 
     var chnlsGroup_map = ChannelsGroupMap.init(rtr.allocator);
     errdefer chnlsGroup_map.deinit();
@@ -131,11 +120,6 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     };
 
     rtr.chnlsGroup_map = chnlsGroup_map;
-
-    rtr.allChnN = std.ArrayList(message.ChannelNumber).initCapacity(rtr.allocator, 256) catch {
-        return AmpeError.AllocationFailed;
-    };
-    errdefer rtr.allChnN.deinit(rtr.allocator);
 
     try rtr.createNotificationChannel();
 
@@ -168,7 +152,6 @@ pub fn destroy(rtr: *Reactor) void {
 
         rtr.pool.close();
         rtr.acns.deinit();
-        rtr.allChnN.deinit(rtr.allocator);
         rtr.ntfr.deinit();
         rtr.ntfcsEnabled = false;
     }
@@ -177,8 +160,6 @@ pub fn destroy(rtr: *Reactor) void {
     // All releases should be done here, not on the thread!!!
     //
     rtr.releaseToPool(&rtr.currMsg);
-    rtr.plr.deinit();
-    rtr.deinitTrgrdChns();
 
     deinitPlatform();
 
@@ -382,23 +363,6 @@ fn createNotificationChannel(rtr: *Reactor) !void {
     return;
 }
 
-fn deinitTrgrdChns(rtr: *Reactor) void {
-    var it = Iterator.init(&rtr.trgrd_map);
-
-    it.reset();
-
-    var tcopt = it.next();
-
-    while (tcopt != null) : (tcopt = it.next()) {
-        tcopt.?.acn.ctx = null;
-
-        tcopt.?.deinitTc();
-    }
-
-    rtr.trgrd_map.deinit();
-    rtr.chnlsGroup_map.deinit();
-}
-
 // Generates the next unique group id using an atomic counter.
 inline fn next_gid() u32 {
     return gid.fetchAdd(1, .monotonic);
@@ -445,18 +409,7 @@ pub fn buildStatusSignal(rtr: *Reactor, stat: AmpeStatus) *Message {
 }
 
 fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
-    if (rtr.trgrd_map.contains(tchn.acn.chn)) {
-        log.warn("channel {d} already exists", .{tchn.acn.chn});
-        return AmpeError.InvalidChannelNumber;
-    }
-
-    rtr.trgrd_map.put(tchn.acn.chn, tchn) catch {
-        return AmpeError.AllocationFailed;
-    };
-
-    rtr.trgrd_map.getPtr(tchn.acn.chn).?.reportWrong();
-
-    rtr.cnmapChanged = true;
+    rtr.cnmapChanged = try rtr.*.attachChannel(tchn);
 
     return;
 }
@@ -484,10 +437,14 @@ inline fn recv_ack(rtr: *Reactor) !void {
 }
 
 fn loop(rtr: *Reactor) void {
-    defer rtr.cleanMboxes();
+    defer rtr.*.cleanMboxes();
+    defer rtr.*.deleteAll();
+    defer rtr.*.plr.deinit();
+    defer rtr.*.chnlsGroup_map.deinit();
+    // rtr.deinitTrgrdChns();
 
     rtr.cnmapChanged = false;
-    var it = Iterator.init(&rtr.trgrd_map);
+    var it = rtr.*.iterator();
     var withItrtr: bool = true;
 
     var sendAckDone: bool = false;
@@ -500,7 +457,7 @@ fn loop(rtr: *Reactor) void {
             // std.time.sleep(50_000_000);
         }
 
-        rtr.vchns();
+        // rtr.vchns();
 
         if (sendAckDone) {
             timeOut = poll_SEC_TIMEOUT * 3; // was poll_INFINITE_TIMEOUT;
@@ -509,13 +466,12 @@ fn loop(rtr: *Reactor) void {
             defer rtr.ack();
         }
 
-        rtr.*.validateChannels();
+        // rtr.*.validateChannels();
 
-        rtr.m4delCnt = 0;
         rtr.loopTrgrs = .{};
 
         if (rtr.cnmapChanged) {
-            it = Iterator.init(&rtr.trgrd_map);
+            it = rtr.*.iterator();
             rtr.cnmapChanged = false;
             withItrtr = true;
         }
@@ -570,30 +526,30 @@ fn loop(rtr: *Reactor) void {
                 },
             };
 
-        _ = rtr.processMarkedForDelete() catch |err| { // was wasRemoved
+        const wasRemoved: bool = rtr.processMarkedForDelete() catch |err| { // was wasRemoved
             log.err("processMarkedForDelete failed with error {any}", .{err});
             return;
         };
 
-        // if (wasRemoved) {
-        rtr.cnmapChanged = true;
-        // }
+        if (wasRemoved) {
+            rtr.cnmapChanged = true;
+        }
     }
 
     return;
 }
 
-fn validateChannels(rtr: *Reactor) void {
-    var it = Iterator.init(&rtr.trgrd_map);
-
-    it.reset();
-
-    var tcopt = it.next();
-
-    while (tcopt != null) : (tcopt = it.next()) {
-        tcopt.?.reportWrong();
-    }
-}
+// fn validateChannels(rtr: *Reactor) void {
+//     var it = rtr.*.iterator();
+//
+//     it.reset();
+//
+//     var tcopt = it.next();
+//
+//     while (tcopt != null) : (tcopt = it.next()) {
+//         tcopt.?.reportWrong();
+//     }
+// }
 
 inline fn processWaitTriggersFailure(rtr: *Reactor) void {
     // 2DO - Add failure processing
@@ -608,7 +564,7 @@ inline fn processTimeOut(rtr: *Reactor) void {
 }
 
 fn processNotify(rtr: *Reactor) !void {
-    const notfTrChnOpt = rtr.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
+    const notfTrChnOpt = rtr.*.trgChannel(message.SpecialMaxChannelNumber);
     assert(notfTrChnOpt != null);
     const notfTrChn = notfTrChnOpt.?;
     assert(notfTrChn.act.notify == .on);
@@ -820,24 +776,11 @@ fn processInternal(rtr: *Reactor) !void {
 
     var chgr = rtr.acns.channelGroup(chnlsimpl) catch unreachable;
     defer chgr.deinit(rtr.allocator);
-    _ = rtr.acns.removeChannels(chnlsimpl) catch unreachable;
-    {
-        for (chgr.items) |chN| {
-            const trcopt = rtr.trgrd_map.getPtr(chN);
 
-            if (trcopt != null) {
-                var tc = trcopt.?;
+    _ = rtr.*.acns.removeChannels(chnlsimpl) catch unreachable;
+    rtr.*.cnmapChanged = try rtr.*.deleteGroup(chgr);
 
-                assert(tc.acn.ctx != null);
-                const grpCtx: *MchnGroup = @ptrCast(@alignCast(tc.acn.ctx.?));
-                assert(grp == grpCtx);
-                tc.resp2ac = false;
-                tc.*.deinitTc();
-            }
-        }
-        // }
-        return;
-    }
+    return;
 }
 
 fn sendByeResponse(rtr: *Reactor) !void {
@@ -847,22 +790,7 @@ fn sendByeResponse(rtr: *Reactor) !void {
 }
 
 fn processMarkedForDelete(rtr: *Reactor) !bool {
-    var removedCount: usize = 0;
-
-    try rtr.allTrgChannels(&rtr.allChnN);
-
-    for (rtr.allChnN.items) |chN| {
-        const tcOpt: ?*TriggeredChannel = rtr.trgrd_map.getPtr(chN);
-        if (tcOpt) |tcPtr| {
-            if (tcPtr.mrk4del) {
-                tcPtr.deinitTc();
-                _ = rtr.trgrd_map.swapRemove(chN);
-                removedCount += 1;
-            }
-        }
-    }
-
-    return removedCount > 0;
+    return rtr.*.deleteMarked();
 }
 
 fn sendHelloRequest(rtr: *Reactor) !void {
@@ -916,7 +844,7 @@ fn post(rtr: *Reactor) !void {
     const sendMsg: *Message = rtr.currMsg.?;
     const chN = sendMsg.bhdr.channel_number;
 
-    var tc = rtr.trgrd_map.getPtr(chN);
+    var tc = rtr.*.trgChannel(chN);
     if (tc == null) { // Already removed
         return;
     }
@@ -941,7 +869,7 @@ fn responseFailure(rtr: *Reactor, failure: AmpeStatus) void {
     rtr.currMsg.?.bhdr.proto.origin = .engine;
 
     const chn = rtr.currMsg.?.bhdr.channel_number;
-    var trchn = rtr.trgrd_map.getPtr(chn);
+    var trchn = rtr.*.trgChannel(chn);
     if (trchn != null) {
         trchn.?.markForDelete(failure);
         trchn.?.sendToCtx(&rtr.currMsg);
@@ -1006,7 +934,7 @@ fn createIoClientChannel(rtr: *Reactor) AmpeError!void {
         return err;
     };
 
-    const tcptr = rtr.trgrd_map.getPtr(hello.bhdr.channel_number).?;
+    const tcptr = rtr.*.trgChannel(hello.bhdr.channel_number).?;
     tcptr.disableDelete();
     tcptr.*.resp2ac = true;
 
@@ -1052,7 +980,7 @@ fn createIoServerChannel(rtr: *Reactor, lstchn: *TriggeredChannel) AmpeError!voi
         .io = clSkt,
     };
 
-    const tcptr = rtr.trgrd_map.getPtr(newAcn.chn).?;
+    const tcptr = rtr.*.trgChannel(newAcn.chn).?;
     tcptr.disableDelete();
     tcptr.*.resp2ac = true;
     tcptr.*.tskt = srvio;
@@ -1076,7 +1004,7 @@ fn createListenerChannel(rtr: *Reactor) AmpeError!void {
 
     accSkt = try internal.triggeredSkts.AcceptSkt.init(welcome, &sc);
 
-    const tcptrOpt = rtr.trgrd_map.getPtr(welcome.bhdr.channel_number);
+    const tcptrOpt = rtr.*.trgChannel(welcome.bhdr.channel_number);
     if (tcptrOpt == null) {
         log.warn("listener channel {d} was not added to triggered channels", .{chN});
         return AmpeError.InvalidChannelNumber;
@@ -1104,7 +1032,7 @@ fn createListenerChannel(rtr: *Reactor) AmpeError!void {
 
 // Wrappers working with ActiveChannels on the thread
 fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
-    var tc = rtr.trgrd_map.getPtr(cn);
+    var tc = rtr.*.trgChannel(cn);
     if (tc != null) {
         tc.?.markForDelete(status.AmpeStatus.channel_closed);
     } else {
@@ -1115,17 +1043,6 @@ fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
 
 fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) channels.ActiveChannel {
     return rtr.acns.createChannel(mid, intr, ptr);
-}
-
-fn allTrgChannels(rtr: *Reactor, chns: *std.ArrayList(message.ChannelNumber)) !void {
-    chns.resize(rtr.allocator, 0) catch unreachable;
-
-    var it = rtr.*.trgrd_map.iterator();
-    while (it.next()) |kv_pair| {
-        try chns.append(rtr.allocator, kv_pair.key_ptr.*);
-    }
-
-    return;
 }
 
 fn cleanMboxes(rtr: *Reactor) void {
@@ -1141,18 +1058,107 @@ fn cleanMboxes(rtr: *Reactor) void {
 }
 
 // Run-time validators
-inline fn vchns(rtr: *Reactor) void {
-    if (rtr.trgrd_map.count() == 0) {
-        log.warn(" !!!! zero triggered channels !!!!", .{});
-        std.Thread.sleep(1_000_000_000); // For breakpoint
-    }
+// inline fn vchns(rtr: *Reactor) void {
+//     if (rtr.trgrd_map.count() == 0) {
+//         log.warn(" !!!! zero triggered channels !!!!", .{});
+//         std.Thread.sleep(1_000_000_000); // For breakpoint
+//     }
+//
+//     const notfTrChnOpt: ?*TriggeredChannel = rtr.*.trgChannel(message.SpecialMaxChannelNumber);
+//     assert(notfTrChnOpt != null);
+//
+//     assert(notfTrChnOpt.?.*.tskt.notification.getSocket() == rtr.*.ntfr.receiver.socket.?);
+//
+//     return;
+// }
 
-    const notfTrChnOpt: ?*TriggeredChannel = rtr.trgrd_map.getPtr(message.SpecialMaxChannelNumber);
-    assert(notfTrChnOpt != null);
+pub fn initMap(rtr: *Reactor) AmpeError!void {
+    var trgrd_map = TriggeredChannelsMap.init(rtr.*.allocator);
+    errdefer trgrd_map.deinit();
+    trgrd_map.ensureTotalCapacity(256) catch {
+        return AmpeError.AllocationFailed;
+    };
 
-    assert(notfTrChnOpt.?.*.tskt.notification.getSocket() == rtr.*.ntfr.receiver.socket.?);
+    rtr.*.trgrd_map = trgrd_map;
 
     return;
+}
+
+pub fn attachChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!bool {
+    if (rtr.*.contains(tchn.acn.chn)) {
+        log.warn("channel {d} already exists", .{tchn.acn.chn});
+        return AmpeError.InvalidChannelNumber;
+    }
+
+    rtr.*.trgrd_map.put(tchn.acn.chn, tchn) catch {
+        return AmpeError.AllocationFailed;
+    };
+
+    return true;
+}
+
+pub inline fn contains(rtr: *Reactor, chn: channels.ChannelNumber) bool {
+    return rtr.*.trgrd_map.contains(chn);
+}
+
+pub inline fn trgChannel(rtr: *Reactor, chn: channels.ChannelNumber) ?*TriggeredChannel {
+    return rtr.*.trgrd_map.getPtr(chn);
+}
+
+pub fn iterator(rtr: *Reactor) Iterator {
+    var result: Iterator = Iterator.init(&rtr.*.trgrd_map);
+    result.reset();
+    return result;
+}
+
+pub fn deleteAll(rtr: *Reactor) void {
+    var itr: Iterator = rtr.*.iterator();
+
+    var tcopt: ?*TriggeredChannel = itr.next();
+
+    while (tcopt != null) : (tcopt = itr.next()) {
+        tcopt.?.*.tskt.deinit();
+    }
+
+    rtr.*.trgrd_map.deinit();
+
+    return;
+}
+
+pub fn deleteGroup(rtr: *Reactor, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
+    var result: bool = false;
+    for (chnls.items) |chN| {
+        var pairOpt = rtr.*.trgrd_map.fetchSwapRemove(chN);
+        if (pairOpt != null) {
+            pairOpt.?.value.tskt.deinit();
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+pub fn deleteMarked(rtr: *Reactor) !bool {
+    var result: bool = false;
+    var i: usize = rtr.*.trgrd_map.count();
+
+    while (i > 0) {
+        i -= 1;
+        const chN: message.ChannelNumber = rtr.*.trgrd_map.keys()[i];
+        const tcOpt: ?*TriggeredChannel = rtr.*.trgChannel(chN);
+        if (tcOpt) |tcPtr| {
+            if (tcPtr.*.mrk4del) {
+                tcPtr.*.updateReceiver();
+                tcPtr.*.deinit();
+                tcPtr.*.engine.*.removeChannelOnT(chN);
+                if(rtr.*.trgrd_map.swapRemove(chN)){
+                    result = true;
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 pub const Iterator = struct {
@@ -1233,9 +1239,7 @@ pub const TriggeredChannel = struct {
         return;
     }
 
-    pub fn deinitTc(tchn: *TriggeredChannel) void {
-        defer tchn.*.removeTc();
-
+    pub fn updateReceiver(tchn: *TriggeredChannel) void {
         if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
             return;
         }
@@ -1263,31 +1267,8 @@ pub const TriggeredChannel = struct {
         return;
     }
 
-    inline fn removeTc(tchn: *TriggeredChannel) void {
-        const chN = tchn.acn.chn;
-
-        if (chN == 0) {
-            return;
-        }
-
-        const rtr = tchn.engine;
-
+    inline fn deinit(tchn: *TriggeredChannel) void {
         tchn.tskt.deinit();
-
-        rtr.removeChannelOnT(chN);
-
-        const wasRemoved: bool = rtr.trgrd_map.swapRemove(chN);
-
-        if (wasRemoved) {
-            rtr.cnmapChanged = true;
-        }
-
-        const trcopt = rtr.trgrd_map.getPtr(chN);
-        if (trcopt != null) {
-            assert(trcopt.?.acn.chn == chN);
-            log.err("trg channel {d} was not removed", .{chN});
-        }
-
         return;
     }
 
