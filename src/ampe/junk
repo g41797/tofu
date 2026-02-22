@@ -1,1023 +1,1462 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 g41797
+// SPDX-License-Identifier: MIT
 
+pub const Reactor = @This();
 
-
-
-test "create TCP listener" {
-    var cnfr: Configurator = .{
-        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+pub fn ampe(rtr: *Reactor) !Ampe {
+    const result: Ampe = .{
+        .ptr = rtr,
+        .vtable = &.{
+            .get = get,
+            .put = put,
+            .create = createCG,
+            .destroy = destroyCG,
+            .getAllocator = getAllocator,
+        },
     };
 
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
+    return result;
 }
 
-test "create UDS listener" {
-    var cnfr: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(""),
+fn alerter(rtr: *Reactor) Notifier.Alerter {
+    const result: Notifier.Alerter = .{
+        .ptr = rtr,
+        .func = send_alert,
     };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
+    return result;
 }
 
-test "create TCP client" {
-    var pool = try Pool.init(gpa, null);
-    defer pool.close();
+sndMtx: Mutex = undefined,
+crtMtx: Mutex = undefined,
+shtdwnStrt: bool = undefined,
+allocator: Allocator = undefined,
+options: tofu.Options = undefined,
+msgs: [2]MSGMailBox = undefined,
+ntfr: Notifier = undefined,
+pool: Pool = undefined,
+acns: ActiveChannels = undefined,
+maxid: u32 = undefined,
+ntfcsEnabled: bool = undefined,
+thread: ?Thread = null,
+cmpl: Semaphore = undefined,
+//
+// Accessible from the thread - don't lock/unlock
+//
+plr: poller.Poller = undefined,
+trgrd_map: TriggeredChannelsMap = undefined,
+chnlsGroup_map: ChannelsGroupMap = undefined,
 
-    var cnfr: Configurator = .{
-        .tcp_server = TCPServerConfigurator.init(localIP, configurator.DefaultPort),
+// Summary of triggers after poller
+loopTrgrs: Triggers = undefined, // Summary of triggers after poller
+
+// Notification flow
+currNtfc: Notifier.Notification = undefined,
+currMsg: ?*Message = undefined,
+currBhdr: BinaryHeader = undefined,
+
+// Iteration flow
+currTcopt: ?*TriggeredChannel = undefined,
+
+unpnt: Notifier.UnpackedNotification,
+
+pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
+    try initPlatform();
+
+    const rtr: *Reactor = gpa.create(Reactor) catch {
+        return AmpeError.AllocationFailed;
     };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-
-    var clcnfr: Configurator = .{
-        .tcp_client = TCPClientConfigurator.init(null, null),
-    };
-
-    var client = try create_client(&clcnfr, &pool);
-
-    defer client.deinit();
-}
-
-test "create UDS client" {
-    var pool = try Pool.init(gpa, null);
-    defer pool.close();
-
-    var tup: Notifier.TempUdsPath = .{};
-    const udsPath = try tup.buildPath(gpa);
-
-    var cnfr: Configurator = .{
-        .uds_server = UDSServerConfigurator.init(udsPath),
-    };
-
-    var listener = try create_listener(&cnfr);
-
-    defer listener.deinit();
-
-     const c_array_ptr: [*:0]const u8 = @ptrCast(&listener.accept.skt.address.un.path);
-     const length = std.mem.len(c_array_ptr);
-     const zig_slice: []const u8 = c_array_ptr[0..length];
-
-    var clcnfr: Configurator = .{
-        .uds_client = UDSClientConfigurator.init(udsPath),
-    };
-
-    var client = try create_client(&clcnfr, &pool);
-
-    defer client.deinit();
-}
-
-
-
-
-     tardy: poll.zig - slightly changed
-    if (comptime builtin.os.tag == .macos) {  was false
-        const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
-        defer std.posix.close(server_socket);
-
-        const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 0);
-        try std.posix.bind(server_socket, &addr.any, addr.getOsSockLen());
-
-        var binded_addr: std.posix.sockaddr = undefined;
-        var binded_size: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-        try std.posix.getsockname(server_socket, &binded_addr, &binded_size);
-
-        try std.posix.listen(server_socket, 1);
-
-        const write_end = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM | posix.SOCK.NONBLOCK, 0);
-        errdefer std.posix.close(write_end);
-
-        _ = try waitConnect(write_end);
-
-        try std.posix.connect(write_end, &binded_addr, binded_size);
-
-        const read_end = try std.posix.accept(server_socket, null, null, std.posix.SOCK.NONBLOCK);
-        errdefer std.posix.close(read_end);
-
-        return .{
-            .sender = write_end,
-            .receiver = read_end,
-        };
+    errdefer {
+        deinitPlatform();
+        gpa.destroy(rtr);
     }
 
-
- Grok generated from former waitConnect
- Define kqueue constants for macOS
-pub fn waitConnect(client: posix.socket_t) !bool {
-    log.debug("TRY WAITCONNECT ON FD {x}", .{client});
-    defer log.debug("FINISH WAITCONNECT ON FD {x}", .{client});
-    if (comptime false) {  grok version below
-         Compile-time OS detection
-        switch (builtin.os.tag) {
-            .linux => {
-                 Linux implementation using poll
-                var spoll: [1]posix.pollfd = .{
-                    .{
-                        .fd = client,
-                        .events = posix.POLL.OUT,
-                        .revents = 0,
-                    },
-                };
-
-                const timeout_ms = 3000;  Assuming SEC_TIMEOUT_MS is 1000
-                const pollstatus = try posix.poll(&spoll, timeout_ms);
-
-                if (pollstatus == 0) {
-                    return false;
-                }
-
-                if (spoll[0].revents & posix.POLL.HUP != 0) {
-                    return false;
-                }
-
-                return true;
-            },
-            .macos => {
-                 macOS implementation using kqueue
-                const kq = try posix.kqueue();
-                defer posix.close(kq);
-
-                var changelist: [1]posix.Kevent = .{
-                    .{
-                        .ident = @intCast(client),
-                        .filter = KqueueConstants.EVFILT_WRITE,
-                        .flags = KqueueConstants.EV_ADD | KqueueConstants.EV_ONESHOT,
-                        .fflags = 0,
-                        .data = 0,
-                        .udata = 0,
-                    },
-                };
-
-                const timeout_ms = 3000;  Assuming SEC_TIMEOUT_MS is 1000
-                var timeout = posix.timespec{
-                    .sec = timeout_ms / 1000,
-                    .nsec = (timeout_ms % 1000) * 1_000_000,
-                };
-
-                var eventlist: [1]posix.Kevent = undefined;
-                const nevents = try posix.kevent(kq, &changelist, &eventlist, &timeout);
-
-                if (nevents == 0) {
-                    return false;
-                }
-
-                if (eventlist[0].flags & KqueueConstants.EV_ERROR != 0 or
-                    eventlist[0].flags & KqueueConstants.EV_EOF != 0)
-                {
-                    return false;
-                }
-
-                return true;
-            },
-            else => @compileError("Unsupported OS: waitConnect is only implemented for Linux (poll) and macOS (kqueue)."),
-        }
-    } else { chatgpt version
-        if (builtin.os.tag == .linux) {
-            return waitConnectLinux(client);
-        } else if (builtin.os.tag == .macos) {
-            return waitConnectMacos(client);
-        } else {
-            @compileError("waitConnect is only implemented for Linux and macOS.");
-        }
-    }
-}
-
-fn waitConnectLinux(client: posix.socket_t) !bool {
-    var spoll: [1]posix.pollfd = undefined;
-
-    while (true) {
-        spoll = .{
-            .{
-                .fd = client,
-                .events = posix.POLL.OUT,
-                .revents = 0,
-            },
-        };
-
-        const pollstatus = try posix.poll(&spoll, SEC_TIMEOUT_MS * 3);
-
-        if (pollstatus == 1) {
-            break;
-        }
-    }
-
-    if (spoll[0].revents & posix.POLL.HUP != 0) {
-        return false;
-    }
-
-    return true;
-}
-
-fn waitConnectMacos(client: posix.socket_t) !bool {
-    const kq = try posix.kqueue();
-    defer posix.close(kq);
-
-    const change: posix.Kevent = .{
-        .ident = @intCast(client),
-        .filter = KqueueConstants.EVFILT_WRITE,
-        .flags = KqueueConstants.EV_ADD,
-        .fflags = 0,
-        .data = 0,
-        .udata = 0,
+    // 2DO add here comptime creation based on os
+    const plru: poller.Poller = .{
+        .poll = poller.Poll.init(gpa) catch {
+            return AmpeError.AllocationFailed;
+        },
     };
 
-    _ = try posix.kevent(kq, &.{change}, &.{}, null);
-
-    var ts: posix.timespec = .{
-        .sec = SEC_TIMEOUT_MS * 3 / 1000,
-        .nsec = (SEC_TIMEOUT_MS * 3 % 1000) * 1_000_000,
+    rtr.* = .{
+        .sndMtx = .{},
+        .crtMtx = .{},
+        .shtdwnStrt = false,
+        .allocator = gpa,
+        .options = options,
+        .msgs = .{ .{}, .{} },
+        .maxid = 0,
+        .plr = plru,
+        .unpnt = .{},
+        .loopTrgrs = .{},
+        .currNtfc = .{},
+        .currMsg = null,
+        .currBhdr = .{},
+        .currTcopt = null,
+        .cmpl = Semaphore{},
     };
 
-    var ev: [1]posix.Kevent = undefined;
+    rtr.acns = ActiveChannels.init(rtr.allocator, 1024) catch { // was 255
+        return AmpeError.AllocationFailed;
+    };
+    errdefer rtr.acns.deinit();
 
-    while (true) {
-        const n = try posix.kevent(kq, &.{}, &ev, &ts);
-        if (n == 0) {
-            continue;
-        }
-        if (n == 1) {
-            break;
-        }
-    }
+    rtr.ntfr = Notifier.init(rtr.allocator) catch {
+        return AmpeError.NotificationDisabled;
+    };
+    errdefer rtr.ntfr.deinit();
 
-    if ((ev[0].flags & KqueueConstants.EV_ERROR) != 0 or
-        (ev[0].flags & KqueueConstants.EV_EOF) != 0)
+    rtr.pool = Pool.init(rtr.allocator, rtr.options.initialPoolMsgs, rtr.options.maxPoolMsgs, rtr.alerter()) catch {
+        return AmpeError.AllocationFailed;
+    };
+    errdefer rtr.pool.close();
+
+    _ = try rtr.*.initMap();
+
+    var chnlsGroup_map = ChannelsGroupMap.init(rtr.allocator);
+    errdefer chnlsGroup_map.deinit();
+    chnlsGroup_map.ensureTotalCapacity(256) catch {
+        return AmpeError.AllocationFailed;
+    };
+
+    rtr.chnlsGroup_map = chnlsGroup_map;
+
+    try rtr.createNotificationChannel();
+
+    rtr.createThread() catch |err| {
+        log.err("create engine thread error {s}", .{@errorName(err)});
+        return AmpeError.AllocationFailed;
+    };
+
+    return rtr;
+}
+
+pub fn destroy(rtr: *Reactor) void {
+    const gpa = rtr.allocator;
+    defer gpa.destroy(rtr);
     {
-        return false;
+        rtr.crtMtx.lock();
+        defer rtr.crtMtx.unlock();
+
+        log.warn("!!! engine will be destroyed !!!", .{});
+
+        var waitEnabled: bool = true;
+
+        rtr._sendAlert(.shutdownStarted) catch {
+            waitEnabled = false;
+        };
+
+        if (waitEnabled) {
+            rtr.waitFinish();
+        }
+
+        rtr.pool.close();
+        rtr.acns.deinit();
+        rtr.ntfr.deinit();
+        rtr.ntfcsEnabled = false;
     }
 
-    return true;
+    //
+    // All releases should be done here, not on the thread!!!
+    //
+    rtr.releaseToPool(&rtr.currMsg);
+
+    deinitPlatform();
+
+    rtr.* = undefined;
 }
 
-const KqueueConstants = if (builtin.os.tag == .macos) struct {
-    const EVFILT_WRITE: i16 = -2;  From sys/event.h
-    const EV_ADD: u16 = 0x0001;
-    const EV_ONESHOT: u16 = 0x0010;
-    const EV_ERROR: u16 = 0x4000;
-    const EV_EOF: u16 = 0x8000;
-} else struct {};
+fn get(ptr: ?*anyopaque, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr._get(strategy);
+}
 
+fn _get(rtr: *Reactor, strategy: tofu.AllocationStrategy) AmpeError!?*Message {
+    const msg = rtr.pool.get(strategy) catch |err| {
+        switch (err) {
+            AmpeError.PoolEmpty => {
+                return null;
+            },
+            else => {
+                return err;
+            },
+        }
+    };
+    return msg;
+}
 
-language: "en-US"
+fn put(ptr: ?*anyopaque, msg: *?*Message) void {
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr._put(msg);
+}
 
-reviews:
-  profile: "chill"
-  high_level_summary: true
+fn _put(rtr: *Reactor, msg: *?*Message) void {
+    const msgopt = msg.*;
+    if (msgopt) |m| {
+        rtr.pool.put(m);
+    }
+    msg.* = null;
 
-auto_review:
-  enabled: true
-  drafts: false
+    return;
+}
 
-path_filters:
-  - "src/**/*.zig"
-  - "build.zig"
-  - "!zig-cache/**"
-  - "!zig-out/**"
+fn createCG(ptr: ?*anyopaque) AmpeError!ChannelGroup {
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr.*._create();
+}
 
-tools:
-  gitleaks:
-    enabled: true
+fn destroyCG(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
+    log.warn("!!! channel group will be destroyed !!!", .{});
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr._destroy(chnlsimpl);
+}
 
+inline fn _create(rtr: *Reactor) AmpeError!ChannelGroup {
+    rtr.crtMtx.lock();
+    defer rtr.crtMtx.unlock();
 
+    if (rtr.shtdwnStrt) {
+        return AmpeError.ShutdownStarted;
+    }
 
+    const grp = try MchnGroup.create(rtr, next_gid());
 
- const ErrorToStatusMap = std.enums.EnumMap(AmpeError, AmpeStatus).init(.{
-     .NotImplementedYet = .not_implemented_yet,
-     .WrongConfiguration = .wrong_configuration,
-     .NotAllowed = .not_allowed,
-     .NullMessage = .null_message,
-     .InvalidMessage = .invalid_message,
-     .InvalidMessageType = .invalid_message_type,
-     .InvalidMessageMode = .invalid_message_mode,
-     .InvalidHeadersLen = .invalid_headers_len,
-     .InvalidBodyLen = .invalid_body_len,
-     .InvalieChannelNumber = .invalid_channel_number,
-     .InvalieMessageId = .invalid_message_id,
-     .InvalidAddress = .invalid_address,
-     .InvalidMoreUsage = .invalid_more_usage,
-     .NotificationDisabled = .notification_disabled,
-     .NotificationFailed = .notification_failed,
-     .PeerDisconnected = .peer_disconnected,
-     .CommunicationFailed = .communication_failed,
-     .PoolEmpty = .pool_empty,
-     .AllocationFailed = .allocation_failed,
-     .WaitInterrupted = .wait_interrupted,
-     .ChannelClosed = .channel_closed,
-     .ShutdownStarted = .shutdown_started,
- });
+    const channelGroup: ChannelGroup = grp.chnls();
 
+    try rtr.*.send_create(channelGroup.ptr);
 
-pub fn markForDelete(dtr: *Distributor, chn: message.ChannelNumber) !void {
-    const trchn = dtr.trgrd_map.getPtr(chn);
-    if (trchn) |ch| {
-        ch.mrk4del = true;
+    return channelGroup;
+}
+
+inline fn send_create(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
+
+    grp.resetCmdCompleted();
+
+    try send_channels_cmd(rtr, chnlsimpl, .success);
+    return;
+}
+
+inline fn _destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
+    rtr.crtMtx.lock();
+    defer rtr.crtMtx.unlock();
+
+    if (rtr.shtdwnStrt) {
+        return AmpeError.ShutdownStarted;
+    }
+
+    if (chnlsimpl == null) {
+        return AmpeError.InvalidAddress;
+    }
+    return try rtr.*.send_destroy(chnlsimpl);
+}
+
+inline fn send_destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
+
+    grp.resetCmdCompleted();
+
+    try send_channels_cmd(rtr, chnlsimpl, .shutdown_started);
+
+    grp.waitCmdCompleted();
+
+    grp.destroy();
+
+    return;
+}
+
+fn send_channels_cmd(rtr: *Reactor, chnlsimpl: ?*anyopaque, st: AmpeStatus) AmpeError!void {
+    const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl));
+
+    var msg: ?*Message = try rtr._get(.always);
+    errdefer rtr._put(&msg);
+
+    const cmd: *Message = msg.?;
+    cmd.*.bhdr.channel_number = message.SpecialMaxChannelNumber;
+    cmd.*.bhdr.proto.opCode = .Signal;
+    cmd.*.bhdr.proto.origin = .engine;
+    cmd.*.bhdr.proto._internalA = .on;
+    cmd.*.bhdr.proto.more = .last;
+
+    cmd.*.bhdr.channel_number = 0;
+    cmd.*.bhdr.status = status.status_to_raw(st);
+
+    _ = cmd.*.ptrToBody(MchnGroup, grp);
+
+    try rtr.submitMsg(cmd);
+
+    return;
+}
+
+fn getAllocator(ptr: ?*anyopaque) Allocator {
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr.*.allocator;
+}
+
+pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
+    rtr.sndMtx.lock();
+    defer rtr.sndMtx.unlock();
+
+    if (!rtr.ntfcsEnabled) {
+        return AmpeError.NotificationDisabled;
+    }
+
+    const oob = msg.bhdr.proto._internalA;
+
+    rtr.msgs[@intFromEnum(oob)].send(msg) catch {
+        return AmpeError.NotAllowed;
+    };
+
+    try rtr.ntfr.sendNotification(.{
+        .kind = .message,
+        .oob = oob,
+    });
+
+    return;
+}
+
+fn send_alert(ptr: ?*anyopaque, alert: Notifier.Alert) AmpeError!void {
+    const rtr: *Reactor = @ptrCast(@alignCast(ptr));
+    return rtr.sendAlert(alert);
+}
+
+fn sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
+    // rtr.mutex.lock();
+    // defer rtr.mutex.unlock();
+
+    return rtr._sendAlert(alrt);
+}
+
+fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
+    rtr.sndMtx.lock();
+    defer rtr.sndMtx.unlock();
+
+    if (!rtr.ntfcsEnabled) {
+        return AmpeError.NotificationDisabled;
+    }
+
+    try rtr.ntfr.sendNotification(.{
+        .kind = .alert,
+        .alert = alrt,
+    });
+
+    if (alrt == .shutdownStarted) {
+        rtr.ntfcsEnabled = false;
+        rtr.shtdwnStrt = true;
+    }
+
+    return;
+}
+
+fn createNotificationChannel(rtr: *Reactor) !void {
+    var ntcn = rtr.createDumbChannel();
+    ntcn.acn.chn = message.SpecialMaxChannelNumber;
+    ntcn.resp2ac = true;
+    ntcn.tskt = .{
+        .notification = internal.triggeredSkts.NotificationSkt.init(&rtr.ntfr.receiver),
+    };
+
+    try rtr.addChannel(ntcn);
+
+    rtr.ntfcsEnabled = true;
+
+    return;
+}
+
+// Generates the next unique group id using an atomic counter.
+inline fn next_gid() u32 {
+    return gid.fetchAdd(1, .monotonic);
+}
+
+// Atomic counter for generating unique group id
+var gid: Atomic(u32) = .init(1);
+
+fn createThread(rtr: *Reactor) !void {
+    rtr.crtMtx.lock();
+    defer rtr.crtMtx.unlock();
+
+    if (rtr.thread != null) {
+        return;
+    }
+
+    rtr.thread = try std.Thread.spawn(.{}, runOnThread, .{rtr});
+
+    _ = try rtr.*.recv_ack();
+
+    return;
+}
+
+inline fn waitFinish(rtr: *Reactor) void {
+    if (rtr.thread) |t| {
+        t.join();
+    }
+}
+
+fn releaseToPool(rtr: *Reactor, storedMsg: *?*Message) void {
+    if (storedMsg.*) |msg| {
+        rtr.pool.put(msg);
+        storedMsg.* = null;
     }
     return;
 }
 
-
-pub fn addDumbChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
-     var dcn = TriggeredChannel.createDumbChannel(dtr);
-
-     dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
-
-     try dtr.addChannel(dcn);
-
-     return;
+pub fn buildStatusSignal(rtr: *Reactor, stat: AmpeStatus) *Message {
+    var ret = Message.create(rtr.allocator) catch unreachable;
+    ret.bhdr.status = status.status_to_raw(stat);
+    ret.bhdr.proto.opCode = .Signal;
+    ret.bhdr.proto.origin = .engine;
+    return ret;
 }
 
-pub fn addIoClientChannel(dtr: *Distributor, chN: channels.ChannelNumber) !void {
-     var cnfgr: Configurator = Configurator.fromMessage(dtr.currMsg.?);
+fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
+    _ = try rtr.*.attachChannel(tchn);
 
-     if (cnfgr.isWrong()) {
-         return AmpeError.WrongConfiguration;
-     }
-
-     var dcn = TriggeredChannel.createDumbChannel(dtr);
-
-     dcn.acn = dtr.*.acns.activeChannel(dtr.currBhdr.channel_number) catch unreachable;
-
-     dtr.trgrd_map.put(chN, dcn) catch {
-         return AmpeError.AllocationFailed;
-     };
-
-     return;
+    return;
 }
 
+pub const TriggeredChannelsMap = std.AutoArrayHashMap(channels.ChannelNumber, TriggeredChannel);
 
-    const TofuClient = struct {
-        const Self = @This();
-        gpa: Allocator = undefined,
-        ampe: Ampe = undefined,
-        cfg: *Configurator = undefined,
-        result: anyerror!status.AmpeStatus = undefined,
+const ChannelsGroupMap = std.AutoArrayHashMap(u32, *MchnGroup);
 
-        fn runOnThread(tfcl: *Self) void {
-            log.debug("---> On client thread", .{});
-            defer log.debug("<--- On client thread", .{});
-            _ = tfcl;
-            return;
+//=================================================
+//                 ON THREAD
+//=================================================
+
+fn runOnThread(rtr: *Reactor) void {
+    rtr.loop();
+    return;
+}
+
+inline fn ack(rtr: *Reactor) void {
+    rtr.*.cmpl.post();
+}
+
+inline fn recv_ack(rtr: *Reactor) !void {
+    _ = try rtr.*.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT);
+    return;
+}
+
+fn loop(rtr: *Reactor) void {
+    defer rtr.*.cleanMboxes();
+    defer rtr.*.deleteAll();
+    defer rtr.*.plr.deinit();
+    defer rtr.*.chnlsGroup_map.deinit();
+
+    var sendAckDone: bool = false;
+    var timeOut: i32 = 0;
+
+    while (true) {
+        { // Section for delay during debug session
+            // 1_000_000_000    1 sec
+            // 1_000_000        1 mlsec
+            // std.time.sleep(50_000_000);
         }
+
+        if (sendAckDone) {
+            timeOut = poll_SEC_TIMEOUT * 3; // was poll_INFINITE_TIMEOUT;
+        } else {
+            sendAckDone = true;
+            defer rtr.ack();
+        }
+
+        rtr.loopTrgrs = .{};
+
+        rtr.loopTrgrs = rtr.plr.waitTriggers(rtr.*.iterator(), timeOut) catch |err| {
+            log.err("waitTriggers error {any}", .{
+                err,
+            });
+            rtr.processWaitTriggersFailure();
+            return;
+        };
+
+        const utrs = UnpackedTriggers.fromTriggers(rtr.loopTrgrs);
+        _ = utrs;
+
+        if (rtr.loopTrgrs.notify == .on) {
+            rtr.processNotify() catch |err|
+                switch (err) {
+                    AmpeError.ShutdownStarted => {
+                        return;
+                    },
+                    else => {
+                        log.err("processNotify failed with error {any}", .{err});
+                        return;
+                    },
+                };
+        }
+
+        rtr.processTriggeredChannels() catch |err|
+            switch (err) {
+                AmpeError.ShutdownStarted => {
+                    return;
+                },
+                else => {
+                    log.err("processTriggeredChannels failed with error {any}", .{err});
+                    return;
+                },
+            };
+
+        rtr.processMessageFromChannels() catch |err|
+            switch (err) {
+                AmpeError.ShutdownStarted => {
+                    return;
+                },
+                else => {
+                    log.info("processMessageFromChannels returned error {any}", .{err});
+                },
+            };
+
+        _ = rtr.processMarkedForDelete() catch |err| {
+            log.err("processMarkedForDelete failed with error {any}", .{err});
+            return;
+        };
+    }
+
+    return;
+}
+
+inline fn processWaitTriggersFailure(rtr: *Reactor) void {
+    // 2DO - Add failure processing
+    _ = rtr;
+    return;
+}
+
+inline fn processTimeOut(rtr: *Reactor) void {
+    // Placeholder for idle processing
+    _ = rtr;
+    return;
+}
+
+fn processNotify(rtr: *Reactor) !void {
+    const notfTrChnOpt = rtr.*.trgChannel(message.SpecialMaxChannelNumber);
+    assert(notfTrChnOpt != null);
+    const notfTrChn = notfTrChnOpt.?;
+    assert(notfTrChn.act.notify == .on);
+
+    rtr.currNtfc = try notfTrChn.tryRecvNotification();
+    rtr.unpnt = Notifier.UnpackedNotification.fromNotification(rtr.currNtfc);
+
+    notfTrChn.act = .{}; // Disable obsolete processing during iteration
+
+    if (rtr.currNtfc.kind == .alert) {
+        switch (rtr.currNtfc.alert) {
+            .shutdownStarted => {
+                // Exit processing loop.
+                // All resources will be released/destroyed
+                // after waitFinish() of the thread
+                rtr.ntfcsEnabled = false;
+                return AmpeError.ShutdownStarted;
+            },
+            .freedMemory => {
+                return; // Adding message from pool will be handled in processTriggeredChannels
+            },
+        }
+    }
+
+    assert(rtr.currNtfc.kind == .message);
+
+    return rtr.storeMessageFromChannels();
+}
+
+fn storeMessageFromChannels(rtr: *Reactor) !void {
+    rtr.currMsg = null;
+
+    var currMsg: *message.Message = undefined;
+    var received: bool = false;
+
+    const queueIndx = @intFromEnum(rtr.currNtfc.oob);
+
+    for (0..1) |_| {
+        currMsg = rtr.msgs[queueIndx].receive(0) catch |err|
+            switch (err) {
+                error.Timeout, error.Interrupted => {
+                    break;
+                },
+                else => {
+                    return AmpeError.ShutdownStarted;
+                },
+            };
+
+        received = true;
+        break;
+    }
+
+    if (!received) {
+        return;
+    }
+
+    rtr.currMsg = currMsg;
+    rtr.currBhdr = currMsg.bhdr;
+    currMsg.assert();
+    return;
+}
+
+fn processTriggeredChannels(rtr: *Reactor) !void {
+    var it: Iterator = rtr.*.iterator();
+
+    rtr.currTcopt = it.next();
+
+    trcIter: while (rtr.currTcopt != null) : (rtr.currTcopt = it.next()) {
+        const tc = rtr.currTcopt.?;
+
+        const trgrs = tc.act;
+
+        const utrgs = UnpackedTriggers.fromTriggers(trgrs);
+        _ = utrgs;
+
+        if (trgrs.off()) {
+            continue;
+        }
+
+        if (trgrs.notify == .on) {
+            continue;
+        }
+
+        if (trgrs.err == .on) {
+            tc.markForDelete(trgrs.toStatus());
+            continue;
+        }
+
+        if (trgrs.connect == .on) {
+            _ = tc.tryConnect() catch {
+                tc.markForDelete(.connect_failed);
+            };
+            continue;
+        }
+
+        if (trgrs.pool == .on) {
+            while (true) {
+                const rcvmsg = rtr.pool.get(.poolOnly) catch {
+                    // Pool still empty, update receiver
+                    tc.*.informPoolEmpty();
+                    break;
+                };
+
+                tc.addForRecv(rcvmsg) catch |err| {
+                    rtr.pool.put(rcvmsg);
+                    var reason: AmpeStatus = .recv_failed;
+                    if (err == AmpeError.NotAllowed) {
+                        reason = .not_allowed;
+                    }
+                    tc.markForDelete(reason);
+                    continue :trcIter;
+                };
+                tc.act.pool = .off;
+                break;
+            }
+        }
+
+        if (trgrs.accept == .on) {
+            rtr.createIoServerChannel(tc) catch |err| {
+                log.info("createIoServerChannel for connected client failed with error {s}", .{@errorName(err)});
+            };
+            continue;
+        }
+
+        if (trgrs.send == .on) {
+            var wereSend: message.MessageQueue = tc.trySend() catch {
+                tc.markForDelete(.send_failed);
+                continue;
+            };
+            var next: ?*Message = wereSend.dequeue();
+            while (next != null) {
+                rtr.pool.put(next.?);
+                next = wereSend.dequeue();
+            }
+        }
+
+        if (trgrs.recv == .on) {
+            var wereRecv: message.MessageQueue = tc.tryRecv() catch {
+                tc.markForDelete(.recv_failed);
+                continue;
+            };
+            var next: ?*Message = wereRecv.dequeue();
+            while (next != null) {
+                var byeResponseReceived: bool = false;
+                if ((next.?.bhdr.proto.opCode == .ByeResponse)) {
+                    byeResponseReceived = true;
+                }
+                tc.sendToCtx(&next);
+                if (byeResponseReceived) {
+                    tc.markForDelete(.channel_closed);
+                }
+                next = wereRecv.dequeue();
+            }
+        }
+    }
+
+    return;
+}
+
+fn processMessageFromChannels(rtr: *Reactor) !void {
+    if (rtr.currMsg == null) {
+        return;
+    }
+
+    defer rtr.releaseToPool(&rtr.currMsg);
+
+    if (rtr.currBhdr.proto.origin == .engine) {
+        return rtr.processInternal();
+    }
+
+    const oc: message.OpCode = try rtr.currMsg.?.*.getOpCode();
+
+    rtr.currMsg.?.assert();
+
+    switch (oc) {
+        .HelloRequest => return rtr.sendHelloRequest(),
+        .WelcomeRequest => return rtr.sendWelcomeRequest(),
+        .ByeRequest, .ByeSignal => return rtr.sendBye(),
+        .ByeResponse => return rtr.sendByeResponse(),
+
+        .HelloResponse, .Request, .Signal, .Response => return rtr.post(),
+
+        else => return AmpeError.InvalidMessage,
+    }
+
+    return;
+}
+
+fn processInternal(rtr: *Reactor) !void {
+    rtr.currMsg.?.assert();
+
+    var cmsg = rtr.currMsg.?;
+    const chnlsimpl: ?*MchnGroup = cmsg.bodyToPtr(MchnGroup);
+    const grp = chnlsimpl.?;
+
+    if (cmsg.bhdr.status == 0) { // Create group
+        rtr.chnlsGroup_map.put(grp.id.?, grp) catch {
+            return AmpeError.AllocationFailed;
+        };
+        return;
+    }
+
+    defer grp.setCmdCompleted();
+
+    const grpPtr: ?**MchnGroup = rtr.chnlsGroup_map.getPtr(grp.id.?);
+    assert(grpPtr != null);
+    assert(grpPtr.?.*.id.? == grp.id.?);
+    _ = rtr.chnlsGroup_map.orderedRemove(grp.id.?);
+
+    var chgr = rtr.acns.channelGroup(chnlsimpl) catch unreachable;
+    defer chgr.deinit(rtr.allocator);
+
+    _ = rtr.*.acns.removeChannels(chnlsimpl) catch unreachable;
+    _ = try rtr.*.deleteGroup(chgr);
+
+    return;
+}
+
+fn sendByeResponse(rtr: *Reactor) !void {
+    // For now - nothing special, just post
+    // In the future - possibly to disable further sends
+    return rtr.post();
+}
+
+fn processMarkedForDelete(rtr: *Reactor) !bool {
+    return rtr.*.deleteMarked();
+}
+
+fn sendHelloRequest(rtr: *Reactor) !void {
+    rtr.currMsg.?.assert();
+
+    rtr.createIoClientChannel() catch |err| {
+        assert(rtr.currMsg != null);
+        rtr.currMsg.?.bhdr.proto.opCode = .HelloResponse;
+
+        const st = status.errorToStatus(err);
+        rtr.responseFailure(st);
+        return;
     };
 
-    var clnt: TofuClient = .{};
+    return;
+}
 
-    const TofuServer = struct {
-        const Self = @This();
-        gpa: Allocator = undefined,
-        ampe: Ampe = undefined,
-        cfg: *Configurator = undefined,
-        result: anyerror!status.AmpeStatus = undefined,
+fn sendWelcomeRequest(rtr: *Reactor) !void {
+    rtr.currMsg.?.assert();
 
-        fn runOnThread(tfsrv: *Self) void {
-            log.debug("---> On server thread", .{});
-            defer log.debug("<--- On server thread", .{});
-            _ = tfsrv;
-            return;
-        }
+    rtr.createListenerChannel() catch |err| {
+        log.info("createListenerChannel {d} failed with error {any}", .{ rtr.currMsg.?.bhdr.channel_number, err });
+
+        rtr.currMsg.?.bhdr.proto.opCode = .WelcomeResponse;
+
+        const st = status.errorToStatus(err);
+        rtr.responseFailure(st);
+        return;
     };
-    var srvr: TofuServer = .{};
 
-    {
-        const clntThread: std.Thread =
-            try std.Thread.spawn(.{}, TofuClient.runOnThread, .{&clnt});
-        defer clntThread.join();
+    return;
+}
 
-        const srvrThread: std.Thread =
-            try std.Thread.spawn(.{}, TofuServer.runOnThread, .{&srvr});
-        defer srvrThread.join();
+fn sendBye(rtr: *Reactor) !void {
+    rtr.currMsg.?.assert();
+
+    const bye: *Message = rtr.currMsg.?;
+
+    if ((bye.bhdr.proto.getRole() == .signal) and (bye.bhdr.proto._internalA == .on)) {
+        // Initiate close of the channel
+        rtr.responseFailure(AmpeStatus.channel_closed);
+        return;
     }
 
+    return rtr.post();
+}
 
+fn post(rtr: *Reactor) !void {
+    rtr.currMsg.?.assert();
 
+    const sendMsg: *Message = rtr.currMsg.?;
+    const chN = sendMsg.bhdr.channel_number;
 
-pub const Library = struct {
-    gpa: Allocator = undefined,
-
-    pub fn Create(gpa: Allocator) !*Library {
-        const ret = try gpa.alloc(Library);
-        ret.gpa = gpa;
-        return ret;
+    var tc = rtr.*.trgChannel(chN);
+    if (tc == null) { // Already removed
+        return;
     }
 
-    pub fn giveAllocator(lib: *Library) Allocator {
-        return lib.gpa;
+    tc.?.tskt.addToSend(sendMsg) catch |err| {
+        log.info("addToSend on channel {d} failed with error {any}", .{ chN, err });
+        const st = status.errorToStatus(err);
+        rtr.responseFailure(st);
+    };
+
+    rtr.currMsg = null;
+
+    return;
+}
+
+fn responseFailure(rtr: *Reactor, failure: AmpeStatus) void {
+    rtr.currMsg.?.assert();
+
+    defer rtr.releaseToPool(&rtr.currMsg);
+
+    rtr.currMsg.?.bhdr.status = status.status_to_raw(failure);
+    rtr.currMsg.?.bhdr.proto.origin = .engine;
+
+    const chn = rtr.currMsg.?.bhdr.channel_number;
+    var trchn = rtr.*.trgChannel(chn);
+    if (trchn != null) {
+        trchn.?.markForDelete(failure);
+        trchn.?.sendToCtx(&rtr.currMsg);
+        return;
+    }
+    if (rtr.currMsg.?.@"<ctx>" == null) {
+        // Both channel and channels were deleted
+        // Message will be returned to Pool via defer above
+        return;
     }
 
-    pub fn asyncSend(lib: *Library, buf: []const u8) void {
-        ......................................
+    // Try notify ChannelGroup directly
+    _ = MchnGroup.sendToReceiver(rtr.currMsg.?.@"<ctx>", &rtr.currMsg) catch {};
+    return;
+}
+
+fn createDumbChannel(rtr: *Reactor) TriggeredChannel {
+    const ret: TriggeredChannel = .{
+        .engine = rtr,
+        .acn = .{
+            .chn = 0,
+            .mid = 0,
+            .ctx = null,
+        },
+        .tskt = .{
+            .dumb = .{},
+        },
+        .exp = internal.triggeredSkts.TriggersOff,
+        .act = internal.triggeredSkts.TriggersOff,
+        .mrk4del = true,
+        .resp2ac = true,
+        .st = null,
+        .firstRecvFinished = false,
+    };
+    return ret;
+}
+
+fn createIoClientChannel(rtr: *Reactor) AmpeError!void {
+    rtr.currMsg.?.assert();
+
+    const hello: *Message = rtr.currMsg.?;
+    const chN = hello.bhdr.channel_number;
+    var tc = createDumbChannel(rtr);
+    tc.acn = rtr.*.acns.activeChannel(chN) catch unreachable;
+
+    try rtr.addChannel(tc);
+
+    var sc: internal.SocketCreator = internal.SocketCreator.init(rtr.allocator);
+    var clSkt: internal.triggeredSkts.IoSkt = .{};
+    errdefer clSkt.deinit();
+
+    try clSkt.initClientSide(&rtr.pool, hello, &sc);
+    rtr.*.currMsg = null;
+
+    _ = clSkt.tryConnect() catch |err| {
+        // Restore HelloRequest
+        var smsgs: MessageQueue = clSkt.detach();
+        const helloMsg: ?*Message = smsgs.dequeue();
+        if (helloMsg != null) {
+            rtr.*.currMsg = helloMsg.?;
+        }
+        return err;
+    };
+
+    const tcptr = rtr.*.trgChannel(hello.bhdr.channel_number).?;
+    tcptr.disableDelete();
+    tcptr.*.resp2ac = true;
+
+    const tskt: internal.triggeredSkts.TriggeredSkt = .{
+        .io = clSkt,
+    };
+    tcptr.*.tskt = tskt;
+
+    return;
+}
+
+fn createIoServerChannel(rtr: *Reactor, lstchn: *TriggeredChannel) AmpeError!void {
+    // Try to get socket of the client
+    var srvsktOpt = lstchn.tryAccept() catch |err| {
+        // Failure on the client side ???
+        log.info("createIoServerChannel tryAccept error {any}", .{err});
+        return;
+    };
+
+    if (srvsktOpt == null) {
+        // Continue to poll
+        log.info("createIoServerChannel srvsktOpt == null ", .{});
+        return;
     }
-};
 
-pub const Client = struct {
-    lib: *Library = undefined,
+    errdefer srvsktOpt.?.close();
 
-    pub fn Create(lib: *Library) !*Client {
-        const ret = try lib.giveAllocator();
-        ret.lib = lib;
-        return ret;
+    var tc = createDumbChannel(rtr);
+
+    const lactChn = lstchn.*.acn;
+
+    // new ActiveChannel for connected client
+    // 2DO set mid & inttr  to real values upon receive of HelloRequest/HelloSignal
+    const newAcn = rtr.createChannelOnT(0, .{}, lactChn.ctx);
+    errdefer rtr.removeChannelOnT(newAcn.chn);
+    tc.acn = newAcn;
+    try rtr.addChannel(tc);
+
+    var clSkt: internal.triggeredSkts.IoSkt = try internal.triggeredSkts.IoSkt.initServerSide(&rtr.pool, newAcn.chn, srvsktOpt.?);
+    errdefer clSkt.deinit();
+
+    const srvio: internal.triggeredSkts.TriggeredSkt = .{
+        .io = clSkt,
+    };
+
+    const tcptr = rtr.*.trgChannel(newAcn.chn).?;
+    tcptr.disableDelete();
+    tcptr.*.resp2ac = true;
+    tcptr.*.tskt = srvio;
+    return;
+}
+
+fn createListenerChannel(rtr: *Reactor) AmpeError!void {
+    rtr.currMsg.?.assert();
+
+    const welcome: *Message = rtr.currMsg.?;
+    const chN = welcome.bhdr.channel_number;
+
+    var tc = rtr.createDumbChannel();
+    tc.acn = rtr.*.acns.activeChannel(chN) catch unreachable;
+
+    try rtr.addChannel(tc);
+
+    var sc: internal.SocketCreator = internal.SocketCreator.init(rtr.allocator);
+    var accSkt: internal.triggeredSkts.AcceptSkt = .{};
+    errdefer accSkt.deinit();
+
+    accSkt = try internal.triggeredSkts.AcceptSkt.init(welcome, &sc);
+
+    const tcptrOpt = rtr.*.trgChannel(welcome.bhdr.channel_number);
+    if (tcptrOpt == null) {
+        log.warn("listener channel {d} was not added to triggered channels", .{chN});
+        return AmpeError.InvalidChannelNumber;
     }
 
-    pub fn process(cln: *Client) void {
-        .....................................
-        const blob: []const u8 = try cln.lib.giveAllocator().alloc(u8, 1024);
-        cln.lib.asyncSend(blob);
-        .....................................
+    const tcptr = tcptrOpt.?;
+
+    tcptr.disableDelete();
+    tcptr.*.resp2ac = true;
+
+    const tskt: internal.triggeredSkts.TriggeredSkt = .{
+        .accept = accSkt,
+    };
+    tcptr.*.tskt = tskt;
+
+    // Listener started, so we can send succ. status to the caller.
+    if (tcptr.*.acn.intr.?.getRole() == .request) {
+        rtr.currMsg.?.bhdr.proto.opCode = .WelcomeResponse;
+        rtr.currMsg.?.bhdr.status = 0;
+        tcptr.sendToCtx(&rtr.currMsg);
     }
-};
 
-fn codeExample() !void {
-    var lib: *Library = try Library.Create(std.testing.allocator);
-
-    ........................
-    .........................
-
-    var client: *Client = try Client.Create(lib);
-
-    .........................
-    .........................
-
-    client.process();
-
+    return;
 }
 
-    ==================================================
-    User: Zig how add to build clean up of zig cache?
-    ==================================================
-
-Assistant: To add a build step that cleans up the Zig cache, you can define a custom step in your build.zig file. The step should use std.fs.deleteTree to recursively remove the .zig-cache directory.
-Example: Add a clean step to build.zig
-Here is a typical build.zig file with a clean step that depends on a separate clean-cache step. This avoids a "FileBusy" error on Windows because the build runner won't try to delete itself while it's running.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Other build steps...
-    // Example: building an executable
-    const exe = b.addExecutable(.{
-        .name = "my_project",
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = b.standardOptimizeOption(.{}),
-    });
-    b.installArtifact(exe);
-    const run_step = b.addRunArtifact(exe);
-    b.step("run", "Run the app").dependOn(&run_step.step);
-
-    // --- Clean Steps ---
-
-    // Clean step for the install directory (zig-out)
-    const clean_out_step = b.addRemoveDirTree(.{
-        .step_name = "clean-out",
-        .dir = b.install_dir,
-    });
-    b.step("clean-out", "Removes the `zig-out` installation directory.").dependOn(&clean_out_step.step);
-
-    // Get the path to the local cache directory
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-
-    // Clean step for the local cache directory (.zig-cache)
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .step_name = "clean-cache",
-        .dir = &cache_path,
-    });
-    b.step("clean-cache", "Removes the `.zig-cache` directory.").dependOn(&clean_cache_step.step);
-
-    // Unified clean step that depends on both
-    const clean_step = b.step("clean", "Removes both build artifacts and cache.");
-    clean_step.dependOn(&clean_out_step.step);
-    clean_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use the new steps
-
-    Add the code to your build.zig file: Copy and paste the provided code into your project's build.zig. You can place it anywhere inside the pub fn build function, but grouping the clean steps at the end is a good practice.
-    Clean the cache and build artifacts: From your terminal, run the new clean step.
-    bash
-
-    zig build clean
-
-    Use code with caution.
-
-Clean only the build artifacts (zig-out):
-bash
-
-zig build clean-out
-
-Use code with caution.
-Clean only the project cache (.zig-cache):
-bash
-
-zig build clean-cache
-
-Use code with caution.
-
-
-Why this approach works best
-
-    Avoids "FileBusy" errors: On operating systems like Windows, you cannot delete a directory that contains an executable that is currently running. The zig build command runs an executable from the .zig-cache directory. By separating the cleanup of .zig-cache into a distinct step, you can run zig build clean-cache as a standalone command.
-    Clear and separate steps: Having dedicated clean-out and clean-cache steps, plus a unified clean step, makes your build system's intent clear and provides flexibility.
-    Discoverable via --help: The step name and description will appear when you run zig build --help, making the command easy for other developers to find and use.
-    User: How to run cleanup steam automatically before test step?
-    Assistant: To make a cleanup step run automatically before your tests, you need to establish a dependency in your build.zig file. The build system is based on a directed acyclic graph (DAG), where a step can depend on one or more other steps. By making your test step dependent on a clean-cache step, you ensure the cache is cleared every time you run zig build test.
-
-Example build.zig with clean-cache dependency
-Modify your build.zig file to define a clean-cache step and then make the test step depend on it.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Standard release options for your project
-    const mode = b.standardReleaseOptions();
-
-    // The test executable for your source file
-    const tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = mode,
-    });
-
-    // Step to actually run the tests
-    const test_step = b.step("test", "Run the library tests");
-    test_step.dependOn(&tests.step);
-
-    // --- Cleanup Steps ---
-
-    // Define a step to remove the local `.zig-cache` directory
-    // NOTE: This cannot be called by itself from `zig build` as it will cause a "FileBusy" error
-    // because the build runner is inside the directory it's trying to delete.
-    // It must be run as a dependency of another step.
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .dir = &cache_path,
-        .step_name = "clean-cache-run-before-test",
-    });
-
-    // --- Add the dependency ---
-
-    // Ensure the clean-cache step runs BEFORE the test step.
-    // When you run `zig build test`, the build system will resolve the `test_step`'s dependencies first.
-    tests.step.dependOn(&clean_cache_step.step);
-
-    // --- Other project steps (e.g., executable) ---
-
-    // Optional: add a top-level `clean-cache` step that can be run on its own
-    // This allows you to manually run `zig build clean-cache` without running tests.
-    // It must be named differently than the dependency step above.
-    const clean_manual_step = b.step("clean-cache", "Manually remove the .zig-cache directory.");
-    clean_manual_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use
-
-    Run tests with automatic cleanup: Now, every time you execute the test step, the clean-cache-run-before-test step will be automatically invoked first.
-    sh
-
-    zig build test
-
-    Use code with caution.
-
-Manually clean the cache: For those times you want to clear the cache without running tests, you can use the separate manual step.
-sh
-
-zig build clean-cache
-
-Use code with caution.
-
-Important considerations
-
-    FileBusy error: You cannot define a top-level step named clean-cache that also cleans the cache directly before tests. The build process itself runs from within the .zig-cache directory. Trying to delete this directory while a process inside it is running will fail on Windows and sometimes on other platforms. The solution is to:
-        Create the addRemoveDirTree step.
-        Make your test step depend on it.
-        Call zig build test. The build runner will clean the cache and then exit, and the test step will be run in a new process.
-    Dependency graph: The Zig build system handles dependencies by creating a DAG. In this example, the tests.step (the test compilation step) is made dependent on the clean_cache_step. The test_step (the test execution step) is dependent on the tests.step, so the sequence is: cleanup, then compile tests, then run tests.
-    User: Create file with context of this session, ready for downloading
-    Assistant: To create a downloadable file containing the context of this session, you can use a small JavaScript snippet that runs in your browser's developer console. This method captures the conversation and formats it as a text file for you to save.
-
-User: Zig how add to build clean up of zig cache?
-Assistant: To add a build step that cleans up the Zig cache, you can define a custom step in your build.zig file. The step should use std.fs.deleteTree to recursively remove the .zig-cache directory.
-Example: Add a clean step to build.zig
-Here is a typical build.zig file with a clean step that depends on a separate clean-cache step. This avoids a "FileBusy" error on Windows because the build runner won't try to delete itself while it's running.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Other build steps...
-    // Example: building an executable
-    const exe = b.addExecutable(.{
-        .name = "my_project",
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = b.standardOptimizeOption(.{}),
-    });
-    b.installArtifact(exe);
-    const run_step = b.addRunArtifact(exe);
-    b.step("run", "Run the app").dependOn(&run_step.step);
-
-    // --- Clean Steps ---
-
-    // Clean step for the install directory (zig-out)
-    const clean_out_step = b.addRemoveDirTree(.{
-        .step_name = "clean-out",
-        .dir = b.install_dir,
-    });
-    b.step("clean-out", "Removes the `zig-out` installation directory.").dependOn(&clean_out_step.step);
-
-    // Get the path to the local cache directory
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-
-    // Clean step for the local cache directory (.zig-cache)
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .step_name = "clean-cache",
-        .dir = &cache_path,
-    });
-    b.step("clean-cache", "Removes the `.zig-cache` directory.").dependOn(&clean_cache_step.step);
-
-    // Unified clean step that depends on both
-    const clean_step = b.step("clean", "Removes both build artifacts and cache.");
-    clean_step.dependOn(&clean_out_step.step);
-    clean_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use the new steps
-
-    Add the code to your build.zig file: Copy and paste the provided code into your project's build.zig. You can place it anywhere inside the pub fn build function, but grouping the clean steps at the end is a good practice.
-    Clean the cache and build artifacts: From your terminal, run the new clean step.
-    bash
-
-    zig build clean
-
-    Use code with caution.
-
-Clean only the build artifacts (zig-out):
-bash
-
-zig build clean-out
-
-Use code with caution.
-Clean only the project cache (.zig-cache):
-bash
-
-zig build clean-cache
-
-Use code with caution.
-
-
-Why this approach works best
-
-    Avoids "FileBusy" errors: On operating systems like Windows, you cannot delete a directory that contains an executable that is currently running. The zig build command runs an executable from the .zig-cache directory. By separating the cleanup of .zig-cache into a distinct step, you can run zig build clean-cache as a standalone command.
-    Clear and separate steps: Having dedicated clean-out and clean-cache steps, plus a unified clean step, makes your build system's intent clear and provides flexibility.
-    Discoverable via --help: The step name and description will appear when you run zig build --help, making the command easy for other developers to find and use.
-    User: How to run cleanup steam automatically before test step?
-    Assistant: To make a cleanup step run automatically before your tests, you need to establish a dependency in your build.zig file. The build system is based on a directed acyclic graph (DAG), where a step can depend on one or more other steps. By making your test step dependent on a clean-cache step, you ensure the cache is cleared every time you run zig build test.
-
-Example build.zig with clean-cache dependency
-Modify your build.zig file to define a clean-cache step and then make the test step depend on it.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Standard release options for your project
-    const mode = b.standardReleaseOptions();
-
-    // The test executable for your source file
-    const tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = mode,
-    });
-
-    // Step to actually run the tests
-    const test_step = b.step("test", "Run the library tests");
-    test_step.dependOn(&tests.step);
-
-    // --- Cleanup Steps ---
-
-    // Define a step to remove the local `.zig-cache` directory
-    // NOTE: This cannot be called by itself from `zig build` as it will cause a "FileBusy" error
-    // because the build runner is inside the directory it's trying to delete.
-    // It must be run as a dependency of another step.
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .dir = &cache_path,
-        .step_name = "clean-cache-run-before-test",
-    });
-
-    // --- Add the dependency ---
-
-    // Ensure the clean-cache step runs BEFORE the test step.
-    // When you run `zig build test`, the build system will resolve the `test_step`'s dependencies first.
-    tests.step.dependOn(&clean_cache_step.step);
-
-    // --- Other project steps (e.g., executable) ---
-
-    // Optional: add a top-level `clean-cache` step that can be run on its own
-    // This allows you to manually run `zig build clean-cache` without running tests.
-    // It must be named differently than the dependency step above.
-    const clean_manual_step = b.step("clean-cache", "Manually remove the .zig-cache directory.");
-    clean_manual_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use
-
-    Run tests with automatic cleanup: Now, every time you execute the test step, the clean-cache-run-before-test step will be automatically invoked first.
-    sh
-
-    zig build test
-
-    Use code with caution.
-
-Manually clean the cache: For those times you want to clear the cache without running tests, you can use the separate manual step.
-sh
-
-zig build clean-cache
-
-Use code with caution.
-
-Important considerations
-
-    FileBusy error: You cannot define a top-level step named clean-cache that also cleans the cache directly before tests. The build process itself runs from within the .zig-cache directory. Trying to delete this directory while a process inside it is running will fail on Windows and sometimes on other platforms. The solution is to:
-        Create the addRemoveDirTree step.
-        Make your test step depend on it.
-        Call zig build test. The build runner will clean the cache and then exit, and the test step will be run in a new process.
-    Dependency graph: The Zig build system handles dependencies by creating a DAG. In this example, the tests.step (the test compilation step) is made dependent on the clean_cache_step. The test_step (the test execution step) is dependent on the tests.step, so the sequence is: cleanup, then compile tests, then run tests.
-    User: Create file with context of this session, ready for downloading
-    Assistant: To create a downloadable file containing the context of this session, you can use a small JavaScript snippet that runs in your browser's developer console. This method captures the conversation and formats it as a text file for you to save.
-
-
-User: Zig how add to build clean up of zig cache?
-Assistant: To add a build step that cleans up the Zig cache, you can define a custom step in your build.zig file. The step should use std.fs.deleteTree to recursively remove the .zig-cache directory.
-Example: Add a clean step to build.zig
-Here is a typical build.zig file with a clean step that depends on a separate clean-cache step. This avoids a "FileBusy" error on Windows because the build runner won't try to delete itself while it's running.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Other build steps...
-    // Example: building an executable
-    const exe = b.addExecutable(.{
-        .name = "my_project",
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = b.standardOptimizeOption(.{}),
-    });
-    b.installArtifact(exe);
-    const run_step = b.addRunArtifact(exe);
-    b.step("run", "Run the app").dependOn(&run_step.step);
-
-    // --- Clean Steps ---
-
-    // Clean step for the install directory (zig-out)
-    const clean_out_step = b.addRemoveDirTree(.{
-        .step_name = "clean-out",
-        .dir = b.install_dir,
-    });
-    b.step("clean-out", "Removes the `zig-out` installation directory.").dependOn(&clean_out_step.step);
-
-    // Get the path to the local cache directory
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-
-    // Clean step for the local cache directory (.zig-cache)
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .step_name = "clean-cache",
-        .dir = &cache_path,
-    });
-    b.step("clean-cache", "Removes the `.zig-cache` directory.").dependOn(&clean_cache_step.step);
-
-    // Unified clean step that depends on both
-    const clean_step = b.step("clean", "Removes both build artifacts and cache.");
-    clean_step.dependOn(&clean_out_step.step);
-    clean_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use the new steps
-
-    Add the code to your build.zig file: Copy and paste the provided code into your project's build.zig. You can place it anywhere inside the pub fn build function, but grouping the clean steps at the end is a good practice.
-    Clean the cache and build artifacts: From your terminal, run the new clean step.
-    bash
-
-    zig build clean
-
-    Use code with caution.
-
-Clean only the build artifacts (zig-out):
-bash
-
-zig build clean-out
-
-Use code with caution.
-Clean only the project cache (.zig-cache):
-bash
-
-zig build clean-cache
-
-Use code with caution.
-
-
-Why this approach works best
-
-    Avoids "FileBusy" errors: On operating systems like Windows, you cannot delete a directory that contains an executable that is currently running. The zig build command runs an executable from the .zig-cache directory. By separating the cleanup of .zig-cache into a distinct step, you can run zig build clean-cache as a standalone command.
-    Clear and separate steps: Having dedicated clean-out and clean-cache steps, plus a unified clean step, makes your build system's intent clear and provides flexibility.
-    Discoverable via --help: The step name and description will appear when you run zig build --help, making the command easy for other developers to find and use.
-    User: How to run cleanup steam automatically before test step?
-    Assistant: To make a cleanup step run automatically before your tests, you need to establish a dependency in your build.zig file. The build system is based on a directed acyclic graph (DAG), where a step can depend on one or more other steps. By making your test step dependent on a clean-cache step, you ensure the cache is cleared every time you run zig build test.
-
-Example build.zig with clean-cache dependency
-Modify your build.zig file to define a clean-cache step and then make the test step depend on it.
-build.zig
-zig
-
-const std = @import("std");
-
-pub fn build(b: *std.Build) void {
-    // Standard release options for your project
-    const mode = b.standardReleaseOptions();
-
-    // The test executable for your source file
-    const tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = b.standardTargetOptions(.{}),
-        .optimize = mode,
-    });
-
-    // Step to actually run the tests
-    const test_step = b.step("test", "Run the library tests");
-    test_step.dependOn(&tests.step);
-
-    // --- Cleanup Steps ---
-
-    // Define a step to remove the local `.zig-cache` directory
-    // NOTE: This cannot be called by itself from `zig build` as it will cause a "FileBusy" error
-    // because the build runner is inside the directory it's trying to delete.
-    // It must be run as a dependency of another step.
-    const cache_path = b.getCacheRoot().path.?.toOwnedAllocator(b.allocator) catch unreachable;
-    const clean_cache_step = b.addRemoveDirTree(.{
-        .dir = &cache_path,
-        .step_name = "clean-cache-run-before-test",
-    });
-
-    // --- Add the dependency ---
-
-    // Ensure the clean-cache step runs BEFORE the test step.
-    // When you run `zig build test`, the build system will resolve the `test_step`'s dependencies first.
-    tests.step.dependOn(&clean_cache_step.step);
-
-    // --- Other project steps (e.g., executable) ---
-
-    // Optional: add a top-level `clean-cache` step that can be run on its own
-    // This allows you to manually run `zig build clean-cache` without running tests.
-    // It must be named differently than the dependency step above.
-    const clean_manual_step = b.step("clean-cache", "Manually remove the .zig-cache directory.");
-    clean_manual_step.dependOn(&clean_cache_step.step);
-}
-
-Use code with caution.
-How to use
-
-    Run tests with automatic cleanup: Now, every time you execute the test step, the clean-cache-run-before-test step will be automatically invoked first.
-    sh
-
-    zig build test
-
-    Use code with caution.
-
-Manually clean the cache: For those times you want to clear the cache without running tests, you can use the separate manual step.
-sh
-
-zig build clean-cache
-
-Use code with caution.
-
-
-
-// -----------------------------------------------------------------------------
-// TESTS
-// -----------------------------------------------------------------------------
-
-test "valueToSlice - success (u32)" {
-    var dest = [_]u8{0} ** 8;
-    const value: u32 = 0x12345678;
-    const expected_size = @sizeOf(u32);
-
-    const filled_slice = valueToSlice(u32, value, dest[0..]);
-    try std.testing.expectEqual(expected_size, filled_slice.len);
-
-    // Check content based on native endianness
-    if (std.builtin.target.cpu.arch.endian() == .little) {
-        // Little-endian: Least significant byte first (78)
-        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[0]);
-        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[3]);
+// Wrappers working with ActiveChannels on the thread
+fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
+    var tc = rtr.*.trgChannel(cn);
+    if (tc != null) {
+        tc.?.markForDelete(status.AmpeStatus.channel_closed);
     } else {
-        // Big-endian: Most significant byte first (12)
-        try std.testing.expectEqual(@as(u8, 0x12), filled_slice[0]);
-        try std.testing.expectEqual(@as(u8, 0x78), filled_slice[3]);
+        rtr.acns.removeChannel(cn);
+    }
+    return;
+}
+
+fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) channels.ActiveChannel {
+    return rtr.acns.createChannel(mid, intr, ptr);
+}
+
+fn cleanMboxes(rtr: *Reactor) void {
+    for (rtr.msgs, 0..) |_, i| {
+        var mbx = rtr.msgs[i];
+        var allocated = mbx.close();
+        while (allocated != null) {
+            const next = allocated.?.next;
+            allocated.?.destroy();
+            allocated = next;
+        }
     }
 }
 
-test "valueToSlice - destination too small" {
-    var dest = [_]u8{0} ** 3; // Needs 4 bytes for u32
-    const value: u32 = 0x12345678;
-    const filled_slice = valueToSlice(u32, value, dest[0..]);
-    try std.testing.expectEqual(@as(usize, 0), filled_slice.len);
+pub fn initMap(rtr: *Reactor) AmpeError!void {
+    var trgrd_map = TriggeredChannelsMap.init(rtr.*.allocator);
+    errdefer trgrd_map.deinit();
+    trgrd_map.ensureTotalCapacity(256) catch {
+        return AmpeError.AllocationFailed;
+    };
+
+    rtr.*.trgrd_map = trgrd_map;
+
+    return;
 }
 
-test "sliceToValue - success (i64)" {
-    // A slice representing the i64 value 0x0102030405060708
-    const bytes_le = [_]u8{ 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
-    const bytes_be = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+pub fn attachChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!bool {
+    if (rtr.*.contains(tchn.acn.chn)) {
+        log.warn("channel {d} already exists", .{tchn.acn.chn});
+        return AmpeError.InvalidChannelNumber;
+    }
 
-    const slice_to_test = if (std.builtin.target.cpu.arch.endian() == .little) bytes_le[0..] else bytes_be[0..];
-    const expected_value: i64 = 0x0102030405060708;
+    rtr.*.trgrd_map.put(tchn.acn.chn, tchn) catch {
+        return AmpeError.AllocationFailed;
+    };
 
-    const value = try sliceToValue(i64, slice_to_test);
-    try std.testing.expectEqual(expected_value, value);
+    return true;
 }
 
-test "sliceToValue - slice too small" {
-    const bytes = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }; // Needs 8 bytes for i64
-    const err = sliceToValue(i64, bytes[0..]);
-    try std.testing.expectEqual(err, error.SliceTooSmall);
+pub inline fn contains(rtr: *Reactor, chn: channels.ChannelNumber) bool {
+    return rtr.*.trgrd_map.contains(chn);
 }
 
-test "roundtrip conversion (f32)" {
-    var dest = [_]u8{0} ** 8;
-    const original_value: f32 = 3.14159;
-    const expected_size = @sizeOf(f32);
-
-    // Value to Slice
-    const filled_slice = valueToSlice(f32, original_value, dest[0..]);
-    try std.testing.expectEqual(expected_size, filled_slice.len);
-
-    // Slice to Value
-    const decoded_value = try sliceToValue(f32, filled_slice);
-
-    // Due to the nature of floating point, comparing equality is fine for an exact byte-for-byte round trip.
-    try std.testing.expectEqual(original_value, decoded_value);
+pub inline fn trgChannel(rtr: *Reactor, chn: channels.ChannelNumber) ?*TriggeredChannel {
+    return rtr.*.trgrd_map.getPtr(chn);
 }
 
-test "valueToSlice - pointer - sliceToValue" {
-    const T = *const u32;
-    var dest = [_]u8{0} ** @sizeOf(T);
-    var x: u32 = 42;
-    const ptr: T = &x;
-
-    const vsl = valueToSlice(T, ptr, dest[0..]);
-
-    const ptr2 = try sliceToValue(T, vsl);
-
-    try std.testing.expectEqual(ptr, ptr2);
+pub fn iterator(rtr: *Reactor) Iterator {
+    var result: Iterator = Iterator.init(&rtr.*.trgrd_map);
+    result.reset();
+    return result;
 }
 
+pub fn deleteAll(rtr: *Reactor) void {
+    var itr: Iterator = rtr.*.iterator();
 
-// inline fn isFirstServerRequest(msg: *Message) bool {
-//     if (msg.bhdr.proto.mtype != .welcome) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.role != .request) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.more != .last) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.origin != .application) {
-//         return false;
-//     }
-//
-//     return true;
-// }
-//
-// inline fn isFirstClientRequest(msg: *Message) bool {
-//     if (msg.bhdr.proto.mtype != .hello) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.role != .request) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.more != .last) {
-//         return false;
-//     }
-//     if (msg.bhdr.proto.origin != .application) {
-//         return false;
-//     }
-//
-//     return true;
-// }
+    var tcopt: ?*TriggeredChannel = itr.next();
+
+    while (tcopt != null) : (tcopt = itr.next()) {
+        tcopt.?.*.tskt.deinit();
+    }
+
+    rtr.*.trgrd_map.deinit();
+
+    return;
+}
+
+pub fn deleteGroup(rtr: *Reactor, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
+    var result: bool = false;
+    for (chnls.items) |chN| {
+        var pairOpt = rtr.*.trgrd_map.fetchSwapRemove(chN);
+        if (pairOpt != null) {
+            pairOpt.?.value.tskt.deinit();
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+pub fn deleteMarked(rtr: *Reactor) !bool {
+    var result: bool = false;
+    var i: usize = rtr.*.trgrd_map.count();
+
+    while (i > 0) {
+        i -= 1;
+        const chN: message.ChannelNumber = rtr.*.trgrd_map.keys()[i];
+        const tcOpt: ?*TriggeredChannel = rtr.*.trgChannel(chN);
+        if (tcOpt) |tcPtr| {
+            if (tcPtr.*.mrk4del) {
+                tcPtr.*.updateReceiver();
+                tcPtr.*.deinit();
+                tcPtr.*.engine.*.removeChannelOnT(chN);
+                if (rtr.*.trgrd_map.swapRemove(chN)) {
+                    result = true;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+pub const Iterator = struct {
+    itrtr: ?Reactor.TriggeredChannelsMap.Iterator = null,
+    map: ?*Reactor.TriggeredChannelsMap = null,
+
+    pub fn init(tcm: *Reactor.TriggeredChannelsMap) Iterator {
+        return .{
+            .itrtr = tcm.iterator(),
+            .map = tcm,
+        };
+    }
+
+    pub fn getPtr(itr: *Iterator, key: channels.ChannelNumber) ?*TriggeredChannel {
+        if (itr.map) |m| {
+            return m.getPtr(key);
+        }
+        return null;
+    }
+
+    pub fn next(itr: *Iterator) ?*TriggeredChannel {
+        if (itr.itrtr != null) {
+            const entry = itr.itrtr.?.next();
+            if (entry) |entr| {
+                return entr.value_ptr;
+            }
+        }
+        return null;
+    }
+
+    pub fn reset(itr: *Iterator) void {
+        if (itr.itrtr != null) {
+            itr.itrtr.?.reset();
+        }
+        return;
+    }
+};
+
+pub const TriggeredChannel = struct {
+    engine: *Reactor = undefined,
+    acn: channels.ActiveChannel = undefined,
+    resp2ac: bool = undefined,
+    tskt: TriggeredSkt = undefined,
+    exp: internal.triggeredSkts.Triggers = undefined,
+    act: internal.triggeredSkts.Triggers = undefined,
+    mrk4del: bool = undefined,
+    st: ?AmpeStatus = undefined,
+    firstRecvFinished: bool = undefined,
+
+    pub fn informPoolEmpty(tchn: *TriggeredChannel) void {
+        var peSignal: ?*Message = tchn.*.engine.*.buildStatusSignal(.pool_empty);
+
+        // log.debug(" ^^^^^^^^^^^^^^^^^ empty pool channel {d}", .{tchn.*.acn.chn});
+
+        tchn.*.sendToCtx(&peSignal);
+        return;
+    }
+
+    pub fn sendToCtx(tchn: *TriggeredChannel, msg: *?*Message) void {
+        if (msg.* == null) {
+            return;
+        }
+
+        defer tchn.engine.releaseToPool(msg);
+
+        if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
+            return;
+        }
+
+        if (msg.*.?.@"<ctx>" == null) {
+            msg.*.?.@"<ctx>" = tchn.acn.ctx;
+        }
+
+        msg.*.?.bhdr.channel_number = tchn.*.acn.chn;
+
+        MchnGroup.sendToReceiver(tchn.acn.ctx.?, msg) catch {};
+
+        return;
+    }
+
+    pub fn updateReceiver(tchn: *TriggeredChannel) void {
+        if ((tchn.acn.ctx == null) or (tchn.resp2ac == false)) {
+            return;
+        }
+
+        var mq = tchn.detach();
+        var next = mq.dequeue();
+        const st = if (tchn.st != null) status.status_to_raw(tchn.st.?) else status.status_to_raw(.channel_closed);
+        while (next != null) {
+            next.?.bhdr.proto.origin = .engine;
+            next.?.bhdr.status = st;
+            tchn.sendToCtx(&next);
+            next = mq.dequeue();
+        }
+
+        var statusMsg = tchn.engine.buildStatusSignal(.channel_closed);
+
+        // Stored information from from received message
+        statusMsg.bhdr.channel_number = tchn.acn.chn;
+        statusMsg.bhdr.message_id = tchn.acn.mid;
+
+        var responseToCtx: ?*Message = statusMsg;
+
+        tchn.sendToCtx(&responseToCtx);
+
+        return;
+    }
+
+    inline fn deinit(tchn: *TriggeredChannel) void {
+        tchn.tskt.deinit();
+        return;
+    }
+
+    pub inline fn markForDelete(tchn: *TriggeredChannel, reason: AmpeStatus) void {
+        tchn.mrk4del = true;
+        tchn.st = reason;
+        return;
+    }
+
+    pub inline fn disableDelete(tchn: *TriggeredChannel) void {
+        tchn.mrk4del = false;
+        tchn.st = null;
+    }
+
+    // Wrappers of TriggeredSkt
+    pub inline fn triggers(tchn: *TriggeredChannel) !Triggers {
+        return tchn.tskt.triggers();
+    }
+
+    pub inline fn getSocket(tchn: *TriggeredChannel) Socket {
+        return tchn.tskt.getSocket();
+    }
+    pub inline fn tryRecvNotification(tchn: *TriggeredChannel) !Notification {
+        return tchn.tskt.tryRecvNotification();
+    }
+
+    pub inline fn tryAccept(tchn: *TriggeredChannel) !?Skt {
+        return tchn.tskt.tryAccept();
+    }
+
+    pub inline fn tryConnect(tchn: *TriggeredChannel) !bool {
+        return tchn.tskt.tryConnect();
+    }
+
+    pub inline fn tryRecv(tchn: *TriggeredChannel) !MessageQueue {
+        var mq: MessageQueue = try tchn.tskt.tryRecv();
+        if ((tchn.firstRecvFinished) or (mq.count() == 0)) {
+            return mq;
+        }
+
+        tchn.acn.mid = mq.first.?.bhdr.message_id;
+        tchn.acn.intr = mq.first.?.bhdr.proto;
+        tchn.firstRecvFinished = true;
+
+        return mq;
+    }
+
+    pub inline fn trySend(tchn: *TriggeredChannel) !MessageQueue {
+        return tchn.tskt.trySend();
+    }
+
+    pub inline fn addToSend(tchn: *TriggeredChannel, sndmsg: *Message) !void {
+        sndmsg.assert();
+
+        return tchn.tskt.addToSend(sndmsg);
+    }
+
+    pub inline fn addForRecv(tchn: *TriggeredChannel, rcvmsg: *Message) !void {
+        return tchn.tskt.addForRecv(rcvmsg);
+    }
+
+    pub inline fn detach(tchn: *TriggeredChannel) MessageQueue {
+        return tchn.tskt.detach();
+    }
+};
+
+inline fn initPlatform() AmpeError!void {
+    if (builtin.os.tag == .windows) {
+        const ws2_32 = std.os.windows.ws2_32;
+        var wsa_data: ws2_32.WSADATA = undefined;
+        if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
+    }
+}
+
+inline fn deinitPlatform() void {
+    if (builtin.os.tag == .windows) {
+        _ = std.os.windows.ws2_32.WSACleanup();
+    }
+}
+
+const tofu = @import("../tofu.zig");
+const message = tofu.message;
+const MessageType = message.MessageType;
+const MessageRole = message.MessageRole;
+const OriginFlag = message.OriginFlag;
+const MoreMessagesFlag = message.MoreMessagesFlag;
+const ProtoFields = message.ProtoFields;
+const BinaryHeader = message.BinaryHeader;
+const TextHeader = message.TextHeader;
+const TextHeaderIterator = message.TextHeaderIterator;
+const TextHeaders = message.TextHeaders;
+const Message = message.Message;
+const MessageID = message.MessageID;
+const MessageQueue = message.MessageQueue;
+
+const Options = tofu.Options;
+const Ampe = tofu.Ampe;
+const ChannelGroup = tofu.ChannelGroup;
+
+const status = tofu.status;
+const AmpeStatus = status.AmpeStatus;
+const AmpeError = status.AmpeError;
+const raw_to_status = status.raw_to_status;
+const raw_to_error = status.raw_to_error;
+const status_to_raw = status.status_to_raw;
+
+const internal = tofu.@"internal usage";
+const Notifier = internal.Notifier;
+const Notification = Notifier.Notification;
+
+const Skt = internal.Skt;
+
+const Pool = internal.Pool;
+
+const channels = internal.channels;
+const ActiveChannels = channels.ActiveChannels;
+
+const Triggers = internal.triggeredSkts.Triggers;
+const TriggeredSkt = internal.triggeredSkts.TriggeredSkt;
+const UnpackedTriggers = internal.triggeredSkts.UnpackedTriggers;
+
+pub const MchnGroup = @import("MchnGroup.zig");
+const GroupId = MchnGroup.GroupId;
+
+const poller = internal.poller;
+
+const poll_INFINITE_TIMEOUT: u32 = @import("poller.zig").poll_INFINITE_TIMEOUT;
+const poll_SEC_TIMEOUT: u32 = @import("poller.zig").poll_SEC_TIMEOUT;
+
+const Appendable = @import("Appendable");
+
+const mailbox = @import("mailbox");
+const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+
+const std = @import("std");
+const builtin = @import("builtin");
+const Allocator = std.mem.Allocator;
+const Mutex = std.Thread.Mutex;
+const Thread = std.Thread;
+const Semaphore = std.Thread.Semaphore;
+const getCurrentTid = Thread.getCurrentId;
+const Atomic = std.atomic.Value;
+const AtomicOrder = std.builtin.AtomicOrder;
+const AtomicRmwOp = std.builtin.AtomicRmwOp;
+
+const Socket = std.posix.socket_t;
+const log = std.log;
+const assert = std.debug.assert;
+
+const PolledTrChnls = struct {
+    trgrd_map: TriggeredChannelsMap = undefined,
+
+    pub fn init(alktr: Allocator) AmpeError!PolledTrChnls {
+        var trgrd_map = TriggeredChannelsMap.init(alktr);
+        errdefer trgrd_map.deinit();
+        trgrd_map.ensureTotalCapacity(256) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        return .{
+            .trgrd_map = trgrd_map,
+        };
+    }
+
+    pub fn attachChannel(ptcs: *PolledTrChnls, tchn: TriggeredChannel) AmpeError!bool {
+        if (ptcs.*.contains(tchn.acn.chn)) {
+            log.warn("channel {d} already exists", .{tchn.acn.chn});
+            return AmpeError.InvalidChannelNumber;
+        }
+
+        ptcs.*.trgrd_map.put(tchn.acn.chn, tchn) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        return true;
+    }
+
+    pub inline fn contains(ptcs: *PolledTrChnls, chn: channels.ChannelNumber) bool {
+        return ptcs.*.trgrd_map.contains(chn);
+    }
+
+    pub inline fn trgChannel(ptcs: *PolledTrChnls, chn: channels.ChannelNumber) ?*TriggeredChannel {
+        return ptcs.*.trgrd_map.getPtr(chn);
+    }
+
+    pub fn iterator(ptcs: *PolledTrChnls) Iterator {
+        var result: Iterator = Iterator.init(&ptcs.*.trgrd_map);
+        result.reset();
+        return result;
+    }
+
+    pub fn deleteAll(ptcs: *PolledTrChnls) void {
+        var itr: Iterator = ptcs.*.iterator();
+
+        var tcopt: ?*TriggeredChannel = itr.next();
+
+        while (tcopt != null) : (tcopt = itr.next()) {
+            tcopt.?.*.tskt.deinit();
+        }
+
+        ptcs.*.trgrd_map.deinit();
+
+        return;
+    }
+
+    pub fn deleteGroup(ptcs: *PolledTrChnls, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
+        var result: bool = false;
+
+        for (chnls.items) |chN| {
+            var pairOpt = ptcs.*.trgrd_map.fetchSwapRemove(chN);
+            if (pairOpt != null) {
+                pairOpt.?.value.tskt.deinit();
+                result = true;
+            }
+        }
+
+        return result;
+    }
+
+    pub fn deleteMarked(ptcs: *PolledTrChnls) !bool {
+        var result: bool = false;
+
+        var i: usize = ptcs.*.trgrd_map.count();
+
+        while (i > 0) {
+            i -= 1;
+            const chN: message.ChannelNumber = ptcs.*.trgrd_map.keys()[i];
+            const tcOpt: ?*TriggeredChannel = ptcs.*.trgChannel(chN);
+            if (tcOpt) |tcPtr| {
+                if (tcPtr.*.mrk4del) {
+                    tcPtr.*.updateReceiver();
+                    tcPtr.*.deinit();
+                    tcPtr.*.engine.*.removeChannelOnT(chN);
+                    if (ptcs.*.trgrd_map.swapRemove(chN)) {
+                        result = true;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+};
