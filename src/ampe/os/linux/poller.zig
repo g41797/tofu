@@ -7,7 +7,7 @@ pub const poll_SEC_TIMEOUT: i32 = 1_000;
 pub const Poller = union(enum) {
     poll: Poll,
 
-    pub fn waitTriggers(self: *Poller, it: ?Reactor.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(self: *Poller, it: ?TcIterator, timeout: i32) AmpeError!Triggers {
         const ret: Triggers = switch (self.*) {
             .poll => try self.*.poll.waitTriggers(it, timeout),
         };
@@ -31,7 +31,7 @@ pub const Poller = union(enum) {
 pub const Poll = struct {
     allocator: Allocator = undefined,
     pollfdVtor: std.ArrayList(std.posix.pollfd) = undefined,
-    it: ?Reactor.Iterator = null,
+    it: ?TcIterator = null,
 
     pub fn init(allocator: Allocator) !Poll {
         var ret: Poll = .{
@@ -51,7 +51,7 @@ pub const Poll = struct {
         return;
     }
 
-    pub fn waitTriggers(pl: *Poll, it: ?Reactor.Iterator, timeout: i32) AmpeError!Triggers {
+    pub fn waitTriggers(pl: *Poll, it: ?TcIterator, timeout: i32) AmpeError!Triggers {
         if ((pl.*.it == null) and (it == null)) {
             return AmpeError.NotAllowed;
         }
@@ -226,11 +226,188 @@ pub const Poll = struct {
 
 const err_mask: i16 = std.posix.POLL.ERR | std.posix.POLL.NVAL | std.posix.POLL.HUP;
 
-const std = @import("std");
-const assert = std.debug.assert;
-const builtin = @import("builtin");
-const Allocator = std.mem.Allocator;
-const log = std.log;
+pub const PolledTrChnls = struct {
+    // [Channel Number = SeqN]
+    chn_seqn_map: std.AutoArrayHashMap(message.ChannelNumber, SeqN) = undefined,
+
+    crseqN: SeqN = undefined,
+
+    // [SeqN - TriggeredChannel]
+    seqn_trc_map: std.AutoArrayHashMap(SeqN, TriggeredChannel) = undefined,
+
+    pll: Poll = .{},
+
+    pub fn init(alktr: Allocator) AmpeError!PolledTrChnls {
+        var chn_seqn_map = std.AutoArrayHashMap(message.ChannelNumber, SeqN).init(alktr);
+        errdefer chn_seqn_map.deinit();
+        chn_seqn_map.ensureTotalCapacity(256) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        var seqn_trc_map = std.AutoArrayHashMap(SeqN, TriggeredChannel).init(alktr);
+        errdefer seqn_trc_map.deinit();
+        seqn_trc_map.ensureTotalCapacity(256) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        const pll: Poll = Poll.init(alktr) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        return .{
+            .seqn_trc_map = seqn_trc_map,
+            .chn_seqn_map = chn_seqn_map,
+            .crseqN = 0,
+            .pll = pll,
+        };
+    }
+
+    pub fn waitTriggers(ptcs: *PolledTrChnls, timeout: i32) AmpeError!Triggers {
+        return ptcs.*.pll.waitTriggers(ptcs.*.iterator(), timeout);
+    }
+
+    pub fn attachChannel(ptcs: *PolledTrChnls, tchn: TriggeredChannel) AmpeError!bool {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        const chN: message.ChannelNumber = tchn.acn.chn;
+
+        if (ptcs.*.chn_seqn_map.contains(chN)) {
+            log.warn("channel {d} already exists", .{chN});
+            return AmpeError.InvalidChannelNumber;
+        }
+
+        ptcs.*.crseqN += 1;
+
+        const seqN: SeqN = ptcs.*.crseqN;
+
+        ptcs.*.chn_seqn_map.put(chN, seqN) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        ptcs.*.seqn_trc_map.put(seqN, tchn) catch {
+            return AmpeError.AllocationFailed;
+        };
+
+        assert(ptcs.*.trgChannel(chN) != null);
+
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        return true;
+    }
+
+    pub inline fn trgChannel(ptcs: *PolledTrChnls, chn: message.ChannelNumber) ?*TriggeredChannel {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        const seqN: SeqN = ptcs.*.chn_seqn_map.get(chn) orelse return null;
+
+        return ptcs.*.seqn_trc_map.getPtr(seqN);
+    }
+
+    pub fn iterator(ptcs: *PolledTrChnls) TcIterator {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        var result: TcIterator = TcIterator.init(&ptcs.*.seqn_trc_map);
+        result.reset();
+        return result;
+    }
+
+    pub fn deleteGroup(ptcs: *PolledTrChnls, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        var result: bool = false;
+
+        for (chnls.items) |chN| {
+            const seqKV = ptcs.*.chn_seqn_map.fetchSwapRemove(chN) orelse continue;
+            var kv = ptcs.*.seqn_trc_map.fetchSwapRemove(seqKV.value) orelse unreachable;
+            kv.value.tskt.deinit();
+            result = true;
+        }
+
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        return result;
+    }
+
+    pub fn deleteMarked(ptcs: *PolledTrChnls) !bool {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        var result: bool = false;
+
+        var i: usize = ptcs.*.chn_seqn_map.count();
+
+        while (i > 0) {
+            i -= 1;
+
+            const seqN = ptcs.*.chn_seqn_map.values()[i];
+            const tcPtr: *TriggeredChannel = ptcs.*.seqn_trc_map.getPtr(seqN) orelse unreachable;
+
+            if (!tcPtr.*.mrk4del) {
+                continue;
+            }
+
+            tcPtr.*.updateReceiver();
+            tcPtr.*.deinit();
+
+            const chN = tcPtr.*.acn.chn;
+            tcPtr.*.engine.*.removeChannelOnT(chN);
+            _ = ptcs.*.chn_seqn_map.swapRemove(chN);
+            _ = ptcs.*.seqn_trc_map.swapRemove(seqN);
+            result = true;
+        }
+
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        return result;
+    }
+
+    pub fn deleteAll(ptcs: *PolledTrChnls) void {
+        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
+
+        ptcs.*.pll.deinit();
+
+        var itr: TcIterator = ptcs.*.iterator();
+
+        var tcopt: ?*TriggeredChannel = itr.next();
+
+        while (tcopt != null) : (tcopt = itr.next()) {
+            tcopt.?.*.tskt.deinit();
+        }
+
+        ptcs.*.seqn_trc_map.deinit();
+        ptcs.*.chn_seqn_map.deinit();
+
+        return;
+    }
+};
+
+pub const TcIterator = struct {
+    itrtr: ?std.AutoArrayHashMap(SeqN, TriggeredChannel).Iterator = null,
+
+    pub fn init(tcm: anytype) TcIterator {
+        return .{
+            .itrtr = tcm.iterator(),
+        };
+    }
+
+    pub fn next(itr: *TcIterator) ?*TriggeredChannel {
+        if (itr.itrtr != null) {
+            const entry = itr.itrtr.?.next();
+            if (entry) |entr| {
+                return entr.value_ptr;
+            }
+        }
+        return null;
+    }
+
+    pub fn reset(itr: *TcIterator) void {
+        if (itr.itrtr != null) {
+            itr.itrtr.?.reset();
+        }
+        return;
+    }
+};
+
+const SeqN = u64;
 
 const tofu = @import("../../../tofu.zig");
 const DBG = tofu.DBG;
@@ -242,3 +419,9 @@ const TriggeredChannel = Reactor.TriggeredChannel;
 const internal = @import("../../internal.zig");
 const TriggeredSkt = internal.triggeredSkts.TriggeredSkt;
 const Triggers = internal.triggeredSkts.Triggers;
+
+const std = @import("std");
+const assert = std.debug.assert;
+const builtin = @import("builtin");
+const Allocator = std.mem.Allocator;
+const log = std.log;

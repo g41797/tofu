@@ -42,8 +42,7 @@ cmpl: Semaphore = undefined,
 //
 // Accessible from the thread - don't lock/unlock
 //
-plr: poller.Poller = undefined,
-ptcs: PolledTrChnls = undefined,
+ptcs: poller.PolledTrChnls = undefined,
 chnlsGroup_map: ChannelsGroupMap = undefined,
 
 // Summary of triggers after poller
@@ -399,7 +398,7 @@ pub fn buildStatusSignal(rtr: *Reactor, stat: AmpeStatus) *Message {
     return ret;
 }
 
-fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
+inline fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
     _ = try rtr.*.attachChannel(tchn);
 
     return;
@@ -580,7 +579,7 @@ fn storeMessageFromChannels(rtr: *Reactor) !void {
 }
 
 fn processTriggeredChannels(rtr: *Reactor) !void {
-    var it: Iterator = rtr.*.iterator();
+    var it: poller.TcIterator = rtr.*.iterator();
 
     rtr.currTcopt = it.next();
 
@@ -735,13 +734,13 @@ fn processInternal(rtr: *Reactor) !void {
     return;
 }
 
-fn sendByeResponse(rtr: *Reactor) !void {
+inline fn sendByeResponse(rtr: *Reactor) !void {
     // For now - nothing special, just post
     // In the future - possibly to disable further sends
     return rtr.post();
 }
 
-fn processMarkedForDelete(rtr: *Reactor) !bool {
+inline fn processMarkedForDelete(rtr: *Reactor) !bool {
     return rtr.*.deleteMarked();
 }
 
@@ -983,7 +982,7 @@ fn createListenerChannel(rtr: *Reactor) AmpeError!void {
 }
 
 // Wrappers working with ActiveChannels on the thread
-fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
+pub fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
     var tc = rtr.*.trgChannel(cn);
     if (tc != null) {
         tc.?.markForDelete(status.AmpeStatus.channel_closed);
@@ -993,7 +992,7 @@ fn removeChannelOnT(rtr: *Reactor, cn: message.ChannelNumber) void {
     return;
 }
 
-fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) channels.ActiveChannel {
+inline fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) channels.ActiveChannel {
     return rtr.acns.createChannel(mid, intr, ptr);
 }
 
@@ -1011,14 +1010,7 @@ fn cleanMboxes(rtr: *Reactor) void {
 
 pub inline fn initPollEnv(rtr: *Reactor) AmpeError!void {
 
-    // 2DO add here comptime creation based on os
-    rtr.*.plr = .{
-        .poll = poller.Poll.init(rtr.*.allocator) catch {
-            return AmpeError.AllocationFailed;
-        },
-    };
-
-    rtr.*.ptcs = try PolledTrChnls.init(rtr.*.allocator);
+    rtr.*.ptcs = try poller.PolledTrChnls.init(rtr.*.allocator);
     return;
 }
 
@@ -1034,12 +1026,12 @@ pub inline fn trgChannel(rtr: *Reactor, chn: channels.ChannelNumber) ?*Triggered
     return rtr.ptcs.trgChannel(chn);
 }
 
-pub inline fn iterator(rtr: *Reactor) Iterator {
+pub inline fn iterator(rtr: *Reactor) poller.TcIterator {
     return rtr.ptcs.iterator();
 }
 
 pub inline fn deleteAll(rtr: *Reactor) void {
-    rtr.*.plr.deinit();
+    // rtr.*.plr.deinit();
     rtr.ptcs.deleteAll();
     return;
 }
@@ -1052,179 +1044,9 @@ pub inline fn deleteMarked(rtr: *Reactor) !bool {
     return rtr.ptcs.deleteMarked();
 }
 
-pub fn waitTriggers(rtr: *Reactor, timeout: i32) AmpeError!Triggers {
-    return rtr.*.plr.waitTriggers(rtr.*.iterator(), timeout);
+pub inline fn waitTriggers(rtr: *Reactor, timeout: i32) AmpeError!Triggers {
+    return rtr.*.ptcs.waitTriggers(timeout);
 }
-
-const PolledTrChnls = struct {
-    // [Channel Number = SeqN]
-    chn_seqn_map: std.AutoArrayHashMap(message.ChannelNumber, SeqN) = undefined,
-
-    crseqN: SeqN = undefined,
-
-    // [SeqN - TriggeredChannel]
-    seqn_trc_map: std.AutoArrayHashMap(SeqN, TriggeredChannel) = undefined,
-
-    pub fn init(alktr: Allocator) AmpeError!PolledTrChnls {
-        var chn_seqn_map = std.AutoArrayHashMap(message.ChannelNumber, SeqN).init(alktr);
-        errdefer chn_seqn_map.deinit();
-        chn_seqn_map.ensureTotalCapacity(256) catch {
-            return AmpeError.AllocationFailed;
-        };
-
-        var seqn_trc_map = std.AutoArrayHashMap(SeqN, TriggeredChannel).init(alktr);
-        errdefer seqn_trc_map.deinit();
-        seqn_trc_map.ensureTotalCapacity(256) catch {
-            return AmpeError.AllocationFailed;
-        };
-
-        return .{
-            .seqn_trc_map = seqn_trc_map,
-            .chn_seqn_map = chn_seqn_map,
-            .crseqN = 0,
-        };
-    }
-
-    pub fn attachChannel(ptcs: *PolledTrChnls, tchn: TriggeredChannel) AmpeError!bool {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        const chN: message.ChannelNumber = tchn.acn.chn;
-
-        if (ptcs.*.chn_seqn_map.contains(chN)) {
-            log.warn("channel {d} already exists", .{chN});
-            return AmpeError.InvalidChannelNumber;
-        }
-
-        ptcs.*.crseqN += 1;
-
-        const seqN: SeqN = ptcs.*.crseqN;
-
-        ptcs.*.chn_seqn_map.put(chN, seqN) catch {
-            return AmpeError.AllocationFailed;
-        };
-
-        ptcs.*.seqn_trc_map.put(seqN, tchn) catch {
-            return AmpeError.AllocationFailed;
-        };
-
-        assert(ptcs.*.trgChannel(chN) != null);
-
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        return true;
-    }
-
-    inline fn trgChannel(ptcs: *PolledTrChnls, chn: channels.ChannelNumber) ?*TriggeredChannel {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        const seqN: SeqN = ptcs.*.chn_seqn_map.get(chn) orelse return null;
-
-        return ptcs.*.seqn_trc_map.getPtr(seqN);
-    }
-
-    pub fn iterator(ptcs: *PolledTrChnls) Iterator {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        var result: Iterator = Iterator.init(&ptcs.*.seqn_trc_map);
-        result.reset();
-        return result;
-    }
-
-    pub fn deleteAll(ptcs: *PolledTrChnls) void {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        var itr: Iterator = ptcs.*.iterator();
-
-        var tcopt: ?*TriggeredChannel = itr.next();
-
-        while (tcopt != null) : (tcopt = itr.next()) {
-            tcopt.?.*.tskt.deinit();
-        }
-
-        ptcs.*.seqn_trc_map.deinit();
-        ptcs.*.chn_seqn_map.deinit();
-
-        return;
-    }
-
-    pub fn deleteGroup(ptcs: *PolledTrChnls, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        var result: bool = false;
-
-        for (chnls.items) |chN| {
-            const seqKV = ptcs.*.chn_seqn_map.fetchSwapRemove(chN) orelse continue;
-            var kv = ptcs.*.seqn_trc_map.fetchSwapRemove(seqKV.value) orelse unreachable;
-            kv.value.tskt.deinit();
-            result = true;
-        }
-
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        return result;
-    }
-
-    pub fn deleteMarked(ptcs: *PolledTrChnls) !bool {
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        var result: bool = false;
-
-        var i: usize = ptcs.*.chn_seqn_map.count();
-
-        while (i > 0) {
-            i -= 1;
-
-            const seqN = ptcs.*.chn_seqn_map.values()[i];
-            const tcPtr: *TriggeredChannel = ptcs.*.seqn_trc_map.getPtr(seqN) orelse unreachable;
-
-            if (!tcPtr.*.mrk4del) {
-                continue;
-            }
-
-            tcPtr.*.updateReceiver();
-            tcPtr.*.deinit();
-
-            const chN = tcPtr.*.acn.chn;
-            tcPtr.*.engine.*.removeChannelOnT(chN);
-            _ = ptcs.*.chn_seqn_map.swapRemove(chN);
-            _ = ptcs.*.seqn_trc_map.swapRemove(seqN);
-            result = true;
-        }
-
-        assert(ptcs.*.chn_seqn_map.count() == ptcs.*.seqn_trc_map.count());
-
-        return result;
-    }
-};
-
-pub const Iterator = struct {
-    itrtr: ?Reactor.std.AutoArrayHashMap(SeqN, TriggeredChannel).Iterator = null,
-
-    pub fn init(tcm: anytype) Iterator {
-        return .{
-            .itrtr = tcm.iterator(),
-        };
-    }
-
-    pub fn next(itr: *Iterator) ?*TriggeredChannel {
-        if (itr.itrtr != null) {
-            const entry = itr.itrtr.?.next();
-            if (entry) |entr| {
-                return entr.value_ptr;
-            }
-        }
-        return null;
-    }
-
-    pub fn reset(itr: *Iterator) void {
-        if (itr.itrtr != null) {
-            itr.itrtr.?.reset();
-        }
-        return;
-    }
-};
-
-const SeqN = u64;
 
 pub const TriggeredChannel = struct {
     engine: *Reactor = undefined,
@@ -1293,7 +1115,7 @@ pub const TriggeredChannel = struct {
         return;
     }
 
-    inline fn deinit(tchn: *TriggeredChannel) void {
+    pub inline fn deinit(tchn: *TriggeredChannel) void {
         tchn.tskt.deinit();
         return;
     }

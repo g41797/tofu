@@ -12,3 +12,6 @@ pub const Poller = backend.Poller;
 pub const Poll = if (@hasDecl(backend, "Poll")) backend.Poll else struct {};
 pub const poll_INFINITE_TIMEOUT = backend.poll_INFINITE_TIMEOUT;
 pub const poll_SEC_TIMEOUT = backend.poll_SEC_TIMEOUT;
+
+pub const PolledTrChnls = backend.PolledTrChnls;
+pub const TcIterator = backend.TcIterator;
