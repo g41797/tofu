@@ -6,7 +6,7 @@ const builtin = @import("builtin");
 pub const channels = @import("channels.zig");
 pub const Notifier = @import("Notifier.zig");
 pub const poller = @import("poller.zig");
-pub const Poller = poller.PollerOs(if (builtin.os.tag == .windows) .wepoll else .epoll);
+pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
 
 const skt_backend = switch (builtin.os.tag) {

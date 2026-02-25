@@ -39,9 +39,19 @@ This document tracks all architectural differences, performance constraints, and
 - **Difference:** `wepoll` defines `EPOLL_CTL_MOD` as `2` and `EPOLL_CTL_DEL` as `3`, which is the inverse of the Linux standard. `src/ampe/poller.zig` uses platform-specific constants to bridge this.
 - **ABI:** We use a custom `WepollEvent` struct to strictly match the Windows C layout expected by `wepoll.c`, avoiding union-related corruption seen with `std.os.linux.epoll_event`.
 
-### **Pointer Stability**
-- **Architecture Change:** Unlike Linux (which can sometimes get away with direct value storage), the Windows `PollerOs` **must** store `TriggeredChannel` as heap-allocated pointers (`*TriggeredChannel`). 
-- **Reason:** Internal I/O vectors point to fields within the struct. `AutoArrayHashMap` reallocations move elements, making these pointers stale. Heap allocation ensures address stability.
+### **Pointer Stability (Heap-Allocated TriggeredChannel)**
+- **Architecture Change:** The `PollerOs` stores `TriggeredChannel` as heap-allocated pointers (`*TriggeredChannel`) rather than by value.
+- **Reason:** The Reactor mutates the channel map **during iteration**. When an `accept` trigger fires, `createIoServerChannel()` calls `attachChannel()` which inserts a new entry via `seqn_trc_map.put()`. If the map stored values directly, this insertion could trigger reallocation, invalidating:
+  1. The iterator's internal slice
+  2. The `*TriggeredChannel` pointer (`lstchn`) passed to `createIoServerChannel`
+- **Solution:** Heap allocation ensures `TriggeredChannel` objects have stable addresses regardless of map reallocations. The map only stores/moves 8-byte pointers.
+- **Reference:** See `Reactor.zig:638-643` (accept path) and `poller.zig:148-177` (attachChannel).
+
+### **I/O Vector Stability (MsgReceiver/MsgSender)**
+- **Architecture Change:** Added `refreshPointers()` methods to `MsgReceiver` and `MsgSender` in `triggeredSkts.zig`.
+- **Reason:** The `iov[]` arrays contain pointers into `Message` buffers (`bhdr`, `thdrs`, `body`). These pointers are set during `prepare()` but may become stale if the message's internal buffers are reallocated or if partial I/O occurs across multiple poll cycles.
+- **Solution:** `refreshPointers()` is called at the start of each `waitTriggers` reconciliation loop to recalculate `iov[].base` pointers based on current buffer addresses and I/O progress.
+- **Reference:** See `triggeredSkts.zig:588` (MsgSender) and `triggeredSkts.zig:957` (MsgReceiver).
 
 ---
 

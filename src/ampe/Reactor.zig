@@ -3,7 +3,7 @@
 
 pub const Reactor = @This();
 
-const PollerType = poller.PollerOs(if (builtin.os.tag == .windows) .wepoll else .epoll);
+const PollerType = poller.Poller;
 
 pub fn ampe(rtr: *Reactor) !Ampe {
     const result: Ampe = .{

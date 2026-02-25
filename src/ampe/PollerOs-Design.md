@@ -1,39 +1,105 @@
-# PollerOs: Unified Cross-Platform Design
+# Poller: Unified Cross-Platform Design
 
-The `PollerOs` design is a high-performance synchronization engine that bridges the gap between stateless application logic and the stateful event-notification systems of modern operating systems (`epoll` on Linux, `wepoll` on Windows, `kqueue` on BSD/macOS).
+The Poller design is a high-performance synchronization engine that bridges the gap between stateless application logic and the stateful event-notification systems of modern operating systems (`epoll` on Linux, `wepoll` on Windows, `kqueue` on BSD/macOS).
 
 ---
 
-## 1. Architectural Core: The Dual-Map Indirection
+## 1. Architecture Overview
+
+### File Structure
+```
+src/ampe/
+├── poller.zig                    # Facade: comptime selects backend
+├── poller/
+│   ├── common.zig                # Shared: TcIterator, isSocketSet, toFd, constants
+│   ├── triggers.zig              # Trigger mapping: epoll/kqueue conversions
+│   ├── core.zig                  # Shared struct fields + PollerCore generic
+│   ├── poll_backend.zig          # ISOLATED: Legacy poll (will be obsolete)
+│   ├── epoll_backend.zig         # Linux epoll implementation
+│   ├── wepoll_backend.zig        # Windows wepoll implementation (includes FFI)
+│   └── kqueue_backend.zig        # macOS/BSD kqueue implementation
+```
+
+### Comptime Backend Selection
+```zig
+// poller.zig facade
+pub const Poller = switch (builtin.os.tag) {
+    .windows => @import("poller/wepoll_backend.zig").Poller,
+    .linux => @import("poller/epoll_backend.zig").Poller,
+    .macos, .freebsd, .openbsd, .netbsd => @import("poller/kqueue_backend.zig").Poller,
+    else => @import("poller/poll_backend.zig").Poller,
+};
+```
+
+---
+
+## 2. Architectural Core: The Dual-Map Indirection
 
 Standard `std.AutoArrayHashMap` usage in Zig is efficient but volatile; `swapRemove` operations relocate data in memory to maintain contiguity. This presents a conflict for stateful kernels which expect a stable token to identify a file descriptor.
 
 **The Solution: Stable Sequence Indirection**
 
 * **The Identity Map:** Maps a `ChannelNumber` to a `SeqN` (Sequence Number).
-* **The Object Map:** Maps the `SeqN` to the `TriggeredChannel` object.
-* **The Token:** The `SeqN` is a monotonic `u64`. It serves as the "User Data" passed to the OS kernel. Even if the `TriggeredChannel` moves in memory due to deletions, the `SeqN` remains constant for that channel's lifecycle, allowing a safe $O(1)$ reverse-lookup when the OS reports an event.
+* **The Object Map:** Maps the `SeqN` to the `*TriggeredChannel` (heap pointer).
+* **The Token:** The `SeqN` is a monotonic `u64`. It serves as the "User Data" passed to the OS kernel. Even if map entries move due to deletions, the `SeqN` remains constant for that channel's lifecycle, allowing a safe $O(1)$ reverse-lookup when the OS reports an event.
 
 ---
 
-## 2. Platform Abstraction Layer
+## 3. PollerCore: Shared Logic via Composition
 
-To support both pointer-sized handles (Windows `HANDLE`) and integer descriptors (Linux `fd_t`), `PollerOs` uses a unified abstraction layer.
+The `PollerCore` generic provides shared logic that all backends use:
+
+```zig
+pub fn PollerCore(comptime Backend: type) type {
+    return struct {
+        chn_seqn_map: ChnSeqnMap,
+        seqn_trc_map: SeqnTrcMap,
+        crseqN: SeqN = 0,
+        allocator: Allocator,
+        backend: Backend,
+
+        pub fn attachChannel(self: *@This(), tchn: *TriggeredChannel) AmpeError!bool { ... }
+        pub fn trgChannel(self: *@This(), chn: ChannelNumber) ?*TriggeredChannel { ... }
+        pub fn deleteGroup(self: *@This(), chnls: ArrayList) AmpeError!bool { ... }
+        pub fn deleteMarked(self: *@This()) !bool { ... }
+        pub fn deleteAll(self: *@This()) void { ... }
+        pub fn waitTriggers(self: *@This(), timeout: i32) AmpeError!Triggers { ... }
+        pub fn iterator(self: *@This()) TcIterator { ... }
+    };
+}
+```
+
+Each backend must implement:
+- `fn init(allocator: Allocator) AmpeError!Backend`
+- `fn deinit(self: *Backend) void`
+- `fn register(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void`
+- `fn modify(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void`
+- `fn unregister(self: *Backend, fd: FdType) void`
+- `fn wait(self: *Backend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers`
+
+---
+
+## 4. Platform Abstraction Layer
 
 ### A. The Handle Type
-The `handle` member is stored as `*anyopaque` for all stateful backends. This ensures sufficient space for 64-bit pointers on Windows while remaining compatible with integer casts on Linux.
+- **Linux (epoll):** `std.posix.fd_t` (i32)
+- **Windows (wepoll):** `*anyopaque` (HANDLE pointer)
+- **BSD/macOS (kqueue):** `std.posix.fd_t` (i32)
 
 ### B. The `toFd` Helper
-Because Windows `SOCKET` is a pointer and Linux `socket_t` is an integer, the `toFd` helper provides a type-safe conversion:
-- **Windows:** Returns `usize` (@intFromPtr).
-- **Linux:** Returns `i32` (@intCast).
+Because Windows `SOCKET` is a pointer and Linux `socket_t` is an integer:
+- **Windows:** Returns `usize` (@intFromPtr)
+- **POSIX:** Returns `i32` (@intCast)
 
-### C. The `wepoll` Bridge
-On Windows, `PollerOs` uses the `wepoll` C library (located in `src/ampe/os/windows/wepoll`) to provide an `epoll`-compatible API over Windows' native `AFD_POLL` mechanism.
+### C. The Trigger Mappings
+The `triggers.zig` module provides platform-specific conversions:
+- `triggers.epoll.toMask()` / `fromMask()` — epoll/wepoll
+- `triggers.kqueue.toEvents()` / `fromEvent()` — kqueue
+- `triggers.poll.toMask()` / `fromMask()` — legacy poll
 
 ---
 
-## 3. The Reconciliation waitTriggers Loop
+## 5. The Reconciliation waitTriggers Loop
 
 `waitTriggers` acts as a state synchronizer, ensuring interest is checked **only** during the loop.
 
@@ -43,9 +109,7 @@ On Windows, `PollerOs` uses the `wepoll` C library (located in `src/ampe/os/wind
 2. **Logic Probe:** Call `tc.tskt.triggers()` for logical intent.
 3. **Internal Sync:** Initialize `tc.act` with internal triggers (e.g., `pool` readiness).
 4. **Delta Check:** Compare interest against `tc.exp`.
-5. **Kernel Sync:** 
-   - **Stateful:** Issue `MOD` syscall if interests differ.
-   - **Stateless (`poll`):** Populate `pollfd` vector.
+5. **Kernel Sync:** Issue backend `modify()` if interests differ.
 
 ### Phase B: The OS Wait
 
@@ -59,27 +123,55 @@ If internal triggers are already pending, the OS wait is performed with a **0 ti
 
 ---
 
-## 4. Lifecycle & Resource Management
+## 6. Heap-Allocated TriggeredChannel (Mutation Safety)
 
-- **Attach:** Generate `SeqN` -> `CTL_ADD` to kernel -> Insert into dual-map.
-- **Delete:** `CTL_DEL` from kernel -> `tc.tskt.deinit()` -> Map cleanup.
-- **Cleanup:** On Windows, uses `epoll_close` for the port handle; on Linux, uses `std.posix.close`.
+The `seqn_trc_map` stores `*TriggeredChannel` (heap pointers) rather than `TriggeredChannel` values. This is **mandatory** due to map mutations during iteration.
+
+### The Problem
+
+The Reactor's `processTriggeredChannels` loop iterates over channels and may trigger `accept`:
+
+```
+processTriggeredChannels() {
+    for each tc in iterator {
+        if (tc.accept triggered) {
+            createIoServerChannel(tc)  // tc is *TriggeredChannel
+                -> attachChannel()
+                -> seqn_trc_map.put()  // MAP MUTATION!
+        }
+    }
+}
+```
+
+If the map stored values by-value, `put()` could trigger reallocation, which would:
+1. Invalidate the iterator's internal slice
+2. Invalidate the `tc` pointer passed to `createIoServerChannel`
+
+### The Solution
+
+By storing heap pointers (`*TriggeredChannel`):
+- Map only stores/moves 8-byte pointers
+- Actual `TriggeredChannel` objects have stable heap addresses
+- Pointers remain valid across map reallocations
 
 ---
 
-## 5. Backend Comparison Matrix
+## 7. Backend Comparison Matrix
 
-| Feature | `.poll` | `.epoll` | `.wepoll` (Windows) |
-| --- | --- | --- | --- |
-| **Wait Efficiency** | $O(N)$ | $O(1)$ | $O(1)$ |
-| **Handle Type** | `void` | `i32` (as pointer) | `HANDLE` (pointer) |
-| **Socket Type** | `i32` | `i32` | `SOCKET` (pointer) |
-| **Token Type** | Vector Index | `u64` | `u64` |
+| Feature | `poll` | `epoll` | `wepoll` | `kqueue` |
+| --- | --- | --- | --- | --- |
+| **Wait Efficiency** | $O(N)$ | $O(1)$ | $O(1)$ | $O(1)$ |
+| **Handle Type** | N/A | `fd_t` | `HANDLE` | `fd_t` |
+| **Socket Type** | `fd_t` | `fd_t` | `SOCKET` | `fd_t` |
+| **Token Type** | Index | `u64` | `u64` | `udata` |
+| **File Location** | `poll_backend.zig` | `epoll_backend.zig` | `wepoll_backend.zig` | `kqueue_backend.zig` |
 
 ---
 
-## 6. Design Guarantees
+## 8. Design Guarantees
 
-* **Incarnation Safety:** 64-bit monotonic `SeqN` prevents ABA issues if FDs are reused.
+* **Incarnation Safety:** 64-bit monotonic `SeqN` prevents ABA issues if FDs are reused. *(ABA Problem: A file descriptor is closed, the OS recycles the same integer for a new socket, and stale events from the old socket are misattributed to the new one. The monotonic `SeqN` ensures each channel has a unique identity regardless of FD reuse.)*
 * **Backpressure Support:** Read interest is dropped if the message pool is full.
 * **Zero Special Functions:** The loop is the sole authority on hardware state.
+* **Mutation Safety:** Heap-allocated channels allow safe map mutations during iteration.
+* **Zero-Cost Comptime Selection:** Only the relevant backend code is compiled per target.

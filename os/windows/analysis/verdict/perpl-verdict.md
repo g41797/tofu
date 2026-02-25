@@ -1,4 +1,4 @@
-```markdown
+
 # Windows AFD_POLL Reactor Design Specification
 
 ## 0. Scope and Objectives
