@@ -88,12 +88,11 @@ pub fn PollerOs(comptime backend: PollType) type {
                             .mod => 2,
                             .del => 3,
                         }
-                    else
-                        switch (op) {
-                            .add => std.os.linux.EPOLL.CTL_ADD,
-                            .mod => std.os.linux.EPOLL.CTL_MOD,
-                            .del => std.os.linux.EPOLL.CTL_DEL,
-                        };
+                    else switch (op) {
+                        .add => std.os.linux.EPOLL.CTL_ADD,
+                        .mod => std.os.linux.EPOLL.CTL_MOD,
+                        .del => std.os.linux.EPOLL.CTL_DEL,
+                    };
                     if (backend == .epoll) {
                         const ep_ev: *std.os.linux.epoll_event = @ptrCast(&ev);
                         std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), @intCast(action), @intCast(fd), if (op == .del) null else ep_ev) catch |e| {

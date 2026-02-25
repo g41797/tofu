@@ -28,7 +28,7 @@ pub const TempUdsPath = struct {
         } else {
             tup.tempFile.parent_dir.deleteFile(tup.tempFile.basename) catch {};
         }
-        
+
         return socket_file;
     }
 };

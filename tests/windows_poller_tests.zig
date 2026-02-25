@@ -112,11 +112,11 @@ test "Windows Poller: TCP Echo Readiness" {
         const msg: *tofu.message.Message = try tofu.message.Message.create(testing.allocator);
         defer msg.*.destroy();
         try msg.*.body.append("Hello");
-        
+
         var bh_bytes: [tofu.message.BinaryHeader.BHSIZE]u8 = undefined;
         msg.*.bhdr.@"<bl>" = @intCast(msg.*.actual_body_len());
         msg.*.bhdr.toBytes(&bh_bytes);
-        
+
         _ = try client_skt.send(&bh_bytes);
         _ = try client_skt.send(msg.*.body.body().?);
     }

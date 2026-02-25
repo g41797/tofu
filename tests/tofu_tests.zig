@@ -17,7 +17,7 @@ test {
 
     // Main test - for Linux
     // if (@import("builtin").os.tag == .linux) {
-        _ = @import("reactor_tests.zig");
+    _ = @import("reactor_tests.zig");
     // }
 
     // Platform-independent tests (no sockets):
@@ -25,7 +25,6 @@ test {
     _ = @import("ampe/channels_tests.zig");
     _ = @import("address_tests.zig");
     _ = @import("message_tests.zig");
-
 
     @import("std").testing.refAllDecls(@This());
 }

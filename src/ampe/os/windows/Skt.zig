@@ -157,7 +157,6 @@ pub fn close(skt: *Skt) void {
     }
 }
 
-
 pub fn send(skt: *Skt, buf: []const u8) AmpeError!usize {
     const rc: i32 = ws2_32.send(skt.socket.?, buf.ptr, @intCast(buf.len), 0);
     if (rc >= 0) return @intCast(rc);

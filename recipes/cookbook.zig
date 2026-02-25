@@ -1897,7 +1897,6 @@ pub inline fn sleep10MlSec() void {
 }
 
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
-
     const tcpPort: u16 = try tofu.FindFreeTcpPort();
 
     if (comptime builtin.os.tag == .windows) {

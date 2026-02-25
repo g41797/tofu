@@ -1011,7 +1011,6 @@ fn cleanMboxes(rtr: *Reactor) void {
 }
 
 pub inline fn initPollEnv(rtr: *Reactor) AmpeError!void {
-
     rtr.*.ptcs = try PollerType.init(rtr.*.allocator);
     return;
 }

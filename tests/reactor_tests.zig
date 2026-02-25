@@ -147,7 +147,6 @@ test {
 }
 
 test "send illegal messages" {
-
     try send_illegal_messages();
 }
 
@@ -189,7 +188,6 @@ fn send_illegal_messages() !void {
 }
 
 test "find free TCP/IP port" {
-
     std.testing.log_level = .debug;
 
     log.info("start find free TCP/IP port ", .{});
@@ -202,7 +200,6 @@ test "find free TCP/IP port" {
 }
 
 test "update receiver" {
-
     std.testing.log_level = .debug;
 
     log.info("start handleUpdateReceiver ", .{});
@@ -217,31 +214,26 @@ test "update receiver" {
 }
 
 test "ampe just create/destroy" {
-
     std.testing.log_level = .debug;
     try test_ampe_just_create_destroy();
 }
 
 test "connect_disconnect" {
-
     std.testing.log_level = .debug;
     try test_connect_disconnect();
 }
 
 test "handle reconnect single threaded" {
-
     std.testing.log_level = .debug;
     try test_handle_reconnect_single_threaded();
 }
 
 test "handle reconnect multithreaded" {
-
     std.testing.log_level = .debug;
     try test_handle_reconnect_multithreaded();
 }
 
 test "loop tests" {
-
     std.testing.log_level = .debug;
 
     for (0..5) |i| {
@@ -265,7 +257,6 @@ test "loop tests" {
 }
 
 test "simm test" {
-
     std.testing.log_level = .debug;
 
     const tests = &[_]*const fn () void{
@@ -281,7 +272,6 @@ test "simm test" {
 }
 
 test "echo client/server test" {
-
     std.testing.log_level = .debug;
 
     const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
@@ -325,5 +315,3 @@ const getCurrentTid = Thread.getCurrentId;
 const testing = std.testing;
 const gpa = std.testing.allocator;
 const log = std.log;
-
-
