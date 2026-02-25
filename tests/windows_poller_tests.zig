@@ -11,11 +11,11 @@ test "Windows Poller: Basic Wakeup via Notifier" {
     _ = ws2_32.WSAStartup(0x0202, &wsa_data);
     defer _ = ws2_32.WSACleanup();
 
-    var pl = try internal.Poller.init(testing.allocator);
-    defer pl.deleteAll();
-
     var ntfr: internal.Notifier = try internal.Notifier.init(testing.allocator);
     defer ntfr.deinit();
+
+    var pl = try internal.Poller.init(testing.allocator);
+    defer pl.deleteAll();
 
     // Set up TriggeredChannel for Notifier receiver
     const ntfr_skt: internal.triggeredSkts.NotificationSkt = internal.triggeredSkts.NotificationSkt.init(&ntfr.receiver);
@@ -106,7 +106,6 @@ test "Windows Poller: TCP Echo Readiness" {
         .acn = .{ .chn = 2 },
     };
     _ = try pl.attachChannel(&tc_srv);
-    const tc_srv_ptr: *TriggeredChannel = pl.trgChannel(2).?;
 
     // 6. Send properly formatted message from client
     {
@@ -127,7 +126,8 @@ test "Windows Poller: TCP Echo Readiness" {
     try testing.expect(trgs2.recv == .on);
 
     // 8. Receive data on server
-    var mq: tofu.message.MessageQueue = try tc_srv_ptr.*.tskt.tryRecv();
+    const tc_srv_ptr_final: *TriggeredChannel = pl.trgChannel(2).?;
+    var mq: tofu.message.MessageQueue = try tc_srv_ptr_final.tskt.tryRecv();
     defer tofu.message.clearQueue(&mq);
     try testing.expect(mq.count() > 0);
     try testing.expectEqualStrings("Hello", mq.first.?.*.body.body().?);
@@ -136,7 +136,7 @@ test "Windows Poller: TCP Echo Readiness" {
     {
         const msg_out: *tofu.message.Message = try tofu.message.Message.create(testing.allocator);
         msg_out.*.bhdr.channel_number = 2;
-        try tc_srv_ptr.*.tskt.addToSend(msg_out);
+        try tc_srv_ptr_final.tskt.addToSend(msg_out);
     }
 
     // 10. Poll for SEND readiness

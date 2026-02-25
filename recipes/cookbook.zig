@@ -23,6 +23,7 @@
 const cookbook = @This();
 
 const std = @import("std");
+const builtin = @import("builtin");
 const log = std.log;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
@@ -1142,6 +1143,10 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                     };
                 }
 
+                if (mtype != .hello and recvMsg.?.*.bhdr.proto.getType() == .hello) {
+                    continue;
+                }
+
                 assert(recvMsg.?.*.bhdr.proto.getRole() == .request);
                 assert(recvMsg.?.*.bhdr.proto.getType() == mtype);
 
@@ -1279,6 +1284,9 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                         .send_failed,
                         .recv_failed,
                         => {
+                            if (builtin.os.tag == .windows) {
+                                std.Thread.sleep(10 * std.time.ns_per_ms);
+                            }
                             break; // connect should be repeated
                         },
 
@@ -1304,7 +1312,9 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                         },
                     }
                 }
-                if (i != tries) {
+                if (builtin.os.tag == .windows) {
+                    std.Thread.sleep(sleepBetweenNS);
+                } else if (i != tries) {
                     std.Thread.sleep(sleepBetweenNS);
                 }
             }
@@ -1404,15 +1414,18 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         }
     };
 
+    const reconnect_tries = if (comptime builtin.os.tag == .windows) 10 else 1000;
+    const reconnect_iterations = if (comptime builtin.os.tag == .windows) 5 else 100;
+
     var tCl: *TofuClient = try TofuClient.create(ampeA, cltCfg);
     defer tCl.destroy();
 
-    try tCl.sendHelloRequestRequest_recvHelloResponse(1000, std.time.ns_per_ms * 1, null);
+    try tCl.sendHelloRequestRequest_recvHelloResponse(reconnect_tries, std.time.ns_per_ms * 1, null);
 
     var tSr: *TofuServer = try TofuServer.create(ampeB, srvCfg);
     defer tSr.destroy();
 
-    try tCl.sendHelloRequestRequest_recvHelloResponse(1, std.time.ns_per_ms * 10, tSr);
+    try tCl.sendHelloRequestRequest_recvHelloResponse(reconnect_iterations, std.time.ns_per_ms * 10, tSr);
 
     try tCl.sendByeRequest();
 
@@ -1638,7 +1651,9 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
                     }
                 }
 
-                if (i != tries) {
+                if (builtin.os.tag == .windows) {
+                    std.Thread.sleep(sleepBetweenNS);
+                } else if (i != tries) {
                     std.Thread.sleep(sleepBetweenNS);
                 }
             }
@@ -1883,8 +1898,21 @@ pub inline fn sleep10MlSec() void {
 
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
 
-    // Prepare configurators: TCP client/server, UDS client/server
     const tcpPort: u16 = try tofu.FindFreeTcpPort();
+
+    if (comptime builtin.os.tag == .windows) {
+        var mhCnfg: [1]Address = [_]Address{
+            .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", tcpPort) },
+        };
+
+        var clntCnfgs: [1]Address = [_]Address{
+            .{ .tcp_client_addr = address.TCPClientAddress.init("127.0.0.1", tcpPort) },
+        };
+
+        var echoClSrv: services.EchoClientServer = try .init(allocator, mhCnfg[0..]);
+
+        return echoClSrv.run(clntCnfgs[0..]);
+    }
 
     var tup: tofu.TempUdsPath = .{};
     const udsPath: []u8 = try tup.buildPath(allocator);

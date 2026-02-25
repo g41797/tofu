@@ -19,7 +19,7 @@ pub fn PollerOs(comptime backend: PollType) type {
         const Self = @This();
 
         chn_seqn_map: std.AutoArrayHashMap(message.ChannelNumber, SeqN),
-        seqn_trc_map: std.AutoArrayHashMap(SeqN, TriggeredChannel),
+        seqn_trc_map: std.AutoArrayHashMap(SeqN, *TriggeredChannel),
         crseqN: SeqN = 0,
 
         handle: switch (backend) {
@@ -29,7 +29,8 @@ pub fn PollerOs(comptime backend: PollType) type {
 
         event_buffer: switch (backend) {
             .poll => std.ArrayList(std.posix.pollfd),
-            .epoll, .wepoll => std.ArrayList(std.os.linux.epoll_event),
+            .epoll => std.ArrayList(std.os.linux.epoll_event),
+            .wepoll => if (builtin.os.tag == .windows) std.ArrayList(WepollEvent) else std.ArrayList(std.os.linux.epoll_event),
             .kqueue => std.ArrayList(std.posix.kevent),
         },
 
@@ -40,7 +41,7 @@ pub fn PollerOs(comptime backend: PollType) type {
             errdefer chn_map.deinit();
             chn_map.ensureTotalCapacity(256) catch return AmpeError.AllocationFailed;
 
-            var seq_map = std.AutoArrayHashMap(SeqN, TriggeredChannel).init(alktr);
+            var seq_map = std.AutoArrayHashMap(SeqN, *TriggeredChannel).init(alktr);
             errdefer seq_map.deinit();
             seq_map.ensureTotalCapacity(256) catch return AmpeError.AllocationFailed;
 
@@ -53,7 +54,8 @@ pub fn PollerOs(comptime backend: PollType) type {
 
             const buf = switch (backend) {
                 .poll => std.ArrayList(std.posix.pollfd).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
-                .epoll, .wepoll => std.ArrayList(std.os.linux.epoll_event).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
+                .epoll => std.ArrayList(std.os.linux.epoll_event).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
+                .wepoll => if (builtin.os.tag == .windows) std.ArrayList(WepollEvent).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed else std.ArrayList(std.os.linux.epoll_event).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
                 .kqueue => std.ArrayList(std.posix.kevent).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
             };
 
@@ -70,23 +72,37 @@ pub fn PollerOs(comptime backend: PollType) type {
             if (backend == .poll) return;
             switch (backend) {
                 .epoll, .wepoll => {
-                    var ev = std.os.linux.epoll_event{
-                        .events = mapToEpoll(exp),
-                        .data = .{ .u64 = seq },
-                    };
-                    const action: i32 = switch (op) {
-                        .add => std.os.linux.EPOLL.CTL_ADD,
-                        .mod => std.os.linux.EPOLL.CTL_MOD,
-                        .del => std.os.linux.EPOLL.CTL_DEL,
-                    };
+                    var ev = if (backend == .wepoll and builtin.os.tag == .windows)
+                        WepollEvent{
+                            .events = mapToEpoll(exp),
+                            .data = seq,
+                        }
+                    else
+                        std.os.linux.epoll_event{
+                            .events = mapToEpoll(exp),
+                            .data = .{ .u64 = seq },
+                        };
+                    const action: i32 = if (backend == .wepoll)
+                        switch (op) {
+                            .add => 1,
+                            .mod => 2,
+                            .del => 3,
+                        }
+                    else
+                        switch (op) {
+                            .add => std.os.linux.EPOLL.CTL_ADD,
+                            .mod => std.os.linux.EPOLL.CTL_MOD,
+                            .del => std.os.linux.EPOLL.CTL_DEL,
+                        };
                     if (backend == .epoll) {
-                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), @intCast(action), @intCast(fd), if (op == .del) null else &ev) catch |e| {
+                        const ep_ev: *std.os.linux.epoll_event = @ptrCast(&ev);
+                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), @intCast(action), @intCast(fd), if (op == .del) null else ep_ev) catch |e| {
                             switch (e) {
                                 // MOD on fd not yet registered -> fall back to ADD
                                 error.FileDescriptorNotRegistered => {
                                     if (op == .del) return; // nothing to remove
                                     if (op == .mod) {
-                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_ADD, @intCast(fd), &ev) catch return AmpeError.CommunicationFailed;
+                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_ADD, @intCast(fd), ep_ev) catch return AmpeError.CommunicationFailed;
                                         return;
                                     }
                                     return AmpeError.CommunicationFailed;
@@ -94,7 +110,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                                 // ADD on fd already registered -> fall back to MOD
                                 error.FileDescriptorAlreadyPresentInSet => {
                                     if (op == .add) {
-                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_MOD, @intCast(fd), &ev) catch return AmpeError.CommunicationFailed;
+                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_MOD, @intCast(fd), ep_ev) catch return AmpeError.CommunicationFailed;
                                         return;
                                     }
                                     return AmpeError.CommunicationFailed;
@@ -104,7 +120,17 @@ pub fn PollerOs(comptime backend: PollType) type {
                         };
                     } else {
                         if (builtin.os.tag == .windows) {
-                            if (epoll_ctl(self.handle, action, @intCast(fd), &ev) != 0) {
+                            const ep_ev: *WepollEvent = @ptrCast(&ev);
+                            const res = epoll_ctl(self.handle, action, @intCast(fd), ep_ev);
+                            if (res != 0) {
+                                const err = std.os.windows.kernel32.GetLastError();
+                                if (@intFromEnum(err) == 1168) { // ERROR_NOT_FOUND
+                                    if (op == .del) return;
+                                    if (op == .mod) {
+                                        if (epoll_ctl(self.handle, 1, @intCast(fd), ep_ev) == 0) return;
+                                    }
+                                }
+                                log.warn("epoll_ctl failed: op={d} fd={d} err={any}", .{ action, fd, err });
                                 return AmpeError.CommunicationFailed;
                             }
                         }
@@ -127,22 +153,33 @@ pub fn PollerOs(comptime backend: PollType) type {
             self.crseqN += 1;
             const seqN = self.crseqN;
 
+            // Allocate a stable heap copy
+            const tchn_heap = self.allocator.create(TriggeredChannel) catch return AmpeError.AllocationFailed;
+            tchn_heap.* = tchn.*;
+
             if (backend != .poll) {
                 // Dumb channels have no socket yet; they will be registered
                 // with epoll on first reconciliation in waitTriggers.
-                if (tchn.tskt.getSocket()) |socket| {
-                    try self.osSync(toFd(socket), seqN, tchn.tskt.triggers() catch Triggers{}, .add);
+                if (tchn_heap.tskt.getSocket()) |socket| {
+                    try self.osSync(toFd(socket), seqN, tchn_heap.tskt.triggers() catch Triggers{}, .add);
                 }
             }
 
-            self.chn_seqn_map.put(chN, seqN) catch return AmpeError.AllocationFailed;
-            self.seqn_trc_map.put(seqN, tchn.*) catch return AmpeError.AllocationFailed;
+            self.chn_seqn_map.put(chN, seqN) catch {
+                self.allocator.destroy(tchn_heap);
+                return AmpeError.AllocationFailed;
+            };
+            self.seqn_trc_map.put(seqN, tchn_heap) catch {
+                _ = self.chn_seqn_map.swapRemove(chN);
+                self.allocator.destroy(tchn_heap);
+                return AmpeError.AllocationFailed;
+            };
             return true;
         }
 
         pub inline fn trgChannel(self: *Self, chn: message.ChannelNumber) ?*TriggeredChannel {
             const seqN = self.chn_seqn_map.get(chn) orelse return null;
-            return self.seqn_trc_map.getPtr(seqN);
+            return self.seqn_trc_map.get(seqN) orelse null;
         }
 
         pub fn deleteGroup(self: *Self, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
@@ -155,6 +192,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                     if (isSocketSet(socket)) try self.osSync(toFd(socket.?), seqKV.value, .{}, .del);
                 }
                 kv.value.tskt.deinit();
+                self.allocator.destroy(kv.value);
                 result = true;
             }
             return result;
@@ -167,7 +205,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                 i -= 1;
                 const chN = self.chn_seqn_map.keys()[i];
                 const seqN = self.chn_seqn_map.values()[i];
-                const tcPtr = self.seqn_trc_map.getPtr(seqN).?;
+                const tcPtr = self.seqn_trc_map.get(seqN).?;
                 if (!tcPtr.mrk4del) continue;
 
                 if (backend != .poll) {
@@ -179,6 +217,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                 tcPtr.engine.removeChannelOnT(chN);
                 _ = self.chn_seqn_map.swapRemove(chN);
                 _ = self.seqn_trc_map.swapRemove(seqN);
+                self.allocator.destroy(tcPtr);
                 result = true;
             }
             return result;
@@ -186,7 +225,7 @@ pub fn PollerOs(comptime backend: PollType) type {
 
         pub fn deleteAll(self: *Self) void {
             const vals = self.seqn_trc_map.values();
-            for (vals) |*tc| {
+            for (vals) |tc| {
                 if (backend != .poll) {
                     const socket = tc.tskt.getSocket();
                     if (isSocketSet(socket)) {
@@ -195,6 +234,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                     }
                 }
                 tc.tskt.deinit();
+                self.allocator.destroy(tc);
             }
             self.event_buffer.deinit(self.allocator);
             if (backend != .poll) {
@@ -208,16 +248,18 @@ pub fn PollerOs(comptime backend: PollType) type {
             }
             self.seqn_trc_map.deinit();
             self.chn_seqn_map.deinit();
+            self.crseqN = 0;
         }
 
         pub fn waitTriggers(self: *Self, timeout: i32) AmpeError!Triggers {
-            if (backend == .poll) self.event_buffer.clearRetainingCapacity();
+            self.event_buffer.clearRetainingCapacity();
 
             var total_act = Triggers{};
 
-            // RECONCILIATION LOOP: Using pointer iteration to allow MUTABLE triggers()
+            // RECONCILIATION LOOP
             const values = self.seqn_trc_map.values();
-            for (values) |*tc| {
+            for (values) |tc| {
+                tc.tskt.refreshPointers();
                 tc.disableDelete();
 
                 // triggers() is now allowed to modify the socket (e.g., pulling from pool)
@@ -256,7 +298,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                     if (n == 0) {
                         total_act.timeout = .on;
                     } else {
-                        for (self.event_buffer.items, self.seqn_trc_map.values()) |pfd, *tc| {
+                        for (self.event_buffer.items, self.seqn_trc_map.values()) |pfd, tc| {
                             const os_act = mapFromPoll(pfd.revents, tc.exp);
                             tc.act = tc.act.lor(os_act);
                             total_act = total_act.lor(tc.act);
@@ -268,18 +310,28 @@ pub fn PollerOs(comptime backend: PollType) type {
                     const n: usize = if (backend == .epoll)
                         std.posix.epoll_wait(@intCast(@intFromPtr(self.handle)), self.event_buffer.unusedCapacitySlice(), wait_timeout)
                     else if (builtin.os.tag == .windows)
-                        @intCast(epoll_wait(self.handle, self.event_buffer.unusedCapacitySlice().ptr, @intCast(self.event_buffer.unusedCapacitySlice().len), wait_timeout))
+                        @intCast(epoll_wait(self.handle, @ptrCast(self.event_buffer.unusedCapacitySlice().ptr), @intCast(self.event_buffer.unusedCapacitySlice().len), wait_timeout))
                     else
                         return AmpeError.NotAllowed;
 
                     if (n == 0) {
                         total_act.timeout = .on;
                     } else {
-                        for (self.event_buffer.unusedCapacitySlice()[0..n]) |ev| {
-                            if (self.seqn_trc_map.getPtr(ev.data.u64)) |tc| {
-                                const os_act = mapFromEpoll(ev.events, tc.exp);
-                                tc.act = tc.act.lor(os_act);
-                                total_act = total_act.lor(tc.act);
+                        if (backend == .wepoll and builtin.os.tag == .windows) {
+                            for (self.event_buffer.unusedCapacitySlice()[0..n]) |ev| {
+                                if (self.seqn_trc_map.get(ev.data)) |tc| {
+                                    const os_act = mapFromEpoll(ev.events, tc.exp);
+                                    tc.act = tc.act.lor(os_act);
+                                    total_act = total_act.lor(tc.act);
+                                }
+                            }
+                        } else {
+                            for (self.event_buffer.unusedCapacitySlice()[0..n]) |ev| {
+                                if (self.seqn_trc_map.get(ev.data.u64)) |tc| {
+                                    const os_act = mapFromEpoll(ev.events, tc.exp);
+                                    tc.act = tc.act.lor(os_act);
+                                    total_act = total_act.lor(tc.act);
+                                }
                             }
                         }
                     }
@@ -291,7 +343,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                         total_act.timeout = .on;
                     } else {
                         for (self.event_buffer.unusedCapacitySlice()[0..n]) |ev| {
-                            if (self.seqn_trc_map.getPtr(@intCast(ev.udata))) |tc| {
+                            if (self.seqn_trc_map.get(@intCast(ev.udata))) |tc| {
                                 const os_act = mapFromKqueue(ev, tc.exp);
                                 tc.act = tc.act.lor(os_act);
                                 total_act = total_act.lor(tc.act);
@@ -380,17 +432,22 @@ fn mapFromKqueue(ev: std.posix.kevent, exp: Triggers) Triggers {
 
 extern fn epoll_create1(flags: i32) ?*anyopaque;
 extern fn epoll_close(ephnd: *anyopaque) i32;
-extern fn epoll_ctl(ephnd: *anyopaque, op: i32, sock: usize, event: *std.os.linux.epoll_event) i32;
-extern fn epoll_wait(ephnd: *anyopaque, events: [*]std.os.linux.epoll_event, maxevents: i32, timeout: i32) i32;
+extern fn epoll_ctl(ephnd: *anyopaque, op: i32, sock: usize, event: *WepollEvent) i32;
+extern fn epoll_wait(ephnd: *anyopaque, events: [*]WepollEvent, maxevents: i32, timeout: i32) i32;
+
+const WepollEvent = extern struct {
+    events: u32,
+    data: u64,
+};
 
 pub const TcIterator = struct {
-    itrtr: std.AutoArrayHashMap(SeqN, TriggeredChannel).Iterator,
-    pub fn init(tcm: *std.AutoArrayHashMap(SeqN, TriggeredChannel)) TcIterator {
+    itrtr: std.AutoArrayHashMap(SeqN, *TriggeredChannel).Iterator,
+    pub fn init(tcm: *std.AutoArrayHashMap(SeqN, *TriggeredChannel)) TcIterator {
         return .{ .itrtr = tcm.iterator() };
     }
     pub fn next(self: *TcIterator) ?*TriggeredChannel {
         const entry = self.itrtr.next() orelse return null;
-        return entry.value_ptr;
+        return entry.value_ptr.*;
     }
     pub fn reset(self: *TcIterator) void {
         self.itrtr.reset();

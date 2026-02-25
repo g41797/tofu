@@ -15,9 +15,14 @@ pub fn listen(skt: *Skt) !void {
     const kernel_backlog: c_int = 1024;
     try skt.*.setREUSE();
 
-    const bind_res: i32 = ws2_32.bind(skt.*.socket.?, &skt.*.address.any, @intCast(skt.*.address.getOsSockLen()));
-    if (bind_res == ws2_32.SOCKET_ERROR) {
-        return error.BindFailed;
+    var retry: usize = 0;
+    const max_retries = 5;
+    while (retry < max_retries) : (retry += 1) {
+        const bind_res: i32 = ws2_32.bind(skt.*.socket.?, &skt.*.address.any, @intCast(skt.*.address.getOsSockLen()));
+        if (bind_res != ws2_32.SOCKET_ERROR) break;
+
+        if (retry == max_retries - 1) return error.BindFailed;
+        std.Thread.sleep(10 * std.time.ns_per_ms);
     }
 
     const listen_res: i32 = ws2_32.listen(skt.*.socket.?, kernel_backlog);
@@ -62,19 +67,34 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 }
 
 pub fn connect(skt: *Skt) AmpeError!bool {
-    const rc: i32 = ws2_32.connect(skt.socket.?, &skt.address.any, @intCast(skt.address.getOsSockLen()));
-    if (rc == 0) return true;
+    var retry: usize = 0;
+    const max_retries = 5;
+    while (retry < max_retries) : (retry += 1) {
+        const rc: i32 = ws2_32.connect(skt.socket.?, &skt.address.any, @intCast(skt.address.getOsSockLen()));
+        if (rc == 0) {
+            try skt.setLingerAbort();
+            return true;
+        }
 
-    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
-    switch (err) {
-        .WSAEISCONN => return true,
-        .WSAEWOULDBLOCK => return false,
-        .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => return AmpeError.ConnectFailed,
-        else => {
-            log.warn("<{d}> connect error {any}", .{ getCurrentTid(), err });
-            return AmpeError.ConnectFailed;
-        },
+        const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+        switch (err) {
+            .WSAEISCONN => {
+                try skt.setLingerAbort();
+                return true;
+            },
+            .WSAEWOULDBLOCK => return false,
+            .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => {
+                if (retry == max_retries - 1) return AmpeError.ConnectFailed;
+                std.Thread.sleep(10 * std.time.ns_per_ms);
+                continue;
+            },
+            else => {
+                log.warn("<{d}> connect error {any}", .{ getCurrentTid(), err });
+                return AmpeError.ConnectFailed;
+            },
+        }
     }
+    return AmpeError.ConnectFailed;
 }
 
 pub fn setREUSE(skt: *Skt) !void {
@@ -116,9 +136,12 @@ pub fn disableNagle(skt: *Skt) !void {
 }
 
 fn deleteUDSPath(skt: *Skt) void {
-    _ = skt;
-    // UDS is not yet supported in std.net.Address for Windows in this Zig version
-    return;
+    if (skt.*.address.any.family == ws2_32.AF.UNIX) {
+        const path = std.mem.sliceTo(&skt.address.un.path, 0);
+        if (path.len > 0) {
+            std.fs.deleteFileAbsolute(path) catch {};
+        }
+    }
 }
 
 pub fn deinit(skt: *Skt) void {
@@ -128,6 +151,7 @@ pub fn deinit(skt: *Skt) void {
 
 pub fn close(skt: *Skt) void {
     if (skt.*.socket) |socket| {
+        _ = skt.setLingerAbort() catch {};
         _ = ws2_32.closesocket(socket);
         skt.*.socket = null;
     }

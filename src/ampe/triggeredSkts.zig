@@ -211,6 +211,13 @@ pub const TriggeredSkt = union(enum) {
             .dumb => tsk.*.dumb.deinit(),
         };
     }
+
+    pub fn refreshPointers(tsk: *TriggeredSkt) void {
+        switch (tsk.*) {
+            .io => tsk.*.io.refreshPointers(),
+            else => {},
+        }
+    }
 };
 
 const NotificationTriggers: Triggers = .{
@@ -231,8 +238,8 @@ pub const NotificationSkt = struct {
         return NotificationTriggers;
     }
 
-    pub inline fn getSocket(self: *NotificationSkt) Socket {
-        return self.skt.socket.?;
+    pub inline fn getSocket(self: *NotificationSkt) ?Socket {
+        return self.skt.socket;
     }
 
     pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
@@ -264,8 +271,8 @@ pub const AcceptSkt = struct {
         return AcceptTriggers;
     }
 
-    pub inline fn getSocket(self: *AcceptSkt) Socket {
-        return self.skt.socket.?;
+    pub inline fn getSocket(self: *AcceptSkt) ?Socket {
+        return self.skt.socket;
     }
 
     pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
@@ -378,8 +385,13 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub inline fn getSocket(self: *IoSkt) Socket {
-        return self.skt.socket.?;
+    pub inline fn getSocket(self: *IoSkt) ?Socket {
+        return self.skt.socket;
+    }
+
+    pub fn refreshPointers(ioskt: *IoSkt) void {
+        ioskt.currRecv.refreshPointers();
+        ioskt.currSend.refreshPointers();
     }
 
     pub fn addToSend(ioskt: *IoSkt, sndmsg: *Message) AmpeError!void {
@@ -535,7 +547,7 @@ pub const MsgSender = struct {
     cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
     msg: ?*Message = null,
-    bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'+'} ** BinaryHeader.BHSIZE,
+    bh: BinaryHeader = .{},
     iov: [3]std.posix.iovec_const = undefined,
     vind: usize = 3,
     sndlen: usize = 0,
@@ -573,6 +585,35 @@ pub const MsgSender = struct {
         return;
     }
 
+    pub fn refreshPointers(ms: *MsgSender) void {
+        if (ms.msg == null or !ms.iovPrepared) return;
+
+        // 1. Header in message
+        if (ms.vind == 0) {
+            const bh_ptr: [*]u8 = @ptrCast(@constCast(&ms.msg.?.bhdr));
+            const consumed = BinaryHeader.BHSIZE - ms.iov[0].len;
+            ms.iov[0].base = @ptrCast(@constCast(&bh_ptr[consumed]));
+        }
+
+        // 2. Text Headers
+        if (ms.vind <= 1) {
+            const hlen = ms.msg.?.actual_headers_len();
+            if (hlen > 0) {
+                const consumed = hlen - ms.iov[1].len;
+                ms.iov[1].base = @ptrCast(@constCast(ms.msg.?.thdrs.buffer.body().?.ptr + consumed));
+            }
+        }
+
+        // 3. Body
+        if (ms.vind <= 2) {
+            const blen = ms.msg.?.actual_body_len();
+            if (blen > 0) {
+                const consumed = blen - ms.iov[2].len;
+                ms.iov[2].base = @ptrCast(@constCast(ms.msg.?.body.body().?.ptr + consumed));
+            }
+        }
+    }
+
     pub fn attach(ms: *MsgSender, msg: *Message) !void {
         if (!ms.ready) {
             return AmpeError.NotAllowed;
@@ -597,16 +638,17 @@ pub const MsgSender = struct {
         ms.msg.?.bhdr.@"<bl>" = @intCast(blen);
         ms.msg.?.bhdr.@"<thl>" = @intCast(hlen);
 
-        @memset(&ms.bh, ' ');
+        // Save native-endian and marshal Big-Endian into message directly
+        ms.bh = ms.msg.?.bhdr;
+        ms.bh.toBytes(@ptrCast(&ms.msg.?.bhdr));
 
-        ms.msg.?.bhdr.toBytes(&ms.bh);
         ms.vind = 0;
 
-        assert(ms.bh.len == message.BinaryHeader.BHSIZE);
+        assert(@sizeOf(BinaryHeader) == 16);
         ms.msg.?.assert();
 
-        ms.iov[0] = .{ .base = &ms.bh, .len = ms.bh.len };
-        ms.sndlen = ms.bh.len;
+        ms.iov[0] = .{ .base = @ptrCast(&ms.msg.?.bhdr), .len = 16 };
+        ms.sndlen = 16;
 
         if (hlen == 0) {
             ms.iov[1] = .{ .base = @ptrCast(""), .len = 0 };
@@ -632,6 +674,11 @@ pub const MsgSender = struct {
 
     pub fn detach(ms: *MsgSender) ?*Message {
         const ret = ms.msg;
+        if (ret) |m| {
+            if (ms.iovPrepared and ms.vind == 0 and ms.iov[0].len > 0) {
+                m.bhdr = ms.bh;
+            }
+        }
         ms.msg = null;
         ms.sndlen = 0;
         ms.vind = 3;
@@ -654,36 +701,52 @@ pub const MsgSender = struct {
 
         while (ms.vind < 3) : (ms.vind += 1) {
             while (ms.iov[ms.vind].len > 0) {
-                const wasSend = try sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]);
+                const wasSend = sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]) catch |err| {
+                    if (ms.vind == 0 and ms.iov[0].len > 0) {
+                        ms.msg.?.bhdr = ms.bh;
+                    }
+                    return err;
+                };
                 if (wasSend == null) {
                     return null;
                 }
                 ms.iov[ms.vind].base += wasSend.?;
                 ms.iov[ms.vind].len -= wasSend.?;
                 ms.sndlen -= wasSend.?;
-
-                if (ms.sndlen > 0) {
-                    continue;
-                }
-
-                const ret = ms.msg;
-                ms.msg = null;
-
-                if (DBG) {
-                    if (ret != null) {
-                        if ((ret.?.bhdr.proto.getType() == .hello) or (ret.?.bhdr.proto.getType() == .bye)) {
-                            ret.?.bhdr.dumpMeta("-->snd ");
-                        }
-                    }
-                }
-
-                return ret;
             }
         }
-        return AmpeError.NotAllowed; // to  prevent bug
+
+        // Entire message fully sent - restore native-endian
+        ms.msg.?.bhdr = ms.bh;
+
+        const ret = ms.msg;
+        ms.msg = null;
+
+        if (DBG) {
+            if (ret != null) {
+                if ((ret.?.bhdr.proto.getType() == .hello) or (ret.?.bhdr.proto.getType() == .bye)) {
+                    ret.?.bhdr.dumpMeta("-->snd ");
+                }
+            }
+        }
+
+        return ret;
     }
 
-    pub fn sendBuf(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
+    pub fn sendBuf(socket: Socket, buf: []const u8) AmpeError!?usize {
+        if (builtin.os.tag == .windows) {
+            const ws2_32 = std.os.windows.ws2_32;
+            const rc: i32 = ws2_32.send(socket, buf.ptr, @intCast(buf.len), 0);
+            if (rc >= 0) return @intCast(rc);
+
+            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+            switch (err) {
+                .WSAEWOULDBLOCK => return null,
+                .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+                else => return AmpeError.CommunicationFailed,
+            }
+        }
+
         var wasSend: usize = 0;
         wasSend = std.posix.send(socket, buf, 0) catch |e| {
             switch (e) {
@@ -702,7 +765,19 @@ pub const MsgSender = struct {
         return wasSend;
     }
 
-    pub fn sendBufTo(socket: std.posix.socket_t, buf: []const u8) AmpeError!?usize {
+    pub fn sendBufTo(socket: Socket, buf: []const u8) AmpeError!?usize {
+        if (builtin.os.tag == .windows) {
+            const ws2_32 = std.os.windows.ws2_32;
+            const rc: i32 = ws2_32.sendto(socket, buf.ptr, @intCast(buf.len), 0, null, 0);
+            if (rc >= 0) return @intCast(rc);
+
+            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+            switch (err) {
+                .WSAEWOULDBLOCK => return null,
+                else => return AmpeError.CommunicationFailed,
+            }
+        }
+
         var wasSend: usize = 0;
         wasSend = std.posix.sendto(socket, buf, 0, null, 0) catch |e| {
             switch (e) {
@@ -784,10 +859,9 @@ pub const MsgReceiver = struct {
 
     inline fn prepareMsg(mr: *MsgReceiver) void {
         mr.msg.?.reset();
-        @memset(&mr.bh, ' ');
-        assert(mr.bh.len == message.BinaryHeader.BHSIZE);
+        assert(@sizeOf(message.BinaryHeader) == 16);
 
-        mr.iov[0] = .{ .base = &mr.bh, .len = mr.bh.len };
+        mr.iov[0] = .{ .base = @ptrCast(&mr.msg.?.bhdr), .len = 16 };
         mr.iov[1] = .{ .base = mr.msg.?.thdrs.buffer.buffer.?.ptr, .len = 0 };
         mr.iov[2] = .{ .base = mr.msg.?.body.buffer.?.ptr, .len = 0 };
 
@@ -820,6 +894,13 @@ pub const MsgReceiver = struct {
             mr.prepareMsg();
         }
 
+        if (DBG) {
+            if (mr.msg == null) {
+                log.err("MsgReceiver.recv: mr.msg is NULL after getFromPool/prepareMsg", .{});
+                return AmpeError.AllocationFailed;
+            }
+        }
+
         while (mr.vind < 3) : (mr.vind += 1) {
             while (mr.iov[mr.vind].len > 0) {
                 const wasRecv = try recvToBuf(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
@@ -836,7 +917,10 @@ pub const MsgReceiver = struct {
             }
 
             if (mr.vind == 0) {
+                // Header received into mr.msg.?.bhdr - capture raw and unmarshal
+                @memcpy(&mr.bh, std.mem.asBytes(&mr.msg.?.bhdr));
                 mr.msg.?.bhdr.fromBytes(&mr.bh);
+
                 if (mr.msg.?.bhdr.@"<thl>" > 0) {
                     mr.iov[1].len = mr.msg.?.bhdr.@"<thl>";
 
@@ -845,6 +929,7 @@ pub const MsgReceiver = struct {
                         return AmpeError.AllocationFailed;
                     };
                     mr.msg.?.thdrs.buffer.change(mr.iov[1].len) catch unreachable;
+                    mr.iov[1].base = mr.msg.?.thdrs.buffer.buffer.?.ptr;
                 }
                 if (mr.msg.?.bhdr.@"<bl>" > 0) {
                     mr.iov[2].len = mr.msg.?.bhdr.@"<bl>";
@@ -854,6 +939,7 @@ pub const MsgReceiver = struct {
                         return AmpeError.AllocationFailed;
                     };
                     mr.msg.?.body.change(mr.iov[2].len) catch unreachable;
+                    mr.iov[2].base = mr.msg.?.body.buffer.?.ptr;
                 }
             }
         }
@@ -868,6 +954,37 @@ pub const MsgReceiver = struct {
         return mr.ready;
     }
 
+    pub fn refreshPointers(mr: *MsgReceiver) void {
+        const m = mr.msg orelse return;
+
+        // 1. Header in message (if still receiving header)
+        if (mr.rcvlen < 16) {
+            const bh_ptr: [*]u8 = @ptrCast(@constCast(&m.bhdr));
+            mr.iov[0].base = @ptrCast(@constCast(&bh_ptr[mr.rcvlen]));
+            mr.iov[0].len = 16 - mr.rcvlen;
+        }
+
+        // 2. Message buffers (if message is active)
+        // Text Headers
+        if (m.thdrs.buffer.buffer) |buf| {
+            if (mr.vind == 1) {
+                const consumed = m.bhdr.@"<thl>" - mr.iov[1].len;
+                mr.iov[1].base = buf.ptr + consumed;
+            } else if (mr.vind < 1) {
+                mr.iov[1].base = buf.ptr;
+            }
+        }
+        // Body
+        if (m.body.buffer) |buf| {
+            if (mr.vind == 2) {
+                const consumed = m.bhdr.@"<bl>" - mr.iov[2].len;
+                mr.iov[2].base = buf.ptr + consumed;
+            } else if (mr.vind < 2) {
+                mr.iov[2].base = buf.ptr;
+            }
+        }
+    }
+
     pub fn deinit(mr: *MsgReceiver) void {
         if (mr.msg) |m| {
             m.destroy();
@@ -877,7 +994,21 @@ pub const MsgReceiver = struct {
         return;
     }
 
-    pub fn recvToBuf(socket: std.posix.socket_t, buf: []u8) AmpeError!?usize {
+    pub fn recvToBuf(socket: Socket, buf: []u8) AmpeError!?usize {
+        if (builtin.os.tag == .windows) {
+            const ws2_32 = std.os.windows.ws2_32;
+            const rc: i32 = ws2_32.recv(socket, buf.ptr, @intCast(buf.len), 0);
+            if (rc > 0) return @intCast(rc);
+            if (rc == 0) return AmpeError.PeerDisconnected;
+
+            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+            switch (err) {
+                .WSAEWOULDBLOCK => return null,
+                .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+                else => return AmpeError.CommunicationFailed,
+            }
+        }
+
         var wasRecv: usize = 0;
         wasRecv = std.posix.recv(socket, buf, 0) catch |e| {
             switch (e) {

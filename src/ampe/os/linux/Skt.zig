@@ -150,6 +150,7 @@ pub fn deinit(skt: *Skt) void {
 
 pub fn close(skt: *Skt) void {
     if (skt.*.socket) |socket| {
+        _ = skt.*.setLingerAbort() catch {};
         posix.close(socket);
         skt.*.socket = null;
     }

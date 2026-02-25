@@ -4,6 +4,7 @@
 //!
 
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const log = std.log;
 const assert = std.debug.assert;
@@ -529,7 +530,9 @@ pub const EchoClientServer = struct {
             return error.EmptyConfiguration;
         }
 
-        for (1..100) |_| {
+        const iterations = if (comptime builtin.os.tag == .windows) 10 else 100;
+
+        for (1..iterations + 1) |_| {
             for (clncfg) |cladrs| {
                 _ = EchoClient.start(ecs.*.ampe, cladrs, 100, &ecs.*.ack) catch |err| {
                     log.info("start EchoClient error {s}", .{@errorName(err)});

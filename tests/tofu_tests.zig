@@ -16,9 +16,9 @@ test {
     }
 
     // Main test - for Linux
-    if (@import("builtin").os.tag == .linux) {
+    // if (@import("builtin").os.tag == .linux) {
         _ = @import("reactor_tests.zig");
-    }
+    // }
 
     // Platform-independent tests (no sockets):
     _ = @import("ampe/Pool_tests.zig");

@@ -184,7 +184,9 @@ pub const Exchanger = struct {
         var serverReady: bool = false;
         var clientReady: bool = false;
 
-        for (0..100) |i| {
+        const connect_tries = if (comptime builtin.os.tag == .windows) 10 else 100;
+
+        for (0..connect_tries) |i| {
             log.debug("wait connected client {d}", .{i + 1});
 
             if (serverReady and clientReady) {
@@ -366,8 +368,9 @@ pub const Exchanger = struct {
         }
 
         var loop: usize = 0;
+        const max_loops = if (comptime builtin.os.tag == .windows) 10 else 100;
 
-        while (loop < 100) : (loop += 1) { //
+        while (loop < max_loops) : (loop += 1) { //
             var wasSend: MessageQueue = try exc.*.sender.?.*.tskt.trySend();
             for (0..wasSend.count()) |_| {
                 exc.*.pool.put(wasSend.dequeue().?);

@@ -75,7 +75,6 @@ pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
-    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
     var udsPath: []const u8 = path;
 
     if (udsPath.len == 0) {
@@ -103,7 +102,6 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    if (builtin.os.tag == .windows) return AmpeError.InvalidAddress;
     var addr: std.net.Address = std.net.Address.initUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
@@ -125,6 +123,12 @@ pub fn createListenerSocket(addr: *const std.net.Address) !Skt {
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer ret.close();
 
+    if (builtin.os.tag == .windows) {
+        var mode: u32 = 1;
+        _ = std.os.windows.ws2_32.ioctlsocket(ret.socket.?, std.os.windows.ws2_32.FIONBIO, &mode);
+        try ret.setLingerAbort();
+    }
+
     try ret.listen();
 
     return ret;
@@ -138,6 +142,11 @@ pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
 
     ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer ret.close();
+
+    if (builtin.os.tag == .windows) {
+        var mode: u32 = 1;
+        _ = std.os.windows.ws2_32.ioctlsocket(ret.socket.?, std.os.windows.ws2_32.FIONBIO, &mode);
+    }
     try ret.setLingerAbort();
     return ret;
 }

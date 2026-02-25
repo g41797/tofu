@@ -4,13 +4,15 @@
 fn test_handle_reconnect_single_threaded() !void {
     std.testing.log_level = .debug;
 
-    const reconnectUdsStatus = recipes.handleReConnnectOfUdsClientServerST(gpa) catch |err| {
-        log.info("handleReConnnectOfUdsClientServerST {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(reconnectUdsStatus == .success);
+    if (builtin.os.tag != .windows) {
+        const reconnectUdsStatus = recipes.handleReConnnectOfUdsClientServerST(gpa) catch |err| {
+            log.info("handleReConnnectOfUdsClientServerST {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(reconnectUdsStatus == .success);
+    }
 
     const reconnectTcpStatus = recipes.handleReConnnectOfTcpClientServerST(gpa) catch |err| {
         log.info("handleReConnnectOfTcpClientServerST {any}", .{
@@ -32,13 +34,15 @@ fn test_handle_reconnect_multithreaded() !void {
     };
     try testing.expect(reconnectStatusTcp == .success);
 
-    const reconnectStatusUds = recipes.handleReConnnectOfUdsClientServerMT(gpa) catch |err| {
-        log.info("handleReConnnectOfTcpClientServerMT {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(reconnectStatusUds == .success);
+    if (builtin.os.tag != .windows) {
+        const reconnectStatusUds = recipes.handleReConnnectOfUdsClientServerMT(gpa) catch |err| {
+            log.info("handleReConnnectOfTcpClientServerMT {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(reconnectStatusUds == .success);
+    }
 }
 
 fn test_connect_disconnect() !void {
@@ -60,21 +64,23 @@ fn test_connect_disconnect() !void {
     };
     try testing.expect(listen2TcpStatus == .success);
 
-    const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
-        log.info("handleStartOfUdsServerAkaListener {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(listenUdsStatus == .success);
+    if (builtin.os.tag != .windows) {
+        const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
+            log.info("handleStartOfUdsServerAkaListener {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(listenUdsStatus == .success);
 
-    const listen2UdsStatus = recipes.handleStartOfUdsListeners(gpa) catch |err| {
-        log.info("handleStartOfUdsServerAkaListener {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(listen2UdsStatus == .success);
+        const listen2UdsStatus = recipes.handleStartOfUdsListeners(gpa) catch |err| {
+            log.info("handleStartOfUdsServerAkaListener {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(listen2UdsStatus == .success);
+    }
 
     const connectTcpStatus = recipes.handleConnnectOfTcpClientServer(gpa) catch |err| {
         log.info("handleConnnectOfTcpClientServer {any}", .{
@@ -84,13 +90,15 @@ fn test_connect_disconnect() !void {
     };
     try testing.expect(connectTcpStatus == .success);
 
-    const connectUdsStatus = recipes.handleConnnectOfUdsClientServer(gpa) catch |err| {
-        log.info("handleConnnectOfUdsClientServer {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(connectUdsStatus == .success);
+    if (builtin.os.tag != .windows) {
+        const connectUdsStatus = recipes.handleConnnectOfUdsClientServer(gpa) catch |err| {
+            log.info("handleConnnectOfUdsClientServer {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(connectUdsStatus == .success);
+    }
 }
 
 fn test_ampe_just_create_destroy() !void {
@@ -122,7 +130,7 @@ fn try_ampe_just_create_destroy() void {
 }
 
 fn try_connect_disconnect() void {
-    // test_connect_disconnect() catch unreachable;
+    test_connect_disconnect() catch unreachable;
 }
 
 fn try_handle_reconnect_single_threaded() void {

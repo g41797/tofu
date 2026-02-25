@@ -64,10 +64,12 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 }
 
 pub fn init(allocator: Allocator) !Notifier {
-    if (builtin.os.tag == .windows) {
+    if (comptime builtin.os.tag == .windows) {
         return initTCP(allocator);
     }
-    return initUDS(allocator);
+    return initUDS(allocator) catch {
+        return initTCP(allocator);
+    };
 }
 
 fn initTCP(allocator: Allocator) !Notifier {
@@ -90,7 +92,14 @@ fn initTCP(allocator: Allocator) !Notifier {
     _ = try waitConnect(senderSkt.socket.?);
 
     // Accept a sender connection - create receiver socket
-    var receiverSkt: Skt = (try listSkt.accept()) orelse return AmpeError.NotificationFailed;
+    var receiverSkt: Skt = undefined;
+    while (true) {
+        if (try listSkt.accept()) |s| {
+            receiverSkt = s;
+            break;
+        }
+        std.Thread.sleep(1 * std.time.ns_per_ms);
+    }
     errdefer receiverSkt.deinit();
 
     try senderSkt.disableNagle();
@@ -150,7 +159,14 @@ fn initUDS(allocator: Allocator) !Notifier {
     }
 
     // Accept a sender connection - create receiver socket
-    var receiverSkt: Skt = (try listSkt.accept()) orelse return AmpeError.NotificationFailed;
+    var receiverSkt: Skt = undefined;
+    while (true) {
+        if (try listSkt.accept()) |s| {
+            receiverSkt = s;
+            break;
+        }
+        std.Thread.sleep(1 * std.time.ns_per_ms);
+    }
     errdefer receiverSkt.deinit();
 
     log.info(" notifier sender {any} receiver {any}", .{ senderSkt.socket.?, receiverSkt.socket.? });
