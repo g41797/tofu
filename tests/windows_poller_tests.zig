@@ -11,31 +11,23 @@ test "Windows Poller: Basic Wakeup via Notifier" {
     _ = ws2_32.WSAStartup(0x0202, &wsa_data);
     defer _ = ws2_32.WSACleanup();
 
-    var pl: internal.poller.backend.Poll = try internal.poller.backend.Poll.init(testing.allocator);
-    defer pl.deinit();
+    var pl = try internal.Poller.init(testing.allocator);
+    defer pl.deleteAll();
 
     var ntfr: internal.Notifier = try internal.Notifier.init(testing.allocator);
     defer ntfr.deinit();
 
-    // Set up real TriggeredChannelsMap
-    var tcm: Reactor.TriggeredChannelsMap = Reactor.TriggeredChannelsMap.init(testing.allocator);
-    defer tcm.deinit();
-
     // Set up TriggeredChannel for Notifier receiver
     const ntfr_skt: internal.triggeredSkts.NotificationSkt = internal.triggeredSkts.NotificationSkt.init(&ntfr.receiver);
-    const tc: TriggeredChannel = TriggeredChannel{
+    var tc: TriggeredChannel = TriggeredChannel{
         .tskt = .{ .notification = ntfr_skt },
         .acn = .{ .chn = tofu.message.SpecialMaxChannelNumber },
     };
 
-    try tcm.put(tofu.message.SpecialMaxChannelNumber, tc);
-    const tc_ptr: *TriggeredChannel = tcm.getPtr(tofu.message.SpecialMaxChannelNumber).?;
-
-    // Set up Iterator
-    const it: Reactor.Iterator = Reactor.Iterator.init(&tcm);
+    _ = try pl.attachChannel(&tc);
 
     // Initial poll - should timeout
-    const trgs1: Triggers = try pl.waitTriggers(it, 100);
+    const trgs1: Triggers = try pl.waitTriggers(100);
     try testing.expect(trgs1.timeout == .on);
 
     // Send notification
@@ -47,15 +39,16 @@ test "Windows Poller: Basic Wakeup via Notifier" {
 
     // Poll again - should trigger notify
     // Wait a bit longer to ensure it's delivered
-    const trgs2: Triggers = try pl.waitTriggers(it, 1000);
+    const trgs2: Triggers = try pl.waitTriggers(1000);
     try testing.expect(trgs2.notify == .on);
 
     // Verify received notification
+    const tc_ptr: *TriggeredChannel = pl.trgChannel(tofu.message.SpecialMaxChannelNumber).?;
     const rcvd: internal.Notifier.Notification = try tc_ptr.*.tskt.tryRecvNotification();
     try testing.expectEqual(notif, rcvd);
 
     // Poll again - should timeout (as we drained it)
-    const trgs3: Triggers = try pl.waitTriggers(it, 100);
+    const trgs3: Triggers = try pl.waitTriggers(100);
     try testing.expect(trgs3.timeout == .on);
 }
 
@@ -69,31 +62,22 @@ test "Windows Poller: TCP Echo Readiness" {
     _ = ws2_32.WSAStartup(0x0202, &wsa_data);
     defer _ = ws2_32.WSACleanup();
 
-    var pl: internal.poller.backend.Poll = try internal.poller.backend.Poll.init(testing.allocator);
-    defer pl.deinit();
+    var pl = try internal.Poller.init(testing.allocator);
+    defer pl.deleteAll();
 
     // 1. Setup Listener
     const port: u16 = try tofu.FindFreeTcpPort();
     const server_addr: tofu.address.TCPServerAddress = tofu.address.TCPServerAddress.init("127.0.0.1", port);
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
-    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = server_addr });
-    defer list_skt.deinit();
+    const list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = server_addr });
+    // list_skt will be owned by AcceptSkt/TriggeredChannel
 
-    const accept_skt: internal.triggeredSkts.AcceptSkt = internal.triggeredSkts.AcceptSkt{ .skt = list_skt };
-    const tc_list: TriggeredChannel = TriggeredChannel{
-        .tskt = .{ .accept = accept_skt },
+    var tc_list: TriggeredChannel = TriggeredChannel{
+        .tskt = .{ .accept = .{ .skt = list_skt } },
         .acn = .{ .chn = 1 },
     };
 
-    var tcm: Reactor.TriggeredChannelsMap = Reactor.TriggeredChannelsMap.init(testing.allocator);
-    defer {
-        var iter = tcm.iterator();
-        while (iter.next()) |entry| {
-            entry.value_ptr.*.tskt.deinit();
-        }
-        tcm.deinit();
-    }
-    try tcm.put(1, tc_list);
+    _ = try pl.attachChannel(&tc_list);
 
     // 2. Setup Client
     const client_addr: tofu.address.TCPClientAddress = tofu.address.TCPClientAddress.init("127.0.0.1", port);
@@ -104,12 +88,11 @@ test "Windows Poller: TCP Echo Readiness" {
     _ = try client_skt.connect();
 
     // 3. Poll for ACCEPT
-    var it: Reactor.Iterator = Reactor.Iterator.init(&tcm);
-    const trgs1: Triggers = try pl.waitTriggers(it, 1000);
+    const trgs1: Triggers = try pl.waitTriggers(1000);
     try testing.expect(trgs1.accept == .on);
 
     // 4. Accept connection
-    const tc_list_ptr: *TriggeredChannel = tcm.getPtr(1).?;
+    const tc_list_ptr: *TriggeredChannel = pl.trgChannel(1).?;
     const server_skt: Skt = (try tc_list_ptr.*.tskt.tryAccept()).?;
     // server_skt will be owned by IoSkt
 
@@ -118,12 +101,12 @@ test "Windows Poller: TCP Echo Readiness" {
     defer pool.close();
 
     const srv_io: internal.triggeredSkts.IoSkt = try internal.triggeredSkts.IoSkt.initServerSide(&pool, 2, server_skt);
-    const tc_srv: TriggeredChannel = TriggeredChannel{
+    var tc_srv: TriggeredChannel = TriggeredChannel{
         .tskt = .{ .io = srv_io },
         .acn = .{ .chn = 2 },
     };
-    try tcm.put(2, tc_srv);
-    const tc_srv_ptr: *TriggeredChannel = tcm.getPtr(2).?;
+    _ = try pl.attachChannel(&tc_srv);
+    const tc_srv_ptr: *TriggeredChannel = pl.trgChannel(2).?;
 
     // 6. Send properly formatted message from client
     {
@@ -140,8 +123,7 @@ test "Windows Poller: TCP Echo Readiness" {
     }
 
     // 7. Poll for RECV
-    it = Reactor.Iterator.init(&tcm);
-    const trgs2: Triggers = try pl.waitTriggers(it, 1000);
+    const trgs2: Triggers = try pl.waitTriggers(1000);
     try testing.expect(trgs2.recv == .on);
 
     // 8. Receive data on server
@@ -158,15 +140,13 @@ test "Windows Poller: TCP Echo Readiness" {
     }
 
     // 10. Poll for SEND readiness
-    it = Reactor.Iterator.init(&tcm);
-    const trgs3: Triggers = try pl.waitTriggers(it, 1000);
+    const trgs3: Triggers = try pl.waitTriggers(1000);
     try testing.expect(trgs3.send == .on);
 }
 
 const std = @import("std");
 const tofu = @import("tofu");
 const internal = tofu.@"internal usage";
-const Poller = internal.poller.Poller;
 const Skt = internal.Skt;
 const SocketCreator = internal.SocketCreator;
 const Reactor = tofu.Reactor;

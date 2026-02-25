@@ -1,9 +1,20 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
+    const host_os = @import("builtin").os.tag;
+
     // Standard target options allows the person running `zig build` to choose
     // what target to build for.
-    const target = b.standardTargetOptions(.{});
+    var target = b.standardTargetOptions(.{});
+
+    // Project Rule: Default ABI for Windows based on Host OS
+    if (target.result.os.tag == .windows and target.query.abi == null) {
+        if (host_os == .linux) {
+            target.result.abi = .gnu;
+        } else if (host_os == .windows) {
+            target.result.abi = .msvc;
+        }
+    }
 
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
@@ -69,6 +80,12 @@ pub fn build(b: *std.Build) void {
         .use_llvm = true,
         .use_lld = true,
     });
+
+    if (target.result.os.tag == .windows) {
+        lib.addCSourceFile(.{ .file = b.path("src/ampe/os/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib.addIncludePath(b.path("src/ampe/os/windows/wepoll"));
+    }
+
     b.installArtifact(lib);
 
     // Create recipes module
@@ -96,18 +113,6 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("temp", temp.module("temp"));
     testMod.addImport("datetime", datetime.module("datetime"));
 
-    // Create Windows POC module (Windows only)
-    if (target.result.os.tag == .windows) {
-        const winPocMod = b.createModule(.{
-            .root_source_file = b.path("poc/windows/poc.zig"),
-            .target = target,
-            .optimize = optimize,
-            .single_threaded = false,
-        });
-        winPocMod.addImport("tofu", tofuMod); // Make tofu module available to win_poc
-        testMod.addImport("win_poc", winPocMod);
-    }
-
     // Creates unit testing artifact
     const lib_unit_tests = b.addTest(.{
         .root_module = testMod,
@@ -121,6 +126,9 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.linkSystemLibrary("ws2_32");
         lib_unit_tests.linkSystemLibrary("ntdll");
         lib_unit_tests.linkSystemLibrary("kernel32"); // Link kernel32 for event functions
+
+        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/os/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib_unit_tests.addIncludePath(b.path("src/ampe/os/windows/wepoll"));
     }
 
     b.installArtifact(lib_unit_tests);

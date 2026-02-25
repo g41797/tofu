@@ -116,18 +116,8 @@ pub fn disableNagle(skt: *Skt) !void {
 }
 
 fn deleteUDSPath(skt: *Skt) void {
-    if (skt.*.server) {
-        switch (skt.*.address.any.family) {
-            std.posix.AF.UNIX => {
-                const udsPath: *const [108]u8 = &skt.*.address.un.path;
-                const path_len: usize = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.*.len;
-                if (path_len > 0) {
-                    std.fs.deleteFileAbsolute(udsPath[0..path_len]) catch {};
-                }
-            },
-            else => {},
-        }
-    }
+    _ = skt;
+    // UDS is not yet supported in std.net.Address for Windows in this Zig version
     return;
 }
 

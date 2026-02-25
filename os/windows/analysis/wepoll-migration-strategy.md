@@ -1,40 +1,50 @@
 # Strategy: wepoll Migration & Reactor Unification
 
-**Date:** 2026-02-16
-**Status:** ACTIVE SHIFT
+**Date:** 2026-02-25
+**Status:** COMPLETED (Baseline Implementation)
 
 ---
 
 ## 1. The Decision: wepoll as Bridge
-To unify the Reactor backends for Linux and Windows, the project will move to an `epoll`-style interface globally.
-- **Windows:** Integrate the `wepoll` C library as a git submodule. This provides a battle-tested `epoll` shim over `AFD_POLL`.
-- **Linux:** Migrate from `poll()` to native `epoll`.
+To unify the Reactor backends for Linux and Windows, the project has moved to an `epoll`-style interface globally.
+- **Windows:** Integrated `wepoll` C library as a git submodule in `src/ampe/os/windows/wepoll`.
+- **Linux:** Migrated from `poll()` to native `epoll`.
 - **Future:** Eventually replace the `wepoll` C dependency with a 100% native Zig implementation using the logic derived in the `PinnedState` analysis.
 
 ---
 
-## 2. Technical Logic (Synthesized from Architectural Review)
+## 2. Technical Implementation
 
-### A. The "Moving vs. Fixed" Target Problem
-- **Problem:** `AutoArrayHashMap` moves `TriggeredChannel` objects on resize, invalidating kernel pointers.
-- **Solution:** Use **PinnedState** (heap-allocated, stable memory) for all kernel-facing structs (`IO_STATUS_BLOCK`, `AFD_POLL_INFO`).
-- **ApcContext:** Use the **Stable Heap Pointer** to the `PinnedState` as the completion context.
+### A. Submodule Integration
+The `wepoll` library is included as a git submodule. It is compiled into the `tofu` library and tests specifically for Windows targets.
 
-### B. Incarnation Safety (The Recycling Race)
-- **The Risk:** `SocketHandle` (or `ChannelNumber`) reuse by the OS before a previous `AFD_POLL` completion arrives.
-- **Defense 1 (Physical):** The **Zombie List**. Never `destroy` a `PinnedState` while `is_pending == true`. Move it to a cleanup list and wait for `STATUS_CANCELLED`.
-- **Defense 2 (Logical):** The **Generation Check**. Store a unique `mid` (MessageID) in the `PinnedState`. On completion, verify `pinned.mid == current_channel.mid`. If they differ, it's a "ghost" completion from a previous life; discard it.
+### B. Unified Poller API
+`src/ampe/poller.zig` (via `PollerOs`) now dynamically selects the backend:
+- `.epoll` for Linux.
+- `.wepoll` for Windows.
+- `*anyopaque` is used for the port handle to accommodate both integer FDs and pointer HANDLEs.
 
----
-
-## 3. ChatGPT Advice (Architectural Alignment)
-The Reactor logic is already "epoll-friendly" because it separates **Desired Interest** (`exp`) from **Activated Triggers** (`act`).
-- **Refactor Surface:** Isolated to `Poller.waitTriggers()`. No change needed in `Reactor.zig`.
-- **Strategy:** Start with "Option A" (Sync interest every loop via `epoll_ctl MOD`) to mimic `poll` behavior safely, then optimize to "Option B" (Lazy updates) later.
+### C. Build System Logic
+`build.zig` automatically selects the appropriate ABI:
+- **Host=Linux, Target=Windows:** Uses `gnu` ABI (avoids SDK requirements).
+- **Host=Windows, Target=Windows:** Uses `msvc` ABI (native performance).
 
 ---
 
-## 4. Operational Shifts
-- **Windows IOCP Native Port:** Postponed in favor of `wepoll` integration.
-- **GitHub CI:** Windows CI is to be disabled to focus on the local migration.
-- **Dependencies:** Add `wepoll` as a git submodule.
+## 3. Verification Record
+
+### A. The "Sandwich Build" (2026-02-25)
+1. **Linux Build:** `zig build -Dtarget=x86_64-linux` -> **PASS**
+2. **Windows Cross-Build:** `zig build -Dtarget=x86_64-windows` -> **PASS** (via `gnu` ABI)
+3. **Linux Build:** `zig build -Dtarget=x86_64-linux` -> **PASS**
+
+### B. Unit Testing
+- Linux unit tests (`zig build test`) are fully functional on native `epoll`.
+- Windows runtime verification is the next priority.
+
+---
+
+## 4. Current Constraints
+- **UDS on Windows:** Temporarily disabled in `SocketCreator.zig` and `Notifier.zig` (TCP loopback fallback used for Notifier).
+- **Outdated POCs:** Old Windows native AFD POCs are disabled in `build.zig` and `os_windows_tests.zig` as they are now obsolete.
+- **Thin Skt:** The abstraction is maintained; `Skt` remains thin, with polling state managed by `PollerOs`.

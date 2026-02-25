@@ -24,7 +24,7 @@ pub fn PollerOs(comptime backend: PollType) type {
 
         handle: switch (backend) {
             .poll => void,
-            else => std.posix.fd_t,
+            else => *anyopaque,
         },
 
         event_buffer: switch (backend) {
@@ -46,9 +46,9 @@ pub fn PollerOs(comptime backend: PollType) type {
 
             const h = switch (backend) {
                 .poll => {},
-                .epoll => std.posix.epoll_create1(0) catch return AmpeError.AllocationFailed,
-                .kqueue => std.posix.kqueue() catch return AmpeError.AllocationFailed,
-                .wepoll => epoll_shim_create(),
+                .epoll => @as(*anyopaque, @ptrFromInt(@as(usize, @intCast(std.posix.epoll_create1(0) catch return AmpeError.AllocationFailed)))),
+                .kqueue => @as(*anyopaque, @ptrFromInt(@as(usize, @intCast(std.posix.kqueue() catch return AmpeError.AllocationFailed)))),
+                .wepoll => if (builtin.os.tag == .windows) epoll_create1(0) orelse return AmpeError.AllocationFailed else return AmpeError.NotAllowed,
             };
 
             const buf = switch (backend) {
@@ -66,7 +66,7 @@ pub fn PollerOs(comptime backend: PollType) type {
             };
         }
 
-        fn osSync(self: *Self, fd: std.posix.fd_t, seq: SeqN, exp: Triggers, op: enum { add, mod, del }) AmpeError!void {
+        fn osSync(self: *Self, fd: anytype, seq: SeqN, exp: Triggers, op: enum { add, mod, del }) AmpeError!void {
             if (backend == .poll) return;
             switch (backend) {
                 .epoll, .wepoll => {
@@ -74,33 +74,41 @@ pub fn PollerOs(comptime backend: PollType) type {
                         .events = mapToEpoll(exp),
                         .data = .{ .u64 = seq },
                     };
-                    const action: u32 = switch (op) {
+                    const action: i32 = switch (op) {
                         .add => std.os.linux.EPOLL.CTL_ADD,
                         .mod => std.os.linux.EPOLL.CTL_MOD,
                         .del => std.os.linux.EPOLL.CTL_DEL,
                     };
-                    std.posix.epoll_ctl(self.handle, action, fd, if (op == .del) null else &ev) catch |e| {
-                        switch (e) {
-                            // MOD on fd not yet registered -> fall back to ADD
-                            error.FileDescriptorNotRegistered => {
-                                if (op == .del) return; // nothing to remove
-                                if (op == .mod) {
-                                    std.posix.epoll_ctl(self.handle, std.os.linux.EPOLL.CTL_ADD, fd, &ev) catch return AmpeError.CommunicationFailed;
-                                    return;
-                                }
+                    if (backend == .epoll) {
+                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), @intCast(action), @intCast(fd), if (op == .del) null else &ev) catch |e| {
+                            switch (e) {
+                                // MOD on fd not yet registered -> fall back to ADD
+                                error.FileDescriptorNotRegistered => {
+                                    if (op == .del) return; // nothing to remove
+                                    if (op == .mod) {
+                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_ADD, @intCast(fd), &ev) catch return AmpeError.CommunicationFailed;
+                                        return;
+                                    }
+                                    return AmpeError.CommunicationFailed;
+                                },
+                                // ADD on fd already registered -> fall back to MOD
+                                error.FileDescriptorAlreadyPresentInSet => {
+                                    if (op == .add) {
+                                        std.posix.epoll_ctl(@intCast(@intFromPtr(self.handle)), std.os.linux.EPOLL.CTL_MOD, @intCast(fd), &ev) catch return AmpeError.CommunicationFailed;
+                                        return;
+                                    }
+                                    return AmpeError.CommunicationFailed;
+                                },
+                                else => return AmpeError.CommunicationFailed,
+                            }
+                        };
+                    } else {
+                        if (builtin.os.tag == .windows) {
+                            if (epoll_ctl(self.handle, action, @intCast(fd), &ev) != 0) {
                                 return AmpeError.CommunicationFailed;
-                            },
-                            // ADD on fd already registered -> fall back to MOD
-                            error.FileDescriptorAlreadyPresentInSet => {
-                                if (op == .add) {
-                                    std.posix.epoll_ctl(self.handle, std.os.linux.EPOLL.CTL_MOD, fd, &ev) catch return AmpeError.CommunicationFailed;
-                                    return;
-                                }
-                                return AmpeError.CommunicationFailed;
-                            },
-                            else => return AmpeError.CommunicationFailed,
+                            }
                         }
-                    };
+                    }
                 },
                 .kqueue => {
                     // kqueue EV_ADD is idempotent (adds or modifies)
@@ -123,7 +131,7 @@ pub fn PollerOs(comptime backend: PollType) type {
                 // Dumb channels have no socket yet; they will be registered
                 // with epoll on first reconciliation in waitTriggers.
                 if (tchn.tskt.getSocket()) |socket| {
-                    try self.osSync(@intCast(socket), seqN, tchn.tskt.triggers() catch Triggers{}, .add);
+                    try self.osSync(toFd(socket), seqN, tchn.tskt.triggers() catch Triggers{}, .add);
                 }
             }
 
@@ -143,8 +151,8 @@ pub fn PollerOs(comptime backend: PollType) type {
                 const seqKV = self.chn_seqn_map.fetchSwapRemove(chN) orelse continue;
                 var kv = self.seqn_trc_map.fetchSwapRemove(seqKV.value) orelse unreachable;
                 if (backend != .poll) {
-                    const socket = kv.value.tskt.getSocket() orelse 0;
-                    if (socket != 0) try self.osSync(@intCast(socket), seqKV.value, .{}, .del);
+                    const socket = kv.value.tskt.getSocket();
+                    if (isSocketSet(socket)) try self.osSync(toFd(socket.?), seqKV.value, .{}, .del);
                 }
                 kv.value.tskt.deinit();
                 result = true;
@@ -163,8 +171,8 @@ pub fn PollerOs(comptime backend: PollType) type {
                 if (!tcPtr.mrk4del) continue;
 
                 if (backend != .poll) {
-                    const socket = tcPtr.tskt.getSocket() orelse 0;
-                    if (socket != 0) try self.osSync(@intCast(socket), seqN, .{}, .del);
+                    const socket = tcPtr.tskt.getSocket();
+                    if (isSocketSet(socket)) try self.osSync(toFd(socket.?), seqN, .{}, .del);
                 }
                 tcPtr.updateReceiver();
                 tcPtr.deinit();
@@ -180,16 +188,24 @@ pub fn PollerOs(comptime backend: PollType) type {
             const vals = self.seqn_trc_map.values();
             for (vals) |*tc| {
                 if (backend != .poll) {
-                    const socket = tc.tskt.getSocket() orelse 0;
-                    if (socket != 0) {
-                        const seqN = self.chn_seqn_map.get(tc.acn.chn) orelse 0;
-                        self.osSync(@intCast(socket), seqN, .{}, .del) catch {};
+                    const socket = tc.tskt.getSocket();
+                    if (isSocketSet(socket)) {
+                        const seq = self.chn_seqn_map.get(tc.acn.chn) orelse 0;
+                        self.osSync(toFd(socket.?), seq, .{}, .del) catch {};
                     }
                 }
                 tc.tskt.deinit();
             }
             self.event_buffer.deinit(self.allocator);
-            if (backend != .poll) std.posix.close(self.handle);
+            if (backend != .poll) {
+                if (backend == .wepoll) {
+                    if (builtin.os.tag == .windows) {
+                        _ = epoll_close(self.handle);
+                    }
+                } else if (backend == .epoll or backend == .kqueue) {
+                    std.posix.close(@intCast(@intFromPtr(self.handle)));
+                }
+            }
             self.seqn_trc_map.deinit();
             self.chn_seqn_map.deinit();
         }
@@ -212,18 +228,18 @@ pub fn PollerOs(comptime backend: PollType) type {
                 total_act = total_act.lor(tc.act);
 
                 if (backend == .poll) {
-                    const socket = tc.tskt.getSocket() orelse 0;
+                    const socket = tc.tskt.getSocket();
                     self.event_buffer.append(self.allocator, .{
-                        .fd = if (socket != 0) @intCast(socket) else -1,
+                        .fd = if (isSocketSet(socket)) toFd(socket.?) else -1,
                         .events = mapToPoll(new_exp),
                         .revents = 0,
                     }) catch return AmpeError.AllocationFailed;
                     tc.exp = new_exp;
                 } else if (!tc.exp.eql(new_exp)) {
-                    const socket = tc.tskt.getSocket() orelse 0;
-                    if (socket != 0) {
+                    const socket = tc.tskt.getSocket();
+                    if (isSocketSet(socket)) {
                         const seq = self.chn_seqn_map.get(tc.acn.chn).?;
-                        try self.osSync(@intCast(socket), seq, new_exp, .mod);
+                        try self.osSync(toFd(socket.?), seq, new_exp, .mod);
                     }
                     tc.exp = new_exp;
                 }
@@ -249,7 +265,13 @@ pub fn PollerOs(comptime backend: PollType) type {
                 },
                 .epoll, .wepoll => {
                     self.event_buffer.ensureTotalCapacity(self.allocator, self.seqn_trc_map.count()) catch return AmpeError.AllocationFailed;
-                    const n = std.posix.epoll_wait(self.handle, self.event_buffer.unusedCapacitySlice(), wait_timeout);
+                    const n: usize = if (backend == .epoll)
+                        std.posix.epoll_wait(@intCast(@intFromPtr(self.handle)), self.event_buffer.unusedCapacitySlice(), wait_timeout)
+                    else if (builtin.os.tag == .windows)
+                        @intCast(epoll_wait(self.handle, self.event_buffer.unusedCapacitySlice().ptr, @intCast(self.event_buffer.unusedCapacitySlice().len), wait_timeout))
+                    else
+                        return AmpeError.NotAllowed;
+
                     if (n == 0) {
                         total_act.timeout = .on;
                     } else {
@@ -356,9 +378,10 @@ fn mapFromKqueue(ev: std.posix.kevent, exp: Triggers) Triggers {
     return act;
 }
 
-fn epoll_shim_create() std.posix.fd_t {
-    return -1;
-}
+extern fn epoll_create1(flags: i32) ?*anyopaque;
+extern fn epoll_close(ephnd: *anyopaque) i32;
+extern fn epoll_ctl(ephnd: *anyopaque, op: i32, sock: usize, event: *std.os.linux.epoll_event) i32;
+extern fn epoll_wait(ephnd: *anyopaque, events: [*]std.os.linux.epoll_event, maxevents: i32, timeout: i32) i32;
 
 pub const TcIterator = struct {
     itrtr: std.AutoArrayHashMap(SeqN, TriggeredChannel).Iterator,
@@ -373,6 +396,25 @@ pub const TcIterator = struct {
         self.itrtr.reset();
     }
 };
+
+fn isSocketSet(skt: ?internal.Socket) bool {
+    if (skt) |s| {
+        if (builtin.os.tag == .windows) {
+            return s != std.os.windows.ws2_32.INVALID_SOCKET;
+        } else {
+            return s != -1;
+        }
+    }
+    return false;
+}
+
+fn toFd(skt: internal.Socket) (if (builtin.os.tag == .windows) usize else std.posix.fd_t) {
+    if (builtin.os.tag == .windows) {
+        return @intFromPtr(skt);
+    } else {
+        return @as(std.posix.fd_t, @intCast(skt));
+    }
+}
 
 const tofu = @import("../tofu.zig");
 const DBG = tofu.DBG;

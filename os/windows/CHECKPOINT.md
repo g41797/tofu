@@ -1,16 +1,18 @@
 **AGENT HANDOVER CHECKPOINT**
-**Current Date:** 2026-02-16
+**Current Date:** 2026-02-25
 **Last Agent:** Gemini CLI
 **Active Phase:** Phase III (Windows/Linux Unification)
-**Active Stage:** wepoll Integration & epoll Unification — Strategic Shift
+**Active Stage:** wepoll Integration — Verification & Refinement
 
 ## Current Status
 - **Strategic Pivot:** Native IOCP/AFD_POLL development is postponed.
 - **Goal:** Unify Windows and Linux backends under the `epoll` model.
-- **Windows Strategy:** Use the `wepoll` C library as a git submodule (bridge).
-- **Linux Strategy:** Migrate from `poll()` to native `epoll`.
-- **PinnedState Analysis:** Completed and documented in `gemini-plan-pinned-state-verdict.md`. This architecture (Zombie lists + Generation IDs) remains the blueprint for the future native Zig replacement of `wepoll`.
-- **CI Status:** Windows CI disabled on GitHub to facilitate local refactor.
+- **Windows Strategy:** Integrated `wepoll` C library as a git submodule in `src/ampe/os/windows/wepoll`.
+- **Linux Strategy:** Migrated from `poll()` to native `epoll` (COMPLETED).
+- **Build System:** Updated `build.zig` to auto-select `gnu` ABI on Linux hosts and `msvc` on Windows hosts for Windows targets.
+- **Poller:** `PollerOs` now supports `.wepoll` backend on Windows (using `wepoll` C shim) and `.epoll` on Linux.
+- **Testing:** "Sandwich Build" (Linux -> Windows -> Linux) passing. Unit tests passing on Linux.
+- **UDS/POCs:** Windows UDS support temporarily disabled (waiting for Zig/OS support). Old Windows POCs disabled.
 
 ## Documents & Plans
 - **Migration Strategy:** `os/windows/analysis/wepoll-migration-strategy.md`
@@ -19,7 +21,7 @@
 - **Previous Implementation Plan:** `os/windows/analysis/claude-plan-pinned-state.md` (Retained for reference).
 
 ## Next Steps
-1. **Linux epoll Migration:** Transition Linux `poller.zig` from `poll()` to `epoll`.
-2. **Add wepoll Submodule:** Integrate `wepoll` (https://github.com/p_u_l_s_a_r/wepoll) into the project.
-3. **Windows wepoll Backend:** Implement a `Poll` backend that uses the `wepoll` API.
-4. **Universal Interface:** Ensure the `Poller` union in `internal.zig` correctly switches between native `epoll` (Linux) and `wepoll` (Windows).
+1. **Native Windows Verification:** Run `zig build test` on a real Windows machine to confirm runtime behavior of `wepoll` backend.
+2. **Re-enable Windows Tests:** Once stable, uncomment and update `tests/os_windows_tests.zig` to use the new `Poller` API.
+3. **Refine UDS Support:** Investigate correct target versions for Windows UDS support or finalize TCP-only Notifier for Windows.
+4. **Cleanup:** Remove unused `src/ampe/os/linux/Skt.zig` if fully replaced by unified logic (or verify its role).

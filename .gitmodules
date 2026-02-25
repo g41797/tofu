@@ -1,0 +1,3 @@
+[submodule "src/ampe/os/windows/wepoll"]
+	path = src/ampe/os/windows/wepoll
+	url = https://github.com/piscisaureus/wepoll

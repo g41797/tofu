@@ -64,7 +64,44 @@ pub fn destroy(ntfr: *Notifier, allocator: Allocator) void {
 }
 
 pub fn init(allocator: Allocator) !Notifier {
+    if (builtin.os.tag == .windows) {
+        return initTCP(allocator);
+    }
     return initUDS(allocator);
+}
+
+fn initTCP(allocator: Allocator) !Notifier {
+    var sc: SCreator = SCreator.init(allocator);
+
+    const port: u16 = tofu.FindFreeTcpPort() catch 0;
+    const server_addr: tofu.address.TCPServerAddress = tofu.address.TCPServerAddress.init("127.0.0.1", port);
+
+    var listSkt: Skt = try sc.fromAddress(.{ .tcp_server_addr = server_addr });
+    defer listSkt.deinit();
+
+    const client_addr: tofu.address.TCPClientAddress = tofu.address.TCPClientAddress.init("127.0.0.1", listSkt.address.getPort());
+    var senderSkt: Skt = try sc.fromAddress(.{ .tcp_client_addr = client_addr });
+    errdefer senderSkt.deinit();
+
+    // Start connecting
+    _ = try senderSkt.connect();
+
+    // Wait for completion (loopback should be fast)
+    _ = try waitConnect(senderSkt.socket.?);
+
+    // Accept a sender connection - create receiver socket
+    var receiverSkt: Skt = (try listSkt.accept()) orelse return AmpeError.NotificationFailed;
+    errdefer receiverSkt.deinit();
+
+    try senderSkt.disableNagle();
+    try receiverSkt.disableNagle();
+
+    log.info(" notifier sender {any} receiver {any}", .{ senderSkt.socket.?, receiverSkt.socket.? });
+
+    return .{
+        .sender = senderSkt,
+        .receiver = receiverSkt,
+    };
 }
 
 fn initUDS(allocator: Allocator) !Notifier {
