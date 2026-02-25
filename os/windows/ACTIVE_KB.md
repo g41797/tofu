@@ -32,7 +32,7 @@
 
 ---
 
-**Current Version:** 028
+**Current Version:** 029
 **Last Updated:** 2026-02-25
 **Current Focus:** Phase III — wepoll Integration (Verification & Refinement)
 
@@ -66,6 +66,7 @@
 - **Unified Interface:** Implemented generic `toFd` and `isSocketSet` helpers to bridge `std.posix.fd_t` (Linux) and `SOCKET` (Windows).
 - **Testing:** Verified "Sandwich Build" (Linux -> Windows/GNU -> Linux) and passed unit tests on Linux.
 - **Cleanup:** Temporarily disabled outdated Windows POCs and UDS support on Windows to resolve build errors.
+- **Documentation Refactor:** Moved and updated `PollerOs-Design.md` to `src/ampe/` to serve as the unified architectural guide.
 
 ---
 
