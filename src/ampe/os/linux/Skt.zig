@@ -155,21 +155,6 @@ pub fn close(skt: *Skt) void {
     }
 }
 
-pub fn knock(socket: std.posix.socket_t) bool {
-    const slice: [1]u8 = .{0};
-
-    _ = MsgSender.sendBufTo(socket, slice[0..0]) catch |err| {
-        log.info("knock error {s}", .{@errorName(err)});
-        return false;
-    };
-
-    return true;
-}
-
-fn isAlreadyConnected(socket: std.posix.socket_t) bool {
-    return knock(socket);
-}
-
 fn disable_nagle(socket: std.posix.socket_t) !void {
     if (comptime os.isBSD()) {
         // system.TCP is weird on MacOS.

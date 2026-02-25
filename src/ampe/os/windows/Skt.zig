@@ -116,8 +116,18 @@ pub fn disableNagle(skt: *Skt) !void {
 }
 
 fn deleteUDSPath(skt: *Skt) void {
-    _ = skt;
-    // UDS on Windows is not supported via std.net.Address in Zig 0.15.2
+    if (skt.*.server) {
+        switch (skt.*.address.any.family) {
+            std.posix.AF.UNIX => {
+                const udsPath: *const [108]u8 = &skt.*.address.un.path;
+                const path_len: usize = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.*.len;
+                if (path_len > 0) {
+                    std.fs.deleteFileAbsolute(udsPath[0..path_len]) catch {};
+                }
+            },
+            else => {},
+        }
+    }
     return;
 }
 
@@ -133,12 +143,6 @@ pub fn close(skt: *Skt) void {
     }
 }
 
-pub fn knock(socket: ws2_32.SOCKET) bool {
-    _ = socket;
-    // Knock is used for readiness check in some POSIX implementations.
-    // In our Windows AFD/IOCP model, we rely on the poller events.
-    return true;
-}
 
 pub fn send(skt: *Skt, buf: []const u8) AmpeError!usize {
     const rc: i32 = ws2_32.send(skt.socket.?, buf.ptr, @intCast(buf.len), 0);

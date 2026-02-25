@@ -3,6 +3,8 @@
 
 pub const Reactor = @This();
 
+const PollerType = poller.PollerOs(.epoll);
+
 pub fn ampe(rtr: *Reactor) !Ampe {
     const result: Ampe = .{
         .ptr = rtr,
@@ -42,7 +44,7 @@ cmpl: Semaphore = undefined,
 //
 // Accessible from the thread - don't lock/unlock
 //
-ptcs: poller.PolledTrChnls = undefined,
+ptcs: PollerType = undefined,
 chnlsGroup_map: ChannelsGroupMap = undefined,
 
 // Summary of triggers after poller
@@ -346,7 +348,7 @@ fn createNotificationChannel(rtr: *Reactor) !void {
         .notification = internal.triggeredSkts.NotificationSkt.init(&rtr.ntfr.receiver),
     };
 
-    try rtr.addChannel(ntcn);
+    try rtr.addChannel(&ntcn);
 
     rtr.ntfcsEnabled = true;
 
@@ -398,7 +400,7 @@ pub fn buildStatusSignal(rtr: *Reactor, stat: AmpeStatus) *Message {
     return ret;
 }
 
-inline fn addChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!void {
+inline fn addChannel(rtr: *Reactor, tchn: *TriggeredChannel) AmpeError!void {
     _ = try rtr.*.attachChannel(tchn);
 
     return;
@@ -866,7 +868,7 @@ fn createIoClientChannel(rtr: *Reactor) AmpeError!void {
     var tc = createDumbChannel(rtr);
     tc.acn = rtr.*.acns.activeChannel(chN) catch unreachable;
 
-    try rtr.addChannel(tc);
+    try rtr.addChannel(&tc);
 
     var sc: internal.SocketCreator = internal.SocketCreator.init(rtr.allocator);
     var clSkt: internal.triggeredSkts.IoSkt = .{};
@@ -922,7 +924,7 @@ fn createIoServerChannel(rtr: *Reactor, lstchn: *TriggeredChannel) AmpeError!voi
     const newAcn = rtr.createChannelOnT(0, .{}, lactChn.ctx);
     errdefer rtr.removeChannelOnT(newAcn.chn);
     tc.acn = newAcn;
-    try rtr.addChannel(tc);
+    try rtr.addChannel(&tc);
 
     var clSkt: internal.triggeredSkts.IoSkt = try internal.triggeredSkts.IoSkt.initServerSide(&rtr.pool, newAcn.chn, srvsktOpt.?);
     errdefer clSkt.deinit();
@@ -947,7 +949,7 @@ fn createListenerChannel(rtr: *Reactor) AmpeError!void {
     var tc = rtr.createDumbChannel();
     tc.acn = rtr.*.acns.activeChannel(chN) catch unreachable;
 
-    try rtr.addChannel(tc);
+    try rtr.addChannel(&tc);
 
     var sc: internal.SocketCreator = internal.SocketCreator.init(rtr.allocator);
     var accSkt: internal.triggeredSkts.AcceptSkt = .{};
@@ -1010,11 +1012,11 @@ fn cleanMboxes(rtr: *Reactor) void {
 
 pub inline fn initPollEnv(rtr: *Reactor) AmpeError!void {
 
-    rtr.*.ptcs = try poller.PolledTrChnls.init(rtr.*.allocator);
+    rtr.*.ptcs = try PollerType.init(rtr.*.allocator);
     return;
 }
 
-pub inline fn attachChannel(rtr: *Reactor, tchn: TriggeredChannel) AmpeError!bool {
+pub inline fn attachChannel(rtr: *Reactor, tchn: *TriggeredChannel) AmpeError!bool {
     return rtr.ptcs.attachChannel(tchn);
 }
 
