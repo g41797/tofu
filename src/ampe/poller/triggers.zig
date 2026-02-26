@@ -92,12 +92,20 @@ pub const kqueue = struct {
         const is_err = (ev.flags & std.posix.system.EV.ERROR != 0);
         const is_eof = (ev.flags & std.posix.system.EV.EOF != 0);
 
-        if (is_err or is_eof) act.err = .on;
-
         if (ev.filter == std.posix.system.EVFILT.READ) {
-            if (exp.recv == .on or is_eof) act.recv = .on else if (exp.notify == .on) act.notify = .on else if (exp.accept == .on) act.accept = .on;
-        }
-        if (ev.filter == std.posix.system.EVFILT.WRITE) {
+            if (is_err) {
+                act.err = .on;
+            } else if (is_eof) {
+                // Peer closed. Trigger recv to drain remaining data.
+                // tryRecv will handle the final 0-byte read and return PeerDisconnected.
+                act.recv = .on;
+            } else {
+                if (exp.recv == .on) act.recv = .on else if (exp.notify == .on) act.notify = .on else if (exp.accept == .on) act.accept = .on;
+            }
+        } else if (ev.filter == std.posix.system.EVFILT.WRITE) {
+            if (is_err or is_eof) {
+                act.err = .on;
+            }
             if (exp.send == .on) act.send = .on else if (exp.connect == .on) act.connect = .on;
         }
         return act;
