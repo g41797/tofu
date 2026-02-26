@@ -10,7 +10,7 @@
 - **Poller Refactoring:** COMPLETED. Clean separation achieved.
 - **Stability:** ACHIEVED. Critical pointer stability refactor (heap storage + 4-step I/O) resolved all previous segmentation faults and protocol hangs.
 - **Resilience:** Abortive closure (`SO_LINGER=0`) and retry loops in `listen`/`connect` resolved all transient `BindFailed`/`ConnectFailed` errors.
-- **Documentation:** `ACTIVE_KB.md` (v040), `PollerOs-Design.md`, `WINDOWS_LIMITATIONS.md` are up to date.
+- **Documentation:** `ACTIVE_KB.md` (v041), `PollerOs-Design.md`, `WINDOWS_LIMITATIONS.md` are up to date.
 
 ## Mandatory Handoff Rules
 1. **Sandwich Build:** ALWAYS verify cross-platform compile after any change (Linux, Windows, macOS).
@@ -78,6 +78,13 @@ All documentation files updated.
    - macOS can return `EINVAL` for `SO_LINGER` on certain socket states
    - Raw syscall allows graceful error handling without panic
 
+### macOS Runtime Fix (abstract sockets) ✅
+1. **Notifier.zig** - Fixed abstract socket usage to be Linux-only
+   - Previous code: `if (builtin.os.tag != .windows)` → set `socket_file[0] = 0`
+   - Fixed code: `if (builtin.os.tag == .linux)` → set `socket_file[0] = 0`
+   - macOS/BSD do NOT support abstract Unix sockets, only Linux does
+   - This caused "uds_path_not_found" errors on macOS
+
 ### Verification Results ✅
 | Platform | Status |
 |----------|--------|
@@ -92,8 +99,9 @@ All documentation files updated.
 
 ## Immediate Tasks for Next Agent
 1. **Native Windows Test:** Run full test suite on native Windows machine
-2. **macOS CI Test:** Trigger manual workflow on macOS to verify kqueue backend
-3. **UDS Stress Analysis:** Investigate AF_UNIX `connect_failed` race conditions
+2. **macOS CI Verification:** Trigger manual workflow on macOS to confirm setLingerAbort fix
+3. **Commit Changes:** All cross-platform fixes ready for commit (git disabled this session)
+4. **UDS Stress Analysis:** Investigate AF_UNIX `connect_failed` race conditions (if any remain)
 
 ## New Architecture Summary
 

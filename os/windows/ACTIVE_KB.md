@@ -58,6 +58,7 @@
 - **Cross-Platform Fixes (2026-02-26):**
   - macOS: Fixed EV flags, fcntl constants, O_NONBLOCK bitcast, LLD linker exclusion
   - macOS: Fixed `setLingerAbort()` panic - use raw `system.setsockopt` instead of `std.posix.setsockopt` (stdlib treats EINVAL as unreachable, but macOS returns EINVAL for SO_LINGER on certain socket states)
+  - macOS: Fixed abstract socket usage in Notifier.zig - only Linux supports abstract sockets, not macOS/BSD
   - Windows: Set minimum version to RS4 in build.zig for UDS support (`has_unix_sockets = true`)
   - All platforms: Fixed hardcoded UDS path size (now comptime: macOS/BSD=104, Linux/Windows=108)
 - **Verification:** Full sandwich pass — Linux tests + Windows/macOS cross-compilation all verified.
@@ -90,18 +91,32 @@ src/ampe/
 
 ## 4. Session Context & Hand-off
 
-### Completed This Session (2026-02-25, Claude Opus 4.5 — poller refactoring):
+### Completed This Session (2026-02-26, Claude Opus 4.5 — Cross-Platform Fixes):
+- **macOS Cross-Compilation Fixes:**
+  - `triggers.zig` - Fixed EV flags (use integer constants instead of packed struct)
+  - `Skt.zig (linux)` - Fixed fcntl constants, O_NONBLOCK bitcast
+  - `address.zig`, `testHelpers.zig` - Fixed hardcoded UDS path size
+  - `build.zig` - Made `use_lld` conditional (LLD doesn't support Mach-O)
+- **Windows UDS Fix:**
+  - `build.zig` - Set minimum Windows version to RS4 for `has_unix_sockets = true`
+  - Refactored to `standardTargetOptionsQueryOnly()` + `resolveTargetQuery()` pattern
+- **macOS Runtime Fix:**
+  - `Skt.zig (linux)` - Fixed `setLingerAbort()` panic by using raw `system.setsockopt`
+  - stdlib's `std.posix.setsockopt` treats EINVAL as unreachable, but macOS returns EINVAL for SO_LINGER
+- **Verification:** Full sandwich pass (Linux Debug/ReleaseFast + Windows/macOS x86_64/aarch64 cross-compile)
+
+### Previous Session (2026-02-25, Claude Opus 4.5 — poller refactoring):
 - Created `src/ampe/poller/` directory with 7 new files
 - Updated `poller.zig` facade with comptime backend selection
 - Updated `internal.zig` and `Reactor.zig` to use new `Poller` type
 - Changed `mac.yml` to manual dispatch only
-- Verified tests pass on Linux (Debug + ReleaseFast)
-- Updated all documentation files
 
 ---
 
 ## 5. Next Steps for AI Agent
-1. **Native Windows Test:** Run full test suite on native Windows machine
+1. **Commit Changes:** All cross-platform fixes ready (git disabled this session)
+2. **macOS CI Verification:** Trigger manual workflow to confirm setLingerAbort fix
+3. **Native Windows Test:** Run full test suite on native Windows machine
 2. **macOS CI Test:** Trigger manual workflow to verify kqueue backend
 3. **UDS Stress Analysis:** Investigate AF_UNIX race conditions under high load
 4. **Cleanup:** Consider removing legacy `PollerOs()` wrapper after full verification

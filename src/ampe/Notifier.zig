@@ -134,8 +134,8 @@ fn initUDS(allocator: Allocator) !Notifier {
     const target_slice: []u8 = socket_file[index_opt.? .. index_opt.? + replacement.len];
     std.mem.copyForwards(u8, target_slice, replacement);
 
-    // Abstract sockets on Linux only (Windows has no abstract namespace)
-    if (builtin.os.tag != .windows) {
+    // Abstract sockets on Linux only (macOS/BSD and Windows do not support abstract namespace)
+    if (builtin.os.tag == .linux) {
         socket_file[0] = 0;
     }
 
