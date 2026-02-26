@@ -102,6 +102,7 @@ All documentation files updated.
 ### Poller Backend Fixes ✅
 1. **kqueue_backend.zig** - Robust `modify()` implementation:
    - Now explicitly enables or disables filters using `EV_ADD | EV_ENABLE` or `EV_ADD | EV_DISABLE`.
+   - Uses `EV_RECEIPT` to safely capture and handle errors during filter updates.
    - Prevents 100% CPU busy loops when the Reactor drops interest (e.g., backpressure).
 2. **kqueue_backend.zig** - Fixed `wait()` timeout handling:
    - Converted millisecond `timeout` to `std.posix.system.timespec` for `kevent` call.
@@ -110,7 +111,9 @@ All documentation files updated.
 3. **All Backends** - Added `clearRetainingCapacity()` to `wait()` for safety.
 
 ### Cross-Platform & Stability ✅
-1. **triggers.zig** - Added `EV_EOF` detection for kqueue to correctly signal peer disconnection.
+1. **triggers.zig** - Refined kqueue `fromEvent()`:
+   - Improved `EV_EOF` and `EV_ERROR` detection for reliable error/disconnect signaling.
+   - `EV_EOF` on read filters now correctly triggers a final `recv` to drain the buffer.
 2. **Notifier.zig** - Fixed `initUDS()` and `waitConnect()`:
    - Corrected sequence: now calls `connect()` before `waitConnect()` on Linux/macOS.
    - Added retry limits (100 attempts) to `accept()` and `poll()` loops to prevent infinite hangs in CI.

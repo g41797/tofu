@@ -59,8 +59,8 @@
   - macOS: Fixed EV flags, fcntl constants, O_NONBLOCK bitcast, LLD linker exclusion
   - macOS: Fixed `setLingerAbort()` panic - use raw `system.setsockopt` for Darwin targets
   - macOS: Fixed abstract socket usage in Notifier.zig - restricted to Linux
-  - macOS: Robust `KqueueBackend.modify()` implementation using explicit `EV_ENABLE`/`EV_DISABLE` to prevent busy loops.
-  - macOS: Added `EV_EOF` detection in `triggers.zig` for correct kqueue error/disconnect signaling.
+  - macOS: Robust `KqueueBackend.modify()` using explicit `EV_ENABLE`/`EV_DISABLE` + `EV_RECEIPT` for error safety.
+  - macOS: Refined `fromEvent` in `triggers.zig` for reliable `EV_EOF` and `EV_ERROR` detection.
   - macOS: Fixed `KqueueBackend.wait()` bug where timeout was ignored (passed `null` to `kevent`).
   - Notifier: Fixed `initUDS` and `waitConnect` logic to prevent hangs and correctly order `connect()`.
   - All platforms: Added `clearRetainingCapacity()` to Poller backends for safe buffer usage.

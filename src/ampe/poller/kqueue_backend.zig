@@ -43,7 +43,7 @@ const KqueueBackend = struct {
         evs[0] = .{
             .ident = @intCast(fd),
             .filter = std.posix.system.EVFILT.READ,
-            .flags = if (r_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE,
+            .flags = if (r_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE | std.posix.system.EV.RECEIPT else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE | std.posix.system.EV.RECEIPT,
             .fflags = 0,
             .data = 0,
             .udata = @intCast(seq),
@@ -54,13 +54,24 @@ const KqueueBackend = struct {
         evs[1] = .{
             .ident = @intCast(fd),
             .filter = std.posix.system.EVFILT.WRITE,
-            .flags = if (w_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE,
+            .flags = if (w_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE | std.posix.system.EV.RECEIPT else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE | std.posix.system.EV.RECEIPT,
             .fflags = 0,
             .data = 0,
             .udata = @intCast(seq),
         };
 
-        _ = std.posix.kevent(self.kqfd, &evs, &.{}, null) catch return AmpeError.CommunicationFailed;
+        var results: [2]Kevent = undefined;
+        const n = std.posix.kevent(self.kqfd, &evs, &results, null) catch return AmpeError.CommunicationFailed;
+
+        // Check receipts for errors (ignoring common ones like "already closed")
+        for (results[0..n]) |res| {
+            if (res.flags & std.posix.system.EV.ERROR != 0) {
+                const err = @as(i32, @intCast(res.data));
+                if (err != 0 and err != @intFromEnum(std.posix.E.BADF) and err != @intFromEnum(std.posix.E.NOENT)) {
+                    return AmpeError.CommunicationFailed;
+                }
+            }
+        }
     }
 
     pub fn unregister(self: *KqueueBackend, fd: std.posix.fd_t) void {
