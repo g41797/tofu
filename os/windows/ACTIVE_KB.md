@@ -100,9 +100,13 @@ src/ampe/
 - **Windows UDS Fix:**
   - `build.zig` - Set minimum Windows version to RS4 for `has_unix_sockets = true`
   - Refactored to `standardTargetOptionsQueryOnly()` + `resolveTargetQuery()` pattern
-- **macOS Runtime Fix:**
+- **macOS Runtime Fixes:**
   - `Skt.zig (linux)` - Fixed `setLingerAbort()` panic by using raw `system.setsockopt`
-  - stdlib's `std.posix.setsockopt` treats EINVAL as unreachable, but macOS returns EINVAL for SO_LINGER
+    - stdlib's `std.posix.setsockopt` treats EINVAL as unreachable, but macOS returns EINVAL for SO_LINGER
+  - `Notifier.zig` - Fixed abstract socket usage to be Linux-only
+    - Changed `if (builtin.os.tag != .windows)` to `if (builtin.os.tag == .linux)`
+    - macOS/BSD do NOT support abstract Unix sockets (setting `socket_file[0] = 0`)
+    - This caused "uds_path_not_found" errors on macOS CI
 - **Verification:** Full sandwich pass (Linux Debug/ReleaseFast + Windows/macOS x86_64/aarch64 cross-compile)
 
 ### Previous Session (2026-02-25, Claude Opus 4.5 — poller refactoring):
@@ -115,7 +119,9 @@ src/ampe/
 
 ## 5. Next Steps for AI Agent
 1. **Commit Changes:** All cross-platform fixes ready (git disabled this session)
-2. **macOS CI Verification:** Trigger manual workflow to confirm setLingerAbort fix
+2. **macOS CI Verification:** Trigger manual workflow to verify:
+   - `setLingerAbort()` raw syscall fix (EINVAL handling)
+   - Abstract sockets Linux-only fix (Notifier.zig)
 3. **Native Windows Test:** Run full test suite on native Windows machine
 2. **macOS CI Test:** Trigger manual workflow to verify kqueue backend
 3. **UDS Stress Analysis:** Investigate AF_UNIX race conditions under high load

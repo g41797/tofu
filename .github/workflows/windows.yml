@@ -1,8 +1,8 @@
 name: Windows
 
 on:
-  # push:
-  # pull_request:
+  push:
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -26,6 +26,10 @@ jobs:
           version: 0.15.2
           use-cache: false
 
-      - run: zig build test -freference-trace --summary all
+      - run: zig build test -freference-trace --summary all -Doptimize=Debug
+
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
 
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall

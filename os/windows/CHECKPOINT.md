@@ -83,7 +83,7 @@ All documentation files updated.
    - Previous code: `if (builtin.os.tag != .windows)` → set `socket_file[0] = 0`
    - Fixed code: `if (builtin.os.tag == .linux)` → set `socket_file[0] = 0`
    - macOS/BSD do NOT support abstract Unix sockets, only Linux does
-   - This caused "uds_path_not_found" errors on macOS
+   - This caused "uds_path_not_found" errors on macOS CI
 
 ### Verification Results ✅
 | Platform | Status |
@@ -93,15 +93,17 @@ All documentation files updated.
 | Windows x86_64 cross-compile | ✅ PASS |
 | macOS x86_64 cross-compile | ✅ PASS |
 | macOS aarch64 cross-compile | ✅ PASS |
-| macOS native tests (CI) | ✅ PASS (after setLingerAbort fix) |
+| macOS native tests (CI) | Pending (setLingerAbort + abstract socket fixes) |
 
 ---
 
 ## Immediate Tasks for Next Agent
-1. **Native Windows Test:** Run full test suite on native Windows machine
-2. **macOS CI Verification:** Trigger manual workflow on macOS to confirm setLingerAbort fix
-3. **Commit Changes:** All cross-platform fixes ready for commit (git disabled this session)
-4. **UDS Stress Analysis:** Investigate AF_UNIX `connect_failed` race conditions (if any remain)
+1. **Commit Changes:** All cross-platform fixes ready for commit (git disabled this session)
+2. **macOS CI Verification:** Trigger manual workflow to verify all macOS fixes:
+   - setLingerAbort() raw syscall fix
+   - Abstract sockets Linux-only fix
+3. **Native Windows Test:** Run full test suite on native Windows machine
+4. **UDS Stress Analysis:** Investigate AF_UNIX race conditions (if any remain after macOS fixes)
 
 ## New Architecture Summary
 
