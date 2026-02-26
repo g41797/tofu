@@ -100,19 +100,24 @@ All documentation files updated.
 ## Completed This Session (2026-02-26, Gemini CLI Agent)
 
 ### Poller Backend Fixes ✅
-1. **kqueue_backend.zig** - Fixed `wait()` timeout handling:
+1. **kqueue_backend.zig** - Robust `modify()` implementation:
+   - Now explicitly enables or disables filters using `EV_ADD | EV_ENABLE` or `EV_ADD | EV_DISABLE`.
+   - Prevents 100% CPU busy loops when the Reactor drops interest (e.g., backpressure).
+2. **kqueue_backend.zig** - Fixed `wait()` timeout handling:
    - Converted millisecond `timeout` to `std.posix.system.timespec` for `kevent` call.
    - Fixed bug where `kevent` was blocking indefinitely due to `null` timeout.
    - Uses field names `sec` and `nsec` for compatibility with Zig 0.15.2 on macOS.
+3. **All Backends** - Added `clearRetainingCapacity()` to `wait()` for safety.
 
 ### Cross-Platform & Stability ✅
-1. **macOS Cross-Compilation Fixes:**
+1. **triggers.zig** - Added `EV_EOF` detection for kqueue to correctly signal peer disconnection.
+2. **Notifier.zig** - Fixed `initUDS()` and `waitConnect()`:
+   - Corrected sequence: now calls `connect()` before `waitConnect()` on Linux/macOS.
+   - Added retry limits (100 attempts) to `accept()` and `poll()` loops to prevent infinite hangs in CI.
+3. **macOS Cross-Compilation Fixes:**
    - `triggers.zig` - Fixed EV flags (integer constants).
    - `Skt.zig (linux)` - Fixed `acceptOs` for Darwin (manual flag setting via `fcntl`).
    - `Skt.zig (linux)` - Fixed `setLingerAbort` panic via raw `system.setsockopt` (macOS EINVAL).
-2. **Investigation & Stabilization:**
-   - Identified that zero-initialization of certain structs (likely `temp.TempFile` or `std.net.Address`) and/or `Skt.accept` order changes caused `SIGSEGV` in `ReleaseFast` on the current host during stack trace capture.
-   - Reverted zero-initializations and restored original `accept` order to achieve 100% test pass rate in both `Debug` and `ReleaseFast` modes.
 
 ### Verification Results ✅
 | Platform | Status |

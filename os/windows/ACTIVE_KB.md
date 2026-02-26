@@ -59,7 +59,11 @@
   - macOS: Fixed EV flags, fcntl constants, O_NONBLOCK bitcast, LLD linker exclusion
   - macOS: Fixed `setLingerAbort()` panic - use raw `system.setsockopt` for Darwin targets
   - macOS: Fixed abstract socket usage in Notifier.zig - restricted to Linux
-  - macOS: Fixed `KqueueBackend.wait()` bug where timeout was ignored (passed `null` to `kevent`)
+  - macOS: Robust `KqueueBackend.modify()` implementation using explicit `EV_ENABLE`/`EV_DISABLE` to prevent busy loops.
+  - macOS: Added `EV_EOF` detection in `triggers.zig` for correct kqueue error/disconnect signaling.
+  - macOS: Fixed `KqueueBackend.wait()` bug where timeout was ignored (passed `null` to `kevent`).
+  - Notifier: Fixed `initUDS` and `waitConnect` logic to prevent hangs and correctly order `connect()`.
+  - All platforms: Added `clearRetainingCapacity()` to Poller backends for safe buffer usage.
   - Windows: Set minimum version to RS4 in build.zig for UDS support
   - All platforms: Fixed hardcoded UDS path size (now comptime: macOS/BSD=104, Linux/Windows=108)
   - Investigation: Resolved `ReleaseFast` `SIGSEGV` by reverting aggressive zero-initialization and `accept` order changes. 100% test pass rate achieved on Linux in all modes.
@@ -137,6 +141,6 @@ src/ampe/
 - **Thin Skt:** An abstraction where `Skt` is just a handle + address + base_handle.
 - **Abortive Close:** Closing a socket with RST (SO_LINGER=0) to bypass `TIME_WAIT`. Mandatory for Windows stability.
 - **Sandwich Build:** Cross-compilation verification across all platforms (Linux → Windows → macOS → Linux).
-- **PollerCore:** Generic type that composes with backend-specific implementations (epoll, wepoll, kqueue, poll).
+- **PollerCore:** Generic type that composes with backend-specific implementations (epoll, wepoll, kqueue, poll). It utilizes heap-allocated `*TriggeredChannel` objects to ensure **Pointer Stability**. This is critical for two reasons: (1) it prevents iterator invalidation during map mutations (e.g., adding a channel during an `accept` event), and (2) it ensures that kernel-facing memory like the Windows `IO_STATUS_BLOCK` remains at a fixed address for the duration of asynchronous operations, preventing memory corruption.
 
 ---

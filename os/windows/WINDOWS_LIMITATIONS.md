@@ -57,12 +57,10 @@ This document tracks all architectural differences, performance constraints, and
 - **ABI:** We use a custom `WepollEvent` struct to strictly match the Windows C layout expected by `wepoll.c`, avoiding union-related corruption seen with `std.os.linux.epoll_event`.
 
 ### **Pointer Stability (Heap-Allocated TriggeredChannel)**
-- **Architecture Change:** The `PollerOs` stores `TriggeredChannel` as heap-allocated pointers (`*TriggeredChannel`) rather than by value.
-- **Reason:** The Reactor mutates the channel map **during iteration**. When an `accept` trigger fires, `createIoServerChannel()` calls `attachChannel()` which inserts a new entry via `seqn_trc_map.put()`. If the map stored values directly, this insertion could trigger reallocation, invalidating:
-  1. The iterator's internal slice
-  2. The `*TriggeredChannel` pointer (`lstchn`) passed to `createIoServerChannel`
-- **Solution:** Heap allocation ensures `TriggeredChannel` objects have stable addresses regardless of map reallocations. The map only stores/moves 8-byte pointers.
-- **Reference:** See `Reactor.zig:638-643` (accept path) and `poller.zig:148-177` (attachChannel).
+- **Architecture Change:** The `Poller` stores `TriggeredChannel` as heap-allocated pointers (`*TriggeredChannel`) rather than by value.
+- **Reason 1: Iterator Safety:** The Reactor mutates the channel map **during iteration**. When an `accept` trigger fires, it calls `attachChannel()` which inserts a new entry via `seqn_trc_map.put()`. If the map stored values directly, this insertion could trigger reallocation, invalidating the iterator's internal slice and the `*TriggeredChannel` pointer currently being processed.
+- **Reason 2: Windows Kernel Integrity (MANDATORY):** On Windows, `AFD_POLL` (via `wepoll`) is an asynchronous operation. The kernel receives a pointer to an `IO_STATUS_BLOCK` (stored within the channel's socket state) and **retains this pointer** to write the result later. If the `TriggeredChannel` were stored by value and the map resized, the `IO_STATUS_BLOCK` would move. The kernel would then write the completion status into the **old, now-invalid address**, causing silent and catastrophic memory corruption.
+- **Solution:** Heap allocation ensures that once a channel is created, its memory address (and thus the address of its internal `IO_STATUS_BLOCK`) is "pinned" for its entire lifecycle, regardless of map reallocations.
 
 ### **I/O Vector Stability (MsgReceiver/MsgSender)**
 - **Architecture Change:** Added `refreshPointers()` methods to `MsgReceiver` and `MsgSender` in `triggeredSkts.zig`.

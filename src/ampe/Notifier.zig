@@ -146,26 +146,24 @@ fn initUDS(allocator: Allocator) !Notifier {
     var senderSkt: Skt = try SCreator.createUdsSocket(socket_file);
     errdefer senderSkt.deinit();
 
-    if (builtin.os.tag == .windows) {
-        // Windows: initiate non-blocking connect first, then wait for completion
-        const connected = try senderSkt.connect();
-        if (!connected) {
-            _ = try waitConnect(senderSkt.socket.?);
-        }
-    } else {
-        // Linux: wait for socket readiness, then raw connect
+    // Initiate connect first (always non-blocking in Tofu)
+    const connected = try senderSkt.connect();
+    if (!connected) {
+        // Wait for completion with timeout to avoid hang
         _ = try waitConnect(senderSkt.socket.?);
-        try posix.connect(senderSkt.socket.?, &listSkt.address.any, listSkt.address.getOsSockLen());
     }
 
     // Accept a sender connection - create receiver socket
     var receiverSkt: Skt = undefined;
-    while (true) {
+    var accept_tries: usize = 0;
+    while (accept_tries < 100) : (accept_tries += 1) {
         if (try listSkt.accept()) |s| {
             receiverSkt = s;
             break;
         }
         std.Thread.sleep(1 * std.time.ns_per_ms);
+    } else {
+        return AmpeError.CommunicationFailed;
     }
     errdefer receiverSkt.deinit();
 
@@ -237,8 +235,8 @@ pub fn _isReadyToSend(sender: socket_t) bool {
 
 pub fn waitConnect(client: socket_t) !bool {
     var spoll: [1]pollfd = undefined;
-
-    while (true) {
+    var tries: usize = 0;
+    while (tries < 100) : (tries += 1) {
         spoll = .{
             .{
                 .fd = client,
@@ -247,11 +245,13 @@ pub fn waitConnect(client: socket_t) !bool {
             },
         };
 
-        const pollstatus = try posix.poll(&spoll, poll_SEC_TIMEOUT * 3);
+        const pollstatus = try posix.poll(&spoll, poll_SEC_TIMEOUT);
 
         if (pollstatus == 1) {
             break;
         }
+    } else {
+        return false;
     }
 
     if (spoll[0].revents & std.posix.POLL.HUP != 0) {

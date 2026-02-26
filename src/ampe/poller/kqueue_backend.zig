@@ -36,12 +36,31 @@ const KqueueBackend = struct {
     }
 
     pub fn modify(self: *KqueueBackend, fd: std.posix.fd_t, seq: SeqN, exp: Triggers) AmpeError!void {
-        // kqueue EV_ADD is idempotent (adds or modifies)
         var evs: [2]Kevent = undefined;
-        const count = triggers_mod.kqueue.toEvents(exp, seq, fd, &evs, false);
-        if (count > 0) {
-            _ = std.posix.kevent(self.kqfd, evs[0..count], &.{}, null) catch return AmpeError.CommunicationFailed;
-        }
+
+        // READ filter
+        const r_on = (exp.recv == .on or exp.accept == .on or exp.notify == .on);
+        evs[0] = .{
+            .ident = @intCast(fd),
+            .filter = std.posix.system.EVFILT.READ,
+            .flags = if (r_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE,
+            .fflags = 0,
+            .data = 0,
+            .udata = @intCast(seq),
+        };
+
+        // WRITE filter
+        const w_on = (exp.send == .on or exp.connect == .on);
+        evs[1] = .{
+            .ident = @intCast(fd),
+            .filter = std.posix.system.EVFILT.WRITE,
+            .flags = if (w_on) std.posix.system.EV.ADD | std.posix.system.EV.ENABLE else std.posix.system.EV.ADD | std.posix.system.EV.DISABLE,
+            .fflags = 0,
+            .data = 0,
+            .udata = @intCast(seq),
+        };
+
+        _ = std.posix.kevent(self.kqfd, &evs, &.{}, null) catch return AmpeError.CommunicationFailed;
     }
 
     pub fn unregister(self: *KqueueBackend, fd: std.posix.fd_t) void {
@@ -70,6 +89,7 @@ const KqueueBackend = struct {
     pub fn wait(self: *KqueueBackend, timeout: i32, seqn_trc_map: *core.SeqnTrcMap) AmpeError!Triggers {
         var total_act = Triggers{};
 
+        self.event_buffer.clearRetainingCapacity();
         self.event_buffer.ensureTotalCapacity(self.allocator, seqn_trc_map.count()) catch return AmpeError.AllocationFailed;
 
         const ts: ?std.posix.system.timespec = if (timeout < 0) null else .{

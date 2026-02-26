@@ -66,6 +66,7 @@ const WepollBackend = struct {
     pub fn wait(self: *WepollBackend, timeout: i32, seqn_trc_map: *core.SeqnTrcMap) AmpeError!Triggers {
         var total_act = Triggers{};
 
+        self.event_buffer.clearRetainingCapacity();
         self.event_buffer.ensureTotalCapacity(self.allocator, seqn_trc_map.count()) catch return AmpeError.AllocationFailed;
 
         const n: usize = @intCast(epoll_wait(

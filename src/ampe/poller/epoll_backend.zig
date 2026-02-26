@@ -65,6 +65,7 @@ const EpollBackend = struct {
     pub fn wait(self: *EpollBackend, timeout: i32, seqn_trc_map: *core.SeqnTrcMap) AmpeError!Triggers {
         var total_act = Triggers{};
 
+        self.event_buffer.clearRetainingCapacity();
         self.event_buffer.ensureTotalCapacity(self.allocator, seqn_trc_map.count()) catch return AmpeError.AllocationFailed;
 
         const n = std.posix.epoll_wait(self.epfd, self.event_buffer.unusedCapacitySlice(), timeout);

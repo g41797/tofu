@@ -90,6 +90,7 @@ pub const kqueue = struct {
     pub fn fromEvent(ev: Kevent, exp: Triggers) Triggers {
         var act = Triggers{ .pool = exp.pool };
         if (ev.flags & EV.ERROR != 0) act.err = .on;
+        if (ev.flags & std.posix.system.EV.EOF != 0) act.err = .on;
         if (ev.filter == std.posix.system.EVFILT.READ) {
             if (exp.recv == .on) act.recv = .on else if (exp.notify == .on) act.notify = .on else if (exp.accept == .on) act.accept = .on;
         }
