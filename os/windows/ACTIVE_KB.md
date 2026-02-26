@@ -16,9 +16,11 @@
 *This section contains notes, requirements, and advice directly from the project author. AI agents must follow these instructions over any conflicting defaults.*
 
 **Current Notes:**
-- **Verification Rule (MANDATORY):** You MUST run all tests in BOTH `Debug` and `ReleaseFast` modes. Successful completion of a task requires:
+- **Verification Rule (MANDATORY):** You MUST run all tests in ALL 4 optimization modes. Successful completion of a task requires:
     1. `zig build test` (Debug)
-    2. `zig build test -Doptimize=ReleaseFast` (ReleaseFast)
+    2. `zig build test -Doptimize=ReleaseSafe` (ReleaseSafe)
+    3. `zig build test -Doptimize=ReleaseFast` (ReleaseFast)
+    4. `zig build test -Doptimize=ReleaseSmall` (ReleaseSmall)
 - **Windows ABI Rule (MANDATORY):**
     - When building **on Linux** for Windows: Use the `gnu` ABI (`-Dtarget=x86_64-windows-gnu`).
     - When building **on Windows** for Windows: Use the `msvc` ABI (`-Dtarget=x86_64-windows-msvc`).
