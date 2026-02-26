@@ -73,12 +73,18 @@ pub fn build(b: *std.Build) void {
         libMod.linkSystemLibrary("ntdll", .{});
     }
 
+    // LLD doesn't support Mach-O (macOS), so only use it on Windows/Linux
+    const use_lld = target.result.os.tag != .macos and
+        target.result.os.tag != .freebsd and
+        target.result.os.tag != .openbsd and
+        target.result.os.tag != .netbsd;
+
     const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "tofu",
         .root_module = libMod,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = use_lld,
     });
 
     if (target.result.os.tag == .windows) {
@@ -117,7 +123,7 @@ pub fn build(b: *std.Build) void {
     const lib_unit_tests = b.addTest(.{
         .root_module = testMod,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = use_lld,
     });
 
     // Link libraries for Windows tests
@@ -145,7 +151,7 @@ pub fn build(b: *std.Build) void {
         .name = "tofu",
         .root_module = tofuMod,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = use_lld,
     });
 
     const install_tofu_docs = b.addInstallDirectory(.{
@@ -168,7 +174,7 @@ pub fn build(b: *std.Build) void {
         .name = "cookbook",
         .root_module = cookbookMod,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = use_lld,
     });
 
     const install_cookbook_docs = b.addInstallDirectory(.{
