@@ -72,8 +72,12 @@ const KqueueBackend = struct {
 
         self.event_buffer.ensureTotalCapacity(self.allocator, seqn_trc_map.count()) catch return AmpeError.AllocationFailed;
 
-        const n = std.posix.kevent(self.kqfd, &.{}, self.event_buffer.unusedCapacitySlice(), null) catch return AmpeError.CommunicationFailed;
-        _ = timeout; // kqueue uses timespec, handled by kevent itself
+        const ts: ?std.posix.system.timespec = if (timeout < 0) null else .{
+            .sec = @intCast(@divTrunc(timeout, 1000)),
+            .nsec = @intCast(@mod(timeout, 1000) * 1_000_000),
+        };
+
+        const n = std.posix.kevent(self.kqfd, &.{}, self.event_buffer.unusedCapacitySlice(), if (ts) |*t| t else null) catch return AmpeError.CommunicationFailed;
 
         if (n == 0) {
             total_act.timeout = .on;

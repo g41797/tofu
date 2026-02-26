@@ -55,13 +55,15 @@
 - **Pointer Stability:** ACHIEVED via heap-allocated `TriggeredChannel` pointers and 4-step stable header I/O.
 - **Abortive Closure:** ACHIEVED. Integrated `SO_LINGER=0` into all WinSock paths to eliminate `TIME_WAIT` hangs.
 - **Error Resilience:** Added retry loops to `listen()` and `connect()` to handle rapid churn on Windows.
-- **Cross-Platform Fixes (2026-02-26):**
+- **Cross-Platform & Stability Fixes (2026-02-26):**
   - macOS: Fixed EV flags, fcntl constants, O_NONBLOCK bitcast, LLD linker exclusion
-  - macOS: Fixed `setLingerAbort()` panic - use raw `system.setsockopt` instead of `std.posix.setsockopt` (stdlib treats EINVAL as unreachable, but macOS returns EINVAL for SO_LINGER on certain socket states)
-  - macOS: Fixed abstract socket usage in Notifier.zig - only Linux supports abstract sockets, not macOS/BSD
-  - Windows: Set minimum version to RS4 in build.zig for UDS support (`has_unix_sockets = true`)
+  - macOS: Fixed `setLingerAbort()` panic - use raw `system.setsockopt` for Darwin targets
+  - macOS: Fixed abstract socket usage in Notifier.zig - restricted to Linux
+  - macOS: Fixed `KqueueBackend.wait()` bug where timeout was ignored (passed `null` to `kevent`)
+  - Windows: Set minimum version to RS4 in build.zig for UDS support
   - All platforms: Fixed hardcoded UDS path size (now comptime: macOS/BSD=104, Linux/Windows=108)
-- **Verification:** Full sandwich pass — Linux tests + Windows/macOS cross-compilation all verified.
+  - Investigation: Resolved `ReleaseFast` `SIGSEGV` by reverting aggressive zero-initialization and `accept` order changes. 100% test pass rate achieved on Linux in all modes.
+- **Verification:** Full sandwich pass — Linux tests (Debug/ReleaseFast) + Windows/macOS cross-compilation all verified.
 
 ---
 

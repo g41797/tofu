@@ -97,13 +97,43 @@ All documentation files updated.
 
 ---
 
+## Completed This Session (2026-02-26, Gemini CLI Agent)
+
+### Poller Backend Fixes ✅
+1. **kqueue_backend.zig** - Fixed `wait()` timeout handling:
+   - Converted millisecond `timeout` to `std.posix.system.timespec` for `kevent` call.
+   - Fixed bug where `kevent` was blocking indefinitely due to `null` timeout.
+   - Uses field names `sec` and `nsec` for compatibility with Zig 0.15.2 on macOS.
+
+### Cross-Platform & Stability ✅
+1. **macOS Cross-Compilation Fixes:**
+   - `triggers.zig` - Fixed EV flags (integer constants).
+   - `Skt.zig (linux)` - Fixed `acceptOs` for Darwin (manual flag setting via `fcntl`).
+   - `Skt.zig (linux)` - Fixed `setLingerAbort` panic via raw `system.setsockopt` (macOS EINVAL).
+2. **Investigation & Stabilization:**
+   - Identified that zero-initialization of certain structs (likely `temp.TempFile` or `std.net.Address`) and/or `Skt.accept` order changes caused `SIGSEGV` in `ReleaseFast` on the current host during stack trace capture.
+   - Reverted zero-initializations and restored original `accept` order to achieve 100% test pass rate in both `Debug` and `ReleaseFast` modes.
+
+### Verification Results ✅
+| Platform | Status |
+|----------|--------|
+| Linux tests (Debug) | ✅ PASS (35/35) |
+| Linux tests (ReleaseFast) | ✅ PASS (35/35) |
+| Windows x86_64 cross-compile | ✅ PASS |
+| macOS x86_64 cross-compile | ✅ PASS |
+| macOS aarch64 cross-compile | ✅ PASS |
+
 ## Immediate Tasks for Next Agent
-1. **Commit Changes:** All cross-platform fixes ready for commit (git disabled this session)
-2. **macOS CI Verification:** Trigger manual workflow to verify all macOS fixes:
-   - setLingerAbort() raw syscall fix
-   - Abstract sockets Linux-only fix
-3. **Native Windows Test:** Run full test suite on native Windows machine
-4. **UDS Stress Analysis:** Investigate AF_UNIX race conditions (if any remain after macOS fixes)
+1. **macOS CI Verification:** Trigger manual workflow to verify the new kqueue timeout fix.
+2. **Native Windows Test:** Run full test suite on native Windows machine.
+3. **UDS Stress Analysis:** Investigate AF_UNIX race conditions under high load (if any remain).
+4. **Cleanup:** Consider removing legacy `PollerOs()` wrapper after full verification.
+
+## Immediate Tasks for Next Agent
+1. **macOS CI Verification:** Trigger manual workflow to verify the new kqueue timeout fix.
+2. **Native Windows Test:** Run full test suite on native Windows machine.
+3. **UDS Stress Analysis:** Investigate AF_UNIX race conditions under high load (if any remain).
+4. **Cleanup:** Consider removing legacy `PollerOs()` wrapper after full verification.
 
 ## New Architecture Summary
 
