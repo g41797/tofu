@@ -156,8 +156,11 @@ pub const TCPServerAddress = struct {
     }
 };
 
+/// Unix socket path size (platform-specific: Linux=108, macOS/BSD=104)
+const UDS_PATH_SIZE: usize = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 104 else 108;
+
 pub const UDSClientAddress = struct {
-    addrbuf: [108]u8 = undefined,
+    addrbuf: [UDS_PATH_SIZE]u8 = undefined,
 
     pub fn init(path: []const u8) UDSClientAddress {
         var ret: UDSClientAddress = .{};
@@ -204,7 +207,7 @@ pub const UDSClientAddress = struct {
 };
 
 pub const UDSServerAddress = struct {
-    addrbuf: [108]u8 = undefined,
+    addrbuf: [UDS_PATH_SIZE]u8 = undefined,
 
     pub fn init(path: []const u8) UDSServerAddress {
         var ret: UDSServerAddress = .{};
@@ -401,6 +404,7 @@ pub const TextHeaders = message.TextHeaders;
 pub const AmpeError = @import("status.zig").AmpeError;
 
 const std = @import("std");
+const builtin = @import("builtin");
 const activeTag = std.meta.activeTag;
 
 // 2DO format - replace with prepare +

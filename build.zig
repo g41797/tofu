@@ -5,16 +5,26 @@ pub fn build(b: *std.Build) void {
 
     // Standard target options allows the person running `zig build` to choose
     // what target to build for.
-    var target = b.standardTargetOptions(.{});
+    var target_query = b.standardTargetOptionsQueryOnly(.{});
 
     // Project Rule: Default ABI for Windows based on Host OS
-    if (target.result.os.tag == .windows and target.query.abi == null) {
+    if (target_query.os_tag == .windows and target_query.abi == null) {
         if (host_os == .linux) {
-            target.result.abi = .gnu;
+            target_query.abi = .gnu;
         } else if (host_os == .windows) {
-            target.result.abi = .msvc;
+            target_query.abi = .msvc;
         }
     }
+
+    // Project Rule: Minimum Windows version is RS4 (build 17063) for Unix socket support
+    // Without this, cross-compilation defaults to older Windows version where
+    // std.net.has_unix_sockets = false, causing Address.un to be void.
+    if (target_query.os_tag == .windows) {
+        target_query.os_version_min = .{ .windows = .win10_rs4 };
+    }
+
+    // Resolve the target after applying customizations
+    const target = b.resolveTargetQuery(target_query);
 
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.

@@ -102,7 +102,7 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    var addr: std.net.Address = std.net.Address.initUnix(path) catch {
+    var addr = std.net.Address.initUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
 

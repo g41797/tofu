@@ -131,8 +131,8 @@ fn deleteUDSPath(skt: *Skt) void {
     if (skt.*.server) {
         switch (skt.*.address.any.family) {
             std.posix.AF.UNIX => {
-                const udsPath: *const [108]u8 = &skt.*.address.un.path;
-                const path_len: usize = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.*.len;
+                const udsPath = &skt.*.address.un.path;
+                const path_len: usize = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.len;
                 if (path_len > 0) {
                     std.fs.deleteFileAbsolute(udsPath[0..path_len]) catch {};
                 }
@@ -224,13 +224,20 @@ pub fn acceptOs(
     std.debug.assert(0 == (flags & ~@as(u32, posix.SOCK.NONBLOCK | posix.SOCK.CLOEXEC))); // Unsupported flag(s)
 
     const accepted_sock: posix.socket_t = while (true) {
-        const rc: usize = if (have_accept4)
+        // On Darwin, accept returns c_int; on Linux with accept4, returns usize
+        const rc = if (have_accept4)
             system.accept4(sock, addr, addr_size, flags)
         else
             system.accept(sock, addr, addr_size);
 
-        switch (posix.errno(rc)) {
-            .SUCCESS => break @intCast(rc),
+        // Convert to usize for errno check (handles both c_int and usize)
+        const rc_usize: usize = if (@typeInfo(@TypeOf(rc)) == .int)
+            @as(usize, @intCast(@as(isize, @intCast(rc))))
+        else
+            rc;
+
+        switch (posix.errno(rc_usize)) {
+            .SUCCESS => break @intCast(rc_usize),
             .INTR => continue,
             .AGAIN => return error.WouldBlock,
             .CONNABORTED => return error.ConnectionAborted,
@@ -248,7 +255,17 @@ pub fn acceptOs(
     errdefer posix.close(accepted_sock);
 
     if (!have_accept4) {
-        try posix.setSockFlags(accepted_sock, flags);
+        // Manually set socket flags on Darwin (setSockFlags is not public)
+        // O_NONBLOCK value: use @bitCast since posix.O is a packed struct on macOS
+        const O_NONBLOCK: u32 = @bitCast(posix.O{ .NONBLOCK = true });
+        if (flags & posix.SOCK.NONBLOCK != 0) {
+            const current = posix.fcntl(accepted_sock, posix.F.GETFL, 0) catch return error.Unexpected;
+            _ = posix.fcntl(accepted_sock, posix.F.SETFL, current | O_NONBLOCK) catch return error.Unexpected;
+        }
+        if (flags & posix.SOCK.CLOEXEC != 0) {
+            const current = posix.fcntl(accepted_sock, posix.F.GETFD, 0) catch return error.Unexpected;
+            _ = posix.fcntl(accepted_sock, posix.F.SETFD, current | posix.FD_CLOEXEC) catch return error.Unexpected;
+        }
     }
     return accepted_sock;
 }

@@ -7,9 +7,12 @@
 /// var tup: tofu.TempUdsPath = .{};
 /// const filePath = try tup.buildPath(allocator);
 /// var adrs: Address = .{ .uds_server_addr = UDSServerAddress.init(filePath) };
+/// Unix socket path size (platform-specific: Linux=108, macOS/BSD=104)
+const UDS_PATH_SIZE: usize = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 104 else 108;
+
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
-    socket_path: [108:0]u8 = undefined,
+    socket_path: [UDS_PATH_SIZE:0]u8 = undefined,
 
     pub fn buildPath(tup: *TempUdsPath, allocator: Allocator) ![]u8 {
         tup.tempFile = try temp.create_file(allocator, "tofu*.port");
@@ -18,7 +21,7 @@ pub const TempUdsPath = struct {
 
         @memset(&tup.*.socket_path, 0);
 
-        const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, tup.socket_path[0..108]) catch {
+        const socket_file = tup.tempFile.parent_dir.realpath(tup.tempFile.basename, &tup.socket_path) catch {
             return AmpeError.UnknownError;
         };
 

@@ -33,9 +33,9 @@
 
 ---
 
-**Current Version:** 040
-**Last Updated:** 2026-02-25
-**Current Focus:** Phase IV — Poller Refactoring (COMPLETED)
+**Current Version:** 041
+**Last Updated:** 2026-02-26
+**Current Focus:** Phase IV — Poller Refactoring (COMPLETED) + Cross-Platform Fixes
 
 ---
 
@@ -55,7 +55,11 @@
 - **Pointer Stability:** ACHIEVED via heap-allocated `TriggeredChannel` pointers and 4-step stable header I/O.
 - **Abortive Closure:** ACHIEVED. Integrated `SO_LINGER=0` into all WinSock paths to eliminate `TIME_WAIT` hangs.
 - **Error Resilience:** Added retry loops to `listen()` and `connect()` to handle rapid churn on Windows.
-- **Verification:** All tests pass on Linux in Debug and ReleaseFast modes.
+- **Cross-Platform Fixes (2026-02-26):**
+  - macOS: Fixed EV flags, fcntl constants, O_NONBLOCK bitcast, LLD linker exclusion
+  - Windows: Set minimum version to RS4 in build.zig for UDS support (`has_unix_sockets = true`)
+  - All platforms: Fixed hardcoded UDS path size (now comptime: macOS/BSD=104, Linux/Windows=108)
+- **Verification:** Full sandwich pass — Linux tests + Windows/macOS cross-compilation all verified.
 
 ---
 

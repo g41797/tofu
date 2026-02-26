@@ -4,17 +4,20 @@
 //! macOS/BSD kqueue-based backend implementation.
 //! Complete kqueue implementation with no comptime branches inside functions.
 
+/// Kqueue event type (platform-specific struct).
+const Kevent = std.posix.system.Kevent;
+
 /// Kqueue-specific backend implementation.
 const KqueueBackend = struct {
     kqfd: std.posix.fd_t,
-    event_buffer: std.ArrayList(std.posix.kevent),
+    event_buffer: std.ArrayList(Kevent),
     allocator: Allocator,
 
     pub fn init(alktr: Allocator) AmpeError!KqueueBackend {
         const kqfd = std.posix.kqueue() catch return AmpeError.AllocationFailed;
         return .{
             .kqfd = kqfd,
-            .event_buffer = std.ArrayList(std.posix.kevent).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
+            .event_buffer = std.ArrayList(Kevent).initCapacity(alktr, 256) catch return AmpeError.AllocationFailed,
             .allocator = alktr,
         };
     }
@@ -25,24 +28,24 @@ const KqueueBackend = struct {
     }
 
     pub fn register(self: *KqueueBackend, fd: std.posix.fd_t, seq: SeqN, exp: Triggers) AmpeError!void {
-        var evs: [2]std.posix.kevent = undefined;
+        var evs: [2]Kevent = undefined;
         const count = triggers_mod.kqueue.toEvents(exp, seq, fd, &evs, false);
         if (count > 0) {
-            std.posix.kevent(self.kqfd, evs[0..count], &.{}, null) catch return AmpeError.CommunicationFailed;
+            _ = std.posix.kevent(self.kqfd, evs[0..count], &.{}, null) catch return AmpeError.CommunicationFailed;
         }
     }
 
     pub fn modify(self: *KqueueBackend, fd: std.posix.fd_t, seq: SeqN, exp: Triggers) AmpeError!void {
         // kqueue EV_ADD is idempotent (adds or modifies)
-        var evs: [2]std.posix.kevent = undefined;
+        var evs: [2]Kevent = undefined;
         const count = triggers_mod.kqueue.toEvents(exp, seq, fd, &evs, false);
         if (count > 0) {
-            std.posix.kevent(self.kqfd, evs[0..count], &.{}, null) catch return AmpeError.CommunicationFailed;
+            _ = std.posix.kevent(self.kqfd, evs[0..count], &.{}, null) catch return AmpeError.CommunicationFailed;
         }
     }
 
     pub fn unregister(self: *KqueueBackend, fd: std.posix.fd_t) void {
-        var evs: [2]std.posix.kevent = undefined;
+        var evs: [2]Kevent = undefined;
         // Delete both READ and WRITE filters
         evs[0] = .{
             .ident = @intCast(fd),
@@ -61,7 +64,7 @@ const KqueueBackend = struct {
             .udata = 0,
         };
         // Ignore errors on unregister (fd may already be closed)
-        std.posix.kevent(self.kqfd, evs[0..2], &.{}, null) catch {};
+        _ = std.posix.kevent(self.kqfd, evs[0..2], &.{}, null) catch {};
     }
 
     pub fn wait(self: *KqueueBackend, timeout: i32, seqn_trc_map: *core.SeqnTrcMap) AmpeError!Triggers {

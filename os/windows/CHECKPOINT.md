@@ -1,15 +1,16 @@
 **AGENT HANDOVER CHECKPOINT**
-**Current Date:** 2026-02-25
+**Current Date:** 2026-02-26
 **Last Agent:** Claude Opus 4.5
-**Active Phase:** Phase IV (Poller Refactoring) — COMPLETED
-**Active Stage:** Poller separation complete, verified on Linux
+**Active Phase:** Phase IV (Poller Refactoring) — COMPLETED + Cross-Platform Fixes
+**Active Stage:** Full sandwich verification pass (Linux, Windows, macOS)
 
 ## Current Status
 - **Verification:** All tests pass in `Debug` and `ReleaseFast` on Linux.
+- **Cross-Compilation:** ALL platforms verified (Linux, Windows x86_64, macOS x86_64/aarch64).
 - **Poller Refactoring:** COMPLETED. Clean separation achieved.
 - **Stability:** ACHIEVED. Critical pointer stability refactor (heap storage + 4-step I/O) resolved all previous segmentation faults and protocol hangs.
 - **Resilience:** Abortive closure (`SO_LINGER=0`) and retry loops in `listen`/`connect` resolved all transient `BindFailed`/`ConnectFailed` errors.
-- **Documentation:** `ACTIVE_KB.md` (v040) and `PollerOs-Design.md` are up to date.
+- **Documentation:** `ACTIVE_KB.md` (v040), `PollerOs-Design.md`, `WINDOWS_LIMITATIONS.md` are up to date.
 
 ## Mandatory Handoff Rules
 1. **Sandwich Build:** ALWAYS verify cross-platform compile after any change (Linux, Windows, macOS).
@@ -48,6 +49,39 @@ Changed `.github/workflows/mac.yml` to manual dispatch only.
 
 ### Task 4: Update Documentation ✅
 All documentation files updated.
+
+---
+
+## Completed This Session (2026-02-26, Claude Opus 4.5 — Cross-Platform Fixes)
+
+### macOS Cross-Compilation Fixes ✅
+1. **triggers.zig** - Fixed EV flags for macOS (use integer constants `EV.DELETE`, `EV.ADD | EV.ENABLE` instead of packed struct syntax)
+2. **Skt.zig (linux)** - Fixed fcntl usage for macOS:
+   - Use `posix.F.GETFL` constants instead of enum literals
+   - Handle error types properly (catch → return error.Unexpected)
+   - Use `@bitCast(posix.O{ .NONBLOCK = true })` for O_NONBLOCK value
+3. **address.zig** - Fixed hardcoded UDS path size 108 → comptime OS check (macOS/BSD=104, else=108)
+4. **testHelpers.zig** - Fixed hardcoded UDS path size 108 → comptime OS check
+5. **build.zig** - Made `use_lld` conditional (LLD doesn't support Mach-O format)
+
+### Windows Minimum Version Fix (UDS Support) ✅
+1. **build.zig** - Set minimum Windows version to RS4 via `target_query.os_version_min = .{ .windows = .win10_rs4 }`
+   - This ensures `std.net.has_unix_sockets = true` during cross-compilation
+   - Without this, `Address.un` is `void` and UDS code fails to compile
+2. **build.zig** - Refactored to use `standardTargetOptionsQueryOnly()` + `resolveTargetQuery()` pattern
+   - Allows modifying query (ABI, OS version) before resolution
+3. **WINDOWS_LIMITATIONS.md** - Documented the version requirement
+
+### Verification Results ✅
+| Platform | Status |
+|----------|--------|
+| Linux tests (Debug) | ✅ PASS |
+| Linux tests (ReleaseFast) | ✅ PASS |
+| Windows x86_64 cross-compile | ✅ PASS |
+| macOS x86_64 cross-compile | ✅ PASS |
+| macOS aarch64 cross-compile | ✅ PASS |
+
+---
 
 ## Immediate Tasks for Next Agent
 1. **Native Windows Test:** Run full test suite on native Windows machine

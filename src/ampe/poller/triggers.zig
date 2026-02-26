@@ -51,14 +51,22 @@ pub const epoll = struct {
 
 /// Kqueue-specific trigger mappings (macOS/BSD).
 pub const kqueue = struct {
-    pub fn toEvents(exp: Triggers, seq: common.SeqN, fd: std.posix.fd_t, evs: []std.posix.kevent, is_del: bool) usize {
+    /// Kqueue event type (platform-specific struct).
+    pub const Kevent = std.posix.system.Kevent;
+
+    /// EV flags as constants (macOS/BSD use integer constants, not packed struct)
+    const EV = std.posix.system.EV;
+    const EV_DELETE: u16 = EV.DELETE;
+    const EV_ADD_ENABLE: u16 = EV.ADD | EV.ENABLE;
+
+    pub fn toEvents(exp: Triggers, seq: common.SeqN, fd: std.posix.fd_t, evs: []Kevent, is_del: bool) usize {
         var i: usize = 0;
-        const flags = if (is_del) std.posix.system.EV.DELETE else std.posix.system.EV.ADD | std.posix.system.EV.ENABLE;
+        const flags: u16 = if (is_del) EV_DELETE else EV_ADD_ENABLE;
         if (exp.recv == .on or exp.accept == .on or exp.notify == .on) {
             evs[i] = .{
                 .ident = @intCast(fd),
                 .filter = std.posix.system.EVFILT.READ,
-                .flags = flags,
+                .flags = @bitCast(flags),
                 .fflags = 0,
                 .data = 0,
                 .udata = @intCast(seq),
@@ -69,7 +77,7 @@ pub const kqueue = struct {
             evs[i] = .{
                 .ident = @intCast(fd),
                 .filter = std.posix.system.EVFILT.WRITE,
-                .flags = flags,
+                .flags = @bitCast(flags),
                 .fflags = 0,
                 .data = 0,
                 .udata = @intCast(seq),
@@ -79,9 +87,9 @@ pub const kqueue = struct {
         return i;
     }
 
-    pub fn fromEvent(ev: std.posix.kevent, exp: Triggers) Triggers {
+    pub fn fromEvent(ev: Kevent, exp: Triggers) Triggers {
         var act = Triggers{ .pool = exp.pool };
-        if (ev.flags & std.posix.system.EV.ERROR != 0) act.err = .on;
+        if (ev.flags & EV.ERROR != 0) act.err = .on;
         if (ev.filter == std.posix.system.EVFILT.READ) {
             if (exp.recv == .on) act.recv = .on else if (exp.notify == .on) act.notify = .on else if (exp.accept == .on) act.accept = .on;
         }

@@ -31,6 +31,23 @@ This document tracks all architectural differences, performance constraints, and
 - **Difference:** No "Abstract Namespace" support. All UDS paths must be valid Windows filesystem paths.
 - **Cleanup:** Socket files must be explicitly deleted using `std.fs.deleteFileAbsolute` before `bind()` to avoid collisions.
 
+### **Minimum Windows Version for UDS (build.zig)**
+- **Requirement:** Windows 10 RS4 (Redstone 4, build 17063) or later for Unix socket support.
+- **Issue:** When cross-compiling to Windows, the default target version is older than RS4. The Zig stdlib checks `has_unix_sockets` which depends on `builtin.os.version_range.windows.isAtLeast(.win10_rs4)`. If the target version is too old, `Address.un` becomes `void` and UDS code fails to compile.
+  ```zig
+  // In std/net.zig
+  pub const has_unix_sockets = switch (native_os) {
+      .windows => builtin.os.version_range.windows.isAtLeast(.win10_rs4) orelse false,
+      // ...
+  };
+  pub const Address = extern union {
+      un: if (has_unix_sockets) posix.sockaddr.un else void,
+      // ...
+  };
+  ```
+- **Fix:** `build.zig` sets `target_query.os_version_min = .{ .windows = .win10_rs4 }` before resolving the target, ensuring `has_unix_sockets = true` during cross-compilation.
+- **Reference:** This is NOT a stdlib bug - it's proper version-gating. UDS was added in Windows 10 RS4.
+
 ---
 
 ## 3. Poller & Event Loop (`wepoll`)
