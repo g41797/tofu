@@ -107,14 +107,25 @@ pub const Linger = extern struct {
 
 pub fn setLingerAbort(skt: *Skt) AmpeError!void {
     // POSIX-specific setsockopt
+    // NOTE: Cannot use std.posix.setsockopt because it treats EINVAL as unreachable.
+    // On macOS, setsockopt(SO_LINGER) can return EINVAL for certain socket states.
+    // Use raw syscall to handle this gracefully.
     const linger_config: Linger = Linger{
         .l_onoff = 1, // Enable linger
         .l_linger = 0, // Set timeout to 0 (immediate abort)
     };
 
-    _ = std.posix.setsockopt(skt.*.socket.?, std.posix.SOL.SOCKET, std.posix.SO.LINGER, &std.mem.toBytes(linger_config)) catch {
+    const rc = system.setsockopt(
+        skt.*.socket.?,
+        posix.SOL.SOCKET,
+        posix.SO.LINGER,
+        &std.mem.toBytes(linger_config),
+        @sizeOf(Linger),
+    );
+
+    if (rc != 0) {
         return AmpeError.SetsockoptFailed;
-    };
+    }
     return;
 }
 

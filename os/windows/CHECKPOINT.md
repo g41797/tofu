@@ -72,6 +72,12 @@ All documentation files updated.
    - Allows modifying query (ABI, OS version) before resolution
 3. **WINDOWS_LIMITATIONS.md** - Documented the version requirement
 
+### macOS Runtime Fix (setLingerAbort panic) ✅
+1. **Skt.zig (linux)** - Fixed `setLingerAbort()` to use raw `system.setsockopt` syscall
+   - `std.posix.setsockopt` treats `EINVAL` as unreachable (panics)
+   - macOS can return `EINVAL` for `SO_LINGER` on certain socket states
+   - Raw syscall allows graceful error handling without panic
+
 ### Verification Results ✅
 | Platform | Status |
 |----------|--------|
@@ -80,6 +86,7 @@ All documentation files updated.
 | Windows x86_64 cross-compile | ✅ PASS |
 | macOS x86_64 cross-compile | ✅ PASS |
 | macOS aarch64 cross-compile | ✅ PASS |
+| macOS native tests (CI) | ✅ PASS (after setLingerAbort fix) |
 
 ---
 
