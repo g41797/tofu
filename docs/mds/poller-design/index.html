@@ -2064,9 +2064,9 @@
 <p>The Reactor should express <em>intent</em> (what it wants to happen), not <em>mechanism</em> (how the OS signals it).</p>
 </blockquote>
 <p>The <code>triggers.zig</code> module translates between these worlds:
-- <code>triggers.epoll.toMask()</code> / <code>fromMask()</code> — converts <code>Triggers</code> ↔ epoll event flags (used by both Linux epoll and Windows wepoll)
-- <code>triggers.kqueue.toEvents()</code> / <code>fromEvent()</code> — converts <code>Triggers</code> ↔ kevent structures
-- <code>triggers.poll.toMask()</code> / <code>fromMask()</code> — legacy poll fallback for non-mainstream platforms</p>
+- triggers.epoll.toMask()/fromMask() — converts <code>Triggers</code> ↔ epoll event flags (used by both Linux epoll and Windows wepoll)
+- triggers.kqueue.toEvents()/fromEvent() — converts <code>Triggers</code> ↔ kevent structures
+- triggers.poll.toMask()/fromMask() — legacy poll fallback for non-mainstream platforms</p>
 <p>Because all Reactor logic speaks only <code>Triggers</code>, <strong>the event loop code is identical across all platforms</strong> — there are zero OS-specific branches inside <code>Reactor.zig</code> itself. Adding a new OS backend requires implementing one module (<code>*_backend.zig</code>) and one translation pair in <code>triggers.zig</code>. Nothing else changes.</p>
 <hr />
 <h2 id="development-history-linux-first-then-partitioned">Development History — Linux First, Then Partitioned</h2>
@@ -2158,12 +2158,12 @@
 </span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Each backend must implement:
-- <code>fn init(allocator: Allocator) AmpeError!Backend</code>
-- <code>fn deinit(self: *Backend) void</code>
-- <code>fn register(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void</code>
-- <code>fn modify(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void</code>
-- <code>fn unregister(self: *Backend, fd: FdType) void</code>
-- <code>fn wait(self: *Backend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers</code></p>
+- fn init(allocator: Allocator) AmpeError!Backend
+- fn deinit(self: <em>Backend) void
+- fn register(self: </em>Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void
+- fn modify(self: <em>Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void
+- fn unregister(self: </em>Backend, fd: FdType) void
+- fn wait(self: <em>Backend, timeout: i32, seqn_trc_map: </em>SeqnTrcMap) AmpeError!Triggers</p>
 <hr />
 <h2 id="4-platform-abstraction-layer">4. Platform Abstraction Layer</h2>
 <h3 id="a-the-handle-type">A. The Handle Type</h3>
@@ -2178,9 +2178,9 @@
 - <strong>POSIX:</strong> Returns <code>i32</code> (@intCast)</p>
 <h3 id="c-the-trigger-mappings">C. The Trigger Mappings</h3>
 <p>The <code>triggers.zig</code> module provides platform-specific conversions:
-- <code>triggers.epoll.toMask()</code> / <code>fromMask()</code> — epoll/wepoll
-- <code>triggers.kqueue.toEvents()</code> / <code>fromEvent()</code> — kqueue
-- <code>triggers.poll.toMask()</code> / <code>fromMask()</code> — legacy poll</p>
+- triggers.epoll.toMask()/fromMask() — epoll/wepoll
+- triggers.kqueue.toEvents()/fromEvent() — kqueue
+- triggers.poll.toMask()/fromMask() — legacy poll</p>
 <hr />
 <h2 id="5-the-reconciliation-waittriggers-loop">5. The Reconciliation waitTriggers Loop</h2>
 <p><code>waitTriggers</code> acts as a state synchronizer, ensuring interest is checked <strong>only</strong> during the loop.</p>
