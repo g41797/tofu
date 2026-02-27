@@ -1,13 +1,14 @@
 
 
-**tofu** is a _protocol_ and an _asynchronous_ **Zig messaging library** used to:
+**tofu** is an _asynchronous_ **Zig messaging library** used to:
 
 - Build **custom** communication flows.
 - Create **non-blocking** systems.
 - Enable **peer-to-peer** messaging between applications.
 
-**tofu** is a completely new project. It is not a port of old code, and it does not use any C libraries.
-It is built **100% in native Zig**. The core functionality uses only the standard library.
+**tofu** is a completely new project. It is not a port of old code. Built in **native Zig** — protocol engine, message handling, Linux and macOS backends use only the standard library.
+
+Windows backend is based on [wepoll](https://github.com/piscisaureus/wepoll).
 
 ---
 
@@ -52,7 +53,7 @@ By "**smell**," I mean the core philosophy:
 
 ## Credits
 - [Karl Seguin](https://github.com/karlseguin) — for introducing me to [Zig networking](https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/)
-- [Franck Blettner](https://github.com/fblettner) — for creating [the template repository](https://github.com/fblettner/fblettner.github.io) for documentation sites, which this documentation is based on 
+- [Franck Blettner](https://github.com/fblettner) — for creating [the template repository](https://github.com/fblettner/fblettner.github.io) for documentation sites, which this documentation is based on
 - Zig Community Forums (in order of my registration) - for your help and patience with my posts
     - [Zig on Reddit](https://www.reddit.com/r/Zig/)
     - [Zig on Discord](https://discord.com/invite/zig)

@@ -1633,7 +1633,7 @@ It allocates and destroys <strong>Message(s)</strong> and <strong>ChannelGroup(s
 </ul>
 <h3 id="physical-separation">Physical Separation</h3>
 <p>The <strong><em>Engine</em></strong> name shows the real work it does.<br />
-Every engine runs one <strong><em>internal thread</em></strong> with a <strong>poll loop</strong>.<br />
+Every engine runs one <strong><em>internal thread</em></strong> with an <strong>event loop</strong>.<br />
 This loop handles all socket operations.</p>
 <p>The <strong><em>Ampe interface</em></strong> is implemented by the <strong><em>Reactor</em></strong> structure.</p>
 <p>All <strong>ChannelGroups</strong> share <strong>one internal socket</strong> to talk to the engine thread.</p>

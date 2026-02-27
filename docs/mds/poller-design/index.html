@@ -2091,19 +2091,20 @@
 <p>This architecture was developed collaboratively:</p>
 <ul>
 <li>
-<p><strong>Author (g41797):</strong> Overall project architecture, the <code>Triggers</code> abstraction, the Reactor design, the wepoll strategy decision, and final verification on all platforms.</p>
+<p><strong><a href="https://github.com/g41797">Author</a>:</strong> Overall project architecture, the <code>Triggers</code> abstraction, the Reactor design, the wepoll strategy decision, and final verification on all platforms.</p>
 </li>
 <li>
-<p><strong>Claude Code (Anthropic):</strong> macOS/BSD kqueue backend implementation, cross-platform build fixes (fcntl constants, O_NONBLOCK bitcast, abstract socket restriction, UDS path sizes, LLD linker exclusion), <code>setLingerAbort()</code> raw syscall fix, repo cleanup and documentation for Zig forum showcase.</p>
+<p><strong><a href="https://github.com/anthropics/claude-code">Claude Code</a>:</strong> macOS/BSD kqueue backend implementation, cross-platform build fixes (fcntl constants, O_NONBLOCK bitcast, abstract socket restriction, UDS path sizes, LLD linker exclusion), <code>setLingerAbort()</code> raw syscall fix, repo cleanup.</p>
 </li>
 <li>
-<p><strong>Gemini CLI (Google):</strong> Robust kqueue <code>modify()</code> with <code>EV_RECEIPT</code> error handling, <code>wait()</code> timeout conversion fix, <code>triggers.zig</code> <code>fromEvent()</code> refinement for <code>EV_EOF</code>/<code>EV_ERROR</code>, <code>Notifier.zig</code> connect/accept ordering fix.</p>
+<p><strong><a href="https://github.com/google-gemini/gemini-cli">Gemini CLI</a>:</strong> Robust kqueue <code>modify()</code> with <code>EV_RECEIPT</code> error handling, <code>wait()</code> timeout conversion fix, <code>triggers.zig</code> <code>fromEvent()</code> refinement for <code>EV_EOF</code>/<code>EV_ERROR</code>, <code>Notifier.zig</code> connect/accept ordering fix.</p>
 </li>
 </ul>
 <p>The AI agents worked iteratively with the author across multiple sessions, each picking up from <code>design/AGENT_STATE.md</code> (the handover document) and updating it on completion.</p>
+<p>This document is also a result of that cooperation. The author disagreed with the writing style. The vote was 2:1.</p>
 <hr />
 <h2 id="architecture">Architecture</h2>
-<p>The Poller design is a high-performance synchronization engine that bridges the gap between stateless application logic and the stateful event-notification systems of modern operating systems (<code>epoll</code> on Linux, <code>wepoll</code> on Windows, <code>kqueue</code> on BSD/macOS).</p>
+<p>The Poller connects the application's logic to OS event notification. Backend: <code>epoll</code> on Linux, <code>wepoll</code> on Windows, <code>kqueue</code> on BSD/macOS.</p>
 <hr />
 <h2 id="1-architecture-overview">1. Architecture Overview</h2>
 <h3 id="file-structure">File Structure</h3>

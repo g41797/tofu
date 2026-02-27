@@ -14,7 +14,7 @@ pub const tofu = @import("tofu");
 
 // Reactor: The single-threaded, event-driven implementation
 // of the Ampe interface. It utilizes the Reactor pattern to multiplex
-// non-blocking socket I/O via an internal poll-style loop.
+// non-blocking socket I/O via an internal event loop.
 pub const Reactor = tofu.Reactor;
 
 pub const Ampe = tofu.Ampe;

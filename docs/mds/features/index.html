@@ -1463,14 +1463,14 @@
 <ul>
 <li><strong>Cross-platform</strong>: Linux (epoll), Windows 10+ (wepoll), macOS/BSD (kqueue) — automatic, zero code changes</li>
 <li><strong>Message-Based</strong>: Uses discrete messages for communication.</li>
-<li><strong>Asynchronous</strong>: Enables non-blocking message exchanges.</li>
-<li><strong>Duplex</strong>: Supports two-way communication.</li>
-<li><strong>Peer-to-Peer</strong>: Allows equal roles after connection establishment.</li>
+<li><strong>Asynchronous</strong>: Non-blocking message exchange.</li>
+<li><strong>Duplex</strong>: Two-way communication.</li>
+<li><strong>Peer-to-Peer</strong>: Equal roles after connection.</li>
 <li><strong>Stream oriented transport</strong> - TCP/IP and <strong>U</strong>nix <strong>D</strong>omain <strong>S</strong>ockets</li>
-<li><strong>Multithread-friendly</strong> - All APIs are safe for concurrent access.</li>
+<li><strong>Multithread-friendly</strong> - All APIs are thread-safe.</li>
 <li><strong>Memory management for messages</strong> - Internal message pool</li>
-<li><strong>Backpressure management</strong> - Allows to control receive of messages</li>
-<li><strong>Customizable application flows</strong> - Allows to build various application flows not restricted to request/response or pub/sub</li>
+<li><strong>Backpressure management</strong> - Flow control for incoming messages</li>
+<li><strong>Customizable application flows</strong> - Any flow — not just request/response or pub/sub</li>
 <li><strong>Simplest API</strong> - You don't have to bother with or know the "guts" of socket interfaces</li>
 <li><strong>DIY</strong> - No enforced authentication or serialization; provides features to design and implement your own.</li>
 <li><strong>Callback enabled</strong> - This will be explained later. </li>

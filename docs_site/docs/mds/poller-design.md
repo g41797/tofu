@@ -52,19 +52,21 @@ The cross-platform architecture was not designed upfront. The sequence was:
 
 This architecture was developed collaboratively:
 
-- **Author (g41797):** Overall project architecture, the `Triggers` abstraction, the Reactor design, the wepoll strategy decision, and final verification on all platforms.
+- **[Author](https://github.com/g41797):** Overall project architecture, the `Triggers` abstraction, the Reactor design, the wepoll strategy decision, and final verification on all platforms.
 
-- **Claude Code (Anthropic):** macOS/BSD kqueue backend implementation, cross-platform build fixes (fcntl constants, O_NONBLOCK bitcast, abstract socket restriction, UDS path sizes, LLD linker exclusion), `setLingerAbort()` raw syscall fix, repo cleanup and documentation for Zig forum showcase.
+- **[Claude Code](https://github.com/anthropics/claude-code):** macOS/BSD kqueue backend implementation, cross-platform build fixes (fcntl constants, O_NONBLOCK bitcast, abstract socket restriction, UDS path sizes, LLD linker exclusion), `setLingerAbort()` raw syscall fix, repo cleanup.
 
-- **Gemini CLI (Google):** Robust kqueue `modify()` with `EV_RECEIPT` error handling, `wait()` timeout conversion fix, `triggers.zig` `fromEvent()` refinement for `EV_EOF`/`EV_ERROR`, `Notifier.zig` connect/accept ordering fix.
+- **[Gemini CLI](https://github.com/google-gemini/gemini-cli):** Robust kqueue `modify()` with `EV_RECEIPT` error handling, `wait()` timeout conversion fix, `triggers.zig` `fromEvent()` refinement for `EV_EOF`/`EV_ERROR`, `Notifier.zig` connect/accept ordering fix.
 
 The AI agents worked iteratively with the author across multiple sessions, each picking up from `design/AGENT_STATE.md` (the handover document) and updating it on completion.
+
+This document is also a result of that cooperation. The author disagreed with the writing style. The vote was 2:1.
 
 ---
 
 ## Architecture
 
-The Poller design is a high-performance synchronization engine that bridges the gap between stateless application logic and the stateful event-notification systems of modern operating systems (`epoll` on Linux, `wepoll` on Windows, `kqueue` on BSD/macOS).
+The Poller connects the application's logic to OS event notification. Backend: `epoll` on Linux, `wepoll` on Windows, `kqueue` on BSD/macOS.
 
 ---
 

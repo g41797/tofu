@@ -110,4 +110,16 @@ The `zbta.sh` script (and platform variants) automates this sequence.
 
 ---
 
+## 5. Documentation Style
+
+- **Short sentences.** Several short sentences are better than one long one.
+- **Bullet lists for sequences.** Use bullets for multi-step flows and multi-part descriptions. One item per line. Don't pack multiple steps into one sentence.
+- **Plain English.** Simple words understood by non-native English speakers. No high-register vocabulary.
+- **No marketing language.** No "enables", "empowers", "bridges the gap", "seamless", "robust", "high-performance" unless technically precise.
+- **No AI filler.** No triple adjectives ("bounded, mechanical, and isolated"), no summary sentences that repeat what the paragraph already said.
+- **Tech terms are fine.** `epoll`, `kqueue`, `TriggeredChannel`, `comptime` — use them as-is. Precision over simplification.
+- **Grammar matters.** "Allows to verb" is not English. Write "Allows X to verb" or restructure.
+
+---
+
 *End of Rules*

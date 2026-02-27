@@ -34,7 +34,7 @@ The **_Message_** does two things:
 ### Physical Separation
 
 The **_Engine_** name shows the real work it does.  
-Every engine runs one **_internal thread_** with a **poll loop**.  
+Every engine runs one **_internal thread_** with an **event loop**.  
 This loop handles all socket operations.
 
 The **_Ampe interface_** is implemented by the **_Reactor_** structure.
