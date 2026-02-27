@@ -1,4 +1,5 @@
 
+- **Cross-platform**: Linux (epoll), Windows 10+ (wepoll), macOS/BSD (kqueue) — automatic, zero code changes
 - **Message-Based**: Uses discrete messages for communication.
 - **Asynchronous**: Enables non-blocking message exchanges.
 - **Duplex**: Supports two-way communication.

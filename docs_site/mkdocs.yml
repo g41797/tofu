@@ -76,6 +76,9 @@ nav:
       - Message Flows: mds/message-flows.md
       - Patterns: mds/patterns.md
       - Error Handling: mds/error-handling.md
+  - Internals:
+      - Poller Design: mds/poller-design.md
+      - Platform Support: mds/platform-support.md
   - Addendum:
       - Advanced Topics: mds/advanced-topics.md
       - Appendable: mds/appendable.md
