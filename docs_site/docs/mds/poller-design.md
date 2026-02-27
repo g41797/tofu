@@ -24,9 +24,9 @@ This abstraction **predates the cross-platform work entirely**. It was designed 
 > The Reactor should express *intent* (what it wants to happen), not *mechanism* (how the OS signals it).
 
 The `triggers.zig` module translates between these worlds:
-- `triggers.epoll.toMask()` / `fromMask()` — converts `Triggers` ↔ epoll event flags (used by both Linux epoll and Windows wepoll)
-- `triggers.kqueue.toEvents()` / `fromEvent()` — converts `Triggers` ↔ kevent structures
-- `triggers.poll.toMask()` / `fromMask()` — legacy poll fallback for non-mainstream platforms
+- triggers.epoll.toMask()/fromMask() — converts `Triggers` ↔ epoll event flags (used by both Linux epoll and Windows wepoll)
+- triggers.kqueue.toEvents()/fromEvent() — converts `Triggers` ↔ kevent structures
+- triggers.poll.toMask()/fromMask() — legacy poll fallback for non-mainstream platforms
 
 Because all Reactor logic speaks only `Triggers`, **the event loop code is identical across all platforms** — there are zero OS-specific branches inside `Reactor.zig` itself. Adding a new OS backend requires implementing one module (`*_backend.zig`) and one translation pair in `triggers.zig`. Nothing else changes.
 
@@ -134,12 +134,12 @@ pub fn PollerCore(comptime Backend: type) type {
 ```
 
 Each backend must implement:
-- `fn init(allocator: Allocator) AmpeError!Backend`
-- `fn deinit(self: *Backend) void`
-- `fn register(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void`
-- `fn modify(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void`
-- `fn unregister(self: *Backend, fd: FdType) void`
-- `fn wait(self: *Backend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers`
+- fn init(allocator: Allocator) AmpeError!Backend
+- fn deinit(self: *Backend) void
+- fn register(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void
+- fn modify(self: *Backend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void
+- fn unregister(self: *Backend, fd: FdType) void
+- fn wait(self: *Backend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers
 
 ---
 
@@ -157,9 +157,9 @@ Because Windows `SOCKET` is a pointer and Linux `socket_t` is an integer:
 
 ### C. The Trigger Mappings
 The `triggers.zig` module provides platform-specific conversions:
-- `triggers.epoll.toMask()` / `fromMask()` — epoll/wepoll
-- `triggers.kqueue.toEvents()` / `fromEvent()` — kqueue
-- `triggers.poll.toMask()` / `fromMask()` — legacy poll
+- triggers.epoll.toMask()/fromMask() — epoll/wepoll
+- triggers.kqueue.toEvents()/fromEvent() — kqueue
+- triggers.poll.toMask()/fromMask() — legacy poll
 
 ---
 
