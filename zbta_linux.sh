@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage ./zbta.sh &> /tmp/....log
+# Usage ./zbta_linux.sh &> /tmp/....log
 
 date
 

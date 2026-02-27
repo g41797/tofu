@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 041
+**Current Version:** 042
 **Last Updated:** 2026-02-27
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Repo Cleanup & Zig Forum Showcase Preparation (COMPLETED)
+**Active Phase:** Site Documentation Polish (IN PROGRESS)
 
 ---
 
@@ -69,6 +69,47 @@ src/ampe/
 
 ## Session History
 
+### 2026-02-27: Claude Sonnet 4.6 — Site Documentation Polish (Session 2)
+
+#### Rules added to design/RULES.md (Section 5 — Documentation Style):
+- Short sentences over long ones
+- Bullet lists for sequences and multi-step flows
+- No marketing language, no AI filler, plain English for non-native speakers
+- Tech terms are fine as-is
+
+#### Changes to docs_site/docs/mds/:
+
+**overview.md:**
+- Opening paragraph rewritten: "asynchronous Zig messaging library" (dropped "protocol and"), native Zig clarification, wepoll note added
+- AI agent credits NOT added to Credits section (author did not ask for this — do not add)
+
+**features.md** — 6 fixes:
+- "Asynchronous": "Enables non-blocking..." → "Non-blocking message exchange."
+- "Duplex": "Supports two-way..." → "Two-way communication."
+- "Peer-to-Peer": "Allows equal roles after connection establishment." → "Equal roles after connection."
+- "Multithread-friendly": "safe for concurrent access" → "thread-safe"
+- "Backpressure": "Allows to control receive of messages" (grammar error) → "Flow control for incoming messages"
+- "Customizable flows": "Allows to build various..." (grammar error) → "Any flow — not just request/response or pub/sub"
+
+**key-ingredients.md:** "poll loop" → "event loop"
+
+**imports.md:** "poll-style loop" → "event loop"
+
+**platform-support.md** — full pass:
+- Reactor/Proactor sections rewritten: shorter, prose trimmed, code blocks do the work
+- wepoll description: "epoll emulator for Windows, internally based on IOCP."
+- Removed AI filler: "Control flow is explicit and predictable", "bounded, mechanical, and isolated", "This is a deliberate architectural guarantee", long closing sentence
+- `Io.Evented` section: Scenario A/B simplified
+
+**poller-design.md:**
+- Architecture opener: "bridges the gap" cliché removed
+- Acknowledgements: participant names now links ([Author], [Claude Code], [Gemini CLI])
+- Added: "This document is also a result of that cooperation. The author disagreed with the writing style. The vote was 2:1."
+
+#### Open questions:
+- AI labeling for poller-design.md and platform-support.md — unresolved, ask author
+- Author said "return to previous doc" after platform-support.md — unclear which doc; ask at session start
+
 ### 2026-02-27: Claude Sonnet 4.6 — Repo Cleanup & Forum Showcase Preparation
 - Deleted `poc/` (8 files — IOCP POC work, superseded by wepoll)
 - Deleted `os/windows/analysis/` (19 files — historical AI planning deliberations)
@@ -116,16 +157,29 @@ src/ampe/
 | Windows x86_64 cross-compile | ✅ PASS |
 | macOS x86_64 cross-compile | ✅ PASS |
 | macOS aarch64 cross-compile | ✅ PASS |
-| macOS native tests (CI) | Pending (setLingerAbort + abstract socket fixes) |
+| macOS native tests | Pending (setLingerAbort + abstract socket fixes) |
+
+---
+
+## Constraints for Next Agent (MANDATORY)
+
+- **Git disabled.** Do NOT run any git commands. Author manages version control manually.
+- **No GitHub CI references.** GitHub workflows are not in use. Say "native hardware testing", not "CI run".
+- **overview.md Credits** — do NOT add AI agent credits there. Author did not ask for this.
+- **Doc style** — see `design/RULES.md` §5. Short sentences. Bullet lists for sequences. No marketing language. Plain English for non-native speakers. Tech terms are fine.
+- **"allows to verb"** is a grammar error in English. Restructure any such phrase found in docs.
+- **Architectural changes** require explicit author approval before implementation.
 
 ---
 
 ## Immediate Tasks for Next Agent
 
-1. **macOS CI Verification:** Trigger manual workflow to verify the new kqueue timeout fix and setLingerAbort fix.
-2. **Native Windows Test:** Run full test suite on native Windows machine.
-3. **UDS Stress Analysis:** Investigate AF_UNIX race conditions under high load (if any remain).
-4. **Legacy Cleanup:** Consider removing legacy `PollerOs()` wrapper after full verification.
+1. **Site docs polish** — in progress, see "Session History" entry for 2026-02-27 (second entry). The user said "return to previous doc" after platform-support.md was done but did not specify which one. Ask at session start.
+2. **AI labeling** — open question: should `poller-design.md` and `platform-support.md` get an explicit "AI-generated" label like sockets101.md? User said "I'm not sure." Resolve with author.
+3. **macOS native hardware testing** — pending. Run full test suite on native macOS.
+4. **Native Windows Test** — pending. Run full test suite on native Windows machine.
+5. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.
+6. **Legacy Cleanup** — consider removing legacy `PollerOs()` wrapper after full verification.
 
 ---
 
