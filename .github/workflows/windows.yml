@@ -17,7 +17,7 @@ jobs:
     steps:
       - run: git config --global core.autocrlf false
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -28,8 +28,17 @@ jobs:
 
       - run: zig build test -freference-trace --summary all -Doptimize=Debug
 
+      - run: rm -rf ./.zig-cache/
+        shell: bash
+
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
 
+      - run: rm -rf ./.zig-cache/
+        shell: bash
+
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+
+      - run: rm -rf ./.zig-cache/
+        shell: bash
 
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall

@@ -445,13 +445,15 @@ inline fn recv_ack(rtr: *Reactor) !void {
 }
 
 fn loop(rtr: *Reactor) void {
+    // Declared first → runs last (Zig defers are LIFO).
+    // Posts cmpl only after all cleanup below has completed, so
+    // waitFinish()'s t.join() returns immediately after timedWait succeeds.
+    // cmpl was already consumed by recv_ack() at startup, so this second
+    // post is unambiguously the shutdown-complete signal.
+    defer rtr.cmpl.post();
     defer rtr.*.cleanMboxes();
     defer rtr.*.deleteAll();
     defer rtr.*.chnlsGroup_map.deinit();
-    // Signal destroy() that the thread has fully exited and all defers
-    // above have run. cmpl was already consumed by recv_ack() at startup,
-    // so this second post is unambiguously the shutdown-complete signal.
-    defer rtr.cmpl.post();
 
     var sendAckDone: bool = false;
     var timeOut: i32 = 0;
