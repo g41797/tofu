@@ -75,7 +75,7 @@ pub fn init(allocator: Allocator) !Notifier {
 fn initTCP(allocator: Allocator) !Notifier {
     var sc: SCreator = SCreator.init(allocator);
 
-    const port: u16 = tofu.FindFreeTcpPort() catch 0;
+    const port: u16 = Skt.findFreeTcpPort() catch 0;
     const server_addr: tofu.address.TCPServerAddress = tofu.address.TCPServerAddress.init("127.0.0.1", port);
 
     var listSkt: Skt = try sc.fromAddress(.{ .tcp_server_addr = server_addr });
