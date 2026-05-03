@@ -41,6 +41,10 @@ maxid: u32 = undefined,
 ntfcsEnabled: bool = undefined,
 thread: ?Thread = null,
 cmpl: Semaphore = undefined,
+// Set by destroy() before sending the shutdown alert.
+// Reactor loop checks this on every iteration as a fallback exit path
+// when the notifier socket cannot deliver the .shutdownStarted alert.
+shutdownFlag: Atomic(bool) = .init(false),
 //
 // Accessible from the thread - don't lock/unlock
 //
@@ -86,6 +90,7 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
         .currBhdr = .{},
         .currTcopt = null,
         .cmpl = Semaphore{},
+        .shutdownFlag = .init(false),
     };
 
     rtr.acns = ActiveChannels.init(rtr.allocator, 1024) catch { // was 255
@@ -132,15 +137,19 @@ pub fn destroy(rtr: *Reactor) void {
 
         log.warn("!!! engine will be destroyed !!!", .{});
 
-        var waitEnabled: bool = true;
+        // Set flag first — reactor loop checks this on every iteration
+        // and exits even if the notifier socket is broken.
+        rtr.shutdownFlag.store(true, .release);
 
-        rtr._sendAlert(.shutdownStarted) catch {
-            waitEnabled = false;
-        };
+        // Best-effort notification. If the notifier socket is in a bad
+        // state (e.g. HUP after rapid reconnect cycles on Windows) this
+        // may fail — that is fine because shutdownFlag is already set.
+        rtr._sendAlert(.shutdownStarted) catch {};
 
-        if (waitEnabled) {
-            rtr.waitFinish();
-        }
+        // Always wait. Skipping waitFinish() when the alert failed was
+        // the root cause of the race: resources were freed while the
+        // reactor loop thread was still accessing seqn_trc_map.
+        rtr.waitFinish();
 
         rtr.pool.close();
         rtr.acns.deinit();
@@ -380,6 +389,15 @@ fn createThread(rtr: *Reactor) !void {
 
 inline fn waitFinish(rtr: *Reactor) void {
     if (rtr.thread) |t| {
+        // cmpl was posted once at startup and consumed by recv_ack().
+        // The reactor loop posts it again just before exiting — that is
+        // the shutdown-complete signal. A timed wait ensures a stuck
+        // thread produces a clear error rather than a silent hang.
+        rtr.cmpl.timedWait(10 * std.time.ns_per_s) catch {
+            log.err("reactor thread did not exit in 10s, detaching", .{});
+            t.detach();
+            return;
+        };
         t.join();
     }
 }
@@ -430,11 +448,22 @@ fn loop(rtr: *Reactor) void {
     defer rtr.*.cleanMboxes();
     defer rtr.*.deleteAll();
     defer rtr.*.chnlsGroup_map.deinit();
+    // Signal destroy() that the thread has fully exited and all defers
+    // above have run. cmpl was already consumed by recv_ack() at startup,
+    // so this second post is unambiguously the shutdown-complete signal.
+    defer rtr.cmpl.post();
 
     var sendAckDone: bool = false;
     var timeOut: i32 = 0;
 
     while (true) {
+        // Fallback exit: called when the notifier is broken (mostly on Windows ???) and the
+        // .shutdownStarted alert could not be send by sendNotification
+        // The loop wakes from waitTriggers within poll_SEC_TIMEOUT*3 (3s)
+        // and then returns here.
+        if (rtr.shutdownFlag.load(.acquire)) {
+            return;
+        }
         { // Section for delay during debug session
             // 1_000_000_000    1 sec
             // 1_000_000        1 mlsec
