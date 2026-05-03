@@ -434,3 +434,9 @@ Update submodules
 wepoll repo
     https://github.com/piscisaureus/wepoll
 
+bun
+    https://github.com/oven-sh/bun
+
+uSockets
+    https://github.com/uNetworking/uSockets
+
