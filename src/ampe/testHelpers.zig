@@ -72,8 +72,14 @@ const tofu = @import("../tofu.zig");
 const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
-const internal = @import("internal.zig");
-const Skt = internal.Skt;
+const build_options = @import("build_options");
+const skt_backend = if (build_options.network == .usockets)
+    @import("os/usockets/Skt.zig")
+else switch (builtin.os.tag) {
+    .windows => @import("os/windows/Skt.zig"),
+    else => @import("os/linux/Skt.zig"),
+};
+const Skt = skt_backend.Skt;
 
 const temp = @import("temp");
 
