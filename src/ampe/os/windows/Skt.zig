@@ -145,8 +145,7 @@ fn deleteUDSPath(skt: *Skt) void {
 }
 
 pub fn findFreeTcpPort() !u16 {
-    const sockfd = ws2_32.socket(ws2_32.AF.INET, ws2_32.SOCK.STREAM, 0);
-    if (sockfd == ws2_32.INVALID_SOCKET) return error.SocketCreateFailed;
+    const sockfd = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
     defer {
         const linger_cfg = Linger{ .l_onoff = 1, .l_linger = 0 };
         _ = ws2_32.setsockopt(sockfd, 0xffff, 0x0080, @ptrCast(&linger_cfg), @sizeOf(Linger));

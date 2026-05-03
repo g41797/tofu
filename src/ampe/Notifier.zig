@@ -93,12 +93,15 @@ fn initTCP(allocator: Allocator) !Notifier {
 
     // Accept a sender connection - create receiver socket
     var receiverSkt: Skt = undefined;
-    while (true) {
+    var accept_tries: usize = 0;
+    while (accept_tries < 100) : (accept_tries += 1) {
         if (try listSkt.accept()) |s| {
             receiverSkt = s;
             break;
         }
         std.Thread.sleep(1 * std.time.ns_per_ms);
+    } else {
+        return AmpeError.CommunicationFailed;
     }
     errdefer receiverSkt.deinit();
 
