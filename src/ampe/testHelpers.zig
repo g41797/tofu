@@ -38,44 +38,7 @@ pub const TempUdsPath = struct {
 
 /// Avoids 'Address In Use' in repeated tests.
 pub fn FindFreeTcpPort() !u16 {
-    const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
-    defer {
-        if (builtin.os.tag == .windows) {
-            // Abortive close for the probe socket
-            const Linger = extern struct {
-                l_onoff: u16,
-                l_linger: u16,
-            };
-            const linger_cfg = Linger{ .l_onoff = 1, .l_linger = 0 };
-            _ = std.os.windows.ws2_32.setsockopt(sockfd, 0xffff, 0x0080, @ptrCast(&linger_cfg), @sizeOf(Linger));
-            _ = std.os.windows.ws2_32.closesocket(sockfd);
-            std.Thread.sleep(20 * std.time.ns_per_ms);
-        } else {
-            posix.close(sockfd);
-        }
-    }
-
-    if (builtin.os.tag == .linux) {
-        try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
-    }
-
-    try posix.setsockopt(sockfd, std.posix.SOL.SOCKET, posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
-
-    // Set up sockaddr_in structure with port 0 (ephemeral port)
-    var addr: posix.sockaddr.in = .{
-        .family = posix.AF.INET,
-        .port = 0, // Let the system assign a free port
-        .addr = 0, // INADDR_ANY (0.0.0.0)
-    };
-
-    try posix.bind(sockfd, @ptrCast(&addr), @sizeOf(posix.sockaddr.in));
-
-    var addr_len: posix.socklen_t = @sizeOf(posix.sockaddr.in);
-    try posix.getsockname(sockfd, @ptrCast(&addr), &addr_len);
-
-    const port = std.mem.bigToNative(u16, addr.port);
-
-    return port;
+    return Skt.findFreeTcpPort();
 }
 
 /// For tests only. Logs errors.
@@ -109,10 +72,12 @@ const tofu = @import("../tofu.zig");
 const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
+const internal = @import("internal.zig");
+const Skt = internal.Skt;
+
 const temp = @import("temp");
 
 const std = @import("std");
-const posix = std.posix;
 const Allocator = std.mem.Allocator;
 const log = std.log;
 

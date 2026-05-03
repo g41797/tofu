@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 042
-**Last Updated:** 2026-02-27
+**Current Version:** 045
+**Last Updated:** 2026-05-03
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Site Documentation Polish (IN PROGRESS)
+**Active Phase:** usockets Migration Preparation (IN PROGRESS)
 
 ---
 
@@ -68,6 +68,81 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-03: Claude Sonnet 4.6 — Phase 3: FindFreeTcpPort to Skt.zig
+
+#### Summary
+Moved `FindFreeTcpPort` logic from `testHelpers.zig` to platform-specific `Skt.zig` files.
+`testHelpers.FindFreeTcpPort()` is now a thin wrapper — all 7 callers unchanged.
+
+#### Changes:
+- `src/ampe/os/linux/Skt.zig` — added `findFreeTcpPort` (posix impl, covers Linux + macOS)
+- `src/ampe/os/windows/Skt.zig` — added `findFreeTcpPort` (ws2_32 impl with linger + 20ms sleep)
+- `src/ampe/os/usockets/Skt.zig` — added `findFreeTcpPort` stub (`error.NotImplemented`)
+- `src/ampe/testHelpers.zig` — replaced body with `return Skt.findFreeTcpPort()`; added `internal`/`Skt` import; removed `posix` import
+
+#### Verification results:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build` (posix default) | ✅ PASS |
+| `zig build test` (posix default) | ✅ PASS (all tests) |
+| `zig build -Dnetwork=usockets` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows -Dnetwork=posix` | ✅ PASS |
+| `grep posix\. src/ampe/testHelpers.zig` | ✅ PASS (zero results) |
+
+---
+
+### 2026-05-03: Claude Sonnet 4.6 — Phase 2: Network-Independent triggeredSkts.zig
+
+#### Summary
+Removed all `std.posix` and `ws2_32` references from `triggeredSkts.zig`.
+
+#### Changes:
+- `src/ampe/triggeredSkts.zig` — replaced `std.posix.iovec_const`/`iovec` with internal `IoBufConst`/`IoBuf` structs; removed `sendBuf`, `sendBufTo`, `recvToBuf` function bodies; updated call sites to `Skt.sendBuf(...)` and `Skt.recvToBuf(...)`; removed unused `builtin` import
+- `src/ampe/os/linux/Skt.zig` — added `sendBuf`, `sendBufTo`, `recvToBuf` (posix impl)
+- `src/ampe/os/windows/Skt.zig` — added `sendBuf`, `sendBufTo`, `recvToBuf` (ws2_32 impl)
+- `src/ampe/os/usockets/Skt.zig` — added `sendBuf`, `sendBufTo`, `recvToBuf` (stubs)
+
+#### Verification results:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build` (posix default) | ✅ PASS |
+| `zig build test` (posix default) | ✅ PASS (all tests) |
+| `zig build -Dnetwork=usockets` | ✅ PASS (stubs compile) |
+| `zig build -Dtarget=x86_64-windows -Dnetwork=posix` | ✅ PASS |
+| `grep std.posix\|ws2_32 triggeredSkts.zig` | ✅ PASS (zero results) |
+
+---
+
+### 2026-05-03: Claude Sonnet 4.6 — usockets Migration Structural Split
+
+#### Summary
+Prepared tofu for usockets migration. Created information base, analysis documents, and executed structural split to enable build-time network backend selection.
+
+#### Documents created:
+- `design/transition-2-usockets.md` — full migration information base (inventory, usockets API analysis, Bun integration patterns, mapping tables, Hook-Back strategy, constraints)
+- `design/transition-2-usockets-plan.md` — implementation plan with coordination instructions for future agents
+
+#### Structural split (Phase 1) — COMPLETE:
+- `build.zig` — added `-Dnetwork=posix|usockets` option; `build_options` module wired to all modules
+- `src/ampe/internal.zig` — updated Skt/Socket selection to use `build_options.network`
+- `src/ampe/poller.zig` — updated Poller selection to use `build_options.network`
+- `src/ampe/os/usockets/Skt.zig` — new usockets Skt stub (compile-only)
+- `src/ampe/poller/usockets_backend.zig` — new usockets Poller stub (compile-only)
+
+#### Verification results:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build` (posix default) | ✅ PASS |
+| `zig build test` (posix default) | ✅ PASS (all tests) |
+| `zig build -Dnetwork=posix` | ✅ PASS |
+| `zig build -Dnetwork=usockets` | ✅ PASS (stubs compile) |
+| `zig build -Dtarget=x86_64-windows -Dnetwork=posix` | ✅ PASS |
+
+---
 
 ### 2026-02-27: Claude Sonnet 4.6 — Site Documentation Polish (Session 2)
 
@@ -174,12 +249,12 @@ src/ampe/
 
 ## Immediate Tasks for Next Agent
 
-1. **Site docs polish** — in progress, see "Session History" entry for 2026-02-27 (second entry). The user said "return to previous doc" after platform-support.md was done but did not specify which one. Ask at session start.
-2. **AI labeling** — open question: should `poller-design.md` and `platform-support.md` get an explicit "AI-generated" label like sockets101.md? User said "I'm not sure." Resolve with author.
-3. **macOS native hardware testing** — pending. Run full test suite on native macOS.
-4. **Native Windows Test** — pending. Run full test suite on native Windows machine.
-5. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.
-6. **Legacy Cleanup** — consider removing legacy `PollerOs()` wrapper after full verification.
+1. **usockets migration Phase 4** — remove posix dependencies from `Notifier.zig` and `SocketCreator.zig`. `testHelpers.zig` is now clean. See `design/transition-2-usockets.md` Section 3 inventory.
+2. **macOS native hardware testing** — pending. Run full test suite on native macOS.
+3. **Native Windows Test** — pending. Run full test suite on native Windows machine.
+4. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.
+5. **Legacy Cleanup** — consider removing legacy `PollerOs()` wrapper after full verification.
+6. **AI labeling** — open question: should `poller-design.md` and `platform-support.md` get an explicit "AI-generated" label like sockets101.md? User said "I'm not sure." Resolve with author.
 
 ---
 

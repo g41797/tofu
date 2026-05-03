@@ -99,8 +99,10 @@ These phases are the behavioral contract of tofu's Reactor. They must survive th
 | `src/ampe/os/linux/Skt.zig` | `posix.bind`, `posix.listen`, `posix.accept`, `posix.connect`, `posix.close` | Sockets (Linux/macOS) |
 | `src/ampe/os/windows/Skt.zig` | `ws2_32.bind`, `ws2_32.listen`, `ws2_32.accept`, `ws2_32.connect`, `ws2_32.closesocket` | Sockets (Windows) |
 | `src/ampe/SocketCreator.zig` | `std.net.Address`, `std.net.getAddressList` | Address resolution & socket creation |
-| `src/ampe/triggeredSkts.zig` | `posix.send`, `posix.sendto`, `posix.iovec_const` | Data transmission |
+| `src/ampe/triggeredSkts.zig` | `posix.send`, `posix.sendto`, `posix.recv`, `posix.iovec_const`, `posix.iovec`, `ws2_32.send`, `ws2_32.sendto`, `ws2_32.recv` | Data transmission — **removed in Phase 2** |
+| `src/ampe/testHelpers.zig` | `posix.socket`, `posix.bind`, `posix.getsockname`, `posix.close`, `posix.setsockopt` | `FindFreeTcpPort` test utility |
 | `src/ampe/Notifier.zig` | `UDS / TCP pair`, `posix.recv`, `posix.send` | Cross-thread loop wakeup |
+
 
 ---
 

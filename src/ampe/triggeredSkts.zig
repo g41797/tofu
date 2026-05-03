@@ -542,13 +542,16 @@ pub const IoSkt = struct {
     }
 };
 
+pub const IoBufConst = struct { base: [*]const u8, len: usize };
+pub const IoBuf = struct { base: [*]u8, len: usize };
+
 pub const MsgSender = struct {
     ready: bool = false,
     cn: message.ChannelNumber = undefined,
     socket: Socket = undefined,
     msg: ?*Message = null,
     bh: BinaryHeader = .{},
-    iov: [3]std.posix.iovec_const = undefined,
+    iov: [3]IoBufConst = undefined,
     vind: usize = 3,
     sndlen: usize = 0,
     iovPrepared: bool = false,
@@ -701,7 +704,7 @@ pub const MsgSender = struct {
 
         while (ms.vind < 3) : (ms.vind += 1) {
             while (ms.iov[ms.vind].len > 0) {
-                const wasSend = sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]) catch |err| {
+                const wasSend = Skt.sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]) catch |err| {
                     if (ms.vind == 0 and ms.iov[0].len > 0) {
                         ms.msg.?.bhdr = ms.bh;
                     }
@@ -733,67 +736,6 @@ pub const MsgSender = struct {
         return ret;
     }
 
-    pub fn sendBuf(socket: Socket, buf: []const u8) AmpeError!?usize {
-        if (builtin.os.tag == .windows) {
-            const ws2_32 = std.os.windows.ws2_32;
-            const rc: i32 = ws2_32.send(socket, buf.ptr, @intCast(buf.len), 0);
-            if (rc >= 0) return @intCast(rc);
-
-            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
-            switch (err) {
-                .WSAEWOULDBLOCK => return null,
-                .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
-                else => return AmpeError.CommunicationFailed,
-            }
-        }
-
-        var wasSend: usize = 0;
-        wasSend = std.posix.send(socket, buf, 0) catch |e| {
-            switch (e) {
-                std.posix.SendError.WouldBlock => {
-                    return null;
-                },
-                std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
-                else => return AmpeError.CommunicationFailed,
-            }
-        };
-
-        if (wasSend == 0) {
-            return null;
-        }
-
-        return wasSend;
-    }
-
-    pub fn sendBufTo(socket: Socket, buf: []const u8) AmpeError!?usize {
-        if (builtin.os.tag == .windows) {
-            const ws2_32 = std.os.windows.ws2_32;
-            const rc: i32 = ws2_32.sendto(socket, buf.ptr, @intCast(buf.len), 0, null, 0);
-            if (rc >= 0) return @intCast(rc);
-
-            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
-            switch (err) {
-                .WSAEWOULDBLOCK => return null,
-                else => return AmpeError.CommunicationFailed,
-            }
-        }
-
-        var wasSend: usize = 0;
-        wasSend = std.posix.sendto(socket, buf, 0, null, 0) catch |e| {
-            switch (e) {
-                std.posix.SendError.WouldBlock => {
-                    return null;
-                },
-                else => return AmpeError.CommunicationFailed,
-            }
-        };
-
-        if (wasSend == 0) {
-            return null;
-        }
-
-        return wasSend;
-    }
 };
 
 pub const MsgReceiver = struct {
@@ -803,7 +745,7 @@ pub const MsgReceiver = struct {
     pool: *internal.Pool = undefined,
     ptrg: Trigger = .off,
     bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'-'} ** BinaryHeader.BHSIZE,
-    iov: [3]std.posix.iovec = undefined,
+    iov: [3]IoBuf = undefined,
     vind: usize = 3,
     rcvlen: usize = 0,
     msg: ?*Message = null,
@@ -903,7 +845,7 @@ pub const MsgReceiver = struct {
 
         while (mr.vind < 3) : (mr.vind += 1) {
             while (mr.iov[mr.vind].len > 0) {
-                const wasRecv = try recvToBuf(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
+                const wasRecv = try Skt.recvToBuf(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
                 if (wasRecv == null) {
                     return null;
                 }
@@ -994,34 +936,6 @@ pub const MsgReceiver = struct {
         return;
     }
 
-    pub fn recvToBuf(socket: Socket, buf: []u8) AmpeError!?usize {
-        if (builtin.os.tag == .windows) {
-            const ws2_32 = std.os.windows.ws2_32;
-            const rc: i32 = ws2_32.recv(socket, buf.ptr, @intCast(buf.len), 0);
-            if (rc > 0) return @intCast(rc);
-            if (rc == 0) return AmpeError.PeerDisconnected;
-
-            const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
-            switch (err) {
-                .WSAEWOULDBLOCK => return null,
-                .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
-                else => return AmpeError.CommunicationFailed,
-            }
-        }
-
-        var wasRecv: usize = 0;
-        wasRecv = std.posix.recv(socket, buf, 0) catch |e| {
-            switch (e) {
-                std.posix.RecvFromError.WouldBlock => {
-                    return null;
-                },
-                std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
-                else => return AmpeError.CommunicationFailed,
-            }
-        };
-
-        return wasRecv;
-    }
 };
 
 pub const DumbSkt = struct {
@@ -1049,7 +963,6 @@ const Notifier = internal.Notifier;
 const Notification = Notifier.Notification;
 
 const std = @import("std");
-const builtin = @import("builtin");
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const Socket = internal.Socket;

@@ -30,6 +30,15 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const optimize = b.standardOptimizeOption(.{});
 
+    const NetworkBackend = enum { posix, usockets };
+    const network = b.option(
+        NetworkBackend,
+        "network",
+        "Network backend: posix (default) or usockets",
+    ) orelse .posix;
+    const build_options = b.addOptions();
+    build_options.addOption(NetworkBackend, "network", network);
+
     const nats = b.dependency("nats", .{
         .target = target,
         .optimize = optimize,
@@ -60,6 +69,7 @@ pub fn build(b: *std.Build) void {
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
     tofuMod.addImport("datetime", datetime.module("datetime"));
+    tofuMod.addOptions("build_options", build_options);
 
     // Create the library module
     const libMod = b.createModule(.{
@@ -75,6 +85,7 @@ pub fn build(b: *std.Build) void {
     libMod.addImport("mailbox", mailbox.module("mailbox"));
     libMod.addImport("temp", temp.module("temp"));
     libMod.addImport("datetime", datetime.module("datetime"));
+    libMod.addOptions("build_options", build_options);
 
     // Need libc for windows sockets
     if (target.result.os.tag == .windows) {
@@ -128,6 +139,7 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("mailbox", mailbox.module("mailbox"));
     testMod.addImport("temp", temp.module("temp"));
     testMod.addImport("datetime", datetime.module("datetime"));
+    testMod.addOptions("build_options", build_options);
 
     // Creates unit testing artifact
     const lib_unit_tests = b.addTest(.{

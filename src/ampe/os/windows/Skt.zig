@@ -144,6 +144,61 @@ fn deleteUDSPath(skt: *Skt) void {
     }
 }
 
+pub fn findFreeTcpPort() !u16 {
+    const sockfd = ws2_32.socket(ws2_32.AF.INET, ws2_32.SOCK.STREAM, 0);
+    if (sockfd == ws2_32.INVALID_SOCKET) return error.SocketCreateFailed;
+    defer {
+        const linger_cfg = Linger{ .l_onoff = 1, .l_linger = 0 };
+        _ = ws2_32.setsockopt(sockfd, 0xffff, 0x0080, @ptrCast(&linger_cfg), @sizeOf(Linger));
+        _ = ws2_32.closesocket(sockfd);
+        std.Thread.sleep(20 * std.time.ns_per_ms);
+    }
+
+    const on: c_int = 1;
+    _ = ws2_32.setsockopt(sockfd, ws2_32.SOL.SOCKET, ws2_32.SO.REUSEADDR, @ptrCast(&on), @sizeOf(c_int));
+
+    var addr: std.net.Address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, 0);
+    _ = ws2_32.bind(sockfd, &addr.any, @intCast(addr.getOsSockLen()));
+
+    var slen: i32 = @intCast(addr.getOsSockLen());
+    _ = ws2_32.getsockname(sockfd, &addr.any, &slen);
+
+    return std.mem.bigToNative(u16, addr.in.sa.port);
+}
+
+pub fn sendBuf(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
+    const rc: i32 = ws2_32.send(socket, buf.ptr, @intCast(buf.len), 0);
+    if (rc >= 0) return @intCast(rc);
+    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+    switch (err) {
+        .WSAEWOULDBLOCK => return null,
+        .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+        else => return AmpeError.CommunicationFailed,
+    }
+}
+
+pub fn sendBufTo(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
+    const rc: i32 = ws2_32.sendto(socket, buf.ptr, @intCast(buf.len), 0, null, 0);
+    if (rc >= 0) return @intCast(rc);
+    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+    switch (err) {
+        .WSAEWOULDBLOCK => return null,
+        else => return AmpeError.CommunicationFailed,
+    }
+}
+
+pub fn recvToBuf(socket: ws2_32.SOCKET, buf: []u8) AmpeError!?usize {
+    const rc: i32 = ws2_32.recv(socket, buf.ptr, @intCast(buf.len), 0);
+    if (rc > 0) return @intCast(rc);
+    if (rc == 0) return AmpeError.PeerDisconnected;
+    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
+    switch (err) {
+        .WSAEWOULDBLOCK => return null,
+        .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
+        else => return AmpeError.CommunicationFailed,
+    }
+}
+
 pub fn deinit(skt: *Skt) void {
     skt.*.deleteUDSPath();
     skt.*.close();

@@ -154,6 +154,60 @@ fn deleteUDSPath(skt: *Skt) void {
     return;
 }
 
+pub fn findFreeTcpPort() !u16 {
+    const sockfd = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
+    defer posix.close(sockfd);
+
+    if (builtin.os.tag == .linux) {
+        try posix.setsockopt(sockfd, posix.SOL.SOCKET, posix.SO.REUSEPORT, &std.mem.toBytes(@as(c_int, 1)));
+    }
+    try posix.setsockopt(sockfd, posix.SOL.SOCKET, posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, 1)));
+
+    var addr: posix.sockaddr.in = .{ .family = posix.AF.INET, .port = 0, .addr = 0 };
+    try posix.bind(sockfd, @ptrCast(&addr), @sizeOf(posix.sockaddr.in));
+
+    var addr_len: posix.socklen_t = @sizeOf(posix.sockaddr.in);
+    try posix.getsockname(sockfd, @ptrCast(&addr), &addr_len);
+
+    return std.mem.bigToNative(u16, addr.port);
+}
+
+pub fn sendBuf(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
+    var wasSend: usize = 0;
+    wasSend = std.posix.send(socket, buf, 0) catch |e| {
+        switch (e) {
+            std.posix.SendError.WouldBlock => return null,
+            std.posix.SendError.ConnectionResetByPeer, std.posix.SendError.BrokenPipe => return AmpeError.PeerDisconnected,
+            else => return AmpeError.CommunicationFailed,
+        }
+    };
+    if (wasSend == 0) return null;
+    return wasSend;
+}
+
+pub fn sendBufTo(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
+    var wasSend: usize = 0;
+    wasSend = std.posix.sendto(socket, buf, 0, null, 0) catch |e| {
+        switch (e) {
+            std.posix.SendError.WouldBlock => return null,
+            else => return AmpeError.CommunicationFailed,
+        }
+    };
+    if (wasSend == 0) return null;
+    return wasSend;
+}
+
+pub fn recvToBuf(socket: posix.socket_t, buf: []u8) AmpeError!?usize {
+    const wasRecv = std.posix.recv(socket, buf, 0) catch |e| {
+        switch (e) {
+            std.posix.RecvFromError.WouldBlock => return null,
+            std.posix.RecvFromError.ConnectionResetByPeer, std.posix.RecvFromError.ConnectionRefused => return AmpeError.PeerDisconnected,
+            else => return AmpeError.CommunicationFailed,
+        }
+    };
+    return wasRecv;
+}
+
 pub fn deinit(skt: *Skt) void {
     skt.*.deleteUDSPath();
     skt.*.close();
