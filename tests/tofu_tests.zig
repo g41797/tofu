@@ -17,9 +17,8 @@ test {
     // Socket-dependent tests (all platforms):
     _ = @import("ampe/Notifier_tests.zig");
 
-    // Windows-specific POC/Poller tests:
+    // Windows-specific poller tests:
     if (@import("builtin").os.tag == .windows) {
-        _ = @import("os_windows_tests.zig");
         _ = @import("windows_poller_tests.zig");
     }
 

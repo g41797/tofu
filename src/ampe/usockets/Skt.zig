@@ -15,6 +15,11 @@ pub fn isSet(skt: *const Skt) bool {
     return skt.socket != null;
 }
 
+pub fn getPort(skt: *const Skt) ?u16 {
+    _ = skt;
+    return null;
+}
+
 pub fn listen(skt: *Skt) !void {
     _ = skt;
     return error.NotImplemented;

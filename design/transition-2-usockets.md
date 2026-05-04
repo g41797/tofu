@@ -1,7 +1,7 @@
 # Transition to usockets: Information Base & Migration Plan
 
 **Status:** Finalized Pre-Design
-**Date:** 2026-05-03
+**Date:** 2026-05-04
 **Purpose:** Comprehensive knowledge base for migrating Zig tofu from `std.posix` / `std.net` / `wepoll` to the uSockets C library for Zig 0.16+ compatibility.
 
 ---
@@ -9,18 +9,17 @@
 ## 1. Why Migration is Needed
 
 - Zig 0.15.2 is the current base; Zig 0.16+ removes `std.posix` and `std.net` APIs entirely.
-- `src/ampe/os/linux/Skt.zig` uses `std.posix` for socket operations on both Linux and macOS.
-- `src/ampe/poller/epoll_backend.zig` and `kqueue_backend.zig` use OS primitives directly via `std.posix`.
-- The wepoll C shim used for Windows is also a migration candidate for a unified C-backend.
+- All platform-specific logic is isolated in `src/ampe/[linux|windows|mac|usockets]` to simplify replacement.
+- The wepoll C shim used for Windows is also a migration candidate for a unified C-backend via `LIBUS_USE_EPOLL`.
 
 ---
 
-## 2. Current Platform Architecture (To Be Replaced)
+## 2. Platform Architecture & Restructuring
 
-### 2.1 Platform Split in `internal.zig`
-Currently, tofu uses a comptime switch to select backends:
-- **Windows:** `os/windows/Skt.zig` + `wepoll_backend.zig`.
-- **Linux/macOS:** `os/linux/Skt.zig` + `epoll_backend.zig` or `kqueue_backend.zig`.
+### 2.1 Platform Folders and Selection
+Tofu uses a `network` build option (`posix` vs `usockets`) to select the backend:
+- **Folders:** All OS-dependent code is consolidated under `src/ampe/` in folders: `linux/`, `windows/`, `mac/`, and `usockets/`.
+- **Selection Logic:** `build.zig` provides `build_options` to `internal.zig` and `poller.zig`, which perform comptime switches to select the active `Skt` and `Poller` implementations.
 
 ### 2.2 PollerCore Design (Must Be Preserved)
 The `PollerCore` logic in `src/ampe/poller/core.zig` must survive. It provides:
@@ -28,64 +27,18 @@ The `PollerCore` logic in `src/ampe/poller/core.zig` must survive. It provides:
 - **ABA Protection:** Using monotonic `SeqN` to prevent stale FD reuse issues.
 - **Pointer Stability:** `TriggeredChannel` is heap-allocated and its address must remain stable for the kernel (especially on Windows).
 
-### 2.3 Socket Type Per Platform
+### 2.3 Socket Interface (`Skt`)
+The `Skt` struct provides the unified interface for all backends.
+- **Port Recovery:** `Skt` implements `getPort() ?u16` to retrieve the OS-assigned port (essential for Notifier and testing). In POSIX this uses `getsockname`; in uSockets it uses `us_socket_local_address`.
+- **Non-Blocking:** All sockets are strictly non-blocking.
 
-| Platform | Socket Type | Non-Blocking | Closure |
-| :------- | :---------- | :----------- | :------ |
-| Linux    | `fd_t` (i32) | `O_NONBLOCK` | `posix.close` |
-| macOS    | `fd_t` (i32) | `O_NONBLOCK` | `posix.close` + raw `setsockopt` for linger |
-| Windows  | `SOCKET` (usize) | `FIONBIO` | `closesocket` + `SO_LINGER=0` |
+### 2.4 Notifier (Cross-Thread Wakeup)
+- **Status:** Moved to `src/ampe/Notifier.zig` as a **platform-independent** component.
+- **Decision:** The existing socket-pair mechanism is **retained**. We will not transition to `us_wakeup_loop` for the uSockets backend, as the existing mechanism is proven and now platform-independent.
 
-### 2.4 Notifier (Cross-Thread Wakeup) — Current
-
-| Platform | Mechanism |
-| :------- | :-------- |
-| Linux    | Abstract UDS socket pair |
-| macOS    | Filesystem-based UDS socket pair |
-| Windows  | TCP loopback socket pair |
-
-Replaced by `us_wakeup_loop` after migration (see Section 6.2).
-
-### 2.5 Key Platform Rules (from OS_BACKENDS.md)
-
-- Windows: `SO_LINGER=0` (abortive close) is **mandatory** on all socket close paths.
-- Windows: wepoll constants differ from Linux — `EPOLL_CTL_MOD=2`, `EPOLL_CTL_DEL=3` (inverse of Linux order).
-- Windows: `WepollEvent` uses custom ABI layout to match Windows C memory layout.
-- Windows: UDS requires RS4+; no abstract namespace; unstable under high load.
-- macOS: `setLingerAbort` must use raw `system.setsockopt` to avoid `EINVAL` panic.
-- macOS: No abstract sockets in Notifier.
-
-### 2.6 Triggers Abstraction
-
-```zig
-// packed u8 — intent-based, not mechanism-based
-pub const Triggers = packed struct(u8) {
-    notify:  bool,
-    accept:  bool,
-    connect: bool,
-    send:    bool,
-    recv:    bool,
-    pool:    bool,
-    err:     bool,
-    timeout: bool,
-};
-```
-
-`Triggers` expresses **what the Reactor wants** (`recv`, `send`, `accept`...), not **how the OS signals it** (`EPOLLIN`, `EVFILT_READ`...). This abstraction is platform-independent and survives the migration unchanged. The `triggers.zig` mapping layer must be reproduced for the usockets backend.
-
-### 2.7 Nine-Phase Reactor Loop
-
-These phases are the behavioral contract of tofu's Reactor. They must survive the migration intact.
-
-1. Compute timeout
-2. Poll (OS wait) — replaced by `us_loop_run_bun_tick`
-3. Classify events
-4. Check timeouts
-5. Drain inbox
-6. Resolve events
-7. Dispatch I/O
-8. Process closes
-9. Drain check
+### 2.5 Triggers Abstraction
+- **Packed Intent:** `Triggers` (packed u8) expresses what the Reactor wants (`recv`, `send`, `accept`, etc.).
+- **Truncated Mapping:** Platform-specific `triggers.zig` files are truncated to only contain the mapping between `Triggers` and OS-specific event masks (e.g., `EPOLLIN` -> `recv`).
 
 ---
 
@@ -93,145 +46,151 @@ These phases are the behavioral contract of tofu's Reactor. They must survive th
 
 | File | Symbol(s) | Role |
 | :--- | :--- | :--- |
-| `src/ampe/poller/epoll_backend.zig` | `epoll_create1`, `epoll_ctl`, `epoll_wait` | Linux event loop |
-| `src/ampe/poller/kqueue_backend.zig` | `kqueue`, `kevent` | macOS/BSD event loop |
-| `src/ampe/poller/wepoll_backend.zig` | `wepoll.h` (C shim) | Windows event loop |
-| `src/ampe/os/linux/Skt.zig` | `posix.bind`, `posix.listen`, `posix.accept`, `posix.connect`, `posix.close` | Sockets (Linux/macOS) |
-| `src/ampe/os/windows/Skt.zig` | `ws2_32.bind`, `ws2_32.listen`, `ws2_32.accept`, `ws2_32.connect`, `ws2_32.closesocket` | Sockets (Windows) |
-| `src/ampe/SocketCreator.zig` | `std.net.Address`, `std.net.getAddressList` | Address resolution & socket creation |
-| `src/ampe/triggeredSkts.zig` | `posix.send`, `posix.sendto`, `posix.recv`, `posix.iovec_const`, `posix.iovec`, `ws2_32.send`, `ws2_32.sendto`, `ws2_32.recv` | Data transmission — **removed in Phase 2** |
-| `src/ampe/testHelpers.zig` | `posix.socket`, `posix.bind`, `posix.getsockname`, `posix.close`, `posix.setsockopt` | `FindFreeTcpPort` test utility |
-| `src/ampe/Notifier.zig` | `UDS / TCP pair`, `posix.recv`, `posix.send` | Cross-thread loop wakeup |
-
+| `src/ampe/linux/epoll_backend.zig` | `epoll_create1`, `epoll_ctl`, `epoll_wait` | Linux event loop (Target for replacement) |
+| `src/ampe/linux/Skt.zig` | `posix.bind`, `posix.listen`, `posix.accept`, etc. | Sockets (Target for replacement) |
+| `src/ampe/linux/SocketCreator.zig` | `posix.socket`, `posix.bind` | Creation (Target for replacement) |
+| `src/ampe/linux/triggers.zig` | `EPOLLIN`, `EPOLLOUT`, etc. | Event mapping (Target for replacement) |
+| `src/ampe/testHelpers.zig` | (None) | **Platform-Independent** (POSIX items moved to `Skt.zig`) |
 
 ---
 
-## 4. Deep uSockets Analysis (vendor/bun-usockets)
+## 4. Verification Strategy: Platform-Independent Contract Tests
 
-### 4.1 Architecture & Model
-- **Platform Backends:** Uses `epoll` (Linux), `kqueue` (macOS/BSD), and `libuv` (Windows default).
-- **Windows — two options:**
-  - `LIBUS_USE_LIBUV`: bun's actual Windows path. Requires libuv as a dependency.
-  - `LIBUS_USE_EPOLL` + wepoll shim: preferred tofu path. `epoll_kqueue.h` does `#include <sys/epoll.h>` under `LIBUS_USE_EPOLL`; on Windows that header does not exist natively. A one-file shim (`sys/epoll.h` → `#include <wepoll.h>`) connects the two. Tofu already vendors `wepoll.h` + `wepoll.c` at `src/ampe/os/windows/wepoll/`. No changes to bun-usockets C source required. bun-usockets does **not** embed wepoll — it must be supplied externally.
-- **Loop Integration:** Supports `us_loop_run_bun_tick(loop, timeout)`, which executes a single iteration—perfect for a Reactor model.
-- **User Data:** `us_poll_t` provides "extension memory" (`ext_size`) for storing the `*TriggeredChannel` context.
+To ensure the uSockets implementation is correct, two key test files have been rewritten to be entirely platform-independent (zero `std.posix` in test code):
 
-### 4.2 Key Capabilities
-- **Threading:** Strictly single-threaded loop. Thread-safe wakeup is provided by `us_wakeup_loop(loop)`.
-- **Backpressure:** `us_socket_write` returns bytes accepted and auto-arms writable triggers on partial success.
-- **Allocation:** Uses `us_calloc` and `us_free`. Can be shimmed to use Zig's GPA or a global C-allocator.
+1.  **`tests/ampe/Notifier_tests.zig`**: Validates cross-thread notification logic.
+2.  **`tests/ampe/sockets_tests.zig`**: A comprehensive contract test suite for `Skt` and `SocketCreator`. 
+
+These tests define the behavioral contract that the uSockets backend must satisfy. They must pass unchanged across all platforms and backends.
 
 ---
 
-## 5. Insights from Bun's uSockets Integration
-
-Analysis of the Bun repository (`/home/g41797/dev/root/github.com/oven-sh/bun/`) reveals how to idiomaticaly integrate uSockets into a Zig project.
+## 5. Deep uSockets Analysis (vendor/bun-usockets)
 
 ### 5.1 The "Tick" Reactor Model
 Bun mirrors tofu's Reactor model by using `us_loop_run_bun_tick(loop, timeout)`. 
-- **Control:** Bun does NOT use the standard `us_loop_run()` (callback-driven proactor). Instead, it calls `tick()` from its main `VirtualMachine.tick()`, allowing the Zig layer to remain the primary driver.
-- **Notifications:** Cross-thread signaling uses `us_wakeup_loop(loop)`. The `wakeup` callback is defined in Zig (via `callconv(.c)`) and typically signals the loop to drain a task queue.
+- **Control:** The Zig layer remains the primary driver, calling `tick()` to execute a single iteration.
+- **Windows Strategy ("Forced Epoll"):** Tofu will compile uSockets with `LIBUS_USE_EPOLL` on Windows to utilize `wepoll`. This requires Tofu to provide thin C shim headers (`sys/epoll.h`, `sys/timerfd.h`, `sys/eventfd.h`) and emulated function implementations in `src/ampe/windows/shims/`.
 
-### 5.2 Binding & Dispatch Mechanism
-- **C-to-Zig Bounce:** Bun uses a central `src/deps/uws/dispatch.zig` that `export`s functions like `us_dispatch_data` and `us_dispatch_writable`.
-- **Kind-Based Switching:** Every socket is stamped with a `SocketKind` (e.g., `.bun_socket_tcp`, `.postgres`). The dispatch layer switches on this kind to route events to the correct Zig handler.
-- **VTable Trampolines:** Bun generates static C-ABI compatible vtables at comptime via `vtable.make(H)`. This allows uSockets to call a single C function pointer which "bounces" into a Zig trampoline that:
-    1. Recovers the typed `ext` context from `us_socket_t`.
-    2. Forwards the call to the high-level Zig handler.
-
-### 5.3 Context & Memory Management
-- **Recovery:** Bun stores the Zig object pointer (`*This`) directly in the `us_socket_t.ext()` memory.
-- **Allocation:** uSockets uses `us_calloc`/`us_free`. Bun's fork defines these as standard `calloc`/`free`. Since Bun uses `mimalloc` as its global allocator, the C calls are automatically routed to it.
-
-### 5.4 Build & Windows Strategy
-- **Unified Sources:** Bun uses a custom "Unified Source" build to concatenate small C files into larger translation units for speed.
-- **Windows backend:** Bun uses `LIBUS_USE_LIBUV` on Windows. Neither the vendored `bun-usockets` nor the bun repo contain wepoll — zero references. The `LIBUS_USE_EPOLL` + wepoll shim path (see Section 4.1) is tofu's preferred option to avoid a libuv dependency. It requires one build artifact: a `sys/epoll.h` file that redirects to `wepoll.h`.
+### 5.2 The "Hook-Back" Pattern
+1.  **Poll Creation:** Each `TriggeredChannel` creates a `us_poll_t` with type `POLL_TYPE_CALLBACK`.
+2.  **Context Binding:** The `*TriggeredChannel` pointer is stored in the poll's extension memory (`ext_size`).
+3.  **The Bounce:** OS events trigger a static C callback (Zig shim) which retrieves the `*TriggeredChannel` and updates its `act` triggers.
 
 ---
 
-## 6. Master Mapping Tables
+## 6. Architectural Decision: The Hybrid "Pull" Model & Backpressure
 
-### 6.1 Low-Level Socket Cycle (Replacing Removed APIs)
+To preserve tofu's unique Reactor architecture (L2-L5 layers) and pool-based backpressure:
 
-| Zig Tofu / `std.posix` (REMOVED in 0.16) | uSockets Equivalent | Description |
+- **Constraint:** Tofu will **NOT** use uSockets' high-level `us_socket_t`. The high-level loop implementation automatically calls an internal **`bsd_recv`** (which wraps the standard `recv` syscall) into a shared buffer *before* invoking callbacks, which would bypass Tofu's backpressure.
+- **Mechanism:** Tofu utilizes the lower-level **`us_poll_t`** with type `POLL_TYPE_CALLBACK`. 
+- **Backpressure Guarantee:** When an `EPOLLIN` event occurs on a `us_poll_t`, uSockets invokes the `us_poll_cb` **without performing any I/O**. This prevents the automatic `bsd_recv` call and allows Tofu to maintain the data in the kernel buffer until a message container is successfully retrieved from the pool.
+- **Flow:**
+    1. `us_loop_run_bun_tick` executes.
+    2. Zig shim (`us_poll_cb`) is triggered; it **only** updates the `tc.act` bitmask.
+    3. Loop returns; Tofu enters Phase 7 ("Dispatch I/O").
+    4. **Manual Read/Write:** Tofu retrieves the raw FD via `us_poll_fd(p)` and performs manual I/O calls. To maintain platform independence and simplify implementation, Tofu uses uSockets' internal **`bsd_recv`** and **`bsd_send`** wrappers.
+- **Advantage of `bsd_recv`/`bsd_send`:** 
+    - Handles `EINTR` retries automatically.
+    - Abstractions over platform-specific socket types (`int` vs `SOCKET`).
+    - Eliminates the need for raw Zig syscalls in the Skt implementation.
+
+---
+
+## 7. Master Mapping Tables
+
+### 7.1 Low-Level Socket Cycle
+
+| Zig Tofu / `std.posix` | uSockets / OS Analog | Description |
 | :--- | :--- | :--- |
-| `posix.socket` | `us_socket_group_listen` / `connect` | Creation is part of the listen/connect request. |
-| `posix.bind` / `posix.listen` | `us_socket_group_listen` | Combined bind + listen into a single call. |
-| `posix.accept` | `on_open` callback | uSockets manages the accept loop internally. |
-| `posix.connect` | `us_socket_group_connect` | Managed non-blocking connect with DNS support. |
-| `posix.recv` | `on_data` callback | uSockets reads into shared buffer; Tofu handles in `on_data`. |
-| `posix.send` | `us_socket_write` | uSockets handles transmission and backpressure. |
+| `posix.socket` | `us_socket_group_listen` / `connect` | Creation is part of the request. |
+| `posix.bind` / `posix.listen` | `us_socket_group_listen` | Combined into a single call. |
+| `posix.accept` | `on_open` callback | Marks readiness; Tofu accepts manually if needed. |
+| `posix.send` | **`bsd_send`** | **Direct Mapping** (uSockets wrapper). Handles `EINTR`. |
+| `posix.recv` | **`bsd_recv`** | **Direct Mapping** (uSockets wrapper). Handles `EINTR`. |
 | `posix.close` | `us_socket_close` | Unified close; support for reset/abort (code `1`). |
-| `O_NONBLOCK` / `FIONBIO` | (Automatic) | All uSockets handles are non-blocking. |
-| `TCP_NODELAY` | `us_socket_nodelay` | Simple toggle for Nagles algorithm. |
-| `SO_LINGER` (Abortive) | `us_socket_close(..., 1, ...)` | Using close code `1` (Reset) triggers abortive shutdown. |
 
-### 6.2 High-Level Functionality Mapping
+### 7.2 High-Level Functionality Mapping
 
 | Tofu Zig Requirement | uSockets Equivalent | Notes |
 | :--- | :--- | :--- |
-| **IP Resolution** | `Bun__addrinfo_get` | Bun-specific extension in `internal.h` for DNS. |
-| **DNS List Strategy** | `us_socket_group_connect` | Handles multiple IPs and address families internally. |
-| **Unix Sockets (UDS)** | `..._listen_unix` / `..._connect_unix` | Unified UDS support across platforms. |
-| **Loop Wakeup** | `us_wakeup_loop` | Replaces UDS/TCP socket-pair `Notifier` logic. |
-| **Timer/Timeout** | `us_socket_timeout` | Integrated timer support (4s granularity). |
-| **OS Wait** | `us_loop_run_bun_tick` | Single-iteration drive for the Reactor loop. |
-| **Peer Identity** | `us_socket_remote_address` | Replaces `getnameinfo` for logging/security. |
+| **IP Resolution** | `Bun__addrinfo_get` | Bun-specific DNS extension. |
+| **Loop Wakeup** | `Notifier` | Socket-pair mechanism is retained. |
+| **OS Wait** | `us_loop_run_bun_tick` | Single-iteration drive. |
 
 ---
 
-## 7. Architecture Layer Map
+## 8. Key Constraints (Non-Negotiable)
 
-Migration scope is L0 and L1 only. L2 may require internal restructuring for `us_loop_run_bun_tick` integration, but the 9-phase loop structure must be preserved.
-
-```
-L5  Public API        — Ampe, ChannelGroup, vtables         (untouched)
-L4  Protocol          — framing, message lifecycle           (untouched)
-L3  Messaging Runtime — Engine, Reactor loop, backpressure   (untouched)
-L2  Reactor Core      — waitTriggers, event dispatch         (internal restructure only)
-L1  OS / Poller       — epoll / kqueue / wepoll              (THIS IS WHAT CHANGES)
-L0  External          — std.posix, ws2_32, wepoll.h          (replaced by usockets)
-```
-
----
-
-## 8. Migration Strategy: The "Hook-Back" Pattern
-
-To preserve tofu's unique Reactor architecture (L2-L5 layers) while replacing the L0-L1 OS layer:
-
-1.  **Poll Creation:** Each `TriggeredChannel` creates a `us_poll_t` with type `POLL_TYPE_CALLBACK`.
-2.  **Context Binding:** The `*TriggeredChannel` pointer is stored in the poll's extension memory (`ext_size`).
-3.  **Tick Phase:** `Reactor.waitTriggers` calls `us_loop_run_bun_tick`.
-4.  **The Bounce:**
-    - uSockets receives an OS event.
-    - It calls a static C callback (Zig shim via `export fn`).
-    - The Zig shim retrieves the `*TriggeredChannel` from the poll extension.
-    - The shim updates `tc.act` with the triggered events (Recv, Send, etc.).
-5.  **Dispatch:** After the tick returns, `waitTriggers` returns the accumulated `Triggers` summary for tofu's 9-phase loop to process.
-
----
-
-## 9. Open Questions & Resolutions
-
-- **Reactor Preservation?** YES. Validated by Bun's "Tick" pattern.
-- **Socket Handle?** `Skt` will wrap `us_poll_t*`. Raw I/O still available via `us_poll_fd(p)`.
-- **Pointer Stability?** Guaranteed. `TriggeredChannel` stays heap-allocated; stored in `ext`.
-- **Notifier?** Replaced by `us_wakeup_loop`.
-- **Windows UDS?** Becomes consistent via uSockets abstraction over `wepoll`.
-- **Abortive Close?** Supported via close code `1` (Reset).
-
----
-
-## 10. Key Constraints (Non-Negotiable)
-
-- **Reactor model is mandatory.**
-- **Pointer stability is mandatory.** TriggeredChannel must remain heap-allocated.
+- **Reactor model is mandatory.** Single-threaded, non-inverted control.
+- **Pointer stability is mandatory.** `TriggeredChannel` must remain heap-allocated.
 - **ABA protection is mandatory.** `SeqN` dual-map must be preserved.
-- **Abortive close is mandatory on Windows.** `SO_LINGER=0` must be used.
+- **Abortive close is mandatory on Windows.** `SO_LINGER=0` via close code `1`.
+- **Primary Platform:** Linux is the primary platform for implementation and debugging.
 - **Verification Sequence:** Linux → Windows → macOS → Linux (Sandwich rule).
-- **4-mode testing required.** Debug, ReleaseSafe, ReleaseFast, ReleaseSmall — all platforms.
-- **Architectural changes require author approval** before implementation.
-- **No git commands.** Author manages version control manually.
+- **4-mode testing required:** Debug, ReleaseSafe, ReleaseFast, ReleaseSmall.
+
+---
+
+## 9. Appendix: Detailed OS Dependency Mapping (Linux)
+
+### 9.1 `src/ampe/linux/epoll_backend.zig`
+
+| OS Dependency | uSockets Analog |
+| :--- | :--- |
+| `epoll_create1` | `us_create_loop` (managed by Poller instance) |
+| `epoll_ctl` (ADD/MOD/DEL) | `us_poll_init` / `us_poll_change` / `us_poll_stop` |
+| `epoll_wait` | `us_loop_run_bun_tick` |
+| `epoll_event` / `data.u64` | `us_poll_t` + `ext` memory (Hook-Back context recovery) |
+
+### 9.2 `src/ampe/linux/Skt.zig`
+
+| OS Dependency | uSockets Analog |
+| :--- | :--- |
+| `socket` + `bind` + `listen` | `us_socket_group_listen` / `us_socket_group_listen_unix` |
+| `accept` / `accept4` | `on_open` callback registered with `us_socket_group` |
+| `connect` | `us_socket_group_connect` / `us_socket_group_connect_unix` |
+| `setsockopt` (REUSEPORT, REUSEADDR) | Managed internally by `us_socket_group` |
+| `setsockopt` (TCP_NODELAY) | `us_socket_nodelay(s, 1)` |
+| `setsockopt` (SO_LINGER=0) | `us_socket_close(s, 1)` (Reset flag triggers abortive close) |
+| `getsockname` | `us_socket_local_address` |
+| `send` / `recv` | **`bsd_send` / `bsd_recv`** |
+| `close` | `us_socket_close` |
+| `posix.E` (Errno) | **OS Shim** (Maps C `errno` to AmpeError) |
+
+### 9.3 `src/ampe/linux/SocketCreator.zig`
+
+| OS Dependency | uSockets Analog |
+| :--- | :--- |
+| `std.net.Address.resolveIp` | `Bun__addrinfo_get` |
+| `getAddressList` (DNS) | `us_socket_group_connect` (Handles IP list internally) |
+| `initUnix` (UDS) | `us_socket_group_listen_unix` / `connect_unix` |
+| `posix.socket` (STREAM) | Implicit in `us_socket_group` type |
+| `SOCK.NONBLOCK` / `CLOEXEC` | Mandatory/Implicit in all uSockets handles |
+
+### 9.4 `src/ampe/linux/triggers.zig`
+
+| OS Item | uSockets / Shim Usage | tofu.Triggers Analog |
+| :--- | :--- | :--- |
+| `EPOLLIN` | `LIBUS_SOCKET_READABLE` | `recv`, `accept`, `notify` |
+| `EPOLLOUT` | `LIBUS_SOCKET_WRITABLE` | `send`, `connect` |
+| `EPOLLERR` / `EPOLLHUP` | Passed as `error` to `us_poll_cb` | `err` |
+| `CTL_ADD` / `CTL_MOD` / `CTL_DEL` | `us_poll_init` / `change` / `stop` | Registration Logic |
+
+---
+
+## 10. Remaining Platform Dependencies
+
+Despite the uSockets abstraction, the following logic remains OS-specific and will be housed in platform folders:
+
+| Area | Platform Dependency |
+| :--- | :--- |
+| **Error Recovery** | Mapping platform error codes (`errno` vs `WSAGetLastError`) to `AmpeError`. |
+| **Lifecycle** | `WSAStartup`/`WSACleanup` (Windows only). |
+| **UDS** | Abstract namespace (Linux only); path deletion constraints (Unix vs Windows). |
+| **Build** | **"Forced Epoll" on Windows:** Tofu will provide thin C shim headers (`sys/epoll.h`, `sys/timerfd.h`, `sys/eventfd.h`) and emulated implementations in `src/ampe/windows/shims/` to satisfy the uSockets Linux backend while utilizing `wepoll`. |
+| **Triggers** | Mapping `LIBUS_SOCKET_READABLE/WRITABLE` to OS bits. |
 
 ---
 

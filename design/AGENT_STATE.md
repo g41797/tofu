@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 048
+**Current Version:** 050
 **Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Skt/SocketCreator Contract Tests (COMPLETE)
+**Active Phase:** Cleanup (COMPLETE)
 
 ---
 
@@ -11,6 +11,8 @@
 
 - **Verification:** All 53 tests pass in `Debug`, `ReleaseSafe`, and `ReleaseFast` on Linux.
 - **Cross-Compilation:** ALL platforms verified (Linux, Windows x86_64, macOS x86_64/aarch64).
+- **Cleanup:** `tests/os_windows_tests.zig` deleted — all tests were duplicates of `sockets_tests.zig` / `Notifier_tests.zig` or permanently skipped on Linux.
+- **Platform-Independent Notifier:** COMPLETED. Single shared `src/ampe/Notifier.zig` — zero posix imports, `initPair` poll loop, `getPort()` on all Skt backends.
 - **Skt/SocketCreator Contract Tests:** COMPLETED. 18 new tests in `tests/ampe/sockets_tests.zig`.
 - **Poller Refactoring:** COMPLETED. Clean separation achieved.
 - **Stability:** ACHIEVED. Critical pointer stability refactor (heap storage + 4-step I/O) resolved all previous segmentation faults and protocol hangs.
@@ -53,15 +55,16 @@ src/ampe/
 ├── internal.zig                  # Facade: Skt, Socket, Notifier, SocketCreator
 ├── common.zig                    # Shared: TcIterator, isSocketSet, toFd, constants
 ├── core.zig                      # Shared struct fields + PollerCore generic
+├── Notifier.zig                  # Shared: platform-independent (replaces 3 identical copies)
 ├── linux/
-│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   ├── Skt.zig, SocketCreator.zig, triggers.zig
 │   └── epoll_backend.zig
 ├── windows/
-│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   ├── Skt.zig, SocketCreator.zig, triggers.zig
 │   ├── wepoll_backend.zig
 │   └── wepoll/                   # vendored copy (wepoll.c, wepoll.h)
 ├── mac/
-│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   ├── Skt.zig, SocketCreator.zig, triggers.zig
 │   └── kqueue_backend.zig
 └── usockets/
     ├── Skt.zig, Notifier.zig (stub), SocketCreator.zig (stub), triggers.zig
@@ -77,6 +80,66 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-04: Claude Sonnet 4.6 — Test Cleanup
+
+#### Summary
+Deleted `tests/os_windows_tests.zig` — a staging file from the wepoll integration phase.
+All live tests in it were duplicates of `sockets_tests.zig` and `Notifier_tests.zig`; the
+Windows-only Poller POC tests (Stages 0–4) were fully commented out.
+Removed its import from `tofu_tests.zig`.
+
+#### Changes:
+- `tests/os_windows_tests.zig` — deleted
+- `tests/tofu_tests.zig` — removed `os_windows_tests.zig` import
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (53/53) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+
+---
+
+### 2026-05-04: Claude Sonnet 4.6 — Platform-Independent Notifier
+
+#### Summary
+Consolidated three byte-for-byte identical `Notifier.zig` files (linux/, mac/, windows/) into a
+single shared `src/ampe/Notifier.zig` with zero `std.posix` imports.
+
+Key design changes:
+- **`getPort() ?u16`** added to all four `Skt.zig` backends — returns `null` for UDS sockets, port for TCP.
+- **`initPair`** — new single-thread poll loop (same pattern as `TCP connect and accept` test) replaces `waitConnect` + accept-retry. Works for both TCP (port 0) and UDS paths.
+- **`initTCP`** — uses port 0 (OS assigns); retrieves port via `listener.getPort().?`. Eliminates `FindFreeTcpPort()` call.
+- **Removed** posix-dependent functions: `create`, `destroy`, `isReadyToSend`, `_isReadyToSend`, `isReadyToRecv`, `_isReadyToRecv`, `waitConnect`, `sendByte`, `recvByte`, `send_notification`.
+- **`recv_notification`** signature changed from `socket_t` → `*Skt`; `triggeredSkts.zig:246` updated.
+- **`Notifier_tests.zig`** rewritten — clean send/recv round-trip, no posix, no isReady* calls.
+- **`os_windows_tests.zig`** Windows Notifier test rewritten — same clean round-trip.
+
+#### Changes:
+- `src/ampe/Notifier.zig` — new shared file
+- `src/ampe/linux/Skt.zig`, `mac/Skt.zig`, `windows/Skt.zig`, `usockets/Skt.zig` — added `getPort() ?u16`
+- `src/ampe/internal.zig` — Notifier selection simplified to single `@import("Notifier.zig")`
+- `src/ampe/triggeredSkts.zig:246` — `recv_notification(nskt.skt.socket.?)` → `recv_notification(nskt.skt)`
+- `tests/ampe/Notifier_tests.zig` — rewritten (clean round-trip, no posix)
+- `tests/os_windows_tests.zig` — Windows Notifier test rewritten
+- `src/ampe/linux/Notifier.zig`, `mac/Notifier.zig`, `windows/Notifier.zig` — deleted
+- `design/notifier-platform-independent.md` — plan saved
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (53/53) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (53/53) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
 
 ### 2026-05-04: Claude Sonnet 4.6 — Skt/SocketCreator Contract Tests
 

@@ -243,7 +243,7 @@ pub const NotificationSkt = struct {
     }
 
     pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
-        return Notifier.recv_notification(nskt.skt.socket.?);
+        return Notifier.recv_notification(nskt.skt);
     }
 
     pub fn deinit(nskt: *NotificationSkt) void {

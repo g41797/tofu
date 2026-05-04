@@ -15,34 +15,14 @@ test "create file for address of uds socket" {
 }
 
 test "base Notifier" {
-    std.testing.log_level = .debug;
-
-    if (builtin.os.tag == .windows) {
-        var wsa_data: std.os.windows.ws2_32.WSADATA = undefined;
-        _ = std.os.windows.ws2_32.WSAStartup(0x0202, &wsa_data);
-        // WSACleanup deferred at end of test
-    }
-    defer if (builtin.os.tag == .windows) {
-        _ = std.os.windows.ws2_32.WSACleanup();
-    };
-
     var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
-
-    try testing.expectEqual(true, ntfr.isReadyToSend());
-    try testing.expectEqual(false, ntfr.isReadyToRecv());
-
-    const notif: Notification = .{
-        .kind = .message,
-        .oob = .on,
-    };
-
+    const notif: Notification = .{ .kind = .message, .oob = .on };
     try ntfr.sendNotification(notif);
-    try testing.expectEqual(true, ntfr.isReadyToRecv());
-
     const ntfc: Notification = try ntfr.recvNotification();
     try testing.expectEqual(notif, ntfc);
 }
+
 const tofu = @import("tofu");
 
 const Notifier = tofu.@"internal usage".Notifier;
@@ -52,6 +32,5 @@ const Notification = Notifier.Notification;
 const temp = @import("temp");
 
 const std = @import("std");
-const builtin = @import("builtin");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
