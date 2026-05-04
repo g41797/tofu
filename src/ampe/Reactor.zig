@@ -1294,6 +1294,6 @@ const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;
 const AtomicRmwOp = std.builtin.AtomicRmwOp;
 
-const Socket = std.posix.socket_t;
+const Socket = internal.Socket;
 const log = std.log;
 const assert = std.debug.assert;

@@ -313,8 +313,8 @@ pub const IoSkt = struct {
             .alreadySend = null,
         };
 
-        ret.currSend.set(cn, sskt.socket.?) catch unreachable;
-        ret.currRecv.set(cn, sskt.socket.?) catch unreachable;
+        ret.currSend.set(cn, &ret.skt) catch unreachable;
+        ret.currRecv.set(cn, &ret.skt) catch unreachable;
 
         return ret;
     }
@@ -390,6 +390,8 @@ pub const IoSkt = struct {
     }
 
     pub fn refreshPointers(ioskt: *IoSkt) void {
+        ioskt.currSend.skt = &ioskt.skt;
+        ioskt.currRecv.skt = &ioskt.skt;
         ioskt.currRecv.refreshPointers();
         ioskt.currSend.refreshPointers();
     }
@@ -425,8 +427,8 @@ pub const IoSkt = struct {
     }
 
     fn postConnect(ioskt: *IoSkt) void {
-        ioskt.currSend.set(ioskt.cn, ioskt.skt.socket.?) catch unreachable;
-        ioskt.currRecv.set(ioskt.cn, ioskt.skt.socket.?) catch unreachable;
+        ioskt.currSend.set(ioskt.cn, &ioskt.skt) catch unreachable;
+        ioskt.currRecv.set(ioskt.cn, &ioskt.skt) catch unreachable;
 
         ioskt.currSend.attach(ioskt.sendQ.dequeue().?) catch unreachable;
         ioskt.alreadySend = null;
@@ -548,7 +550,7 @@ pub const IoBuf = struct { base: [*]u8, len: usize };
 pub const MsgSender = struct {
     ready: bool = false,
     cn: message.ChannelNumber = undefined,
-    socket: Socket = undefined,
+    skt: *Skt = undefined,
     msg: ?*Message = null,
     bh: BinaryHeader = .{},
     iov: [3]IoBufConst = undefined,
@@ -566,12 +568,12 @@ pub const MsgSender = struct {
         };
     }
 
-    pub fn set(ms: *MsgSender, cn: message.ChannelNumber, socket: Socket) !void {
+    pub fn set(ms: *MsgSender, cn: message.ChannelNumber, skt: *Skt) !void {
         if (ms.ready) {
             return AmpeError.NotAllowed;
         }
         ms.cn = cn;
-        ms.socket = socket;
+        ms.skt = skt;
         ms.ready = true;
     }
 
@@ -704,7 +706,7 @@ pub const MsgSender = struct {
 
         while (ms.vind < 3) : (ms.vind += 1) {
             while (ms.iov[ms.vind].len > 0) {
-                const wasSend = Skt.sendBuf(ms.socket, ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]) catch |err| {
+                const wasSend = ms.skt.sendBuf(ms.iov[ms.vind].base[0..ms.iov[ms.vind].len]) catch |err| {
                     if (ms.vind == 0 and ms.iov[0].len > 0) {
                         ms.msg.?.bhdr = ms.bh;
                     }
@@ -741,7 +743,7 @@ pub const MsgSender = struct {
 pub const MsgReceiver = struct {
     ready: bool = false,
     cn: message.ChannelNumber = undefined,
-    socket: Socket = undefined,
+    skt: *Skt = undefined,
     pool: *internal.Pool = undefined,
     ptrg: Trigger = .off,
     bh: [BinaryHeader.BHSIZE]u8 = [_]u8{'-'} ** BinaryHeader.BHSIZE,
@@ -761,12 +763,12 @@ pub const MsgReceiver = struct {
         };
     }
 
-    pub fn set(mr: *MsgReceiver, cn: message.ChannelNumber, socket: Socket) !void {
+    pub fn set(mr: *MsgReceiver, cn: message.ChannelNumber, skt: *Skt) !void {
         if (mr.ready) {
             return AmpeError.NotAllowed;
         }
         mr.cn = cn;
-        mr.socket = socket;
+        mr.skt = skt;
         mr.ready = true;
     }
 
@@ -845,7 +847,7 @@ pub const MsgReceiver = struct {
 
         while (mr.vind < 3) : (mr.vind += 1) {
             while (mr.iov[mr.vind].len > 0) {
-                const wasRecv = try Skt.recvToBuf(mr.socket, mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
+                const wasRecv = try mr.skt.recvToBuf(mr.iov[mr.vind].base[0..mr.iov[mr.vind].len]);
                 if (wasRecv == null) {
                     return null;
                 }

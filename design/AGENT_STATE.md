@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 046
+**Current Version:** 047
 **Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** OS Folder Flattening (COMPLETE)
+**Active Phase:** Socket Abstraction Cleanup (COMPLETE)
 
 ---
 
@@ -76,6 +76,34 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-04: Claude Sonnet 4.6 — Socket Abstraction Cleanup
+
+#### Summary
+Removed raw `Socket` type from `MsgSender` and `MsgReceiver` in `triggeredSkts.zig`.
+Both now store `*Skt` pointing to the parent `IoSkt.skt`. Instance methods `sendBuf`/`recvToBuf`
+added to all four `Skt.zig` files. `sendBufTo` deleted (zero callers). `Reactor.zig` hardcoded
+`std.posix.socket_t` fixed to `internal.Socket`.
+
+#### Changes:
+- `linux/Skt.zig`, `mac/Skt.zig`, `windows/Skt.zig`, `usockets/Skt.zig` — renamed free fns to `sendBufFd`/`recvToBufFd`; added instance methods `sendBuf`/`recvToBuf`; deleted `sendBufTo`
+- `triggeredSkts.zig` — `MsgSender`/`MsgReceiver`: `socket: Socket` → `skt: *Skt`; updated `set()`, send/recv loops, `IoSkt.initServerSide()`, `postConnect()`, `refreshPointers()`
+- `Reactor.zig` — fixed `Socket` type import
+- `design/remove-socket-from-msgsender.md` — session plan saved
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseFast` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseSmall` | ✅ PASS (35/35) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
 
 ### 2026-05-04: Claude Sonnet 4.6 — OS Folder Flattening (Restructure)
 
@@ -295,7 +323,7 @@ Prepared tofu for usockets migration. Created information base, analysis documen
 
 ## Immediate Tasks for Next Agent
 
-1. **Per-OS posix removal** — each OS folder (`linux/`, `windows/`, `mac/`) now has its own copy of `Notifier.zig`, `SocketCreator.zig`, `triggers.zig`. Per-OS adaptation (removing `std.posix` calls for Zig 0.16+) can now proceed independently in each folder.
+1. **Per-OS posix removal** — each OS folder (`linux/`, `windows/`, `mac/`) now has its own copy of `Notifier.zig`, `SocketCreator.zig`, `triggers.zig`. Per-OS adaptation (removing `std.posix` calls for Zig 0.16+) can now proceed independently in each folder. `MsgSender`/`MsgReceiver` now use `*Skt` — the raw `Socket` type no longer appears in business logic.
 2. **macOS native hardware testing** — pending. Run full test suite on native macOS.
 3. **Native Windows Test** — pending. Run full test suite on native Windows machine.
 4. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.

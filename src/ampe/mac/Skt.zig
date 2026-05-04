@@ -172,7 +172,7 @@ pub fn findFreeTcpPort() !u16 {
     return std.mem.bigToNative(u16, addr.port);
 }
 
-pub fn sendBuf(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
+pub fn sendBufFd(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
     var wasSend: usize = 0;
     wasSend = std.posix.send(socket, buf, 0) catch |e| {
         switch (e) {
@@ -185,19 +185,7 @@ pub fn sendBuf(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
     return wasSend;
 }
 
-pub fn sendBufTo(socket: posix.socket_t, buf: []const u8) AmpeError!?usize {
-    var wasSend: usize = 0;
-    wasSend = std.posix.sendto(socket, buf, 0, null, 0) catch |e| {
-        switch (e) {
-            std.posix.SendError.WouldBlock => return null,
-            else => return AmpeError.CommunicationFailed,
-        }
-    };
-    if (wasSend == 0) return null;
-    return wasSend;
-}
-
-pub fn recvToBuf(socket: posix.socket_t, buf: []u8) AmpeError!?usize {
+pub fn recvToBufFd(socket: posix.socket_t, buf: []u8) AmpeError!?usize {
     const wasRecv = std.posix.recv(socket, buf, 0) catch |e| {
         switch (e) {
             std.posix.RecvFromError.WouldBlock => return null,
@@ -206,6 +194,14 @@ pub fn recvToBuf(socket: posix.socket_t, buf: []u8) AmpeError!?usize {
         }
     };
     return wasRecv;
+}
+
+pub fn sendBuf(skt: *Skt, buf: []const u8) AmpeError!?usize {
+    return sendBufFd(skt.socket.?, buf);
+}
+
+pub fn recvToBuf(skt: *Skt, buf: []u8) AmpeError!?usize {
+    return recvToBufFd(skt.socket.?, buf);
 }
 
 pub fn deinit(skt: *Skt) void {

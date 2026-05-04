@@ -165,7 +165,7 @@ pub fn findFreeTcpPort() !u16 {
     return std.mem.bigToNative(u16, addr.in.sa.port);
 }
 
-pub fn sendBuf(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
+pub fn sendBufFd(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
     const rc: i32 = ws2_32.send(socket, buf.ptr, @intCast(buf.len), 0);
     if (rc >= 0) return @intCast(rc);
     const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
@@ -176,17 +176,7 @@ pub fn sendBuf(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
     }
 }
 
-pub fn sendBufTo(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
-    const rc: i32 = ws2_32.sendto(socket, buf.ptr, @intCast(buf.len), 0, null, 0);
-    if (rc >= 0) return @intCast(rc);
-    const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
-    switch (err) {
-        .WSAEWOULDBLOCK => return null,
-        else => return AmpeError.CommunicationFailed,
-    }
-}
-
-pub fn recvToBuf(socket: ws2_32.SOCKET, buf: []u8) AmpeError!?usize {
+pub fn recvToBufFd(socket: ws2_32.SOCKET, buf: []u8) AmpeError!?usize {
     const rc: i32 = ws2_32.recv(socket, buf.ptr, @intCast(buf.len), 0);
     if (rc > 0) return @intCast(rc);
     if (rc == 0) return AmpeError.PeerDisconnected;
@@ -196,6 +186,14 @@ pub fn recvToBuf(socket: ws2_32.SOCKET, buf: []u8) AmpeError!?usize {
         .WSAECONNRESET, .WSAECONNABORTED, .WSAESHUTDOWN => return AmpeError.PeerDisconnected,
         else => return AmpeError.CommunicationFailed,
     }
+}
+
+pub fn sendBuf(skt: *Skt, buf: []const u8) AmpeError!?usize {
+    return sendBufFd(skt.socket.?, buf);
+}
+
+pub fn recvToBuf(skt: *Skt, buf: []u8) AmpeError!?usize {
+    return recvToBufFd(skt.socket.?, buf);
 }
 
 pub fn deinit(skt: *Skt) void {

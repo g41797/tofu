@@ -45,20 +45,26 @@ pub fn findFreeTcpPort() !u16 {
     return error.NotImplemented;
 }
 
-pub fn sendBuf(socket: std.posix.fd_t, buf: []const u8) AmpeError!?usize {
+pub fn sendBufFd(socket: std.posix.fd_t, buf: []const u8) AmpeError!?usize {
     _ = socket;
     _ = buf;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn sendBufTo(socket: std.posix.fd_t, buf: []const u8) AmpeError!?usize {
+pub fn recvToBufFd(socket: std.posix.fd_t, buf: []u8) AmpeError!?usize {
     _ = socket;
     _ = buf;
     return AmpeError.NotImplementedYet;
 }
 
-pub fn recvToBuf(socket: std.posix.fd_t, buf: []u8) AmpeError!?usize {
-    _ = socket;
+pub fn sendBuf(skt: *Skt, buf: []const u8) AmpeError!?usize {
+    _ = skt;
+    _ = buf;
+    return AmpeError.NotImplementedYet;
+}
+
+pub fn recvToBuf(skt: *Skt, buf: []u8) AmpeError!?usize {
+    _ = skt;
     _ = buf;
     return AmpeError.NotImplementedYet;
 }
