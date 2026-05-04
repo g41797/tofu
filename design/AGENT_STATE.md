@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 050
+**Current Version:** 052
 **Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Cleanup (COMPLETE)
+**Active Phase:** Pre-Implementation Analysis (COMPLETE)
 
 ---
 
@@ -80,6 +80,83 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-04: Claude Sonnet 4.6 — bun-usockets Chosen as Implementation Target
+
+#### Summary
+Updated verdict and transition documents to reflect the final backend decision:
+**bun-usockets** (`vendor/bun-usockets/`) is the implementation target for all platforms.
+
+Decisive factors:
+- `us_socket_local_address` is public in bun-usockets — needed for `Skt.getPort()`.
+  Upstream uSockets has no public equivalent.
+- `us_loop_run_bun_tick` is an exported symbol that matches tofu's tick model exactly.
+- Windows forced-epoll is already battle-tested by the Bun team.
+- bun-usockets is already vendored; upstream is not.
+
+Appended §15 to `design/transition-2-usockets.md`:
+- Corrected API mapping table (POLL_TYPE_CALLBACK path)
+- Internal headers that must be included (`internal.h`, `networking/bsd.h`)
+- Windows shim strategy (unchanged from §13; corrected eventfd/timerfd reasoning)
+- Implementation sequence: Linux → Windows → macOS → Linux sandwich, 4-mode verify
+
+Updated verdict in `design/transition-2-usockets-verdict.md`:
+- §14 rewritten with balanced tradeoff analysis
+- Final verdict section added explicitly recommending bun-usockets
+- Summary table last row corrected
+
+#### Changes:
+- `design/transition-2-usockets-verdict.md` — §14 rewritten, Final Verdict section added
+- `design/transition-2-usockets.md` — §15 appended (bun-usockets implementation proposal)
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+No code changes. Analysis and documentation only.
+
+---
+
+### 2026-05-04: Claude Sonnet 4.6 — usockets Migration Plan Verdict
+
+#### Summary
+Reviewed and verified `design/transition-2-usockets.md` (Gemini CLI analysis of usockets migration)
+against the actual source code of both uSockets backends:
+- `/home/g41797/dev/root/github.com/uNetworking/uSockets/` (upstream)
+- `/home/g41797/dev/root/github.com/g41797/tofu/vendor/bun-usockets/` (bun fork)
+
+Saved detailed findings to `design/transition-2-usockets-verdict.md`.
+
+#### Key findings:
+
+1. **All "bsd_*" and `POLL_TYPE_CALLBACK` APIs are internal-only** — not in `libusockets.h`.
+   Both approaches require including internal headers (`internal/internal.h`, `networking/bsd.h`).
+   Workable since tofu vendors full source, but the migration plan does not acknowledge this.
+
+2. **`us_loop_run_bun_tick` is not in bun-usockets' public header** — defined in `epoll_kqueue.c`,
+   linkable as an exported symbol, but not officially declared in `libusockets.h`.
+
+3. **`us_socket_local_address` is bun-only** — present in bun-usockets `libusockets.h` (line 536),
+   absent from upstream uSockets. Critical for `Skt.getPort()`. Upstream would need raw
+   `getsockname` (reintroducing posix) or internal struct access.
+
+4. **Accept mapping is wrong for the POLL_TYPE_CALLBACK path** — §7/§9 say `on_open callback`,
+   but with POLL_TYPE_CALLBACK there is no on_open. Correct: manual `bsd_accept_socket(us_poll_fd(p), &addr)`.
+
+5. **"Template approach" (§12.2) is architecturally backwards** — `usockets/` IS the backend for
+   `-Dnetwork=usockets` builds, not a source of templates to copy to posix folders.
+
+6. **eventfd/timerfd shims ARE needed** — but because uSockets creates them internally at loop init,
+   not because tofu calls `us_wakeup_loop` (which it won't, since Notifier uses socket-pairs).
+
+7. **§14 verdict understates bun-usockets** — `us_socket_local_address` being public and the existing
+   vendored state make bun-usockets the stronger practical choice for initial implementation.
+
+#### Changes:
+- `design/transition-2-usockets-verdict.md` — new verdict document
+
+#### Verification:
+No code changes. Analysis only.
+
+---
 
 ### 2026-05-04: Claude Sonnet 4.6 — Test Cleanup
 
