@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const std = @import("std");
-const tofu = @import("../../../tofu.zig");
+const tofu = @import("../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
 
 pub const Skt = @This();

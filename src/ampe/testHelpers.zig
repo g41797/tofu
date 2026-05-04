@@ -74,10 +74,11 @@ const AmpeError = status.AmpeError;
 
 const build_options = @import("build_options");
 const skt_backend = if (build_options.network == .usockets)
-    @import("os/usockets/Skt.zig")
+    @import("usockets/Skt.zig")
 else switch (builtin.os.tag) {
-    .windows => @import("os/windows/Skt.zig"),
-    else => @import("os/linux/Skt.zig"),
+    .windows => @import("windows/Skt.zig"),
+    .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
+    else => @import("linux/Skt.zig"),
 };
 const Skt = skt_backend.Skt;
 

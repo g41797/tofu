@@ -151,7 +151,7 @@ pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
     return ret;
 }
 
-const tofu = @import("../tofu.zig");
+const tofu = @import("../../tofu.zig");
 
 const address = tofu.address;
 const Address = address.Address;
@@ -169,7 +169,7 @@ const AmpeError = tofu.status.AmpeError;
 
 const TempUdsPath = tofu.TempUdsPath;
 
-const internal = @import("internal.zig");
+const internal = @import("../internal.zig");
 const Notifier = internal.Notifier;
 const Skt = internal.Skt;
 

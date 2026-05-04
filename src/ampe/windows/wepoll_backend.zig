@@ -114,9 +114,9 @@ extern fn epoll_close(ephnd: *anyopaque) i32;
 extern fn epoll_ctl(ephnd: *anyopaque, op: i32, sock: usize, event: *WepollEvent) i32;
 extern fn epoll_wait(ephnd: *anyopaque, events: [*]WepollEvent, maxevents: i32, timeout: i32) i32;
 
-const common = @import("common.zig");
+const common = @import("../common.zig");
 const SeqN = common.SeqN;
-const core = @import("core.zig");
+const core = @import("../core.zig");
 const triggers_mod = @import("triggers.zig");
 
 const internal = @import("../internal.zig");

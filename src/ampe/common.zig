@@ -52,11 +52,11 @@ pub fn toFd(skt: Socket) FdType {
 /// Platform-appropriate file descriptor type.
 pub const FdType = if (builtin.os.tag == .windows) usize else std.posix.fd_t;
 
-const tofu = @import("../../tofu.zig");
+const tofu = @import("../tofu.zig");
 const Reactor = tofu.Reactor;
 const TriggeredChannel = Reactor.TriggeredChannel;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 const Socket = internal.Socket;
 
 const std = @import("std");

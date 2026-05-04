@@ -185,13 +185,13 @@ pub const SeqnTrcMap = std.AutoArrayHashMap(SeqN, *TriggeredChannel);
 const common = @import("common.zig");
 const SeqN = common.SeqN;
 
-const tofu = @import("../../tofu.zig");
+const tofu = @import("../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
 const message = tofu.message;
 const Reactor = tofu.Reactor;
 const TriggeredChannel = Reactor.TriggeredChannel;
 
-const internal = @import("../internal.zig");
+const internal = @import("internal.zig");
 const Triggers = internal.triggeredSkts.Triggers;
 
 const std = @import("std");

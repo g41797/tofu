@@ -317,11 +317,11 @@ pub fn deinit(ntfr: *Notifier) void {
     ntfr.receiver.deinit();
 }
 
-const tofu = @import("../tofu.zig");
+const tofu = @import("../../tofu.zig");
 
-const internal = @import("internal.zig");
+const internal = @import("../internal.zig");
 
-const poll_SEC_TIMEOUT: i32 = @import("poller.zig").poll_SEC_TIMEOUT;
+const poll_SEC_TIMEOUT: i32 = @import("../poller.zig").poll_SEC_TIMEOUT;
 
 const TempUdsPath = tofu.TempUdsPath;
 

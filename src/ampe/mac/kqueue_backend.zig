@@ -129,9 +129,9 @@ const KqueueBackend = struct {
 /// Complete kqueue-based Poller type using PollerCore.
 pub const Poller = core.PollerCore(KqueueBackend);
 
-const common = @import("common.zig");
+const common = @import("../common.zig");
 const SeqN = common.SeqN;
-const core = @import("core.zig");
+const core = @import("../core.zig");
 const triggers_mod = @import("triggers.zig");
 
 const internal = @import("../internal.zig");

@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 045
-**Last Updated:** 2026-05-03
+**Current Version:** 046
+**Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** usockets Migration Preparation (IN PROGRESS)
+**Active Phase:** OS Folder Flattening (COMPLETE)
 
 ---
 
@@ -43,20 +43,28 @@
 
 ---
 
-## Poller Architecture (Phase IV Complete)
+## Architecture (after OS Folder Flattening)
 
 ### File Structure
 ```
 src/ampe/
 ├── poller.zig                    # Facade: comptime selects backend
-├── poller/
-│   ├── common.zig                # Shared: TcIterator, isSocketSet, toFd, constants
-│   ├── triggers.zig              # Trigger mapping: epoll/kqueue conversions
-│   ├── core.zig                  # Shared struct fields + PollerCore generic
-│   ├── poll_backend.zig          # ISOLATED: Legacy poll (will be obsolete)
-│   ├── epoll_backend.zig         # Linux epoll implementation
-│   ├── wepoll_backend.zig        # Windows wepoll implementation (includes FFI)
-│   └── kqueue_backend.zig        # macOS/BSD kqueue implementation
+├── internal.zig                  # Facade: Skt, Socket, Notifier, SocketCreator
+├── common.zig                    # Shared: TcIterator, isSocketSet, toFd, constants
+├── core.zig                      # Shared struct fields + PollerCore generic
+├── linux/
+│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   └── epoll_backend.zig
+├── windows/
+│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   ├── wepoll_backend.zig
+│   └── wepoll/                   # vendored copy (wepoll.c, wepoll.h)
+├── mac/
+│   ├── Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig
+│   └── kqueue_backend.zig
+└── usockets/
+    ├── Skt.zig, Notifier.zig (stub), SocketCreator.zig (stub), triggers.zig
+    └── usockets_backend.zig (stub)
 ```
 
 ### Key Design Decisions
@@ -68,6 +76,44 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-04: Claude Sonnet 4.6 — OS Folder Flattening (Restructure)
+
+#### Summary
+Flattened `src/ampe/os/` and `src/ampe/poller/` into four sibling OS folders directly under `src/ampe/`.
+Each OS folder is now self-contained with its own backend, Notifier, SocketCreator, and triggers.
+wepoll vendored by copy (submodule removed). Reactor shutdown race condition fixed. CI workflows aligned.
+
+#### Structure after this session:
+```
+src/ampe/
+├── linux/    — Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig, epoll_backend.zig
+├── windows/  — Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig, wepoll_backend.zig, wepoll/
+├── mac/      — Skt.zig, Notifier.zig, SocketCreator.zig, triggers.zig, kqueue_backend.zig
+├── usockets/ — Skt.zig, Notifier.zig (stub), SocketCreator.zig (stub), triggers.zig, usockets_backend.zig
+├── common.zig, core.zig
+├── poller.zig, internal.zig  (facades — imports updated)
+```
+Deleted: `src/ampe/os/`, `src/ampe/poller/`, top-level `Notifier.zig`, `SocketCreator.zig`, `linux/poll_backend.zig` (not in use).
+
+#### Other fixes in this session:
+- `Reactor.zig` — shutdown race condition: atomic `shutdownFlag`, unconditional `waitFinish()`, `timedWait(10s)` with detach on timeout, defer LIFO ordering corrected
+- `.github/workflows/linux.yml` — test order aligned (Debug→Safe→Fast→Small)
+- `.github/workflows/mac.yml` / `windows.yml` — added `rm -rf ./.zig-cache/` between test runs
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseFast` | ✅ PASS (35/35) |
+| `zig build test -Doptimize=ReleaseSmall` | ✅ PASS (35/35) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
 
 ### 2026-05-03: Claude Sonnet 4.6 — Phase 3: FindFreeTcpPort to Skt.zig
 
@@ -249,7 +295,7 @@ Prepared tofu for usockets migration. Created information base, analysis documen
 
 ## Immediate Tasks for Next Agent
 
-1. **usockets migration Phase 4** — remove posix dependencies from `Notifier.zig` and `SocketCreator.zig`. `testHelpers.zig` is now clean. See `design/transition-2-usockets.md` Section 3 inventory.
+1. **Per-OS posix removal** — each OS folder (`linux/`, `windows/`, `mac/`) now has its own copy of `Notifier.zig`, `SocketCreator.zig`, `triggers.zig`. Per-OS adaptation (removing `std.posix` calls for Zig 0.16+) can now proceed independently in each folder.
 2. **macOS native hardware testing** — pending. Run full test suite on native macOS.
 3. **Native Windows Test** — pending. Run full test suite on native Windows machine.
 4. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.

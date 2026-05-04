@@ -250,5 +250,5 @@ const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;
 
-const tofu = @import("../../../tofu.zig");
+const tofu = @import("../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;

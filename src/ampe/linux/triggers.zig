@@ -112,7 +112,7 @@ pub const kqueue = struct {
     }
 };
 
-const common = @import("common.zig");
+const common = @import("../common.zig");
 
 const internal = @import("../internal.zig");
 const Triggers = internal.triggeredSkts.Triggers;

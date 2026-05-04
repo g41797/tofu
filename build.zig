@@ -109,8 +109,8 @@ pub fn build(b: *std.Build) void {
     });
 
     if (target.result.os.tag == .windows) {
-        lib.addCSourceFile(.{ .file = b.path("src/ampe/os/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib.addIncludePath(b.path("src/ampe/os/windows/wepoll"));
+        lib.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib.addIncludePath(b.path("src/ampe/windows/wepoll"));
     }
 
     b.installArtifact(lib);
@@ -155,8 +155,8 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.linkSystemLibrary("ntdll");
         lib_unit_tests.linkSystemLibrary("kernel32"); // Link kernel32 for event functions
 
-        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/os/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib_unit_tests.addIncludePath(b.path("src/ampe/os/windows/wepoll"));
+        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
     }
 
     b.installArtifact(lib_unit_tests);

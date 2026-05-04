@@ -25,5 +25,5 @@ pub const FindFreeTcpPort = @import("ampe/testHelpers.zig").FindFreeTcpPort;
 pub const DestroyChannels = @import("ampe/testHelpers.zig").DestroyChannels;
 pub const RunTasks = @import("ampe/testHelpers.zig").RunTasks;
 pub const Skt = @import("ampe/internal.zig").Skt; // Made public
-pub const SocketCreator = @import("ampe/SocketCreator.zig").SocketCreator; // Made public
+pub const SocketCreator = @import("ampe/internal.zig").SocketCreator; // Made public
 pub const @"internal usage" = @import("ampe/internal.zig");
