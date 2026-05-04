@@ -387,3 +387,73 @@ The forced-epoll strategy from §5.1 and §13 applies unchanged:
 3. **macOS third** — kqueue path in bun-usockets; verify.
 4. **Linux sandwich** — re-run full test suite on Linux after all platforms verified.
 5. **4-mode verification** — Debug, ReleaseSafe, ReleaseFast, ReleaseSmall on each platform.
+
+---
+
+## 16. Folder Structure After usockets Migration
+
+### 16.1 The posix folders do not change
+
+`src/ampe/linux/`, `src/ampe/mac/`, and `src/ampe/windows/` are the **posix backend**.
+They remain complete and unchanged. They are compiled only under `-Dnetwork=posix`.
+
+### 16.2 The usockets backend is a single folder for all platforms
+
+`src/ampe/usockets/` is selected for all OS targets under `-Dnetwork=usockets`.
+Because `bsd.c` absorbs OS differences internally, the Zig files in `usockets/` are
+**mostly unified** — one implementation for Linux, Windows, and macOS.
+
+What `bsd.c` handles internally (no per-OS Zig code needed):
+
+- `bsd_accept_socket` — `accept4` on Linux, `accept` + fcntl on Windows/macOS.
+- `bsd_create_listen_socket` — `getaddrinfo`, socket creation, all `setsockopt` variants per OS.
+- `bsd_create_connect_socket` — Windows loopback fast-fail (`SIO_TCP_INITIAL_RTO`) and all connect variants.
+- `bsd_recv` / `bsd_send` — EINTR retry, `MSG_NOSIGNAL` compat, `MSG_DONTWAIT` on all platforms.
+- Abstract UDS sockets — detects `sun_path[0] == 0`, adjusts `addrlen` correctly.
+- UDS long-path workaround — macOS 104-byte `sun_path` limit handled via `chdir` inside bsd.c.
+
+### 16.3 What remains platform-specific in usockets/
+
+Three small comptime branches stay in `usockets/Skt.zig`:
+
+| Concern | Platform | How handled |
+| :--- | :--- | :--- |
+| Error code mapping | Windows: `WSAGetLastError()`; Linux/macOS: `errno` | `comptime if (builtin.os.tag == .windows)` in `mapError()` |
+| Abstract UDS path prefix | Linux only: `path[0] = 0` before passing to `bsd_*` | `comptime if (builtin.os.tag == .linux)` already in `Notifier.zig` |
+| `WSAStartup` / `WSACleanup` | Windows only | Stays in `Reactor.zig` (comptime branch already there) |
+
+### 16.4 Windows build infrastructure (not Zig code)
+
+`src/ampe/windows/shims/` provides C headers needed to compile bun-usockets on Windows:
+
+| File | Purpose |
+| :--- | :--- |
+| `sys/epoll.h` | Redirects epoll calls to wepoll |
+| `sys/timerfd.h` | Emulates timerfd (used by bun-usockets loop init internally) |
+| `sys/eventfd.h` | Emulates eventfd (used by bun-usockets loop init internally) |
+
+These shims are compile-time only. They make `bsd.c` and `epoll_kqueue.c` compile on Windows
+without any changes to the bun-usockets source. They are added to the include path in `build.zig`
+for Windows + usockets targets.
+
+### 16.5 Final file structure (usockets backend)
+
+```
+src/ampe/
+├── internal.zig          # Facade: selects usockets/ under -Dnetwork=usockets
+├── poller.zig            # Facade: selects usockets/usockets_backend.zig
+├── Notifier.zig          # Shared, platform-independent (already complete)
+├── linux/                # Posix backend — unchanged, -Dnetwork=posix only
+├── mac/                  # Posix backend — unchanged, -Dnetwork=posix only
+├── windows/
+│   ├── ...               # Posix backend — unchanged, -Dnetwork=posix only
+│   └── shims/            # C headers for Windows usockets compilation
+│       ├── sys/epoll.h
+│       ├── sys/timerfd.h
+│       └── sys/eventfd.h
+└── usockets/             # Single unified backend for all platforms
+    ├── Skt.zig           # bsd_* wrappers + mapError() comptime branch
+    ├── SocketCreator.zig # bsd_create_listen/connect_socket wrappers
+    ├── triggers.zig      # Triggers → LIBUS_SOCKET_READABLE/WRITABLE (same on all OS)
+    └── usockets_backend.zig  # us_create_loop, us_create_poll, us_loop_run_bun_tick
+```

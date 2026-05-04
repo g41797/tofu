@@ -1,6 +1,6 @@
 # Agent State & Handover
 
-**Current Version:** 052
+**Current Version:** 053
 **Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
 **Active Phase:** Pre-Implementation Analysis (COMPLETE)
@@ -80,6 +80,32 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-05: Claude Sonnet 4.6 — Folder Structure After usockets Migration
+
+#### Summary
+Analyzed what remains platform-specific after `bsd.c` absorbs OS differences.
+Answered: `linux/`, `mac/`, `windows/` posix folders are unchanged — they are the posix backend.
+`usockets/` becomes a single unified backend for all platforms under `-Dnetwork=usockets`.
+
+`bsd.c` handles internally: accept variants (accept4/accept+fcntl), all setsockopt, connect
+Windows fast-fail, EINTR retry, MSG_NOSIGNAL compat, abstract UDS addrlen, macOS path workaround.
+
+Only three small comptime branches remain in `usockets/Skt.zig`:
+- Error mapping: `WSAGetLastError()` vs `errno`
+- Abstract UDS prefix: `path[0] = 0` (Linux only, already in Notifier.zig)
+- WSAStartup/Cleanup: stays in Reactor.zig (already there)
+
+`windows/shims/` (C headers: sys/epoll.h, sys/timerfd.h, sys/eventfd.h) stays as build
+infrastructure for Windows usockets compilation. Not Zig code.
+
+#### Changes:
+- `design/transition-2-usockets.md` — §16 appended (folder structure after migration)
+
+#### Verification:
+No code changes. Analysis and documentation only.
+
+---
 
 ### 2026-05-04: Claude Sonnet 4.6 — bun-usockets Chosen as Implementation Target
 
