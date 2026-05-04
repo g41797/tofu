@@ -7,6 +7,10 @@ socket: ?std.posix.socket_t = null,
 address: std.net.Address = undefined,
 server: bool = false,
 
+pub fn isSet(skt: *const Skt) bool {
+    return skt.socket != null;
+}
+
 pub fn listen(skt: *Skt) !void {
     skt.*.server = true;
     skt.*.deleteUDSPath();

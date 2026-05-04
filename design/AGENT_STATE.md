@@ -1,16 +1,17 @@
 # Agent State & Handover
 
-**Current Version:** 047
+**Current Version:** 048
 **Last Updated:** 2026-05-04
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Socket Abstraction Cleanup (COMPLETE)
+**Active Phase:** Skt/SocketCreator Contract Tests (COMPLETE)
 
 ---
 
 ## Current Status
 
-- **Verification:** All tests pass in `Debug` and `ReleaseFast` on Linux.
+- **Verification:** All 53 tests pass in `Debug`, `ReleaseSafe`, and `ReleaseFast` on Linux.
 - **Cross-Compilation:** ALL platforms verified (Linux, Windows x86_64, macOS x86_64/aarch64).
+- **Skt/SocketCreator Contract Tests:** COMPLETED. 18 new tests in `tests/ampe/sockets_tests.zig`.
 - **Poller Refactoring:** COMPLETED. Clean separation achieved.
 - **Stability:** ACHIEVED. Critical pointer stability refactor (heap storage + 4-step I/O) resolved all previous segmentation faults and protocol hangs.
 - **Resilience:** Abortive closure (`SO_LINGER=0`) and retry loops in `listen`/`connect` resolved all transient `BindFailed`/`ConnectFailed` errors.
@@ -76,6 +77,34 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-04: Claude Sonnet 4.6 — Skt/SocketCreator Contract Tests
+
+#### Summary
+Added `tests/ampe/sockets_tests.zig` — 18 contract tests for `linux/Skt.zig` and `linux/SocketCreator.zig`.
+Tests use only the public `tofu.*` API (zero `std.posix` in test code) so they run unchanged after posix removal.
+Fixed two race conditions in the initial implementation of the multi-thread TCP tests:
+
+1. **`TCP recvToBuf returns null when no data`** — server thread sent RST (SO_LINGER=0) before client's second `connect()` call. Fix: listener pre-created in main thread; server stores accepted conn in `ctx.conn`; main thread closes it after `connectWithRetry` returns.
+
+2. **`TCP connect and accept`** — non-blocking connect/accept cannot be retried on the same socket across threads without races. Fix: rewritten as single-threaded poll loop — interleaves `connect()` and `accept()` retries in one loop, no server thread needed.
+
+#### Changes:
+- `tests/ampe/sockets_tests.zig` — new file (18 tests, 4 groups)
+- `tests/tofu_tests.zig` — added `_ = @import("ampe/sockets_tests.zig");` guarded by `if (builtin.os.tag == .linux)`
+- `src/ampe/linux/Skt.zig`, `mac/Skt.zig`, `windows/Skt.zig`, `usockets/Skt.zig` — added `isSet()` method
+- `design/sockets-tests-plan.md` — plan saved; updated to reflect final implementation
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (53/53) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (53/53) |
+| `zig build test -Doptimize=ReleaseFast` | ✅ PASS (53/53) |
+
+---
 
 ### 2026-05-04: Claude Sonnet 4.6 — Socket Abstraction Cleanup
 

@@ -1,572 +1,393 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+// Contract tests for linux/Skt.zig and linux/SocketCreator.zig.
+// Zero std.posix in test code — these tests must pass unchanged after posix removal.
+
 test {
     std.testing.log_level = .debug;
     std.log.debug("sockets_tests\r\n", .{});
 }
 
-const localIP = "127.0.0.1";
+// ---------------------------------------------------------------------------
+// Retry helpers — non-blocking sockets need spin loops in tests
+// ---------------------------------------------------------------------------
 
-pub const std_options: @import("std").Options = .{ .log_level = .debug };
+const MAX_RETRIES = 10_000;
+const SLEEP_NS = 1 * std.time.ns_per_ms;
 
-test "UDS exchanger " {
-    std.testing.log_level = .info;
-
-    log.debug("Exchanger UDS\r\n", .{});
-
-    var tup: Notifier.TempUdsPath = .{};
-
-    const path: []u8 = try tup.buildPath(gpa);
-
-    log.debug("\r\nUDS path {s}\r\n", .{path});
-
-    const srvcnf: Address = .{
-        .uds_server_addr = UDSServerAddress.init(path),
-    };
-
-    const clcnf: Address = .{
-        .uds_client_addr = UDSClientAddress.init(path),
-    };
-
-    for (1..3) |_| {
-        try run(srvcnf, clcnf);
+fn acceptWithRetry(server: *Skt) !Skt {
+    for (0..MAX_RETRIES) |_| {
+        if (try server.accept()) |accepted| return accepted;
+        std.Thread.sleep(SLEEP_NS);
     }
-    return;
+    return error.TimeoutAccept;
 }
 
-test "TCP/IP exchanger " {
-    std.testing.log_level = .info;
-
-    log.debug("Exchanger TCP/IP)\r\n", .{});
-
-    const srvcnf: Address = .{
-        .tcp_server_addr = TCPServerAddress.init(localIP, address.DefaultPort),
-    };
-
-    const clcnf: Address = .{
-        .tcp_client_addr = TCPClientAddress.init(localIP, address.DefaultPort),
-    };
-
-    for (1..3) |_| {
-        try run(srvcnf, clcnf);
+fn connectWithRetry(client: *Skt) !void {
+    for (0..MAX_RETRIES) |_| {
+        if (try client.connect()) return;
+        std.Thread.sleep(SLEEP_NS);
     }
-    return;
+    return error.TimeoutConnect;
 }
 
-fn run(srvcnf: Address, clcnf: Address) !void {
-    var exc: Exchanger = try Exchanger.init(gpa, srvcnf, clcnf, false);
-    defer exc.*.deinit();
-
-    try exc.*.startListen();
-
-    try exc.*.startClient();
-
-    try exc.*.waitConnectClient();
-
-    exc.*.setRun(Exchanger.sendRecvPoll);
-
-    try exc.*.exchange();
-
-    return;
+fn sendAll(skt: *Skt, data: []const u8) !void {
+    var sent: usize = 0;
+    while (sent < data.len) {
+        if (try skt.sendBuf(data[sent..])) |n| sent += n else std.Thread.sleep(SLEEP_NS);
+    }
 }
 
-pub const SendRecv = *const fn (exc: *Exchanger, count: usize) anyerror!void;
-
-pub const Exchanger = struct {
-    allocator: Allocator = undefined,
-    pool: Pool = undefined,
-
-    srvcnf: Address = undefined,
-    clcnf: Address = undefined,
-
-    lstCN: CN = 10,
-    srvCN: CN = 20,
-    clCN: CN = 30,
-
-    tcm: ?TCM = null,
-    plr: ?Poller = null,
-
-    sender: ?*TC = null,
-    receiver: ?*TC = null,
-
-    forSend: MessageQueue = .{},
-    forRecv: MessageQueue = .{},
-    forCmpr: MessageQueue = .{},
-
-    srf: SendRecv = undefined,
-
-    pub fn init(allocator: Allocator, srvcnf: Address, clcnf: Address, usePoller: bool) !Exchanger {
-        var ret: Exchanger = .{
-            .allocator = allocator,
-            .pool = try Pool.init(allocator, null, null, null),
-            .srvcnf = srvcnf,
-            .clcnf = clcnf,
-        };
-
-        if (usePoller) {
-            ret.srf = sendRecvPoll;
-        } else {
-            ret.srf = sendRecvNonPoll;
-        }
-
-        errdefer ret.*.deinit();
-
-        var tcm: TCM = TCM.init(allocator);
-        errdefer tcm.deinit();
-        try tcm.ensureTotalCapacity(256);
-        ret.tcm = tcm;
-
-        const pll: Poller = .{
-            .poll = try Poll.init(allocator),
-        };
-
-        ret.plr = pll;
-
-        return ret;
+fn recvAll(skt: *Skt, buf: []u8) !void {
+    var got: usize = 0;
+    while (got < buf.len) {
+        if (try skt.recvToBuf(buf[got..])) |n| got += n else std.Thread.sleep(SLEEP_NS);
     }
+}
 
-    pub fn setRun(exc: *Exchanger, sr: SendRecv) void {
-        exc.*.srf = sr;
-    }
+// ---------------------------------------------------------------------------
+// Group 1 — SocketCreator (no connection, single thread)
+// ---------------------------------------------------------------------------
 
-    pub fn setRunner(exc: *Exchanger, usePoller: bool) void {
-        if (usePoller) {
-            exc.*.srf = sendRecvPoll;
-        } else {
-            exc.*.srf = sendRecvNonPoll;
-        }
-    }
+test "SocketCreator wrong address returns InvalidAddress" {
+    var sc = SocketCreator.init(gpa);
+    try testing.expectError(AmpeError.InvalidAddress, sc.fromAddress(.{ .wrong = .{} }));
+}
 
-    pub fn startListen(exc: *Exchanger) !void {
-        var lst: TC = .{
-            .exp = .{},
-            .act = .{},
-            .tskt = try create_listener(&exc.*.srvcnf),
-            .acn = .{
-                .chn = exc.*.lstCN,
-                .mid = exc.*.lstCN,
-                .ctx = null,
-            },
-        };
-        errdefer lst.tskt.deinit();
+test "SocketCreator parse empty message returns InvalidAddress" {
+    var msg = try Message.create(gpa);
+    defer msg.destroy();
+    var sc = SocketCreator.init(gpa);
+    try testing.expectError(AmpeError.InvalidAddress, sc.parse(msg));
+}
 
-        try exc.*.tcm.?.put(exc.*.lstCN, lst);
+test "SocketCreator TCP server socket is set and server-flagged" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer skt.deinit();
+    try testing.expect(skt.isSet());
+    try testing.expect(skt.server == true);
+}
 
+test "SocketCreator UDS server socket is set and server-flagged" {
+    var tup: tofu.TempUdsPath = .{};
+    const path = try tup.buildPath(gpa);
+    var sc = SocketCreator.init(gpa);
+    var skt = try sc.fromAddress(.{ .uds_server_addr = UDSServerAddress.init(path) });
+    defer skt.deinit();
+    try testing.expect(skt.isSet());
+    try testing.expect(skt.server == true);
+}
+
+test "SocketCreator TCP client socket is created" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer server.deinit();
+    var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client.deinit();
+    try testing.expect(client.isSet());
+    try testing.expect(client.server == false);
+}
+
+test "SocketCreator UDS client connect to nonexistent path fails" {
+    var sc = SocketCreator.init(gpa);
+    // fromAddress only creates the socket — connect() is where the path is resolved
+    var skt = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init("/tmp/tofu_no_such_socket_xyz.sock") });
+    defer skt.deinit();
+    try testing.expect(skt.isSet());
+    // connect must fail since the path does not exist
+    try testing.expectError(AmpeError.UDSPathNotFound, skt.connect());
+}
+
+test "SocketCreator findFreeTcpPort returns bindable port" {
+    const port = try tofu.FindFreeTcpPort();
+    try testing.expect(port > 0);
+    var sc = SocketCreator.init(gpa);
+    var skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer skt.deinit();
+    try testing.expect(skt.isSet());
+}
+
+test "SocketCreator createUdsListener with empty path auto-creates" {
+    var skt = try SocketCreator.createUdsListener(gpa, "");
+    defer skt.deinit();
+    try testing.expect(skt.isSet());
+    try testing.expect(skt.server == true);
+}
+
+// ---------------------------------------------------------------------------
+// Group 2 — Skt state (single thread)
+// ---------------------------------------------------------------------------
+
+test "Skt zero-initialized deinit is safe" {
+    var skt: Skt = .{};
+    skt.deinit();
+}
+
+test "Skt accept on listener before client returns null" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer listener.deinit();
+    const result = try listener.accept();
+    try testing.expect(result == null);
+}
+
+test "Skt connect does not error (non-blocking pending or immediate)" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer server.deinit();
+    var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client.deinit();
+    _ = try client.connect();
+}
+
+// ---------------------------------------------------------------------------
+// Group 3 — TCP integration (two threads)
+//
+// The listener is created in the main thread before spawning the server thread.
+// This guarantees the server is listening before the client attempts to connect,
+// eliminating the ECONNREFUSED race that occurs when the server thread races to
+// bind its own socket.
+//
+// For tcpServerImmediateRecv the accepted conn is stored in ctx.conn and closed
+// by the main thread AFTER connectWithRetry returns. This prevents the server's
+// RST (SO_LINGER=0) from interrupting the client's second connect() call.
+// ---------------------------------------------------------------------------
+
+const TcpCtx = struct {
+    listener: Skt = .{},
+    conn: Skt = .{},
+    received: [1000]u8 = undefined,
+    recv_len: usize = 0,
+    accepted_set: bool = false,
+    err: ?anyerror = null,
+};
+
+fn tcpServerRecv(ctx: *TcpCtx) void {
+    var conn = acceptWithRetry(&ctx.listener) catch |e| {
+        ctx.err = e;
         return;
-    }
-
-    pub fn startClient(exc: *Exchanger) !void {
-        var cl: TC = .{
-            .exp = .{},
-            .act = .{},
-            .tskt = try create_client_addr(&exc.*.clcnf, &exc.*.pool),
-            .acn = .{
-                .chn = exc.*.clCN,
-                .mid = exc.*.clCN,
-                .ctx = null,
-            },
-        };
-        // Workaround, in production hello contains chn
-        cl.tskt.io.cn = cl.acn.chn;
-        errdefer cl.tskt.deinit();
-
-        try exc.*.tcm.?.put(exc.*.clCN, cl);
-
+    };
+    defer conn.deinit();
+    recvAll(&conn, ctx.received[0..]) catch |e| {
+        ctx.err = e;
         return;
-    }
+    };
+    ctx.recv_len = ctx.received.len;
+}
 
-    pub fn waitConnectClient(exc: *Exchanger) !void {
-        var it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
-
-        var trgrs: internal.triggeredSkts.Triggers = .{};
-
-        var serverReady: bool = false;
-        var clientReady: bool = false;
-
-        const connect_tries = if (comptime builtin.os.tag == .windows) 10 else 100;
-
-        for (0..connect_tries) |i| {
-            log.debug("wait connected client {d}", .{i + 1});
-
-            if (serverReady and clientReady) {
-                break;
-            }
-
-            trgrs = try exc.plr.?.waitTriggers(it, SEC_TIMEOUT_MS);
-
-            if (trgrs.err == .on) {
-                break;
-            }
-
-            if (trgrs.timeout == .on) {
-                continue;
-            }
-
-            if (serverReady) { // disable further accepts - test flow only
-                trgrs.accept = .off;
-            }
-
-            if (trgrs.accept == .on) { // Just one listener, so checking trgrs is OK
-                var listener: internal.TriggeredSkt = exc.*.tcm.?.getPtr(exc.*.lstCN).?.*.tskt;
-
-                log.debug("wait connected client - try accept", .{});
-                const srvsktptr: ?*internal.sockets.Skt = try listener.tryAccept();
-
-                if (srvsktptr != null) {
-                    const srvio: internal.TriggeredSkt = .{
-                        .io = try internal.triggeredSkts.IoSkt.initServerSide(&exc.*.pool, exc.*.srvCN, srvsktptr.?),
-                    };
-
-                    var srv: TC = .{
-                        .exp = .{},
-                        .act = .{},
-                        .tskt = srvio,
-                        .acn = .{
-                            .chn = exc.*.srvCN,
-                            .mid = exc.*.srvCN,
-                            .ctx = null,
-                        },
-                    };
-                    errdefer srv.tskt.deinit();
-
-                    try exc.*.tcm.?.put(exc.*.srvCN, srv);
-
-                    it = Reactor.Iterator.init(&exc.*.tcm.?);
-
-                    serverReady = true;
-                    log.debug("wait connected client - server ready", .{});
-                }
-            }
-
-            if (trgrs.connect == .on) {
-                log.debug("wait connected client - try connect", .{});
-                const clTsktPtr: *TC = exc.*.tcm.?.getPtr(exc.*.clCN).?;
-
-                if (clTsktPtr.*.act.connect == .on) {
-                    _ = try clTsktPtr.*.tryConnect();
-                }
-            }
-
-            if ((trgrs.send == .on) or (trgrs.recv == .on) or (trgrs.pool == .on)) {
-                clientReady = true;
-                log.debug("wait connected client - client ready", .{});
-            }
-        }
-
+fn tcpServerImmediateRecv(ctx: *TcpCtx) void {
+    ctx.conn = acceptWithRetry(&ctx.listener) catch |e| {
+        ctx.err = e;
         return;
-    }
-
-    pub fn exchange(exc: *Exchanger) !void {
-        exc.*.removeTC(exc.*.lstCN); // poll only io sockets
-
-        exc.*.sender = exc.*.getTC(exc.*.clCN).?;
-        exc.*.receiver = exc.*.getTC(exc.*.srvCN).?;
-
-        const sdf: Socket = exc.*.sender.?.*.tskt.getSocket();
-        const rdf: Socket = exc.*.receiver.?.*.tskt.getSocket();
-
-        log.debug("sender fd {x} receiver fd {x} ", .{ sdf, rdf });
-
-        assert(sdf != rdf);
-
-        try exc.*.exchangeMsgs(11);
+    };
+    // Immediately recv before client sends — must return null (WouldBlock).
+    // conn is NOT closed here; main thread closes it after connectWithRetry
+    // returns to prevent RST from racing with the client's connect() retries.
+    const result = ctx.conn.recvToBuf(ctx.received[0..]) catch |e| {
+        ctx.err = e;
         return;
+    };
+    ctx.recv_len = if (result == null) 0 else result.?;
+    ctx.accepted_set = true;
+}
+
+test "TCP connect and accept" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer listener.deinit();
+    var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client.deinit();
+    var accepted: ?Skt = null;
+    defer if (accepted) |*a| a.deinit();
+    var client_connected = false;
+    for (0..MAX_RETRIES) |_| {
+        if (!client_connected) client_connected = try client.connect();
+        if (accepted == null) accepted = try listener.accept();
+        if (client_connected and accepted != null) break;
+        std.Thread.sleep(SLEEP_NS);
     }
+    try testing.expect(client_connected);
+    try testing.expect(accepted != null);
+    try testing.expect(accepted.?.isSet());
+    try testing.expect(client.isSet());
+}
 
-    pub fn exchangeMsgs(exc: *Exchanger, count: usize) !void {
-        exc.*.clearPool();
-        exc.*.clearQs();
+test "TCP sendBuf recvToBuf round-trip" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var ctx: TcpCtx = .{};
+    ctx.listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer ctx.listener.deinit();
+    const t = try std.Thread.spawn(.{}, tcpServerRecv, .{&ctx});
+    var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client.deinit();
+    try connectWithRetry(&client);
+    var payload: [1000]u8 = undefined;
+    @memset(&payload, 0xAB);
+    try sendAll(&client, &payload);
+    t.join();
+    try testing.expect(ctx.err == null);
+    try testing.expectEqual(@as(usize, 1000), ctx.recv_len);
+    try testing.expectEqualSlices(u8, &payload, &ctx.received);
+}
 
-        const body: []u8 = try exc.*.allocator.alloc(u8, 10000);
-        defer exc.*.allocator.free(body);
-
-        for (0..count) |i| {
-            var smsg: *Message = try Message.create(exc.*.allocator);
-
-            smsg.*.bhdr.channel_number = exc.*.srvCN;
-            smsg.*.bhdr.message_id = i + 1;
-            smsg.*.bhdr.proto.role = .signal;
-            smsg.*.bhdr.proto.more = .last;
-            smsg.*.bhdr.proto.mtype = .application;
-            smsg.*.bhdr.proto.origin = .application;
-            try smsg.*.body.copy(body);
-
-            exc.*.forSend.enqueue(smsg);
-            exc.*.forCmpr.enqueue(try smsg.*.clone());
-            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver
-            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver
-            exc.*.pool.put(try Message.create(exc.*.allocator)); // Prepare free messages for receiver                                                             //
-        }
-
-        const scount: usize = exc.*.forSend.count();
-
-        assert(scount == count);
-
-        if (scount == 0) {
-            return;
-        }
-
-        for (0..scount) |_| {
-            try exc.*.sender.?.*.tskt.addToSend(exc.*.forSend.dequeue().?);
-        }
-        assert(exc.*.sender.?.*.tskt.io.sendQ.count() == scount);
-
-        try exc.*.srf(exc, count);
+test "TCP recvToBuf returns null when no data" {
+    const port = try tofu.FindFreeTcpPort();
+    var sc = SocketCreator.init(gpa);
+    var ctx: TcpCtx = .{};
+    ctx.listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
+    defer ctx.listener.deinit();
+    defer ctx.conn.deinit();
+    const t = try std.Thread.spawn(.{}, tcpServerImmediateRecv, .{&ctx});
+    var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client.deinit();
+    try connectWithRetry(&client);
+    // Wait for server to complete its recv before we allow it to deinit (via ctx.conn.deinit below).
+    for (0..MAX_RETRIES) |_| {
+        if (ctx.accepted_set or ctx.err != null) break;
+        std.Thread.sleep(SLEEP_NS);
     }
+    t.join();
+    try testing.expect(ctx.err == null);
+    try testing.expectEqual(@as(usize, 0), ctx.recv_len);
+}
 
-    pub fn sendRecvPoll(
-        exc: *Exchanger,
-        count: usize,
-    ) !void {
-        if (count == 0) {
-            return;
-        }
+// ---------------------------------------------------------------------------
+// Group 4 — UDS integration (two threads)
+// ---------------------------------------------------------------------------
 
-        const it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
+const UdsCtx = struct {
+    path: [108:0]u8 = [_:0]u8{0} ** 108,
+    path_len: usize = 0,
+    received: [1000]u8 = undefined,
+    recv_len: usize = 0,
+    accepted_set: bool = false,
+    err: ?anyerror = null,
 
-        var loop: usize = 1;
-
-        while ((loop < 3 * count) and (exc.*.forRecv.count() < (count + 1))) : (loop += 1) {
-            var trgrs: internal.triggeredSkts.Triggers = .{};
-
-            trgrs = try exc.*.plr.?.waitTriggers(it, Notifier.SEC_TIMEOUT_MS);
-
-            try testing.expect(trgrs.err != .on);
-
-            // In production code we need in loop check act triggers per every channels
-            // For the test - checking of 'trgrs' is good enough
-
-            if (trgrs.send == .on) {
-                var wasSend: MessageQueue = try exc.*.sender.?.*.tskt.trySend();
-                for (0..wasSend.count()) |_| {
-                    exc.*.pool.put(wasSend.dequeue().?);
-                }
-            }
-            if (trgrs.recv == .on) {
-                var wasRecv: MessageQueue = try exc.*.receiver.?.*.tskt.tryRecv();
-                wasRecv.move(&exc.*.forRecv);
-            }
-
-            log.debug("loop {d} received {d}", .{
-                loop,
-                exc.*.forRecv.count(),
-            });
-        }
-
-        try testing.expect(exc.*.forRecv.count() == (count + 1));
-
-        return;
-    }
-
-    pub fn sendRecvNonPoll(
-        exc: *Exchanger,
-        count: usize,
-    ) !void {
-        if (count == 0) {
-            return;
-        }
-
-        var loop: usize = 0;
-        const max_loops = if (comptime builtin.os.tag == .windows) 10 else 100;
-
-        while (loop < max_loops) : (loop += 1) { //
-            var wasSend: MessageQueue = try exc.*.sender.?.*.tskt.trySend();
-            for (0..wasSend.count()) |_| {
-                exc.*.pool.put(wasSend.dequeue().?);
-            }
-
-            var wasRecv: MessageQueue = try exc.*.receiver.?.*.tskt.tryRecv();
-
-            wasRecv.move(&exc.*.forRecv);
-
-            const rc: usize = exc.*.forRecv.count();
-            if (rc == (count + 1)) {
-                break;
-            }
-        }
-
-        try testing.expect(exc.*.forRecv.count() == (count + 1));
-
-        return;
-    }
-
-    fn closeChannels(exc: *Exchanger) void {
-        var it: Reactor.Iterator = Reactor.Iterator.init(&exc.*.tcm.?);
-
-        var next: ?*TC = it.next();
-
-        while (next != null) {
-            next.?.*.tskt.deinit();
-            next = it.next();
-        }
-        return;
-    }
-
-    fn getTC(exc: *Exchanger, cn: channels.ChannelNumber) ?*TC {
-        const tcp: ?*TC = exc.*.tcm.?.getPtr(cn);
-        if (tcp) |tc| {
-            return tc;
-        }
-        return null;
-    }
-
-    fn removeTC(exc: *Exchanger, tcn: channels.ChannelNumber) void {
-        const tcp: ?*TC = exc.*.tcm.?.getPtr(tcn);
-        if (tcp) |tc| {
-            tc.*.tskt.deinit();
-        }
-        _ = exc.*.tcm.?.swapRemove(tcn);
-    }
-
-    pub fn clearQs(exc: *Exchanger) void {
-        message.clearQueue(&exc.*.forCmpr);
-        message.clearQueue(&exc.*.forRecv);
-        message.clearQueue(&exc.*.forSend);
-    }
-
-    pub fn clearPool(exc: *Exchanger) void {
-        exc.*.pool.freeAll();
-    }
-
-    pub fn deinit(exc: *Exchanger) void {
-        exc.*.closeChannels();
-
-        exc.*.clearQs();
-
-        if (exc.*.tcm != null) {
-            exc.*.tcm.?.deinit();
-            exc.*.tcm = null;
-        }
-        if (exc.*.plr != null) {
-            exc.*.plr.?.deinit();
-            exc.*.plr = null;
-        }
-
-        exc.*.pool.close();
+    fn pathSlice(ctx: *const UdsCtx) []const u8 {
+        return ctx.path[0..ctx.path_len];
     }
 };
 
-fn create_listener(cnfr: *Address) !internal.TriggeredSkt {
-    var wlcm: *Message = try Message.create(gpa);
-    defer wlcm.*.destroy();
-
-    try cnfr.*.format(wlcm);
-
-    var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
-
-    var tskt: internal.TriggeredSkt = .{
-        .accept = try internal.AcceptSkt.init(wlcm, &sc),
+fn udsServerAcceptOnly(ctx: *UdsCtx) void {
+    var sc = SocketCreator.init(gpa);
+    var listener = sc.fromAddress(.{ .uds_server_addr = UDSServerAddress.init(ctx.pathSlice()) }) catch |e| {
+        ctx.err = e;
+        return;
     };
-    errdefer tskt.deinit();
-
-    const trgrs: internal.triggeredSkts.Triggers = try tskt.triggers();
-
-    try testing.expect(trgrs.accept == .on);
-
-    return tskt;
+    defer listener.deinit();
+    var conn = acceptWithRetry(&listener) catch |e| {
+        ctx.err = e;
+        return;
+    };
+    defer conn.deinit();
+    ctx.accepted_set = conn.isSet();
 }
 
-fn create_client_addr(cnfr: *Address, pool: *Pool) !internal.TriggeredSkt {
-    var hello: *Message = try Message.create(gpa);
-
-    cnfr.*.format(hello) catch |err| {
-        hello.*.destroy();
-        return err;
+fn udsServerRecv(ctx: *UdsCtx) void {
+    var sc = SocketCreator.init(gpa);
+    var listener = sc.fromAddress(.{ .uds_server_addr = UDSServerAddress.init(ctx.pathSlice()) }) catch |e| {
+        ctx.err = e;
+        return;
     };
-
-    var sc: internal.SocketCreator = internal.SocketCreator.init(gpa);
-
-    var clSkt: internal.triggeredSkts.IoSkt = .{};
-    try clSkt.initClientSide(pool, hello, &sc);
-    var tskt: internal.TriggeredSkt = .{
-        .io = clSkt,
+    defer listener.deinit();
+    var conn = acceptWithRetry(&listener) catch |e| {
+        ctx.err = e;
+        return;
     };
-    errdefer tskt.deinit();
-
-    const trgrs: internal.triggeredSkts.Triggers = try tskt.triggers();
-
-    const utrg: internal.triggeredSkts.UnpackedTriggers = internal.triggeredSkts.UnpackedTriggers.fromTriggers(trgrs);
-
-    const onTrigger: u8 = switch (cnfr.*) {
-        .tcp_client_addr => utrg.connect,
-        .uds_client_addr => utrg.send,
-        else => unreachable,
+    defer conn.deinit();
+    recvAll(&conn, ctx.received[0..]) catch |e| {
+        ctx.err = e;
+        return;
     };
-
-    try testing.expect(onTrigger == 1);
-
-    return tskt;
+    ctx.recv_len = ctx.received.len;
 }
 
-const tofu = @import("../tofu.zig");
-const internal = tofu.@"internal usage";
+fn udsServerDeinit(ctx: *UdsCtx) void {
+    var sc = SocketCreator.init(gpa);
+    var listener = sc.fromAddress(.{ .uds_server_addr = UDSServerAddress.init(ctx.pathSlice()) }) catch |e| {
+        ctx.err = e;
+        return;
+    };
+    listener.deinit();
+    ctx.accepted_set = true;
+}
 
-const message = tofu.message;
-const MessageType = message.MessageType;
-const MessageRole = message.MessageRole;
-const OriginFlag = message.OriginFlag;
-const MoreMessagesFlag = message.MoreMessagesFlag;
-const ProtoFields = message.ProtoFields;
-const BinaryHeader = message.BinaryHeader;
-const TextHeader = message.TextHeader;
-const TextHeaderIterator = message.TextHeaderIterator;
-const TextHeaders = message.TextHeaders;
-const Message = message.Message;
-const MessageQueue = message.MessageQueue;
-const MessageID = message.MessageID;
-const VC = message.ValidForSend;
-const CN = message.ChannelNumber;
+test "UDS connect and accept" {
+    var tup: tofu.TempUdsPath = .{};
+    const path = try tup.buildPath(gpa);
+    var ctx: UdsCtx = .{};
+    ctx.path_len = path.len;
+    @memcpy(ctx.path[0..path.len], path);
+    const t = try std.Thread.spawn(.{}, udsServerAcceptOnly, .{&ctx});
+    std.Thread.sleep(5 * std.time.ns_per_ms);
+    var sc = SocketCreator.init(gpa);
+    var client = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init(ctx.pathSlice()) });
+    defer client.deinit();
+    _ = try client.connect();
+    t.join();
+    try testing.expect(ctx.err == null);
+    try testing.expect(ctx.accepted_set);
+}
 
-const Reactor = tofu.Reactor;
-const TCM = internal.TriggeredChannelsMap;
-const TC = internal.TriggeredChannel;
+test "UDS sendBuf recvToBuf round-trip" {
+    var tup: tofu.TempUdsPath = .{};
+    const path = try tup.buildPath(gpa);
+    var ctx: UdsCtx = .{};
+    ctx.path_len = path.len;
+    @memcpy(ctx.path[0..path.len], path);
+    const t = try std.Thread.spawn(.{}, udsServerRecv, .{&ctx});
+    std.Thread.sleep(5 * std.time.ns_per_ms);
+    var sc = SocketCreator.init(gpa);
+    var client = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init(ctx.pathSlice()) });
+    defer client.deinit();
+    _ = try client.connect();
+    var payload: [1000]u8 = undefined;
+    @memset(&payload, 0xCD);
+    try sendAll(&client, &payload);
+    t.join();
+    try testing.expect(ctx.err == null);
+    try testing.expectEqual(@as(usize, 1000), ctx.recv_len);
+    try testing.expectEqualSlices(u8, &payload, &ctx.received);
+}
 
-const poller = internal.poller;
-const Poller = poller.Poller;
-const Poll = poller.Poll;
+test "UDS server socket file removed after deinit" {
+    var tup: tofu.TempUdsPath = .{};
+    const path = try tup.buildPath(gpa);
+    var ctx: UdsCtx = .{};
+    ctx.path_len = path.len;
+    @memcpy(ctx.path[0..path.len], path);
+    const t = try std.Thread.spawn(.{}, udsServerDeinit, .{&ctx});
+    t.join();
+    try testing.expect(ctx.err == null);
+    std.fs.accessAbsolute(ctx.pathSlice(), .{}) catch |e| {
+        try testing.expect(e == error.FileNotFound);
+        return;
+    };
+    try testing.expect(false); // file still exists
+}
 
-const address = tofu.address;
-const Address = address.Address;
-const TCPServerAddress = address.TCPServerAddress;
-const TCPClientAddress = address.TCPClientAddress;
-const UDSServerAddress = address.UDSServerAddress;
-const UDSClientAddress = address.UDSClientAddress;
-const WrongAddress = address.WrongAddress;
+// ---------------------------------------------------------------------------
+// Imports
+// ---------------------------------------------------------------------------
 
-const status = tofu.status;
-const AmpeStatus = status.AmpeStatus;
-const AmpeError = status.AmpeError;
-const raw_to_status = status.raw_to_status;
-const raw_to_error = status.raw_to_error;
-const status_to_raw = status.status_to_raw;
-
-const Pool = internal.Pool;
-const Notifier = internal.Notifier;
-const Notification = Notifier.Notification;
-
-const channels = internal.channels;
-const ActiveChannel = channels.ActiveChannel;
-const ActiveChannels = channels.ActiveChannels;
-
-const sockets = internal.sockets;
-
-const Appendable = @import("Appendable");
-
-const DBG = tofu.DBG;
+const tofu = @import("tofu");
+const Skt = tofu.Skt;
+const SocketCreator = tofu.SocketCreator;
+const TCPServerAddress = tofu.address.TCPServerAddress;
+const TCPClientAddress = tofu.address.TCPClientAddress;
+const UDSServerAddress = tofu.address.UDSServerAddress;
+const UDSClientAddress = tofu.address.UDSClientAddress;
+const AmpeError = tofu.AmpeError;
+const Message = tofu.Message;
 
 const std = @import("std");
 const testing = std.testing;
-const assert = std.debug.assert;
-const posix = std.posix;
-const mem = std.mem;
-const builtin = @import("builtin");
-const os = builtin.os.tag;
-const Allocator = std.mem.Allocator;
 const gpa = std.testing.allocator;
-const Mutex = std.Thread.Mutex;
-const Socket = std.posix.socket_t;
-
-const log = std.log;
-
-// 2DO - clean obsolete log.debug

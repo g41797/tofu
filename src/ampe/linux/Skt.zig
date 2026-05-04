@@ -7,6 +7,10 @@ socket: ?std.posix.socket_t = null,
 address: std.net.Address = undefined,
 server: bool = false,
 
+pub fn isSet(skt: *const Skt) bool {
+    return skt.socket != null;
+}
+
 pub fn listen(skt: *Skt) !void {
     skt.*.server = true;
     skt.*.deleteUDSPath();
@@ -291,9 +295,9 @@ pub fn acceptOs(
         else
             system.accept(sock, addr, addr_size);
 
-        // Convert to usize for errno check (handles both c_int and usize)
-        const rc_usize: usize = if (@typeInfo(@TypeOf(rc)) == .int)
-            @as(usize, @intCast(@as(isize, @intCast(rc))))
+        // Darwin accept returns c_int (sign-extend to usize); Linux accept4 returns usize directly.
+        const rc_usize: usize = if (@TypeOf(rc) == c_int)
+            @as(usize, @bitCast(@as(isize, @intCast(rc))))
         else
             rc;
 

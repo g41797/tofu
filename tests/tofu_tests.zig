@@ -23,6 +23,11 @@ test {
         _ = @import("windows_poller_tests.zig");
     }
 
+    // Linux Skt/SocketCreator contract tests (baseline for posix removal):
+    if (@import("builtin").os.tag == .linux) {
+        _ = @import("ampe/sockets_tests.zig");
+    }
+
     std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 
     // Main test - for Linux

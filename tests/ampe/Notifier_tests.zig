@@ -53,6 +53,5 @@ const temp = @import("temp");
 
 const std = @import("std");
 const builtin = @import("builtin");
-const posix = std.posix;
 const testing = std.testing;
 const Allocator = std.mem.Allocator;

@@ -8,6 +8,10 @@ address: std.net.Address = undefined,
 server: bool = false,
 base_handle: windows.HANDLE = windows.INVALID_HANDLE_VALUE,
 
+pub fn isSet(skt: *const Skt) bool {
+    return skt.socket != null;
+}
+
 pub fn listen(skt: *Skt) !void {
     skt.*.server = true;
     skt.*.deleteUDSPath();

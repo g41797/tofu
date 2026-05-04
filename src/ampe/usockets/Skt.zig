@@ -11,6 +11,10 @@ socket: ?std.posix.fd_t = null,
 address: std.net.Address = undefined,
 server: bool = false,
 
+pub fn isSet(skt: *const Skt) bool {
+    return skt.socket != null;
+}
+
 pub fn listen(skt: *Skt) !void {
     _ = skt;
     return error.NotImplemented;
