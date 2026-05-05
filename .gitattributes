@@ -3,3 +3,5 @@
 *.css linguist-detectable=false
 *.js linguist-detectable=false
 *.zig text eol=lf
+*.cmd linguist-detectable=false
+

@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 057
+**Current Version:** 059
 **Last Updated:** 2026-05-05
 **Last Agent:** Claude Sonnet 4.6
-**Active Phase:** Pre-Implementation Analysis (COMPLETE)
+**Active Phase:** Implementation Ready — Stage 0 is next
 
 ---
 
@@ -61,6 +61,57 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-05: Claude Sonnet 4.6 — Design Folder Cleanup
+
+#### Summary
+Deleted two more obsolete design files. Design folder is now minimal and current.
+
+#### Changes
+- `design/transition-2-usockets-verdict.md` — deleted (decision and findings already captured in AGENT_STATE.md and the implementation plan)
+- `design/AGENT_STATE.md` — this entry
+
+#### Remaining design files
+| File | Purpose |
+| :--- | :--- |
+| `AGENT_STATE.md` | Session state and handover |
+| `RULES.md` | Contributor and agent rules |
+| `poller-design.md` | Poller architecture documentation |
+| `transition-2-usockets.md` | Migration information base |
+| `transition-2-bun-usockets-plan.md` | Final implementation plan (stages 0–6) |
+
+#### Verification
+No code changes.
+
+---
+
+### 2026-05-05: Claude Sonnet 4.6 — Final bun-usockets Implementation Plan
+
+#### Summary
+Deep source-level analysis of `vendor/bun-usockets/src/` and all existing design documents.
+Produced `design/transition-2-bun-usockets-plan.md` — the single authoritative implementation plan.
+Deleted three obsolete design files.
+
+#### Key findings (from reading actual C source)
+
+- `us_internal_dispatch_ready_poll` is defined in **`loop.c`** (not socket.c). To override it from Zig via `export fn`, the C definition must be marked `__attribute__((weak))` — a one-line patch to `vendor/bun-usockets/src/loop.c`.
+- All three Windows adapter headers are **required**: `sys/epoll.h` (wepoll redirect), `sys/timerfd.h`, `sys/eventfd.h`. bun-usockets calls `timerfd_create` and `eventfd` internally at loop init time regardless of user code.
+- `bsd_create_connect_socket` takes a pre-resolved `sockaddr_storage*` — hostname resolution must be done via `getaddrinfo` C extern on the Zig side.
+- `POLL_TYPE_SOCKET = 0` is the correct poll type. Store `*TriggeredChannel` in ext memory (`p + 1`, 16-byte aligned, `ext_size = @sizeOf(*TriggeredChannel)`).
+- All bsd_* functions and `POLL_TYPE_*` constants are in internal headers — `internal/internal.h` and `internal/networking/bsd.h`. Both must be added as include paths in `build.zig`.
+- `us_socket_local_address` (needed by `Skt.getPort()`) is in bun-usockets `libusockets.h` — absent from upstream uSockets. Confirms bun-usockets as the only viable choice.
+
+#### Changes
+- `design/transition-2-bun-usockets-plan.md` — new (final authoritative plan, stages 0–6)
+- `design/transition-2-usockets-plan.md` — deleted (superseded)
+- `design/bun-usockets-implementation.md` — deleted (superseded)
+- `design/usockets-open-questions.md` — deleted (AI research dump, content incorporated)
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification
+No code changes. Analysis and documentation only.
+
+---
 
 ### 2026-05-05: Claude Sonnet 4.6 — Design Doc Cleanup
 
@@ -552,11 +603,21 @@ Prepared tofu for usockets migration. Created information base, analysis documen
 
 ## Immediate Tasks for Next Agent
 
-1. **Per-OS posix removal** — each OS folder (`linux/`, `windows/`, `mac/`) now has its own copy of `Notifier.zig`, `SocketCreator.zig`, `triggers.zig`. Per-OS adaptation (removing `std.posix` calls for Zig 0.16+) can now proceed independently in each folder. `MsgSender`/`MsgReceiver` now use `*Skt` — the raw `Socket` type no longer appears in business logic.
-2. **macOS native hardware testing** — pending. Run full test suite on native macOS.
-3. **Native Windows Test** — pending. Run full test suite on native Windows machine.
-4. **UDS Stress Analysis** — investigate AF_UNIX race conditions under heavy load on Windows.
-5. **Legacy Cleanup** — consider removing legacy `PollerOs()` wrapper after full verification.
+The implementation plan is in `design/transition-2-bun-usockets-plan.md`. Stages in order:
+
+1. **Stage 0 — VSCode config** — update `.vscode/launch.json` (add `"c"` to `sourceLanguages`, add `"Debug Tests (usockets)"` config) and `.vscode/tasks.json` (add `"zig build install usockets"` and `"zig build test usockets"` tasks). No code changes.
+
+2. **Stage 1 — build.zig + Skt.zig + SocketCreator.zig** — wire bun-usockets C sources into `build.zig`; implement `usockets/Skt.zig` using `bsd_*` wrappers; implement `usockets/SocketCreator.zig` using `bsd_create_*` + `getaddrinfo` extern. Acceptance: `sockets_tests.zig` pass on Linux.
+
+3. **Stage 2 — Notifier tests** — Notifier itself is done. Run `Notifier_tests.zig` under `-Dnetwork=usockets` to confirm. Acceptance: both tests pass.
+
+4. **Stage 3 — triggers.zig + usockets_backend.zig** — implement full backend including `export fn us_internal_dispatch_ready_poll` override and `us_loop_run_bun_tick` wait loop. Requires one-line vendor patch: add `__attribute__((weak))` to `us_internal_dispatch_ready_poll` in `vendor/bun-usockets/src/loop.c`. Acceptance: all 64 tests pass, 4-mode sandwich on Linux.
+
+5. **Stage 4 — Windows adapter headers** — create `src/ampe/windows/adapters/sys/epoll.h`, `timerfd.h`, `eventfd.h`. Acceptance: cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds.
+
+6. **Stage 5 — macOS verify** — cross-compile `x86_64-macos` and `aarch64-macos`. Acceptance: compile succeeds.
+
+7. **Stage 6 — native hardware testing + docs** — full sandwich on native Linux; bump `AGENT_STATE.md`.
 
 ---
 
