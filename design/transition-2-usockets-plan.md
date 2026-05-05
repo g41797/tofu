@@ -8,7 +8,7 @@
 
 ## 1. Context
 
-`build.zig` exposes `-Dnetwork=usockets`. When set, `internal.zig` routes to `src/ampe/usockets/` for all five platform-specific files. All five are currently stubs returning `AmpeError.NotImplementedYet`. The posix backends (`linux/`, `mac/`, `windows/`) remain untouched.
+`build.zig` exposes `-Dnetwork=usockets`. When set, `internal.zig` routes to `src/ampe/usockets/` for Skt, SocketCreator, and Poller. `Notifier` is platform-independent (`src/ampe/Notifier.zig`) and is used directly regardless of backend. The posix backends (`linux/`, `mac/`, `windows/`) remain untouched.
 
 **Goal:** implement `src/ampe/usockets/` so all 64 existing tests pass under `-Dnetwork=usockets` on Linux (later Windows and macOS per the sequencing in §15.5).
 
@@ -16,15 +16,16 @@
 
 ## 2. Files to Implement
 
-Five files in `src/ampe/usockets/` — one unified implementation for all platforms (§16.2):
+Four files in `src/ampe/usockets/` — one unified implementation for all platforms (§16.2):
 
 | File | Status | What it replaces |
 | :--- | :--- | :--- |
-| `usockets_backend.zig` | stub → full | `epoll_backend.zig` / `wepoll_backend.zig` / `kqueue_backend.zig` |
 | `Skt.zig` | stub → full | `linux/Skt.zig`, `mac/Skt.zig`, `windows/Skt.zig` |
 | `SocketCreator.zig` | stub → full | `linux/SocketCreator.zig`, etc. |
 | `triggers.zig` | partial → full | `linux/triggers.zig`, etc. |
-| `Notifier.zig` | stub → re-export | delegates to platform-independent `../Notifier.zig` |
+| `usockets_backend.zig` | stub → full | `epoll_backend.zig` / `wepoll_backend.zig` / `kqueue_backend.zig` |
+
+Note: `Notifier.zig` is platform-independent (`src/ampe/Notifier.zig`). No usockets-specific file needed — `internal.zig` now imports it unconditionally.
 
 Plus new build infrastructure:
 - `src/ampe/windows/adapters/sys/epoll.h` (new)
@@ -360,14 +361,9 @@ Abstract UDS namespace (Linux only): prepend `\x00` to path before passing to `b
 
 ---
 
-## 10. `usockets/Notifier.zig`
+## 10. Notifier
 
-The platform-independent `src/ampe/Notifier.zig` already uses `internal.Skt` and `internal.SocketCreator` — which resolve to `usockets/Skt.zig` and `usockets/SocketCreator.zig` under `-Dnetwork=usockets`. Once those two are implemented, the platform-independent Notifier works unchanged.
-
-`usockets/Notifier.zig` should re-export the parent:
-```zig
-pub usingnamespace @import("../Notifier.zig");
-```
+`src/ampe/Notifier.zig` is platform-independent and shared by all backends. `internal.zig` imports it unconditionally. No `usockets/Notifier.zig` file exists or is needed. Once `usockets/Skt.zig` and `usockets/SocketCreator.zig` are implemented, Notifier works unchanged under `-Dnetwork=usockets`.
 
 ---
 
@@ -397,45 +393,25 @@ File: `.github/workflows/mac.yml` — same addition.
 
 ---
 
-## 13. Implementation Sequence (§15.5)
+## 13. Implementation Sequence
 
-### Stage 1 — Linux: compile + backend (target: 8 poller contract tests pass)
+| Stage | Content | Acceptance |
+| :---- | :------ | :--------- |
+| **0** | Update `.vscode/` config for Zig+C mixed debugging | Debug session with C source stepping works |
+| **1** | `build.zig` C sources + `Skt.zig` + `SocketCreator.zig` | `sockets_tests.zig` pass on Linux |
+| **2** | Notifier already complete — run `Notifier_tests.zig` | `Notifier_tests.zig` pass on Linux |
+| **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass on Linux (4-mode sandwich) |
+| **4** | Windows: adapter headers + `build.zig` include path | `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=usockets` compiles |
+| **5** | macOS: verify | `zig build -Dtarget=x86_64-macos -Dnetwork=usockets` compiles |
+| **6** | CI + docs | `linux.yml` / `mac.yml` updated; `AGENT_STATE.md` bumped |
 
-1. `build.zig`: add usockets C sources block for Linux
-2. `usockets_backend.zig`: FFI declarations, required exports, full `UsocketsBackend` + dispatch override
-3. `triggers.zig`: `toEvents` / `fromEvents`
-4. Verify: `zig build test -Doptimize=Debug -Dnetwork=usockets` — 8 poller_tests pass
-
-### Stage 2 — Linux: Skt + SocketCreator + Notifier (target: all 64 tests pass)
-
-1. `Skt.zig`: implement all methods using `bsd_*` wrappers
-2. `SocketCreator.zig`: implement using `bsd_create_*` functions
-3. `Notifier.zig`: `pub usingnamespace @import("../Notifier.zig");`
-4. Verify full Linux sandwich:
-   - `zig build test -Doptimize=Debug -Dnetwork=usockets` — 64/64
-   - `zig build test -Doptimize=ReleaseSafe -Dnetwork=usockets` — 64/64
-   - `zig build test -Doptimize=ReleaseFast -Dnetwork=usockets` — 64/64
-   - `zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets` — 64/64
-
-### Stage 3 — Windows: adapters + compile
-
-1. `src/ampe/windows/adapters/sys/epoll.h` — redirects to wepoll
-2. `src/ampe/windows/adapters/sys/timerfd.h` — emulates timerfd
-3. `src/ampe/windows/adapters/sys/eventfd.h` — emulates eventfd
-4. `build.zig`: add adapters include path for Windows usockets
-5. Verify: `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=usockets` compiles
-
-### Stage 4 — macOS: verify
-
-1. Verify: `zig build -Dtarget=x86_64-macos -Dnetwork=usockets`
-2. Verify: `zig build -Dtarget=aarch64-macos -Dnetwork=usockets`
-
-### Stage 5 — CI + docs
-
-1. `.vscode/launch.json`: add `"c"` to sourceLanguages
-2. `.github/workflows/linux.yml` + `mac.yml`: add usockets test steps
-3. `design/transition-2-usockets.md`: add §18
-4. `design/AGENT_STATE.md`: session entry, version bump
+**Linux 4-mode sandwich (end of Stage 3):**
+```sh
+zig build test -Doptimize=Debug -Dnetwork=usockets        # 64/64
+zig build test -Doptimize=ReleaseSafe -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=ReleaseFast -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets # 64/64
+```
 
 ---
 
@@ -444,15 +420,14 @@ File: `.github/workflows/mac.yml` — same addition.
 | File | Action |
 | :--- | :----- |
 | `build.zig` | Add usockets C source block (lines ~112, ~158) |
-| `src/ampe/usockets/usockets_backend.zig` | Full implementation |
-| `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
 | `src/ampe/usockets/Skt.zig` | Implement using `bsd_*` wrappers |
 | `src/ampe/usockets/SocketCreator.zig` | Implement using `bsd_create_*` |
-| `src/ampe/usockets/Notifier.zig` | Re-export `../Notifier.zig` |
+| `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
+| `src/ampe/usockets/usockets_backend.zig` | Full implementation |
 | `src/ampe/windows/adapters/sys/epoll.h` | New — wepoll redirect |
 | `src/ampe/windows/adapters/sys/timerfd.h` | New — timerfd emulation |
 | `src/ampe/windows/adapters/sys/eventfd.h` | New — eventfd emulation |
-| `.vscode/launch.json` | Add `"c"` to sourceLanguages |
+| `.vscode/` config files | Stage 0 — Zig+C mixed debugging setup |
 | `.github/workflows/linux.yml` | Add `-Dnetwork=usockets` test steps |
 | `.github/workflows/mac.yml` | Add `-Dnetwork=usockets` test steps |
 
@@ -463,3 +438,100 @@ File: `.github/workflows/mac.yml` — same addition.
 Acceptance: all 64 tests pass with `-Dnetwork=usockets` on Linux (all 4 optimize modes). Cross-compile to Windows and macOS succeeds.
 
 The 8 backend contract tests (`tests/ampe/poller_tests.zig`) and 2 PollerCore integration tests (`tests/pollercore_tests.zig`) run unchanged — no test code changes needed.
+
+---
+
+## Addendum — Open Questions (2026-05-05)
+
+The following issues remain unresolved. They must be addressed before or during implementation.
+
+*Resolved and applied: A1 (Notifier platform-independent), A5 (initPlatform added to tests), A6+A7 (stage sequence corrected).*
+
+---
+
+### A2. POLL_TYPE_CALLBACK is ruled out — dispatch approach TBD
+
+User clarified: callbacks will NOT be used. The plan's POLL_TYPE_CALLBACK approach (sections 7.1–7.3) is off the table.
+
+The proposed alternative (export `us_internal_dispatch_ready_poll` from Zig to override socket.c's C definition) was also questioned: tofu uses only vendored C, not Bun's Zig code. The user suggested "extracting" relevant lines from Bun's Zig source as reference — but no Bun Zig files exist in `vendor/bun-usockets/` (C only).
+
+**Open questions:**
+- What poll type replaces POLL_TYPE_CALLBACK?
+- How does event dispatch reach Zig without callbacks?
+- Which Bun Zig source lines are worth extracting as reference?
+- Where is Bun's Zig source for usockets integration found?
+
+**Impact on plan:** Sections 7.1–7.3 must be rewritten once the dispatch approach is decided.
+
+---
+
+### A3. Windows adapter headers — source unknown
+
+The plan specifies three new header files:
+- `src/ampe/windows/adapters/sys/epoll.h`
+- `src/ampe/windows/adapters/sys/timerfd.h`
+- `src/ampe/windows/adapters/sys/eventfd.h`
+
+**Open question:** Where do these come from? Options not yet decided:
+- Already exist somewhere in the repo or a vendor tree?
+- Taken from an upstream project (Bun, libuv, wepoll, etc.)?
+- Written from scratch?
+
+**Impact on plan:** Stage 3 cannot start until source is identified.
+
+---
+
+### A4. Hostname-to-IP resolution missing in SocketCreator
+
+`bsd_create_connect_socket` takes an already-resolved `struct sockaddr_storage *addr` — it does NOT do DNS resolution internally. The linux `SocketCreator.zig` uses `std.net.getAddressList` which is unavailable under usockets (removed in Zig 0.16+).
+
+`transition-2-usockets.md` §9.3 mentions `Bun__addrinfo_get` but this is a Bun-specific extension not present in vendored bun-usockets C.
+
+**Open questions:**
+- How does `usockets/SocketCreator.zig` resolve a hostname to `sockaddr_storage`?
+- Is there a bsd.h function that accepts host+port strings for connect (like `bsd_create_listen_socket` does for listen)?
+- Should `getaddrinfo` be called directly via C extern?
+
+**Impact on plan:** Section 9 (`SocketCreator.zig`) is incomplete until this is resolved.
+
+---
+
+### A5. sockets_tests.zig and Notifier_tests.zig missing initPlatform/deinitPlatform
+
+Both test files predate `tofu.initPlatform`/`tofu.deinitPlatform`. On Windows they will fail because WSAStartup is never called.
+
+**Fix needed:** Add `try tofu.initPlatform(); defer tofu.deinitPlatform();` to each test in both files — same pattern used in `poller_tests.zig` and `pollercore_tests.zig`.
+
+**Status:** Deferred — fix during Windows verification pass.
+
+---
+
+### A6. Implementation sequence is wrong — corrected order
+
+The plan's staged sequence (backend first, then Skt/SocketCreator) is inverted. The backend's poller contract tests create TCP pairs using SocketCreator/Skt — the backend cannot be tested before those work.
+
+**Corrected sequence:**
+
+| Stage | Content | Acceptance |
+| :---- | :------ | :--------- |
+| **0** | VSCode `.vscode/` config updated for Zig+C mixed debugging | Debug session works with C source stepping |
+| **1** | `build.zig` C sources + `Skt.zig` + `SocketCreator.zig` | `sockets_tests.zig` pass on Linux |
+| **2** | Notifier already done — run `Notifier_tests.zig` | `Notifier_tests.zig` pass on Linux |
+| **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass on Linux (4-mode sandwich) |
+| **4** | Windows: adapter headers + compile | Cross-compile succeeds |
+| **5** | macOS: verify | Cross-compile succeeds |
+| **6** | CI + docs | linux.yml / mac.yml updated |
+
+**Impact on plan:** Section 13 (Implementation Sequence) must be rewritten.
+
+---
+
+### A7. Stage 0 — VSCode configuration is a prerequisite
+
+`.vscode/` configuration files must be updated for mixed Zig+C debugging before any implementation begins. This is Stage 0 (not Stage 5 as currently placed in the plan).
+
+Files to review and update: `launch.json`, `tasks.json`, `settings.json`.
+Minimum change known: add `"c"` to `sourceLanguages` in `launch.json`.
+Other changes (build tasks for `-Dnetwork=usockets`, C include paths for IntelliSense) TBD.
+
+**Impact on plan:** Move VSCode changes from Section 11/Stage 5 to Stage 0.

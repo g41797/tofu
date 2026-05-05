@@ -7,6 +7,8 @@ test {
 }
 
 test "create file for address of uds socket" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var buffer: [100]u8 = undefined;
     var tempFile = try temp.create_file(std.testing.allocator, "*.yaaamp");
     defer tempFile.deinit();
@@ -15,6 +17,8 @@ test "create file for address of uds socket" {
 }
 
 test "base Notifier" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
     const notif: Notification = .{ .kind = .message, .oob = .on };

@@ -51,11 +51,15 @@ fn recvAll(skt: *Skt, buf: []u8) !void {
 // ---------------------------------------------------------------------------
 
 test "SocketCreator wrong address returns InvalidAddress" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var sc = SocketCreator.init(gpa);
     try testing.expectError(AmpeError.InvalidAddress, sc.fromAddress(.{ .wrong = .{} }));
 }
 
 test "SocketCreator parse empty message returns InvalidAddress" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var msg = try Message.create(gpa);
     defer msg.destroy();
     var sc = SocketCreator.init(gpa);
@@ -63,6 +67,8 @@ test "SocketCreator parse empty message returns InvalidAddress" {
 }
 
 test "SocketCreator TCP server socket is set and server-flagged" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -72,6 +78,8 @@ test "SocketCreator TCP server socket is set and server-flagged" {
 }
 
 test "SocketCreator UDS server socket is set and server-flagged" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath(gpa);
     var sc = SocketCreator.init(gpa);
@@ -82,6 +90,8 @@ test "SocketCreator UDS server socket is set and server-flagged" {
 }
 
 test "SocketCreator TCP client socket is created" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -93,6 +103,8 @@ test "SocketCreator TCP client socket is created" {
 }
 
 test "SocketCreator UDS client connect to nonexistent path fails" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var sc = SocketCreator.init(gpa);
     // fromAddress only creates the socket — connect() is where the path is resolved
     var skt = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init("/tmp/tofu_no_such_socket_xyz.sock") });
@@ -103,6 +115,8 @@ test "SocketCreator UDS client connect to nonexistent path fails" {
 }
 
 test "SocketCreator findFreeTcpPort returns bindable port" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     try testing.expect(port > 0);
     var sc = SocketCreator.init(gpa);
@@ -112,6 +126,8 @@ test "SocketCreator findFreeTcpPort returns bindable port" {
 }
 
 test "SocketCreator createUdsListener with empty path auto-creates" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var skt = try SocketCreator.createUdsListener(gpa, "");
     defer skt.deinit();
     try testing.expect(skt.isSet());
@@ -123,11 +139,15 @@ test "SocketCreator createUdsListener with empty path auto-creates" {
 // ---------------------------------------------------------------------------
 
 test "Skt zero-initialized deinit is safe" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var skt: Skt = .{};
     skt.deinit();
 }
 
 test "Skt accept on listener before client returns null" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -137,6 +157,8 @@ test "Skt accept on listener before client returns null" {
 }
 
 test "Skt connect does not error (non-blocking pending or immediate)" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -198,6 +220,8 @@ fn tcpServerImmediateRecv(ctx: *TcpCtx) void {
 }
 
 test "TCP connect and accept" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -220,6 +244,8 @@ test "TCP connect and accept" {
 }
 
 test "TCP sendBuf recvToBuf round-trip" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var ctx: TcpCtx = .{};
@@ -239,6 +265,8 @@ test "TCP sendBuf recvToBuf round-trip" {
 }
 
 test "TCP recvToBuf returns null when no data" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var ctx: TcpCtx = .{};
@@ -321,6 +349,8 @@ fn udsServerDeinit(ctx: *UdsCtx) void {
 }
 
 test "UDS connect and accept" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath(gpa);
     var ctx: UdsCtx = .{};
@@ -338,6 +368,8 @@ test "UDS connect and accept" {
 }
 
 test "UDS sendBuf recvToBuf round-trip" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath(gpa);
     var ctx: UdsCtx = .{};
@@ -359,6 +391,8 @@ test "UDS sendBuf recvToBuf round-trip" {
 }
 
 test "UDS server socket file removed after deinit" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath(gpa);
     var ctx: UdsCtx = .{};

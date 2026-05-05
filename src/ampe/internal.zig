@@ -6,10 +6,7 @@ const builtin = @import("builtin");
 const build_options = @import("build_options");
 
 pub const channels = @import("channels.zig");
-pub const Notifier = if (build_options.network == .usockets)
-    @import("usockets/Notifier.zig")
-else
-    @import("Notifier.zig");
+pub const Notifier = @import("Notifier.zig");
 pub const poller = @import("poller.zig");
 pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
