@@ -148,37 +148,101 @@ We define `us_internal_dispatch_ready_poll` in Zig and supply our own dispatch l
 void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int eof, int events) {
 
 // After:
+/* weak: overridden by Zig export in usockets_backend.zig */
 __attribute__((weak)) void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int eof, int events) {
 ```
 
 With a weak definition in C, the linker uses our strong Zig-exported symbol. This is a minimal, targeted vendor patch — one annotation on one line.
 
+**License:** `loop.c` is Apache License 2.0 (Alex Hultman, 2018–2021). Apache 2.0 explicitly permits modification. Requirements: retain the original license header (unchanged) and mark the modified file. The comment `/* weak: overridden by Zig export in usockets_backend.zig */` satisfies the marking requirement.
+
 **Alternative if patching is unacceptable:** add `-Wl,--allow-multiple-definition` to the link flags and rely on link order (Zig objects appear before C objects in LLD). This is fragile and not recommended.
 
-### 4.4 Our dispatch implementation
+### 4.4 g_wait_state — lifecycle, thread safety, and misuse detection
+
+`us_internal_dispatch_ready_poll` has a fixed C signature — we cannot add parameters to it. Yet after `us_loop_run_bun_tick` returns, `wait()` must know the aggregate of all triggers that fired. `g_wait_state` bridges the gap: it is a pointer to a `WaitState` allocated on `wait()`'s own stack frame, published before the C call and unpublished after.
+
+**Lifecycle within a single `wait()` call:**
+
+```
+wait() enters
+  │
+  ├─ assert g_wait_state == null        ← detect nested/concurrent misuse, panic if violated
+  ├─ var ws = WaitState{...}            ← allocate on wait()'s stack frame
+  ├─ g_wait_state = &ws                 ← publish: dispatch fn can now find the context
+  │
+  ├─ us_loop_run_bun_tick(loop, &ts)    ← C code runs synchronously on this thread
+  │     │
+  │     └─ (zero or more times, same thread, same call stack):
+  │         us_internal_dispatch_ready_poll(poll, err, eof, events)
+  │              reads  g_wait_state    ← finds wait()'s stack frame
+  │              reads  us_poll_ext(p)  ← finds *TriggeredChannel for this fd
+  │              writes ws.total_act    ← accumulates into wait()'s local
+  │              writes tc.act          ← updates the channel directly
+  │
+  ├─ us_loop_run_bun_tick returns       ← all dispatch calls done; no C callbacks pending
+  ├─ g_wait_state = null                ← unpublish (via defer — runs even on error return)
+  └─ return ws.total_act
+```
+
+**Why `threadlocal`:**
+Each OS thread that runs a reactor calls `wait()` independently. A process-wide `var` would be a data race between threads. `threadlocal var` gives each thread its own slot — multiple reactors on separate threads work correctly without locking.
+
+**Nested call detection:**
+If `g_wait_state != null` on entry to `wait()`, a second `wait()` is already active on this thread. This is a programming error (e.g. calling `wait()` from inside a dispatch callback). Detect and panic:
 
 ```zig
-// Module-level, safe because wait() is single-threaded
-var g_wait_state: ?*WaitState = null;
+// Thread-local: one slot per thread; isolates concurrent reactor instances.
+threadlocal var g_wait_state: ?*WaitState = null;
 
 const WaitState = struct {
     map: *SeqnTrcMap,
     total_act: Triggers,
 };
+```
 
+**Initial value:**
+Zig zero-initializes all module-level variables, including `threadlocal` ones. `?*WaitState` zero is `null`. When a thread starts, its slot is already `null` before `wait()` is ever called — no explicit initialization needed. The full per-thread lifecycle is:
+
+```
+thread starts  → g_wait_state = null   (Zig runtime, automatic zero-init)
+wait() call 1  → set → used → null     (defer)
+wait() call 2  → set → used → null     (defer)
+...
+thread exits   → slot destroyed
+```
+
+**Cleanup:**
+`defer g_wait_state = null` in `wait()` guarantees the slot is cleared on every exit path — normal return, error return, or (in debug builds) a trapped assertion. After `wait()` returns, the stack frame holding `WaitState` is gone; the null ensures the dispatch fn cannot access freed memory if called outside a `wait()` context (the `orelse return` guard in dispatch handles any residual call).
+
+### 4.5 Our dispatch implementation
+
+```zig
 export fn us_internal_dispatch_ready_poll(
     poll: *anyopaque,
     err: c_int,
     eof: c_int,
     events: c_int,
 ) callconv(.C) void {
-    const ws = g_wait_state orelse return;
-    // ext memory holds *TriggeredChannel (stored during register/modify)
+    const ws = g_wait_state orelse return;  // called outside wait() — ignore
     const tc_ptr = @as(**TriggeredChannel, @ptrCast(@alignCast(us_poll_ext(poll))));
     const tc = tc_ptr.*;
     const act = triggers_mod.fromEvents(events, err, eof, tc.exp);
     tc.act = tc.act.lor(act);
     ws.total_act = ws.total_act.lor(act);
+}
+```
+
+And in `wait()`:
+
+```zig
+pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers {
+    if (g_wait_state != null) @panic("wait() called recursively or from two reactors on the same thread");
+    // ... wire ext pointers ...
+    var ws = WaitState{ .map = seqn_trc_map, .total_act = Triggers{} };
+    g_wait_state = &ws;
+    defer g_wait_state = null;
+    // ... call us_loop_run_bun_tick ...
 }
 ```
 
@@ -644,7 +708,7 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 
 ---
 
-## 14. VSCode Debug Config (Stage 0)
+## 13. VSCode Debug Config (Stage 0)
 
 ### `launch.json`
 
@@ -719,7 +783,7 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 
 ---
 
-## 13. Implementation Sequence
+## 14. Implementation Sequence
 
 
 | Stage | Work | Acceptance criterion |
@@ -742,7 +806,7 @@ zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
 
 ---
 
-## 14. Critical Files
+## 15. Critical Files
 
 | File | Action |
 | :--- | :----- |
@@ -760,10 +824,137 @@ zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
 
 ---
 
-## 15. Open Items (minor, resolved during implementation)
+## 16. Open Items (minor, resolved during implementation)
 
 - **SeqN / tc wiring in `wait()`:** Confirm how `PollerCore` exposes the `*TriggeredChannel` for a given fd before `wait()` runs. The pattern in §7.5 (iterate `seqn_trc_map` and write ext pointers before polling) may need adjustment to match how `PollerCore` actually calls `wait()`. Read `src/ampe/poller.zig` at Stage 3 start.
 
 - **`bsd_create_connect_socket` second parameter:** The `options` field in `bsd.h` — verify whether `0` is the correct default (non-blocking, no delay) or if a flag must be set. Read `bsd.c` implementation at Stage 1.
 
 - **Abstract UDS namespace prefix on Linux:** `Notifier.zig` already handles this pattern. Copy the same `\x00` prefix logic to `SocketCreator.createUdsServer` for consistency.
+
+- **Vendored bun-usockets commit pin:** Record the exact git commit hash of `vendor/bun-usockets` in `AGENT_STATE.md` when Stage 1 begins. This allows future vendor updates to be evaluated against the specific known-good revision that all implementation choices are based on.
+
+## 17. Addendum 
+
+**Verdict: Overall Solid, Production-Ready Plan with Minor Risks & Refinements**
+
+**Summary Rating: 8.5/10** — Excellent technical depth, strong alignment with tofu's callback-less single-threaded reactor architecture, and pragmatic choice of **bun-usockets**. The plan is authoritative, well-structured for staged implementation, and preserves tofu's core invariants (PollerCore, ABA protection, backpressure via manual I/O, no callbacks/threads). It correctly prioritizes Linux verification with "sandwich" testing.
+
+### Key Strengths (Pros)
+- **Architectural Fidelity**: Perfect preservation of `PollerCore` contract (exactly 6 functions) and "pull" model. Using `us_poll_t` + `POLL_TYPE_SOCKET` (or CALLBACK) + `ext` memory for `*TriggeredChannel` + `g_wait_state`/`us_internal_dispatch_ready_poll` override is clever and matches Bun's own Zig integration patterns.
+- **bun-usockets Choice**: Correct final decision over upstream uSockets. `us_loop_run_bun_tick` + public `us_poll_*` APIs + `us_socket_local_address` eliminate major pain points. Bun's fork is battle-tested in a high-performance Zig context.
+- **Unified Backend**: `src/ampe/usockets/` as single cross-platform folder (with minimal comptime branches) is elegant and reduces maintenance vs. per-OS folders.
+- **Minimal Vendor Patch**: One-line `__attribute__((weak))` on `us_internal_dispatch_ready_poll` in `loop.c` is low-risk, license-compliant (Apache 2.0), and standard weak-symbol override technique.
+- **Testing Strategy**: Contract tests (`sockets_tests.zig`, `Notifier_tests.zig`, poller core tests) + 4-mode sandwich (Debug/ReleaseSafe/Fast/Small) + cross-compile + native verification is rigorous.
+- **Windows Handling**: Forced `LIBUS_USE_EPOLL` + thin shims (`epoll.h`, `timerfd.h`, `eventfd.h`) reusing wepoll is smart and keeps dependency surface small.
+- **Notifier & Platform Init**: Retaining socket-pair Notifier and promoting `initPlatform`/`deinitPlatform` (WSAStartup) is clean.
+
+### Potential Issues / Contradictions / Risks
+- ~~**Poll Type Inconsistency**~~: **RESOLVED — not a risk.** `POLL_TYPE_SOCKET` is correct. The concern assumed `loop.c`'s `us_internal_dispatch_ready_poll` would run and trigger high-level socket callbacks. With `__attribute__((weak))` on that definition, our Zig `export fn` completely supplants it — `loop.c`'s implementation never executes regardless of poll type. `POLL_TYPE_CALLBACK` is ruled out: its ext layout requires the first 8 bytes to hold a C fn pointer, which would displace our `*TriggeredChannel`. See §4 and §16 Analysis.
+- **g_wait_state Thread Safety**: `threadlocal` is correct for multi-reactor scenarios, but `us_loop_run_bun_tick` + dispatch must stay strictly single-threaded per loop (already enforced by design). Nested `wait()` panic is good defensive coding.
+- **Ext Memory Wiring**: Iterating `seqn_trc_map` in every `wait()` to set `us_poll_ext` pointers works but could be optimized (e.g., set once in `register`/`modify` where possible). Confirm stability with `PollerCore`.
+- **Error Mapping & Edge Cases**: `mapErrno()` in `Skt.zig` must handle Windows `WSA*` vs. POSIX `errno` carefully (including `EINTR` retries already in `bsd_*`). Abstract UDS (`\x00` prefix) and long-path macOS handling rely on `bsd.c` — verify.
+- **Build Complexity**: Adding many C sources + includes + flags (`-DLIBUS_USE_EPOLL` / kqueue) + Windows shims increases build surface. Linker order for weak symbols and `Bun__*` exports must be robust.
+- **Minor Documentation Drift**: Slight mismatches between the two MDs (e.g., poll type, `POLL_TYPE_CALLBACK` emphasis) — expected in iterative planning, but consolidate before coding.
+- **No Major Wrong Decisions**: Early upstream preference was reasonable but correctly pivoted based on API availability (`us_socket_local_address`, tick function). Weak patch is acceptable for vendor control.
+
+### Recommended Refinements
+1. ~~**Consolidate Poll Type**~~: **SUPERSEDED.** `POLL_TYPE_SOCKET` is correct and requires no change. See resolved item in Potential Issues above and §16 Analysis.
+2. **SeqN/TriggeredChannel Wiring**: Double-check `PollerCore` hook in `wait()` (as noted in Open Items).
+3. **Add Defensive Checks**: Validate `us_poll_fd`, ext alignment, and dispatch guard (`g_wait_state orelse return`).
+4. **Version Pin**: Document exact vendored bun-usockets commit/hash.
+5. **Performance**: Monitor vs. original epoll (expect parity or better due to bsd wrappers).
+6. **Fallback**: Keep POSIX backends fully functional under `-Dnetwork=posix`.
+
+**Overall Verdict**: This is a high-quality, low-regret migration plan. Proceed with **Stage 0–3 on Linux first**. Risks are manageable engineering details, not fundamental design flaws. Once Linux sandwich passes (64/64 tests in all modes), Windows/macOS cross-compile + native verification should be straightforward. Tofu will emerge with better Zig 0.16+ compatibility, unified backend, and maintained performance characteristics.
+
+---
+
+### Analysis of Raised Points
+
+**Poll Type Inconsistency — not a real risk.**
+The concern is that `POLL_TYPE_SOCKET` triggers high-level socket callbacks inside `loop.c`. This is only true if `loop.c`'s `us_internal_dispatch_ready_poll` runs. With the `__attribute__((weak))` patch, our Zig export completely replaces that function — `loop.c`'s implementation never executes regardless of poll type. `POLL_TYPE_SOCKET` is correct. `POLL_TYPE_CALLBACK` is ruled out (user decision) and would complicate ext memory layout unnecessarily (its first 8 bytes must hold a C fn pointer, displacing our `*TriggeredChannel`).
+
+**Ext memory wiring in every `wait()` — necessary, not an optimization target.**
+`seqn_trc_map` is a parameter passed fresh to each `wait()` call. The `*TriggeredChannel` for a given fd cannot be known at `register()` time because PollerCore builds the map independently. Re-wiring on every `wait()` is the correct approach. Since PollerCore heap-allocates `*TriggeredChannel` for pointer stability, the pointers themselves are stable across calls — only the mapping needs to be applied.
+
+**Version pin — valid, add to implementation checklist.**
+The vendored bun-usockets commit hash should be recorded in `AGENT_STATE.md` when Stage 1 begins, so any future vendor update can be evaluated against the specific known-good revision.
+
+**`EINTR` in `Skt.zig` — already handled.**
+`bsd.c` retries on `EINTR` internally. `Skt.zig` does not need to handle it.
+
+**`POLL_TYPE_CALLBACK` recommendation in Refinement 1 — superseded.**
+The recommendation to use `POLL_TYPE_CALLBACK` was based on the old approach (before the dispatch override was confirmed). With the Zig override in place, `POLL_TYPE_SOCKET` is correct and simpler. No change needed.
+
+**Remaining valid refinements from the review:**
+- Validate ext pointer alignment in dispatch (already covered by `@alignCast` in the Zig cast).
+- Keep POSIX backends fully functional under `-Dnetwork=posix` — no changes touch those folders.
+- Monitor performance vs. native epoll backend after Stage 3 passes.
+
+---
+
+## 18. CI Network Matrix
+
+Run both `-Dnetwork=posix` and `-Dnetwork=usockets` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `usockets` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
+
+### When to add (per platform)
+
+| Workflow | Add at | Reason |
+| :--- | :--- | :--- |
+| `linux.yml` | Stage 3 | All 64 tests pass with usockets on Linux |
+| `windows.yml` | Stage 4 | Windows adapter headers complete |
+| `mac.yml` | Stage 5 | macOS usockets verified |
+
+### `linux.yml` after Stage 3
+
+Replace the existing `strategy.matrix` block and all four `zig build test` steps:
+
+```yaml
+strategy:
+  fail-fast: false
+  matrix:
+    os: [ubuntu]
+    network: [posix, usockets]
+
+steps:
+  - uses: actions/checkout@v5
+    with:
+      submodules: false
+
+  - uses: mlugg/setup-zig@v2
+    with:
+      version: 0.15.2
+      use-cache: false
+
+  - run: rm -rf ./.zig-cache/
+
+  - run: zig build test -freference-trace --summary all -Doptimize=Debug        -Dnetwork=${{ matrix.network }}
+
+  - run: rm -rf ./.zig-cache/
+
+  - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe  -Dnetwork=${{ matrix.network }}
+
+  - run: rm -rf ./.zig-cache/
+
+  - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast  -Dnetwork=${{ matrix.network }}
+
+  - run: rm -rf ./.zig-cache/
+
+  - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=${{ matrix.network }}
+```
+
+This produces 2 parallel jobs per push: `build (ubuntu, posix)` and `build (ubuntu, usockets)`, each running all 4 optimize modes. GitHub labels the jobs by matrix values automatically.
+
+### `mac.yml` after Stage 5
+
+Same change — replace `matrix.os: [macos]` with the two-dimension form and add `-Dnetwork=${{ matrix.network }}` to all four test steps. No other difference from linux.yml.
+
+### `windows.yml` after Stage 4
+
+Same pattern with `matrix.os: [windows]`. Windows already uses `submodules: recursive` and `shell: bash` on cache-clear steps — keep those. The `zig build test` steps gain `-Dnetwork=${{ matrix.network }}`.
+
+### Cost
+
+2× CI minutes per platform during the transition (8 jobs on Linux instead of 4). Acceptable trade-off for continuous dual-backend verification. After porting is complete (Stage 6), keep the matrix permanently — both backends remain supported.
+
