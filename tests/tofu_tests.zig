@@ -17,15 +17,16 @@ test {
     // Socket-dependent tests (all platforms):
     _ = @import("ampe/Notifier_tests.zig");
 
-    // Windows-specific poller tests:
-    if (@import("builtin").os.tag == .windows) {
-        _ = @import("windows_poller_tests.zig");
-    }
-
     // Linux Skt/SocketCreator contract tests (baseline for posix removal):
     if (@import("builtin").os.tag == .linux) {
         _ = @import("ampe/sockets_tests.zig");
     }
+
+    // Poller backend contract tests (backend-independent, all platforms):
+    _ = @import("ampe/poller_tests.zig");
+
+    // PollerCore integration tests (all backends, all platforms):
+    _ = @import("pollercore_tests.zig");
 
     std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 

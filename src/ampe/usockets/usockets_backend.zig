@@ -26,7 +26,7 @@ const UsocketsBackend = struct {
         _ = self;
     }
 
-    pub fn register(self: *UsocketsBackend, fd: std.posix.fd_t, seq: SeqN, exp: Triggers) AmpeError!void {
+    pub fn register(self: *UsocketsBackend, fd: common.FdType, seq: SeqN, exp: Triggers) AmpeError!void {
         _ = self;
         _ = fd;
         _ = seq;
@@ -34,7 +34,7 @@ const UsocketsBackend = struct {
         return AmpeError.NotImplementedYet;
     }
 
-    pub fn modify(self: *UsocketsBackend, fd: std.posix.fd_t, seq: SeqN, exp: Triggers) AmpeError!void {
+    pub fn modify(self: *UsocketsBackend, fd: common.FdType, seq: SeqN, exp: Triggers) AmpeError!void {
         _ = self;
         _ = fd;
         _ = seq;
@@ -42,7 +42,7 @@ const UsocketsBackend = struct {
         return AmpeError.NotImplementedYet;
     }
 
-    pub fn unregister(self: *UsocketsBackend, fd: std.posix.fd_t) void {
+    pub fn unregister(self: *UsocketsBackend, fd: common.FdType) void {
         _ = self;
         _ = fd;
     }

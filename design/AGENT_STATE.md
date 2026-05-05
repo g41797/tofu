@@ -1,7 +1,7 @@
 # Agent State & Handover
 
-**Current Version:** 053
-**Last Updated:** 2026-05-04
+**Current Version:** 057
+**Last Updated:** 2026-05-05
 **Last Agent:** Claude Sonnet 4.6
 **Active Phase:** Pre-Implementation Analysis (COMPLETE)
 
@@ -9,7 +9,7 @@
 
 ## Current Status
 
-- **Verification:** All 53 tests pass in `Debug`, `ReleaseSafe`, and `ReleaseFast` on Linux.
+- **Verification:** All 64 tests pass in `Debug` and `ReleaseSafe` on Linux. Full sandwich verified (Windows x86_64, macOS x86_64/aarch64).
 - **Cross-Compilation:** ALL platforms verified (Linux, Windows x86_64, macOS x86_64/aarch64).
 - **Cleanup:** `tests/os_windows_tests.zig` deleted — all tests were duplicates of `sockets_tests.zig` / `Notifier_tests.zig` or permanently skipped on Linux.
 - **Platform-Independent Notifier:** COMPLETED. Single shared `src/ampe/Notifier.zig` — zero posix imports, `initPair` poll loop, `getPort()` on all Skt backends.
@@ -80,6 +80,151 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-05: Claude Sonnet 4.6 — Design Doc Cleanup
+
+#### Summary
+Removed 10 obsolete files from `design/`. Remaining active files: 7.
+
+#### Removed:
+- `reactor-kb.md` — Reactor-over-IOCP knowledge base (IOCP approach abandoned)
+- `spec.md` — Reactor-over-IOCP Specification v6.1 (same reason)
+- `QUESTIONS.md` — Phase I Windows POC feasibility questions (all resolved)
+- `notifier-platform-independent.md` — completed task plan
+- `remove-socket-from-msgsender.md` — completed task plan
+- `sockets-tests-plan.md` — completed task plan
+- `uds-notes.md` — completed task plan (Status: COMPLETED)
+- `transition-2-usockets-plan.md` — completed structural split plan (Status: COMPLETE)
+- `roadmap.md` — Phase IV COMPLETE, all phases done
+- `decisions.md` — early decision log superseded by `transition-2-usockets.md` and `AGENT_STATE.md`
+
+#### Remaining design docs:
+- `AGENT_STATE.md` — session state and handover (this file)
+- `RULES.md` — contributor and agent rules
+- `poller-design.md` — poller architecture documentation
+- `poller-tests-plan.md` — poller test plans (Tasks 1–3)
+- `transition-2-usockets.md` — usockets migration information base
+- `transition-2-usockets-verdict.md` — bun-usockets vs upstream verdict
+- `windows-notes.md` — Windows implementation limitations and deviations
+
+---
+
+### 2026-05-05: Claude Sonnet 4.6 — initPlatform/deinitPlatform + Platform-Independent Poller Tests
+
+#### Summary
+Three coupled changes.
+
+**`initPlatform`/`deinitPlatform` promoted to tofu source:** `Reactor.zig` had private `initPlatform`/
+`deinitPlatform` functions (WSAStartup/WSACleanup on Windows, no-op elsewhere). Extracted to
+`src/ampe/internal.zig` as `pub fn initPlatform() AmpeError!void` / `pub fn deinitPlatform() void`.
+`Reactor.zig` calls `internal.initPlatform`/`internal.deinitPlatform`. Exported via `tofu.zig` as
+`tofu.initPlatform`/`tofu.deinitPlatform`. Single canonical implementation — no duplication across test files.
+
+**`poller_tests.zig` made platform-independent:** All 8 backend contract tests now call
+`try tofu.initPlatform()` / `defer tofu.deinitPlatform()`. Linux-only guard removed from `tofu_tests.zig`.
+Tests run on all platforms (epoll, kqueue, wepoll, future usockets).
+
+**`pollercore_tests.zig` updated:** Local `wsaInit`/`wsaDeinit` helpers replaced with
+`tofu.initPlatform`/`tofu.deinitPlatform`. `builtin` import removed (no longer needed).
+
+#### Changes:
+- `src/ampe/internal.zig` — `initPlatform`/`deinitPlatform` added (public)
+- `src/ampe/Reactor.zig` — `initPlatform`/`deinitPlatform` removed; calls `internal.initPlatform`/`internal.deinitPlatform`
+- `src/tofu.zig` — `initPlatform`/`deinitPlatform` exported
+- `tests/ampe/poller_tests.zig` — `tofu.initPlatform`/`deinitPlatform` in all 8 tests
+- `tests/pollercore_tests.zig` — local helpers replaced by `tofu.initPlatform`/`deinitPlatform`
+- `tests/tofu_tests.zig` — linux guard removed from `poller_tests` import
+- `design/poller-tests-plan.md` — Task 3 section updated
+- `design/transition-2-usockets.md` — §17 rewritten
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification (full sandwich):
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (64/64) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (64/64) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
+
+### 2026-05-05: Claude Sonnet 4.6 — PollerCore Integration Tests (pollercore_tests.zig)
+
+#### Summary
+Converted `tests/windows_poller_tests.zig` (Windows-only, 2 tests) to
+`tests/pollercore_tests.zig` — platform-independent PollerCore integration tests
+that run on all backends (epoll, kqueue, wepoll, future usockets) without OS guards.
+
+**Changes from original:**
+- Skip guard removed (no `SkipZigTest`).
+- WSA lifecycle: `wsaInit()`/`wsaDeinit()` comptime helpers — `if (builtin.os.tag == .windows)` prunes the block on POSIX; `std.os.windows` is never analyzed on Linux/macOS.
+- Port 0 + `getPort().?` replaces `FindFreeTcpPort()`.
+- `sendBuf()` replaces `send()` (correct `Skt` method name).
+- `connectWithRetry` loop replaces single-shot `connect()` — safe across all platforms.
+- `tofu_tests.zig`: Windows guard+import replaced by unconditional `_ = @import("pollercore_tests.zig")`.
+- `windows_poller_tests.zig` retained as a file; no longer imported.
+
+#### Changes:
+- `tests/pollercore_tests.zig` — new file (2 PollerCore integration tests)
+- `tests/tofu_tests.zig` — replaced windows guard with unconditional pollercore_tests import
+- `design/poller-tests-plan.md` — Task 3 section added
+- `design/transition-2-usockets.md` — §17 added (PollerCore test portability)
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (64/64) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (64/64) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
+
+### 2026-05-05: Claude Sonnet 4.6 — Poller Backend Contract Tests + FdType Correction
+
+#### Summary
+Two coupled tasks.
+
+**FdType correction:** `usockets_backend.zig` register/modify/unregister used `std.posix.fd_t`
+(i32) but usockets backend compiles on all platforms. Corrected to `common.FdType`
+(i32 on POSIX, usize on Windows — matches `LIBUS_SOCKET_DESCRIPTOR`).
+`internal.zig` Socket type for usockets updated: inlined as
+`if (builtin.os.tag == .windows) usize else std.posix.fd_t` to avoid circular import
+(`internal.zig` ↔ `common.zig`).
+`design/transition-2-usockets.md` §15.6 added documenting the alignment.
+
+**Poller contract tests:** New `tests/ampe/poller_tests.zig` — 8 backend contract tests.
+Tests the backend directly via `poller_instance.backend.*` (bypasses PollerCore).
+Single-threaded throughout — write data before `wait()` for readable tests;
+freshly connected socket is immediately writable for send tests.
+`makeTC` uses `var tc: TriggeredChannel = undefined` + explicit `.exp`/`.act` init
+(`std.mem.zeroes` rejected — TriggeredChannel has non-nullable pointer fields).
+
+#### Changes:
+- `src/ampe/usockets/usockets_backend.zig` — `std.posix.fd_t` → `common.FdType` (3 signatures)
+- `src/ampe/internal.zig` — usockets Socket type inlined (circular import avoided)
+- `design/transition-2-usockets.md` — §15.6 FdType Alignment added
+- `tests/ampe/poller_tests.zig` — new file (8 tests)
+- `tests/tofu_tests.zig` — poller_tests import added (linux guard)
+- `design/poller-tests-plan.md` — plan saved
+- `design/AGENT_STATE.md` — this entry
+
+#### Verification:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (62/62) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+
+---
 
 ### 2026-05-05: Claude Sonnet 4.6 — Folder Structure After usockets Migration
 

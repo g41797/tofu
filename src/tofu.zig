@@ -26,4 +26,6 @@ pub const DestroyChannels = @import("ampe/testHelpers.zig").DestroyChannels;
 pub const RunTasks = @import("ampe/testHelpers.zig").RunTasks;
 pub const Skt = @import("ampe/internal.zig").Skt; // Made public
 pub const SocketCreator = @import("ampe/internal.zig").SocketCreator; // Made public
+pub const initPlatform = @import("ampe/internal.zig").initPlatform;
+pub const deinitPlatform = @import("ampe/internal.zig").deinitPlatform;
 pub const @"internal usage" = @import("ampe/internal.zig");

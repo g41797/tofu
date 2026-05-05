@@ -24,8 +24,10 @@ else switch (builtin.os.tag) {
 
 pub const Skt = skt_backend.Skt;
 
+// For usockets: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
+// Inlined to avoid circular import with common.zig (which imports internal.zig for Socket).
 pub const Socket = if (build_options.network == .usockets)
-    std.posix.fd_t // placeholder; will be replaced in Phase 2
+    if (builtin.os.tag == .windows) usize else std.posix.fd_t
 else switch (builtin.os.tag) {
     .windows => @import("std").os.windows.ws2_32.SOCKET,
     else => @import("std").posix.socket_t,
@@ -40,3 +42,19 @@ else switch (builtin.os.tag) {
 };
 pub const SocketCreator = sc_backend.SocketCreator;
 pub const triggeredSkts = @import("triggeredSkts.zig");
+
+pub fn initPlatform() AmpeError!void {
+    if (builtin.os.tag == .windows) {
+        const ws2_32 = std.os.windows.ws2_32;
+        var wsa_data: ws2_32.WSADATA = undefined;
+        if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
+    }
+}
+
+pub fn deinitPlatform() void {
+    if (builtin.os.tag == .windows) {
+        _ = std.os.windows.ws2_32.WSACleanup();
+    }
+}
+
+const AmpeError = @import("../status.zig").AmpeError;

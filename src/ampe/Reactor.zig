@@ -65,13 +65,13 @@ currTcopt: ?*TriggeredChannel = undefined,
 unpnt: Notifier.UnpackedNotification,
 
 pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
-    try initPlatform();
+    try internal.initPlatform();
 
     const rtr: *Reactor = gpa.create(Reactor) catch {
         return AmpeError.AllocationFailed;
     };
     errdefer {
-        deinitPlatform();
+        internal.deinitPlatform();
         gpa.destroy(rtr);
     }
 
@@ -162,7 +162,7 @@ pub fn destroy(rtr: *Reactor) void {
     //
     rtr.releaseToPool(&rtr.currMsg);
 
-    deinitPlatform();
+    internal.deinitPlatform();
 
     rtr.* = undefined;
 }
@@ -1215,19 +1215,6 @@ pub const TriggeredChannel = struct {
     }
 };
 
-inline fn initPlatform() AmpeError!void {
-    if (builtin.os.tag == .windows) {
-        const ws2_32 = std.os.windows.ws2_32;
-        var wsa_data: ws2_32.WSADATA = undefined;
-        if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
-    }
-}
-
-inline fn deinitPlatform() void {
-    if (builtin.os.tag == .windows) {
-        _ = std.os.windows.ws2_32.WSACleanup();
-    }
-}
 
 const tofu = @import("../tofu.zig");
 const message = tofu.message;

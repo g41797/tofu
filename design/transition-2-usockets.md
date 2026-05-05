@@ -436,6 +436,23 @@ These shims are compile-time only. They make `bsd.c` and `epoll_kqueue.c` compil
 without any changes to the bun-usockets source. They are added to the include path in `build.zig`
 for Windows + usockets targets.
 
+### 15.6 FdType Alignment (Implementation Constraint)
+
+All poller backends declare `register`/`modify`/`unregister` with a platform fd parameter.
+The usockets backend must use `common.FdType` (not `std.posix.fd_t`) because it compiles
+on all platforms:
+
+| Platform | `common.FdType` | `LIBUS_SOCKET_DESCRIPTOR` |
+| :--- | :--- | :--- |
+| Linux / macOS | `std.posix.fd_t` (`i32`) | `int` (`i32`) |
+| Windows | `usize` | `uintptr_t` (`usize`) |
+
+- `core.zig` already passes `common.toFd()` → `FdType` to all backend calls.
+- `usockets_backend.zig` signatures updated to `common.FdType` (was `std.posix.fd_t`).
+- `internal.zig` `Socket` type for usockets = `common.FdType` (replaces `std.posix.fd_t` placeholder).
+
+---
+
 ### 16.5 Final file structure (usockets backend)
 
 ```
@@ -457,3 +474,50 @@ src/ampe/
     ├── triggers.zig      # Triggers → LIBUS_SOCKET_READABLE/WRITABLE (same on all OS)
     └── usockets_backend.zig  # us_create_loop, us_create_poll, us_loop_run_bun_tick
 ```
+
+---
+
+## 17. Poller Test Portability + initPlatform/deinitPlatform
+
+### 17.1 Platform environment lifecycle: `initPlatform` / `deinitPlatform`
+
+WSA initialization (Windows only) was previously private to `Reactor.zig`
+(`initPlatform`/`deinitPlatform`). Now promoted to a canonical location:
+
+```zig
+// src/ampe/internal.zig — exported via tofu.zig as tofu.initPlatform / tofu.deinitPlatform
+pub fn initPlatform() AmpeError!void { ... }  // WSAStartup on Windows; no-op elsewhere
+pub fn deinitPlatform() void { ... }          // WSACleanup on Windows; no-op elsewhere
+```
+
+`Reactor.zig` calls `internal.initPlatform()`/`internal.deinitPlatform()` — single implementation,
+no duplication. Tests call `tofu.initPlatform()`/`tofu.deinitPlatform()`.
+On Linux/macOS the comptime-false `if (.windows)` branch is pruned by the compiler.
+
+### 17.2 Test layer summary
+
+All three poller test files now run on all platforms (no OS guards):
+
+| File | Level | What it tests | OS guard |
+| :--- | :--- | :--- | :--- |
+| `tests/ampe/poller_tests.zig` | Backend (`poller_instance.backend.*`) | 8 backend contract tests — register, wait, modify, unregister, seqN isolation | **None — all platforms** |
+| `tests/pollercore_tests.zig` | PollerCore (`attachChannel`, `waitTriggers`, `trgChannel`) | 2 integration tests — Notifier wakeup, TCP accept/recv/send | **None — all platforms** |
+
+### 17.3 Conversion from windows_poller_tests.zig
+
+`tests/windows_poller_tests.zig` was a Windows-only file (skip guard on non-Windows).
+`tests/pollercore_tests.zig` is the platform-independent replacement:
+
+| Change | Detail |
+| :--- | :--- |
+| Skip guard removed | No `if (os.tag != .windows) return error.SkipZigTest` |
+| WSA lifecycle | `tofu.initPlatform()`/`tofu.deinitPlatform()` — canonical source implementation |
+| Port allocation | Port 0 → `getPort().?` replaces `FindFreeTcpPort()` |
+| Send method | `sendBuf()` replaces `send()` (correct `Skt` instance method name) |
+| Connect | `connectWithRetry` loop replaces single non-retried `connect()` |
+
+### 17.4 Future usockets backend
+
+Both test files run unchanged when the usockets backend is complete:
+- `poller_tests.zig` validates the backend contract (register/wait/modify/unregister).
+- `pollercore_tests.zig` validates full PollerCore integration (Notifier, accept, recv/send).
