@@ -1,29 +1,31 @@
 # Agent State & Handover
 
-**Current Version:** 059
-**Last Updated:** 2026-05-05
+**Current Version:** 060
+**Last Updated:** 2026-05-06
 **Last Agent:** Claude Sonnet 4.6
 **Active Phase:** Implementation Ready — Stage 0 is next
 
 ---
 
-## Current Status
+## Constraints for Next Agent (MANDATORY)
 
-- **Verification:** All 64 tests pass in `Debug` and `ReleaseSafe` on Linux. Full sandwich verified (Windows x86_64, macOS x86_64/aarch64).
-- **Cross-Compilation:** ALL platforms verified (Linux, Windows x86_64, macOS x86_64/aarch64).
-- **Cleanup:** `tests/os_windows_tests.zig` deleted — all tests were duplicates of `sockets_tests.zig` / `Notifier_tests.zig` or permanently skipped on Linux.
-- **Platform-Independent Notifier:** COMPLETED. Single shared `src/ampe/Notifier.zig` — zero posix imports, `initPair` poll loop, `getPort()` on all Skt backends.
-- **Skt/SocketCreator Contract Tests:** COMPLETED. 18 new tests in `tests/ampe/sockets_tests.zig`.
-- **Poller Refactoring:** COMPLETED. Clean separation achieved.
-- **Stability:** ACHIEVED. Critical pointer stability refactor (heap storage + 4-step I/O) resolved all previous segmentation faults and protocol hangs.
-- **Resilience:** Abortive closure (`SO_LINGER=0`) and retry loops in `listen`/`connect` resolved all transient `BindFailed`/`ConnectFailed` errors.
-- **Repo Cleanup:** COMPLETED — `poc/`, `os/windows/analysis/`, obsolete files deleted; `os/windows/` reorganized to `design/`.
+- **Git disabled.** Do NOT run any git commands. Author manages version control manually.
+- **GitHub workflows exist** (`linux.yml`, `mac.yml`, `windows.yml`). Add the network matrix per plan §14 at the correct stage only — do NOT modify workflows for any other reason.
+- **Doc and comments style** — see `design/RULES.md` §5. Short sentences. Bullet lists for sequences. No marketing language. Plain English for non-native speakers. Tech terms are fine.
+- **"allows to verb"** is a grammar error in English. Restructure any such phrase found in docs.
+- **Architectural changes** require explicit author approval before implementation.
 
 ---
 
-## Technical State of Play
+## Current Status
 
-- **Verification:** Full sandwich pass — Linux tests (Debug/ReleaseFast) + Windows/macOS cross-compilation all verified.
+**Update this section at the start and end of every session.**
+
+- Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
+- No implementation code written yet. All `usockets/` files are stubs.
+- Stage 0 (VSCode config) is the next task.
+- All 64 tests pass on Linux (Debug + ReleaseSafe) with the default `-Dnetwork=posix` backend.
+- Cross-compilation verified: `x86_64-windows-gnu`, `x86_64-macos`, `aarch64-macos` all compile clean.
 
 ---
 
@@ -48,7 +50,7 @@ src/ampe/
 │   ├── Skt.zig, SocketCreator.zig, triggers.zig
 │   └── kqueue_backend.zig
 └── usockets/
-    ├── Skt.zig, Notifier.zig (stub), SocketCreator.zig (stub), triggers.zig
+    ├── Skt.zig, SocketCreator.zig (stub), triggers.zig
     └── usockets_backend.zig (stub)
 ```
 
@@ -61,6 +63,52 @@ src/ampe/
 ---
 
 ## Session History
+
+### Template — use for every session entry
+
+Add new entries at the top of Session History (newest first). Bump version and update date in the file header.
+
+```
+### YYYY-MM-DD: <Agent Name> — <Short Title>
+
+#### Summary
+One paragraph. What was done and why.
+
+#### Changes
+- `path/to/file` — what changed
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS (N/N) |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS (N/N) |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ PASS |
+| `zig build -Dtarget=x86_64-macos` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos` | ✅ PASS |
+```
+
+---
+
+### 2026-05-06: Claude Sonnet 4.6 — Plan Finalization and Agent Handover Prep
+
+#### Summary
+Reorganized `design/transition-2-bun-usockets-plan.md`: fixed five in-place errors, reordered tail
+sections into logical sequence, moved obsolete content to Historical Notes. Analyzed and incorporated
+Gemini CLI verdict. Added §0 (For the Implementing Agent) to plan and updated AGENT_STATE.md
+for handover to an implementation agent.
+
+#### Changes
+- `design/transition-2-bun-usockets-plan.md` — structural reorder (§12–§18), 5 in-place fixes,
+  §0 added, §14 CI Network Matrix added, Historical Notes section added
+- `design/AGENT_STATE.md` — version 059→060; Current Status filled; Technical State of Play
+  removed; CI constraint updated; Immediate Tasks collapsed; session template added; this entry
+- `design/transition-2-bun-usockets-plan-verdict.md` — deleted (Gemini review; content absorbed)
+
+#### Verification
+No code changes. Documentation only.
+
+---
 
 ### 2026-05-05: Claude Sonnet 4.6 — Design Folder Cleanup
 
@@ -130,14 +178,8 @@ Removed 10 obsolete files from `design/`. Remaining active files: 7.
 - `roadmap.md` — Phase IV COMPLETE, all phases done
 - `decisions.md` — early decision log superseded by `transition-2-usockets.md` and `AGENT_STATE.md`
 
-#### Remaining design docs:
-- `AGENT_STATE.md` — session state and handover (this file)
-- `RULES.md` — contributor and agent rules
-- `poller-design.md` — poller architecture documentation
-- `poller-tests-plan.md` — poller test plans (Tasks 1–3)
-- `transition-2-usockets.md` — usockets migration information base
-- `transition-2-usockets-verdict.md` — bun-usockets vs upstream verdict
-- `windows-notes.md` — Windows implementation limitations and deviations
+#### Verification
+No code changes.
 
 ---
 
@@ -273,7 +315,7 @@ Only three small comptime branches remain in `usockets/Skt.zig`:
 - Abstract UDS prefix: `path[0] = 0` (Linux only, already in Notifier.zig)
 - WSAStartup/Cleanup: stays in Reactor.zig (already there)
 
-`windows/shims/` (C headers: sys/epoll.h, sys/timerfd.h, sys/eventfd.h) stays as build
+`windows/adapters/` (C headers: sys/epoll.h, sys/timerfd.h, sys/eventfd.h) stays as build
 infrastructure for Windows usockets compilation. Not Zig code.
 
 #### Changes:
@@ -590,34 +632,9 @@ Prepared tofu for usockets migration. Created information base, analysis documen
 
 ---
 
-## Constraints for Next Agent (MANDATORY)
-
-- **Git disabled.** Do NOT run any git commands. Author manages version control manually.
-- **No GitHub CI references.** GitHub workflows are not in use. Say "native hardware testing", not "CI run".
-- **overview.md Credits** — do NOT add AI agent credits there. Author did not ask for this.
-- **Doc style** — see `design/RULES.md` §5. Short sentences. Bullet lists for sequences. No marketing language. Plain English for non-native speakers. Tech terms are fine.
-- **"allows to verb"** is a grammar error in English. Restructure any such phrase found in docs.
-- **Architectural changes** require explicit author approval before implementation.
-
----
-
 ## Immediate Tasks for Next Agent
 
-The implementation plan is in `design/transition-2-bun-usockets-plan.md`. Stages in order:
-
-1. **Stage 0 — VSCode config** — update `.vscode/launch.json` (add `"c"` to `sourceLanguages`, add `"Debug Tests (usockets)"` config) and `.vscode/tasks.json` (add `"zig build install usockets"` and `"zig build test usockets"` tasks). No code changes.
-
-2. **Stage 1 — build.zig + Skt.zig + SocketCreator.zig** — wire bun-usockets C sources into `build.zig`; implement `usockets/Skt.zig` using `bsd_*` wrappers; implement `usockets/SocketCreator.zig` using `bsd_create_*` + `getaddrinfo` extern. Acceptance: `sockets_tests.zig` pass on Linux.
-
-3. **Stage 2 — Notifier tests** — Notifier itself is done. Run `Notifier_tests.zig` under `-Dnetwork=usockets` to confirm. Acceptance: both tests pass.
-
-4. **Stage 3 — triggers.zig + usockets_backend.zig** — implement full backend including `export fn us_internal_dispatch_ready_poll` override and `us_loop_run_bun_tick` wait loop. Requires one-line vendor patch: add `__attribute__((weak))` to `us_internal_dispatch_ready_poll` in `vendor/bun-usockets/src/loop.c`. Acceptance: all 64 tests pass, 4-mode sandwich on Linux.
-
-5. **Stage 4 — Windows adapter headers** — create `src/ampe/windows/adapters/sys/epoll.h`, `timerfd.h`, `eventfd.h`. Acceptance: cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds.
-
-6. **Stage 5 — macOS verify** — cross-compile `x86_64-macos` and `aarch64-macos`. Acceptance: compile succeeds.
-
-7. **Stage 6 — native hardware testing + docs** — full sandwich on native Linux; bump `AGENT_STATE.md`.
+See `design/transition-2-bun-usockets-plan.md` §12 (Implementation Sequence). **Stage 0 (VSCode config) is next.**
 
 ---
 

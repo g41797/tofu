@@ -6,6 +6,41 @@
 
 ---
 
+## 0. For the Implementing Agent
+
+### Start Here
+
+Read these files before writing any code:
+
+1. `design/AGENT_STATE.md` — current status, hard constraints, session history template
+2. This plan — architecture (§1), dispatch mechanism (§4), implementation sequence (§12)
+3. `design/RULES.md` — doc and code style rules (§5 is mandatory)
+
+### Stage Sequence
+
+Follow §12 (Implementation Sequence) one stage at a time.
+Run the acceptance criterion for each stage before starting the next.
+Do not skip stages.
+
+### Hard Constraints
+
+- **No git commands.** The author manages version control manually.
+- **No architectural changes** without explicit author approval.
+- **GitHub workflows exist** — add the CI network matrix per §14 at the correct stage only.
+- **Doc and comments style** — `design/RULES.md` §5. Short sentences. No marketing language.
+- **"allows to verb"** is a grammar error. Restructure if found.
+
+### Recording Your Work
+
+After completing each stage:
+
+1. Open `design/AGENT_STATE.md`.
+2. Bump the version number and update the date in the file header.
+3. Update the `Current Status` section — what was done, what is next.
+4. Add a session history entry using the template in `design/AGENT_STATE.md` (Session History → Template).
+
+---
+
 ## 1. Architecture: What We Are Implementing
 
 Tofu's `ampe` layer is a single-threaded reactor. The backend interface is defined by `PollerCore` (comptime generic). The backend must implement exactly six functions:
@@ -28,6 +63,16 @@ Types:
 **Reference implementation:** `src/ampe/linux/epoll_backend.zig`. It calls `epoll_create1`, `epoll_ctl`, `epoll_wait` directly via `std.posix`. The usockets backend replaces these with bun-usockets primitives but keeps the same reactor contract.
 
 No callbacks. No threads. One `wait()` call blocks; events accumulate into `total_act`; control returns to caller.
+
+### Why Manual Pull, Not High-Level uSockets
+
+| | **This plan (Manual Pull)** | **High-Level uSockets** |
+| :--- | :--- | :--- |
+| **I/O control** | Zig calls `bsd_recv` / `bsd_send` directly | C calls Zig `on_data` / `on_writable` callbacks |
+| **Backpressure** | Managed by Tofu `Pool` | Managed by uSockets internal buffer |
+| **Integration cost** | Override 1 function (`us_internal_dispatch_ready_poll`) | Implement full VTable (`us_socket_context_options_t`) |
+| **Reactor inversion** | None — pull model preserved | Yes — C drives the I/O loop |
+| **Portability** | High (uses uSockets event loop only) | High |
 
 ---
 
@@ -233,6 +278,9 @@ export fn us_internal_dispatch_ready_poll(
 }
 ```
 
+**Why the dispatcher does not check SeqN:**  
+ABA protection is handled at the `SeqnTrcMap` level (the caller maps `SeqN → *TriggeredChannel` before each `wait()`). By the time the dispatcher fires, the poll is guaranteed live: `unregister()` calls `us_poll_stop()` before `us_poll_free()`, which removes the fd from epoll. The kernel cannot deliver an event for a stopped poll, so stale dispatch calls after unregistration are impossible. Checking SeqN inside the dispatcher would be redundant — the epoll kernel guarantee is stronger.
+
 And in `wait()`:
 
 ```zig
@@ -246,7 +294,7 @@ pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) Amp
 }
 ```
 
-### 4.5 ext memory layout
+### 4.6 ext memory layout
 
 `us_poll_ext(p)` returns `p + 1` (pointer arithmetic on `us_poll_t*`), i.e. the address immediately after the struct. Memory is allocated as `sizeof(us_poll_t) + ext_size`. The ext region is 16-byte aligned (`LIBUS_EXT_ALIGNMENT`).
 
@@ -285,7 +333,7 @@ if (network == .usockets) {
     artifact.link_libc = true;
 
     if (is_windows) {
-        // Windows: shim epoll/timerfd/eventfd (see §9 for contents)
+        // Windows: shim epoll/timerfd/eventfd (see §11 for contents)
         artifact.addIncludePath(b.path("src/ampe/windows/adapters"));
         artifact.addCSourceFile(.{
             .file = b.path("src/ampe/windows/wepoll/wepoll.c"),
@@ -418,13 +466,11 @@ pub fn deinit(self: *UsocketsBackend) void {
 
 ```zig
 pub fn register(self: *UsocketsBackend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void {
-    _ = seq; // SeqN is stored in SeqnTrcMap; we store *TriggeredChannel directly via ext
-    // Caller ensures tc is in seqn_trc_map before calling wait()
+    _ = seq; // SeqN managed by PollerCore via SeqnTrcMap; not stored in poll
     const poll = us_create_poll(self.loop, 0, @sizeOf(*TriggeredChannel))
         orelse return AmpeError.AllocationFailed;
     us_poll_init(poll, @intCast(fd), POLL_TYPE_SOCKET);
-    // tc pointer is written by the poller core before the first wait();
-    // store null for now; modify() sets the actual pointer when needed
+    // ext (*TriggeredChannel) is wired by wait() on every call via seqn_trc_map iteration
     us_poll_start(poll, self.loop, triggers_mod.toEvents(exp));
     try self.polls.put(fd, poll);
 }
@@ -444,12 +490,13 @@ pub fn unregister(self: *UsocketsBackend, fd: FdType) void {
 }
 ```
 
-**Note on SeqN / TriggeredChannel wiring:** The poller core sets `tc` in ext memory before calling `wait()`. The exact hook depends on how `PollerCore` exposes this — confirm against `src/ampe/poller.zig` during implementation.
+**SeqN / TriggeredChannel wiring:** `wait()` iterates `seqn_trc_map` and writes the `*TriggeredChannel` into each poll's ext memory before calling `us_loop_run_bun_tick`. No PollerCore hook is needed. See §7.5.
 
 ### 7.5 wait
 
 ```zig
 pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) AmpeError!Triggers {
+    if (g_wait_state != null) @panic("wait() called recursively or from two reactors on the same thread");
     // Wire ext pointers before polling
     var it = seqn_trc_map.iterator();
     while (it.next()) |entry| {
@@ -687,24 +734,25 @@ static inline int eventfd_read(int fd, uint64_t *val) {
 
 ---
 
-## 12. Native Hardware Testing (Stage 6)
+## 12. Implementation Sequence
 
-Run the full 4-mode sandwich on native Linux hardware. Cross-compile to verify Windows and macOS do not regress:
+| Stage | Work | Acceptance criterion |
+| :---- | :--- | :------------------- |
+| **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger |
+| **1** | `build.zig` + `Skt.zig` + `SocketCreator.zig` | `sockets_tests.zig` pass on Linux |
+| **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux |
+| **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass, 4-mode sandwich on Linux |
+| **4** | Windows adapter headers + build.zig include path | Cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds |
+| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=usockets` succeeds |
+| **6** | Native hardware testing + docs | Full sandwich passes; `AGENT_STATE.md` bumped |
 
+**Stage 3 — Linux 4-mode sandwich:**
 ```sh
-# Native Linux — all four optimize modes
 zig build test -Doptimize=Debug        -Dnetwork=usockets  # 64/64
 zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
 zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
 zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
-
-# Cross-compile (no native macOS or Windows machine needed for compile check)
-zig build -Dtarget=x86_64-windows-gnu -Dnetwork=usockets
-zig build -Dtarget=x86_64-macos      -Dnetwork=usockets
-zig build -Dtarget=aarch64-macos     -Dnetwork=usockets
 ```
-
-Native macOS and Windows hardware testing follows the same sandwich pattern once the cross-compile passes.
 
 ---
 
@@ -783,118 +831,7 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 
 ---
 
-## 14. Implementation Sequence
-
-
-| Stage | Work | Acceptance criterion |
-| :---- | :--- | :------------------- |
-| **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger |
-| **1** | `build.zig` + `Skt.zig` + `SocketCreator.zig` | `sockets_tests.zig` pass on Linux |
-| **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux |
-| **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass, 4-mode sandwich on Linux |
-| **4** | Windows adapter headers + build.zig include path | Cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds |
-| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=usockets` succeeds |
-| **6** | Native hardware testing + docs | Full sandwich passes; `AGENT_STATE.md` bumped |
-
-**Stage 3 — Linux 4-mode sandwich:**
-```sh
-zig build test -Doptimize=Debug        -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
-```
-
----
-
-## 15. Critical Files
-
-| File | Action |
-| :--- | :----- |
-| `vendor/bun-usockets/src/loop.c` (line 369) | Add `__attribute__((weak))` to `us_internal_dispatch_ready_poll` |
-| `build.zig` | Add usockets C source + include blocks (both `lib` and `lib_unit_tests`) |
-| `src/ampe/usockets/Skt.zig` | Implement using `bsd_*` wrappers |
-| `src/ampe/usockets/SocketCreator.zig` | Implement using `bsd_create_*` + `getaddrinfo` extern |
-| `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
-| `src/ampe/usockets/usockets_backend.zig` | Full implementation + export `us_internal_dispatch_ready_poll` |
-| `src/ampe/windows/adapters/sys/epoll.h` | New — wepoll redirect |
-| `src/ampe/windows/adapters/sys/timerfd.h` | New — Windows Waitable Timer shim |
-| `src/ampe/windows/adapters/sys/eventfd.h` | New — Windows Event shim |
-| `.vscode/launch.json` | Add `"c"` to sourceLanguages, add usockets config |
-| `.vscode/tasks.json` | Add usockets build and test tasks |
-
----
-
-## 16. Open Items (minor, resolved during implementation)
-
-- **SeqN / tc wiring in `wait()`:** Confirm how `PollerCore` exposes the `*TriggeredChannel` for a given fd before `wait()` runs. The pattern in §7.5 (iterate `seqn_trc_map` and write ext pointers before polling) may need adjustment to match how `PollerCore` actually calls `wait()`. Read `src/ampe/poller.zig` at Stage 3 start.
-
-- **`bsd_create_connect_socket` second parameter:** The `options` field in `bsd.h` — verify whether `0` is the correct default (non-blocking, no delay) or if a flag must be set. Read `bsd.c` implementation at Stage 1.
-
-- **Abstract UDS namespace prefix on Linux:** `Notifier.zig` already handles this pattern. Copy the same `\x00` prefix logic to `SocketCreator.createUdsServer` for consistency.
-
-- **Vendored bun-usockets commit pin:** Record the exact git commit hash of `vendor/bun-usockets` in `AGENT_STATE.md` when Stage 1 begins. This allows future vendor updates to be evaluated against the specific known-good revision that all implementation choices are based on.
-
-## 17. Addendum 
-
-**Verdict: Overall Solid, Production-Ready Plan with Minor Risks & Refinements**
-
-**Summary Rating: 8.5/10** — Excellent technical depth, strong alignment with tofu's callback-less single-threaded reactor architecture, and pragmatic choice of **bun-usockets**. The plan is authoritative, well-structured for staged implementation, and preserves tofu's core invariants (PollerCore, ABA protection, backpressure via manual I/O, no callbacks/threads). It correctly prioritizes Linux verification with "sandwich" testing.
-
-### Key Strengths (Pros)
-- **Architectural Fidelity**: Perfect preservation of `PollerCore` contract (exactly 6 functions) and "pull" model. Using `us_poll_t` + `POLL_TYPE_SOCKET` (or CALLBACK) + `ext` memory for `*TriggeredChannel` + `g_wait_state`/`us_internal_dispatch_ready_poll` override is clever and matches Bun's own Zig integration patterns.
-- **bun-usockets Choice**: Correct final decision over upstream uSockets. `us_loop_run_bun_tick` + public `us_poll_*` APIs + `us_socket_local_address` eliminate major pain points. Bun's fork is battle-tested in a high-performance Zig context.
-- **Unified Backend**: `src/ampe/usockets/` as single cross-platform folder (with minimal comptime branches) is elegant and reduces maintenance vs. per-OS folders.
-- **Minimal Vendor Patch**: One-line `__attribute__((weak))` on `us_internal_dispatch_ready_poll` in `loop.c` is low-risk, license-compliant (Apache 2.0), and standard weak-symbol override technique.
-- **Testing Strategy**: Contract tests (`sockets_tests.zig`, `Notifier_tests.zig`, poller core tests) + 4-mode sandwich (Debug/ReleaseSafe/Fast/Small) + cross-compile + native verification is rigorous.
-- **Windows Handling**: Forced `LIBUS_USE_EPOLL` + thin shims (`epoll.h`, `timerfd.h`, `eventfd.h`) reusing wepoll is smart and keeps dependency surface small.
-- **Notifier & Platform Init**: Retaining socket-pair Notifier and promoting `initPlatform`/`deinitPlatform` (WSAStartup) is clean.
-
-### Potential Issues / Contradictions / Risks
-- ~~**Poll Type Inconsistency**~~: **RESOLVED — not a risk.** `POLL_TYPE_SOCKET` is correct. The concern assumed `loop.c`'s `us_internal_dispatch_ready_poll` would run and trigger high-level socket callbacks. With `__attribute__((weak))` on that definition, our Zig `export fn` completely supplants it — `loop.c`'s implementation never executes regardless of poll type. `POLL_TYPE_CALLBACK` is ruled out: its ext layout requires the first 8 bytes to hold a C fn pointer, which would displace our `*TriggeredChannel`. See §4 and §16 Analysis.
-- **g_wait_state Thread Safety**: `threadlocal` is correct for multi-reactor scenarios, but `us_loop_run_bun_tick` + dispatch must stay strictly single-threaded per loop (already enforced by design). Nested `wait()` panic is good defensive coding.
-- **Ext Memory Wiring**: Iterating `seqn_trc_map` in every `wait()` to set `us_poll_ext` pointers works but could be optimized (e.g., set once in `register`/`modify` where possible). Confirm stability with `PollerCore`.
-- **Error Mapping & Edge Cases**: `mapErrno()` in `Skt.zig` must handle Windows `WSA*` vs. POSIX `errno` carefully (including `EINTR` retries already in `bsd_*`). Abstract UDS (`\x00` prefix) and long-path macOS handling rely on `bsd.c` — verify.
-- **Build Complexity**: Adding many C sources + includes + flags (`-DLIBUS_USE_EPOLL` / kqueue) + Windows shims increases build surface. Linker order for weak symbols and `Bun__*` exports must be robust.
-- **Minor Documentation Drift**: Slight mismatches between the two MDs (e.g., poll type, `POLL_TYPE_CALLBACK` emphasis) — expected in iterative planning, but consolidate before coding.
-- **No Major Wrong Decisions**: Early upstream preference was reasonable but correctly pivoted based on API availability (`us_socket_local_address`, tick function). Weak patch is acceptable for vendor control.
-
-### Recommended Refinements
-1. ~~**Consolidate Poll Type**~~: **SUPERSEDED.** `POLL_TYPE_SOCKET` is correct and requires no change. See resolved item in Potential Issues above and §16 Analysis.
-2. **SeqN/TriggeredChannel Wiring**: Double-check `PollerCore` hook in `wait()` (as noted in Open Items).
-3. **Add Defensive Checks**: Validate `us_poll_fd`, ext alignment, and dispatch guard (`g_wait_state orelse return`).
-4. **Version Pin**: Document exact vendored bun-usockets commit/hash.
-5. **Performance**: Monitor vs. original epoll (expect parity or better due to bsd wrappers).
-6. **Fallback**: Keep POSIX backends fully functional under `-Dnetwork=posix`.
-
-**Overall Verdict**: This is a high-quality, low-regret migration plan. Proceed with **Stage 0–3 on Linux first**. Risks are manageable engineering details, not fundamental design flaws. Once Linux sandwich passes (64/64 tests in all modes), Windows/macOS cross-compile + native verification should be straightforward. Tofu will emerge with better Zig 0.16+ compatibility, unified backend, and maintained performance characteristics.
-
----
-
-### Analysis of Raised Points
-
-**Poll Type Inconsistency — not a real risk.**
-The concern is that `POLL_TYPE_SOCKET` triggers high-level socket callbacks inside `loop.c`. This is only true if `loop.c`'s `us_internal_dispatch_ready_poll` runs. With the `__attribute__((weak))` patch, our Zig export completely replaces that function — `loop.c`'s implementation never executes regardless of poll type. `POLL_TYPE_SOCKET` is correct. `POLL_TYPE_CALLBACK` is ruled out (user decision) and would complicate ext memory layout unnecessarily (its first 8 bytes must hold a C fn pointer, displacing our `*TriggeredChannel`).
-
-**Ext memory wiring in every `wait()` — necessary, not an optimization target.**
-`seqn_trc_map` is a parameter passed fresh to each `wait()` call. The `*TriggeredChannel` for a given fd cannot be known at `register()` time because PollerCore builds the map independently. Re-wiring on every `wait()` is the correct approach. Since PollerCore heap-allocates `*TriggeredChannel` for pointer stability, the pointers themselves are stable across calls — only the mapping needs to be applied.
-
-**Version pin — valid, add to implementation checklist.**
-The vendored bun-usockets commit hash should be recorded in `AGENT_STATE.md` when Stage 1 begins, so any future vendor update can be evaluated against the specific known-good revision.
-
-**`EINTR` in `Skt.zig` — already handled.**
-`bsd.c` retries on `EINTR` internally. `Skt.zig` does not need to handle it.
-
-**`POLL_TYPE_CALLBACK` recommendation in Refinement 1 — superseded.**
-The recommendation to use `POLL_TYPE_CALLBACK` was based on the old approach (before the dispatch override was confirmed). With the Zig override in place, `POLL_TYPE_SOCKET` is correct and simpler. No change needed.
-
-**Remaining valid refinements from the review:**
-- Validate ext pointer alignment in dispatch (already covered by `@alignCast` in the Zig cast).
-- Keep POSIX backends fully functional under `-Dnetwork=posix` — no changes touch those folders.
-- Monitor performance vs. native epoll backend after Stage 3 passes.
-
----
-
-## 18. CI Network Matrix
+## 14. CI Network Matrix
 
 Run both `-Dnetwork=posix` and `-Dnetwork=usockets` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `usockets` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
 
@@ -957,4 +894,116 @@ Same pattern with `matrix.os: [windows]`. Windows already uses `submodules: recu
 ### Cost
 
 2× CI minutes per platform during the transition (8 jobs on Linux instead of 4). Acceptable trade-off for continuous dual-backend verification. After porting is complete (Stage 6), keep the matrix permanently — both backends remain supported.
+
+---
+
+## 15. Native Hardware Testing (Stage 6)
+
+Run the full 4-mode sandwich on native Linux hardware. Cross-compile to verify Windows and macOS do not regress:
+
+```sh
+# Native Linux — all four optimize modes
+zig build test -Doptimize=Debug        -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
+
+# Cross-compile (no native macOS or Windows machine needed for compile check)
+zig build -Dtarget=x86_64-windows-gnu -Dnetwork=usockets
+zig build -Dtarget=x86_64-macos      -Dnetwork=usockets
+zig build -Dtarget=aarch64-macos     -Dnetwork=usockets
+```
+
+Native macOS and Windows hardware testing follows the same sandwich pattern once the cross-compile passes.
+
+---
+
+## 16. Critical Files
+
+| File | Action |
+| :--- | :----- |
+| `vendor/bun-usockets/src/loop.c` (line 369) | Add `__attribute__((weak))` to `us_internal_dispatch_ready_poll` |
+| `build.zig` | Add usockets C source + include blocks (both `lib` and `lib_unit_tests`) |
+| `src/ampe/usockets/Skt.zig` | Implement using `bsd_*` wrappers |
+| `src/ampe/usockets/SocketCreator.zig` | Implement using `bsd_create_*` + `getaddrinfo` extern |
+| `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
+| `src/ampe/usockets/usockets_backend.zig` | Full implementation + export `us_internal_dispatch_ready_poll` |
+| `src/ampe/windows/adapters/sys/epoll.h` | New — wepoll redirect |
+| `src/ampe/windows/adapters/sys/timerfd.h` | New — Windows Waitable Timer shim |
+| `src/ampe/windows/adapters/sys/eventfd.h` | New — Windows Event shim |
+| `.vscode/launch.json` | Add `"c"` to sourceLanguages, add usockets config |
+| `.vscode/tasks.json` | Add usockets build and test tasks |
+
+---
+
+## 17. Open Items (minor, resolved during implementation)
+
+- **`bsd_create_connect_socket` second parameter:** The `options` field in `bsd.h` — verify whether `0` is the correct default (non-blocking, no delay) or if a flag must be set. Read `bsd.c` implementation at Stage 1.
+
+- **Abstract UDS namespace prefix on Linux:** `Notifier.zig` already handles this pattern. Copy the same `\x00` prefix logic to `SocketCreator.createUdsServer` for consistency.
+
+- **Vendored bun-usockets commit pin:** Record the exact git commit hash of `vendor/bun-usockets` in `AGENT_STATE.md` when Stage 1 begins. This allows future vendor updates to be evaluated against the specific known-good revision that all implementation choices are based on.
+
+---
+
+## 18. Addendum — AI Review Record
+
+**Verdict: Overall Solid, Production-Ready Plan with Minor Risks & Refinements**
+
+**Summary Rating: 8.5/10** — Excellent technical depth, strong alignment with tofu's callback-less single-threaded reactor architecture, and pragmatic choice of **bun-usockets**. The plan is authoritative, well-structured for staged implementation, and preserves tofu's core invariants (PollerCore, ABA protection, backpressure via manual I/O, no callbacks/threads). It correctly prioritizes Linux verification with "sandwich" testing.
+
+### Key Strengths (Pros)
+- **Architectural Fidelity**: Perfect preservation of `PollerCore` contract (exactly 6 functions) and "pull" model. Using `us_poll_t` + `POLL_TYPE_SOCKET` + `ext` memory for `*TriggeredChannel` + `g_wait_state`/`us_internal_dispatch_ready_poll` override is clever and matches Bun's own Zig integration patterns.
+- **bun-usockets Choice**: Correct final decision over upstream uSockets. `us_loop_run_bun_tick` + public `us_poll_*` APIs + `us_socket_local_address` eliminate major pain points. Bun's fork is battle-tested in a high-performance Zig context.
+- **Unified Backend**: `src/ampe/usockets/` as single cross-platform folder (with minimal comptime branches) is elegant and reduces maintenance vs. per-OS folders.
+- **Minimal Vendor Patch**: One-line `__attribute__((weak))` on `us_internal_dispatch_ready_poll` in `loop.c` is low-risk, license-compliant (Apache 2.0), and standard weak-symbol override technique.
+- **Testing Strategy**: Contract tests (`sockets_tests.zig`, `Notifier_tests.zig`, poller core tests) + 4-mode sandwich (Debug/ReleaseSafe/Fast/Small) + cross-compile + native verification is rigorous.
+- **Windows Handling**: Forced `LIBUS_USE_EPOLL` + thin shims (`epoll.h`, `timerfd.h`, `eventfd.h`) reusing wepoll is smart and keeps dependency surface small.
+- **Notifier & Platform Init**: Retaining socket-pair Notifier and promoting `initPlatform`/`deinitPlatform` (WSAStartup) is clean.
+
+### Potential Issues / Risks (status at time of review)
+- ~~**Poll Type Inconsistency**~~: **RESOLVED.** `POLL_TYPE_SOCKET` is correct. Weak override means `loop.c`'s implementation never runs regardless of poll type. `POLL_TYPE_CALLBACK` ruled out — see §4.
+- **g_wait_state Thread Safety**: `threadlocal` is correct. Nested `wait()` panic guard added to §7.5.
+- **Ext Memory Wiring**: Re-wiring on every `wait()` is necessary and correct — see §4.5 / §7.5.
+- **Error Mapping & Edge Cases**: `mapErrno()` in `Skt.zig` handles Windows `WSA*` vs. POSIX `errno`. `EINTR` retries are in `bsd.c` — `Skt.zig` does not need to handle them.
+- **Build Complexity**: Linker order for weak symbols and `Bun__*` exports — verify at Stage 1.
+- **No Major Wrong Decisions**: Pivot from upstream uSockets to bun-usockets was correct.
+
+### Recommended Refinements
+1. ~~**Consolidate Poll Type**~~: **SUPERSEDED.** `POLL_TYPE_SOCKET` is correct. No change needed.
+2. ~~**SeqN/TriggeredChannel Wiring hook**~~: **RESOLVED.** `wait()` wires ext directly — no PollerCore hook. See §7.4 / §7.5.
+3. **Add Defensive Checks**: Validate ext alignment and dispatch guard (`g_wait_state orelse return`) — both already in §4.5 / §7.5.
+4. **Version Pin**: Record vendored bun-usockets commit hash — added to §17 Open Items.
+5. **Performance**: Monitor vs. original epoll after Stage 3 passes.
+6. **Fallback**: Keep POSIX backends fully functional under `-Dnetwork=posix`.
+
+**Overall Verdict**: High-quality, low-regret migration plan. Proceed with Stage 0–3 on Linux first.
+
+---
+
+## Historical Notes
+
+*Content moved here because it is superseded by or absorbed into the main plan body.*
+
+### Minor Documentation Drift (from original AI review)
+
+> Slight mismatches between the two MDs (e.g., poll type, `POLL_TYPE_CALLBACK` emphasis) — expected in iterative planning, but consolidate before coding.
+
+Context: "the two MDs" referred to `transition-2-usockets-plan.md` and `bun-usockets-implementation.md`, both since deleted. The consolidation is complete — this plan is the single authoritative document.
+
+### Analysis of Raised Points (planning-phase counter-arguments)
+
+These were written as counter-arguments to the original AI review during planning. Their conclusions are now directly incorporated into the main plan sections.
+
+**Poll Type Inconsistency — not a real risk.**
+The concern was that `POLL_TYPE_SOCKET` triggers high-level socket callbacks. This is only true if `loop.c`'s `us_internal_dispatch_ready_poll` runs. With `__attribute__((weak))`, our Zig export replaces that function entirely. `POLL_TYPE_CALLBACK` is ruled out — its ext layout requires the first 8 bytes to hold a C fn pointer, displacing our `*TriggeredChannel`. (Now in §4.3.)
+
+**Ext memory wiring in every `wait()` — necessary, not an optimization target.**
+`seqn_trc_map` is passed fresh each `wait()`. `*TriggeredChannel` cannot be known at `register()` time. Since PollerCore heap-allocates channels for pointer stability, the pointers are stable across calls — only the mapping needs applying each `wait()`. (Now in §7.5.)
+
+**`EINTR` in `Skt.zig` — already handled.**
+`bsd.c` retries on `EINTR` internally. (Now in §18 Potential Issues.)
+
+**`POLL_TYPE_CALLBACK` recommendation — superseded.**
+Based on the old approach before the dispatch override was confirmed. With the Zig override, `POLL_TYPE_SOCKET` is correct and simpler. (Now in §4.3.)
 
