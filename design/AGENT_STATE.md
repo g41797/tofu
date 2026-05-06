@@ -1,6 +1,6 @@
 # Agent State & Handover
 
-**Current Version:** 065
+**Current Version:** 066
 **Last Updated:** 2026-05-06
 **Last Agent:** Claude Code (Sonnet 4.6)
 **Active Phase:** Implementation — Stage 0.5 is next
@@ -94,6 +94,23 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-06: Claude Code (Sonnet 4.6) — Plan Update: posix_net Separate Module + Struct Audit
+
+#### Summary
+Two architectural decisions finalized. (1) `posix_net` moves from `src/ampe/usockets/posix_net/` to `src/ampe/posix_net/` — a standalone module with no tofu type dependencies, registered in `build.zig` as a named module. Consumers use `@import("posix_net")`. (2) Struct-access audit of `linux/Skt.zig` and `linux/SocketCreator.zig` identified 4 new posix_net accessors needed beyond the §12.5 function mapping: `addrFamily`, `addrPort`, `addrUnixPath`, `deleteUnixPath`. `usockets/Skt.zig` struct changes to `fd: pn.Fd` + `uds_server_path: ?[108]u8` (replaces `socket`, `address`, `server`). `PnError` replaces `AmpeError` inside posix_net; translation happens at each usockets method boundary. Tests move to `tests/posix_net/posix_net_tests.zig` (27 tests, up from 22).
+
+#### Changes
+- `design/transition-2-bun-usockets-plan.md` — §2 table/description; §2.5 path + module structure + new accessors table + PnError in example; §7.1 import; §8 struct layout + method table + error translation; §9.2 comment; §12 Stage 0.5 updated; §16 file rows updated
+- `design/AGENT_STATE.md` — v065→066; session entry added
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Plan-only session | No code written |
 
 ---
 
