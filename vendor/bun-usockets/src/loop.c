@@ -366,7 +366,8 @@ void us_internal_loop_post(struct us_loop_t *loop) {
 #define us_ioctl ioctl
 #endif
 
-void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int eof, int events) {
+/* weak: overridden by Zig export in usockets_backend.zig */
+__attribute__((weak)) void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int eof, int events) {
     switch (us_internal_poll_type(p)) {
     case POLL_TYPE_CALLBACK: {
             struct us_internal_callback_t *cb = (struct us_internal_callback_t *) p;

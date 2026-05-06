@@ -9,7 +9,17 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "zig build install",
-            "sourceLanguages": ["zig"]
+            "sourceLanguages": ["zig", "c"]
+        },
+        {
+            "name": "Debug Tests (usockets)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "zig build install usockets",
+            "sourceLanguages": ["zig", "c"]
         }
     ]
 }

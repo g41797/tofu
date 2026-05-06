@@ -21,11 +21,7 @@
                 "fileLocation": ["relative", "${workspaceFolder}"],
                 "pattern": {
                     "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
                 }
             },
             "group": {
@@ -53,11 +49,24 @@
                 "fileLocation": ["relative", "${workspaceFolder}"],
                 "pattern": {
                     "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "zig build install usockets",
+            "type": "shell",
+            "command": "zig",
+            "args": ["build", "install", "-Dnetwork=usockets", "--summary", "all"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
+            "problemMatcher": {
+                "owner": "zig",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
                 }
             },
             "group": "build"
@@ -82,11 +91,24 @@
                 "fileLocation": ["relative", "${workspaceFolder}"],
                 "pattern": {
                     "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            },
+            "group": "test"
+        },
+        {
+            "label": "zig build test usockets",
+            "type": "shell",
+            "command": "zig",
+            "args": ["build", "test", "-Dnetwork=usockets", "--summary", "all"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
+            "problemMatcher": {
+                "owner": "zig",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
                 }
             },
             "group": "test"

@@ -87,11 +87,40 @@ pub fn build(b: *std.Build) void {
     libMod.addImport("datetime", datetime.module("datetime"));
     libMod.addOptions("build_options", build_options);
 
-    // Need libc for windows sockets
+    // Link libraries for Windows sockets
     if (target.result.os.tag == .windows) {
         libMod.link_libc = true;
         libMod.linkSystemLibrary("ws2_32", .{});
         libMod.linkSystemLibrary("ntdll", .{});
+    }
+
+    if (network == .usockets) {
+        const is_kqueue = target.result.os.tag == .macos or
+            target.result.os.tag == .freebsd or
+            target.result.os.tag == .netbsd or
+            target.result.os.tag == .openbsd;
+        const is_windows = target.result.os.tag == .windows;
+
+        const backend_flag = if (is_kqueue) "-DLIBUS_USE_KQUEUE" else "-DLIBUS_USE_EPOLL";
+        const flags = &.{ "-fno-sanitize=undefined", "-DLIBUS_NO_SSL", backend_flag };
+
+        const root = "vendor/bun-usockets/src/";
+        inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
+            libMod.addCSourceFile(.{ .file = b.path(root ++ f), .flags = flags });
+        }
+        libMod.addCSourceFile(.{
+            .file = b.path(root ++ "eventing/epoll_kqueue.c"),
+            .flags = flags,
+        });
+        libMod.addIncludePath(b.path(root));
+        libMod.addIncludePath(b.path(root ++ "internal"));
+        libMod.addIncludePath(b.path(root ++ "internal/networking"));
+        libMod.link_libc = true;
+
+        if (is_windows) {
+            libMod.addIncludePath(b.path("src/ampe/windows/adapters"));
+            // wepoll is already linked for Windows below
+        }
     }
 
     // LLD doesn't support Mach-O (macOS), so only use it on Windows/Linux
@@ -157,6 +186,35 @@ pub fn build(b: *std.Build) void {
 
         lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
         lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
+    }
+
+    if (network == .usockets) {
+        const is_kqueue = target.result.os.tag == .macos or
+            target.result.os.tag == .freebsd or
+            target.result.os.tag == .netbsd or
+            target.result.os.tag == .openbsd;
+        const is_windows = target.result.os.tag == .windows;
+
+        const backend_flag = if (is_kqueue) "-DLIBUS_USE_KQUEUE" else "-DLIBUS_USE_EPOLL";
+        const flags = &.{ "-fno-sanitize=undefined", "-DLIBUS_NO_SSL", backend_flag };
+
+        const root = "vendor/bun-usockets/src/";
+        inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
+            lib_unit_tests.addCSourceFile(.{ .file = b.path(root ++ f), .flags = flags });
+        }
+        lib_unit_tests.addCSourceFile(.{
+            .file = b.path(root ++ "eventing/epoll_kqueue.c"),
+            .flags = flags,
+        });
+        lib_unit_tests.addIncludePath(b.path(root));
+        lib_unit_tests.addIncludePath(b.path(root ++ "internal"));
+        lib_unit_tests.addIncludePath(b.path(root ++ "internal/networking"));
+        lib_unit_tests.linkLibC();
+
+        if (is_windows) {
+            lib_unit_tests.addIncludePath(b.path("src/ampe/windows/adapters"));
+            // wepoll is already linked for Windows below
+        }
     }
 
     b.installArtifact(lib_unit_tests);

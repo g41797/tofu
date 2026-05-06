@@ -29,6 +29,8 @@ Do not skip stages.
 - **GitHub workflows exist** — add the CI network matrix per §14 at the correct stage only.
 - **Doc and comments style** — `design/RULES.md` §5. Short sentences. No marketing language.
 - **"allows to verb"** is a grammar error. Restructure if found.
+- **Use linux/ as reference.** For every stub in `usockets/`, use the corresponding `linux/` (or `mac/` / `windows/`) subfolder file as the primary reference for logic and structure.
+- **NO POSIX.** Never use `std.posix` or raw POSIX APIs and structs in new code. Use `bsd_*` wrappers from bun-usockets. If you cannot find a `bsd_*` replacement for a specific struct or API, raise it as a blocking question before proceeding.
 
 ### Recording Your Work
 
@@ -86,6 +88,9 @@ Four files in `src/ampe/usockets/`, unified across all platforms:
 | `SocketCreator.zig` | stub | `linux/SocketCreator.zig`, etc. |
 | `triggers.zig` | partial | `linux/triggers.zig`, etc. |
 | `usockets_backend.zig` | stub | `epoll_backend.zig` / `kqueue_backend.zig` / `wepoll_backend.zig` |
+| `posix_net.zig` + `posix_net/` | new | inline `extern fn` blocks in `Skt.zig` / `SocketCreator.zig` / `usockets_backend.zig` |
+
+**`posix_net.zig` + `posix_net/`:** Facade + subfolder that replaces `std.posix` and `std.net` in the usockets backend. All consumers import: `const pn = @import("posix_net.zig");` See §2.5 for details.
 
 **Notifier:** `src/ampe/Notifier.zig` is platform-independent. `internal.zig` already imports it unconditionally. No usockets-specific file is needed or exists.
 
@@ -93,6 +98,95 @@ New files (Windows only, Stage 4):
 - `src/ampe/windows/adapters/sys/epoll.h`
 - `src/ampe/windows/adapters/sys/timerfd.h`
 - `src/ampe/windows/adapters/sys/eventfd.h`
+
+---
+
+## 2.5 `src/ampe/usockets/posix_net/` — Our std.posix + std.net
+
+`posix_net.zig` is the single import for all OS-level socket operations in the usockets backend. It is a facade — no `extern fn` declarations, no logic — only re-exports from the `posix_net/` subfolder. Create these files first in Stage 0.5.
+
+### File structure
+
+```
+src/ampe/usockets/
+├── posix_net.zig         # facade: re-exports from posix_net/ subfolder
+├── posix_net/
+│   ├── ffi.zig           # ALL extern fn (bsd_* + us_*) — never imported directly by consumers
+│   ├── types.zig         # Addr (wraps bsd_addr_t), addrinfo extern struct, FdType alias, constants
+│   ├── socket.zig        # sendBuf, recvToBuf, acceptSocket, closeSocket, nodelay, keepalive, wouldBlock
+│   ├── creator.zig       # createListenSocket (TCP+UDS), createConnectSocket (TCP+UDS)
+│   └── poll.zig          # us_loop + us_poll wrappers
+```
+
+### posix_net.zig content
+
+```zig
+// src/ampe/usockets/posix_net.zig
+// Import in consumers: const pn = @import("posix_net.zig");
+
+pub usingnamespace @import("posix_net/types.zig");
+pub usingnamespace @import("posix_net/socket.zig");
+pub usingnamespace @import("posix_net/creator.zig");
+pub const poll = @import("posix_net/poll.zig");
+```
+
+`posix_net/ffi.zig` is never imported directly by consumers. Only `types.zig`, `socket.zig`, `creator.zig`, and `poll.zig` import it.
+
+### Naming convention
+
+Zig wrapper functions use plain camelCase — no prefix. The `pn` module alias serves as the namespace prefix at call sites.
+
+| Call site | Source in posix_net/ |
+| :--- | :--- |
+| `pn.sendBuf(fd, buf)` | `socket.zig` |
+| `pn.recvToBuf(fd, buf)` | `socket.zig` |
+| `pn.acceptSocket(fd, &addr)` | `socket.zig` |
+| `pn.closeSocket(fd)` | `socket.zig` |
+| `pn.nodelay(fd)` | `socket.zig` |
+| `pn.wouldBlock()` | `socket.zig` |
+| `pn.Addr` | `types.zig` |
+| `pn.FdType` | `types.zig` |
+| `pn.POLL_TYPE_SOCKET` | `types.zig` |
+| `pn.LIBUS_SOCKET_READABLE` | `types.zig` |
+| `pn.LIBUS_SOCKET_WRITABLE` | `types.zig` |
+| `pn.createListenSocket(host, port, options)` | `creator.zig` |
+| `pn.createListenSocketUnix(path, pathlen, options)` | `creator.zig` |
+| `pn.createConnectSocket(addr, options)` | `creator.zig` |
+| `pn.createConnectSocketUnix(path, pathlen, options)` | `creator.zig` |
+| `pn.poll.createLoop()` | `poll.zig` |
+| `pn.poll.freeLoop(loop)` | `poll.zig` |
+| `pn.poll.createPoll(loop, ext_size)` | `poll.zig` |
+| `pn.poll.freePoll(p, loop)` | `poll.zig` |
+| `pn.poll.initPoll(p, fd, poll_type)` | `poll.zig` |
+| `pn.poll.startPoll(p, loop, events)` | `poll.zig` |
+| `pn.poll.changePoll(p, loop, events)` | `poll.zig` |
+| `pn.poll.stopPoll(p, loop)` | `poll.zig` |
+| `pn.poll.pollExt(p)` | `poll.zig` |
+| `pn.poll.tick(loop, timeout)` | `poll.zig` |
+
+The underlying C functions keep the `bsd_` prefix in `ffi.zig` — fixed by bun-usockets.
+
+### Two-layer pattern (example from posix_net/socket.zig)
+
+```zig
+const ffi = @import("ffi.zig");
+
+pub fn sendBuf(fd: FdType, buf: []const u8) AmpeError!?usize {
+    const n = ffi.bsd_send(@intCast(fd), buf.ptr, @intCast(buf.len));
+    if (n < 0) {
+        if (ffi.bsd_would_block() != 0) return null;
+        return AmpeError.CommunicationFailed;
+    }
+    if (n == 0) return null;
+    return @intCast(n);
+}
+
+pub fn wouldBlock() bool {
+    return ffi.bsd_would_block() != 0;
+}
+```
+
+`bsd_create_connect_socket` takes a pre-resolved `sockaddr_storage*` — see §9 for hostname resolution via `getaddrinfo`.
 
 ---
 
@@ -270,7 +364,7 @@ export fn us_internal_dispatch_ready_poll(
     events: c_int,
 ) callconv(.C) void {
     const ws = g_wait_state orelse return;  // called outside wait() — ignore
-    const tc_ptr = @as(**TriggeredChannel, @ptrCast(@alignCast(us_poll_ext(poll))));
+    const tc_ptr = @as(**TriggeredChannel, @ptrCast(@alignCast(pn.poll.pollExt(poll))));
     const tc = tc_ptr.*;
     const act = triggers_mod.fromEvents(events, err, eof, tc.exp);
     tc.act = tc.act.lor(act);
@@ -400,28 +494,15 @@ const LIBUS_SOCKET_WRITABLE: c_int = 2;
 
 ## 7. `usockets/usockets_backend.zig`
 
-### 7.1 C FFI declarations
+### 7.1 Imports
 
 ```zig
-extern fn us_create_loop(
-    hint: ?*anyopaque,
-    wakeup_cb: ?*anyopaque,
-    pre_cb: ?*anyopaque,
-    post_cb: ?*anyopaque,
-    ext_size: c_uint,
-) callconv(.C) ?*anyopaque;
-extern fn us_loop_free(loop: *anyopaque) callconv(.C) void;
-extern fn us_create_poll(loop: *anyopaque, fallthrough: c_int, ext_size: c_uint) callconv(.C) ?*anyopaque;
-extern fn us_poll_free(p: *anyopaque, loop: *anyopaque) callconv(.C) void;
-extern fn us_poll_init(p: *anyopaque, fd: c_int, poll_type: c_int) callconv(.C) void;
-extern fn us_poll_start(p: *anyopaque, loop: *anyopaque, events: c_int) callconv(.C) void;
-extern fn us_poll_change(p: *anyopaque, loop: *anyopaque, events: c_int) callconv(.C) void;
-extern fn us_poll_stop(p: *anyopaque, loop: *anyopaque) callconv(.C) void;
-extern fn us_poll_ext(p: *anyopaque) callconv(.C) *anyopaque;
-extern fn us_loop_run_bun_tick(loop: *anyopaque, timeout: ?*const std.posix.timespec) callconv(.C) void;
-
-const POLL_TYPE_SOCKET: c_int = 0;
+const pn = @import("posix_net.zig");
+// pn.poll.* wraps all us_create_loop, us_create_poll, us_poll_*, us_loop_run_bun_tick externs
+// pn.POLL_TYPE_SOCKET, pn.LIBUS_SOCKET_READABLE, pn.LIBUS_SOCKET_WRITABLE — from posix_net/types.zig
 ```
+
+All `us_*` C functions are declared in `posix_net/ffi.zig` and wrapped in `posix_net/poll.zig`. Use `pn.poll.*` at call sites. Use `pn.POLL_TYPE_SOCKET` wherever the poll type constant is needed.
 
 ### 7.2 Struct
 
@@ -441,7 +522,7 @@ pub const Poller = core.PollerCore(UsocketsBackend);
 
 ```zig
 pub fn init(allocator: Allocator) AmpeError!UsocketsBackend {
-    const loop = us_create_loop(null, null, null, null, 0)
+    const loop = pn.poll.createLoop()
         orelse return AmpeError.AllocationFailed;
     return .{
         .loop = loop,
@@ -454,11 +535,11 @@ pub fn deinit(self: *UsocketsBackend) void {
     var it = self.polls.iterator();
     while (it.next()) |entry| {
         const poll = entry.value_ptr.*;
-        us_poll_stop(poll, self.loop);
-        us_poll_free(poll, self.loop);
+        pn.poll.stopPoll(poll, self.loop);
+        pn.poll.freePoll(poll, self.loop);
     }
     self.polls.deinit();
-    us_loop_free(self.loop);
+    pn.poll.freeLoop(self.loop);
 }
 ```
 
@@ -467,25 +548,25 @@ pub fn deinit(self: *UsocketsBackend) void {
 ```zig
 pub fn register(self: *UsocketsBackend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void {
     _ = seq; // SeqN managed by PollerCore via SeqnTrcMap; not stored in poll
-    const poll = us_create_poll(self.loop, 0, @sizeOf(*TriggeredChannel))
+    const poll = pn.poll.createPoll(self.loop, @sizeOf(*TriggeredChannel))
         orelse return AmpeError.AllocationFailed;
-    us_poll_init(poll, @intCast(fd), POLL_TYPE_SOCKET);
+    pn.poll.initPoll(poll, @intCast(fd), pn.POLL_TYPE_SOCKET);
     // ext (*TriggeredChannel) is wired by wait() on every call via seqn_trc_map iteration
-    us_poll_start(poll, self.loop, triggers_mod.toEvents(exp));
+    pn.poll.startPoll(poll, self.loop, triggers_mod.toEvents(exp));
     try self.polls.put(fd, poll);
 }
 
 pub fn modify(self: *UsocketsBackend, fd: FdType, seq: SeqN, exp: Triggers) AmpeError!void {
     _ = seq;
     const poll = self.polls.get(fd) orelse return AmpeError.CommunicationFailed;
-    us_poll_change(poll, self.loop, triggers_mod.toEvents(exp));
+    pn.poll.changePoll(poll, self.loop, triggers_mod.toEvents(exp));
 }
 
 pub fn unregister(self: *UsocketsBackend, fd: FdType) void {
     if (self.polls.fetchRemove(fd)) |entry| {
         const poll = entry.value;
-        us_poll_stop(poll, self.loop);
-        us_poll_free(poll, self.loop);
+        pn.poll.stopPoll(poll, self.loop);
+        pn.poll.freePoll(poll, self.loop);
     }
 }
 ```
@@ -502,7 +583,7 @@ pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) Amp
     while (it.next()) |entry| {
         const tc = entry.value_ptr.*;
         if (self.polls.get(tc.fd)) |poll| {
-            const ptr = @as(**TriggeredChannel, @ptrCast(@alignCast(us_poll_ext(poll))));
+            const ptr = @as(**TriggeredChannel, @ptrCast(@alignCast(pn.poll.pollExt(poll))));
             ptr.* = tc;
         }
     }
@@ -512,13 +593,13 @@ pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) Amp
     defer g_wait_state = null;
 
     if (timeout < 0) {
-        us_loop_run_bun_tick(self.loop, null);
+        pn.poll.tick(self.loop, null);
     } else {
-        const ts = std.posix.timespec{
+        const ts = std.c.timespec{
             .tv_sec = @divTrunc(timeout, 1000),
             .tv_nsec = @as(isize, @rem(timeout, 1000)) * std.time.ns_per_ms,
         };
-        us_loop_run_bun_tick(self.loop, &ts);
+        pn.poll.tick(self.loop, &ts);
     }
 
     if (ws.total_act.isZero()) ws.total_act.timeout = .on;
@@ -530,37 +611,31 @@ pub fn wait(self: *UsocketsBackend, timeout: i32, seqn_trc_map: *SeqnTrcMap) Amp
 
 ## 8. `usockets/Skt.zig`
 
-Replaces `std.posix.*` with `bsd_*` wrappers. Platform differences (error codes, socket handles) are isolated to `mapErrno()`.
+Replaces `std.posix.*` with `pn.*` wrappers. Platform differences (error codes, socket handles) are isolated to `mapErrno()`.
 
 ```zig
-extern fn bsd_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int, err: *c_int) c_int;
-extern fn bsd_create_listen_socket_unix(path: [*]const u8, pathlen: usize, options: c_int, err: *c_int) c_int;
-extern fn bsd_create_connect_socket(addr: *const anyopaque, options: c_int) c_int;
-extern fn bsd_create_connect_socket_unix(path: [*]const u8, pathlen: usize, options: c_int) c_int;
-extern fn bsd_accept_socket(fd: c_int, addr: *anyopaque) c_int;
-extern fn bsd_recv(fd: c_int, buf: [*]u8, length: c_int, flags: c_int) isize;
-extern fn bsd_send(fd: c_int, buf: [*]const u8, length: c_int) isize;
-extern fn bsd_close_socket(fd: c_int) void;
-extern fn bsd_shutdown_socket(fd: c_int) void;
-extern fn bsd_socket_nodelay(fd: c_int, enabled: c_int) void;
-extern fn bsd_socket_keepalive(fd: c_int, on: c_int, delay: c_uint) c_int;
-extern fn us_socket_local_address(s: *const anyopaque, buf: [*]u8, length: *c_int) void;
+const pn = @import("posix_net.zig");
 ```
+
+All socket operations use `pn.sendBuf(...)`, `pn.recvToBuf(...)`, etc. No inline `extern fn` blocks — they live in `posix_net/ffi.zig` behind wrappers.
+
+**Struct change:** `usockets/Skt.zig` stores only `fd: c_int` (no `address: std.net.Address` field). Address info is retrieved on demand via `pn.localAddr` / `pn.remoteAddr`.
 
 **Method mapping:**
 
-| Skt method | bsd_* call |
-| :--------- | :--------- |
-| `listen(host, port)` | `bsd_create_listen_socket(host, port, 0, &err)` |
-| `accept(server_fd)` | `bsd_accept_socket(server_fd, &addr)` |
-| `connect(addr)` | `bsd_create_connect_socket(&sockaddr_storage, 0)` — addr pre-resolved |
-| `sendBuf(buf)` | `bsd_send(fd, buf.ptr, @intCast(buf.len))` |
-| `recvToBuf(buf)` | `bsd_recv(fd, buf.ptr, @intCast(buf.len), 0)` |
-| `close()` | `bsd_close_socket(fd)` |
-| `disableNagle()` | `bsd_socket_nodelay(fd, 1)` |
-| `getPort()` | `us_socket_local_address` + parse bytes |
+| Skt method | pn.* call |
+| :--------- | :-------- |
+| `listen(host, port)` | `pn.createListenSocket(host, port, 0)` |
+| `listenUnix(path, pathlen)` | `pn.createListenSocketUnix(path, pathlen, 0)` |
+| `accept(server_fd)` | `pn.acceptSocket(server_fd, &addr)` |
+| `connect(addr)` | `pn.createConnectSocket(&sockaddr_storage, 0)` — addr pre-resolved |
+| `sendBuf(buf)` | `pn.sendBuf(fd, buf)` |
+| `recvToBuf(buf)` | `pn.recvToBuf(fd, buf)` |
+| `close()` | `pn.closeSocket(fd)` |
+| `disableNagle()` | `pn.nodelay(fd)` |
+| `getPort()` | `pn.localAddr(fd, &addr)` + `pn.addrPort(&addr)` |
 
-**Error mapping (comptime branch on OS):**
+**Error mapping (NO POSIX — use `pn.wouldBlock()`):**
 
 ```zig
 fn mapErrno() AmpeError {
@@ -570,12 +645,25 @@ fn mapErrno() AmpeError {
             else => AmpeError.CommunicationFailed,
         };
     }
-    return switch (std.posix.errno(-1)) {
-        .AGAIN, .WOULDBLOCK => AmpeError.WouldBlock,
-        else => AmpeError.CommunicationFailed,
-    };
+    // pn.wouldBlock() checks errno EAGAIN / EWOULDBLOCK cross-platform
+    if (pn.wouldBlock()) return AmpeError.WouldBlock;
+    return AmpeError.CommunicationFailed;
 }
 ```
+
+**`connect()` return value:** `bsd_create_connect_socket` / `bsd_create_connect_socket_unix` returns a valid fd or -1. It does not separately signal "immediate success" vs "EINPROGRESS pending". Always return `true` for any non-negative fd:
+
+```zig
+pub fn connect(skt: *Skt) AmpeError!bool {
+    // bsd_create_connect_socket already performed connect() during Skt creation.
+    // A valid fd means connected (UDS: typically immediate) or EINPROGRESS (TCP).
+    // The reactor handles both correctly: WRITE event arrives immediately for EINPROGRESS.
+    _ = skt;
+    return true;
+}
+```
+
+Error cases (fd == -1) are handled by `SocketCreator` before `connect()` is called.
 
 ---
 
@@ -587,9 +675,22 @@ fn mapErrno() AmpeError {
 
 `bsd_create_listen_socket_unix(path, pathlen, 0, &err)` — for UDS. On Linux, prepend `\x00` for abstract namespace (comptime branch, same pattern as `Notifier.zig`).
 
-### 9.2 Connect side — hostname resolution
+### 9.2 UDS — Linux abstract namespace
 
-`bsd_create_connect_socket` takes a **pre-resolved `sockaddr_storage*`**. Resolution uses `getaddrinfo` via C extern (libc is already linked by `artifact.link_libc = true`):
+Pass the full path including the leading `\x00` byte, with `pathlen` = full length including `\x00`. `bsd_create_listen_socket_unix` calls `bsd_create_unix_socket_address` internally, which checks `path[0] == '\0'` and handles abstract namespace correctly. No Zig-side workaround needed — bsd.c has it. Pattern (same as existing `Notifier.zig`):
+
+```zig
+// Abstract UDS path on Linux: prepend \x00
+var buf: [108]u8 = undefined;
+buf[0] = 0;
+@memcpy(buf[1..][0..name.len], name);
+const pathlen = name.len + 1;
+const fd = pn.createListenSocketUnix(&buf, pathlen, 0);
+```
+
+### 9.3 Connect side — hostname resolution
+
+`bsd_create_connect_socket` takes a **pre-resolved `sockaddr_storage*`**. Resolution uses `getaddrinfo` via C extern (libc is already linked by `artifact.link_libc = true`). See also §9.2 for UDS abstract namespace handling.
 
 ```zig
 const addrinfo = extern struct {
@@ -633,7 +734,7 @@ fn resolveConnect(host: [:0]const u8, port: u16) AmpeError!FdType {
 
     var cur = res;
     while (cur) |ai| : (cur = ai.ai_next) {
-        const fd = bsd_create_connect_socket(
+        const fd = pn.createConnectSocket(
             @ptrCast(ai.ai_addr), 0);
         if (fd >= 0) return @intCast(fd);
     }
@@ -654,6 +755,8 @@ pub const Notifier = @import("Notifier.zig");  // line 9 of internal.zig — alr
 ```
 
 No `usockets/Notifier.zig` exists or is needed. Notifier uses `Skt` + `SocketCreator` internally — once those are implemented, Notifier works unchanged under `-Dnetwork=usockets`.
+
+**No `bsd_socketpair` needed.** `Notifier.zig` uses the "Manual Pair" approach — it calls `SocketCreator.createUdsListener` + `createUdsSocket`, not `std.posix.socketpair`. Once `usockets/SocketCreator.zig` is implemented with `bsd_*`, Notifier works under `-Dnetwork=usockets` without modification.
 
 ---
 
@@ -738,8 +841,10 @@ static inline int eventfd_read(int fd, uint64_t *val) {
 
 | Stage | Work | Acceptance criterion |
 | :---- | :--- | :------------------- |
-| **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger |
-| **1** | `build.zig` + `Skt.zig` + `SocketCreator.zig` | `sockets_tests.zig` pass on Linux |
+| **-1** | Scan `linux/*.zig` for all `std.posix` / `std.net` usage; verify each has a `bsd_*` replacer (see §12.5) | All usages accounted for; no blockers remain — **DONE** |
+| **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger — **DONE** |
+| **0.5** | `build.zig` (C sources only) + `posix_net/` subfolder + `posix_net.zig` facade + `posix_net_tests.zig` (22 tests) | `zig build test -Dnetwork=usockets` runs all 22 `posix_net_tests`; pass on Linux |
+| **1** | `Skt.zig` + `SocketCreator.zig` (using `pn.*`) | `sockets_tests.zig` pass on Linux |
 | **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux |
 | **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass, 4-mode sandwich on Linux |
 | **4** | Windows adapter headers + build.zig include path | Cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds |
@@ -753,6 +858,44 @@ zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
 zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
 zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
 ```
+
+---
+
+## 12.5 std.posix / std.net → bsd_* Mapping (Stage -1 result)
+
+Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No blockers found.**
+
+| std.posix / std.net usage | Source file | bsd_* replacement | Notes |
+| :--- | :--- | :--- | :--- |
+| `std.posix.socket_t` | Skt.zig | `c_int` (POSIX) / `usize` (Windows) — `LIBUS_SOCKET_DESCRIPTOR` | Use `FdType` from `internal.zig` |
+| `std.net.Address` | Skt.zig, SocketCreator.zig | Not needed — `bsd_*` take host string or `sockaddr*` | Remove from usockets/Skt.zig struct |
+| `std.posix.AF.INET`, `AF.INET6` | Skt.zig | Not needed — `bsd_create_listen_socket` handles all families internally | |
+| `std.posix.AF.UNIX` | Skt.zig | `bsd.bsd_create_listen_socket_unix` / `bsd.bsd_create_connect_socket_unix` | |
+| `std.posix.SOCK.NONBLOCK`, `SOCK.CLOEXEC` | Skt.zig, SocketCreator.zig | `bsd_set_nonblocking(fd)` — called inside `bsd_create_*` already | `bsd_create_*` always sets NONBLOCK |
+| `std.posix.setsockopt` (REUSEADDR, REUSEPORT) | Skt.zig | `bsd_create_listen_socket` calls `bsd_set_reuse` internally | No Zig call needed |
+| `std.posix.SO.LINGER`, `posix.SOL.SOCKET` | Skt.zig | `bsd_close_socket` handles linger-on-close internally | No `setLingerAbort` needed |
+| `std.posix.IPPROTO.TCP`, `std.posix.TCP.NODELAY` | Skt.zig | `pn.nodelay(fd)` | Direct replacement |
+| `std.posix.send` | Skt.zig | `pn.sendBuf(fd, buf)` | Returns `isize`; negative = error |
+| `std.posix.recv` | Skt.zig | `pn.recvToBuf(fd, buf)` | Returns `isize`; 0 = EOF |
+| `std.posix.SendError.WouldBlock` | Skt.zig | `pn.wouldBlock()` | Check after negative return |
+| `std.posix.RecvFromError.WouldBlock` | Skt.zig | `pn.wouldBlock()` | Check after negative return |
+| `posix.bind`, `posix.listen` | Skt.zig | `pn.createListenSocket(host, port, 0)` | |
+| `posix.getsockname` | Skt.zig | `pn.localAddr(fd, &addr)` + `pn.addrPort(&addr)` | `bsd_addr_t` is opaque |
+| `posix.socket` | SocketCreator.zig | Replaced by `bsd_create_listen_socket` / `bsd_create_connect_socket` | No raw socket() call |
+| `posix.close` | Skt.zig | `pn.closeSocket(fd)` | Cross-platform including WIN32 |
+| `posix.system.connect` (connectOs) | Skt.zig | `pn.createConnectSocket(&sockaddr_storage, 0)` | Returns fd; negative = error |
+| `posix.fcntl` (F.GETFL/SETFL/GETFD/SETFD) (acceptOs) | Skt.zig | Not needed — `bsd_accept_socket` sets NONBLOCK internally | Remove acceptOs; use bsd_accept_socket |
+| `posix.AcceptError.WouldBlock` | Skt.zig | `bsd.bsd_would_block() != 0` after `bsd_accept_socket` returns -1 | |
+| `posix.ConnectError` | Skt.zig | Map via `bsd_would_block()` | EINPROGRESS = WouldBlock |
+| `posix.sockaddr.in`, `posix.socklen_t` | Skt.zig | Not needed — `bsd_*` use `bsd_addr_t` / `sockaddr_storage` internally | |
+| `std.net.Address.resolveIp` | SocketCreator.zig | `getaddrinfo` extern — see §9.2 | |
+| `std.net.getAddressList` | SocketCreator.zig | `getaddrinfo` extern — see §9.2 | |
+| `std.net.Address.initUnix` | SocketCreator.zig | Pass path directly to `bsd_create_listen_socket_unix` / `bsd_create_connect_socket_unix` | |
+| `std.os.windows.ws2_32.ioctlsocket` | SocketCreator.zig | Not needed — `bsd_set_nonblocking` handles Windows | |
+| `std.os.linux.EPOLL.IN/OUT/ERR/HUP/RDHUP/PRI` | triggers.zig | `bsd.LIBUS_SOCKET_READABLE` (1), `bsd.LIBUS_SOCKET_WRITABLE` (2) | bun-usockets masks epoll internally |
+| `posix.errno(-1)` in `mapErrno` | Skt.zig | `pn.wouldBlock()` | Cross-platform EAGAIN check |
+
+**One open question for Stage 1:** `findFreeTcpPort()` in `linux/Skt.zig` uses raw `posix.socket` + `posix.bind` + `posix.getsockname`. Verify whether any test running under `-Dnetwork=usockets` calls this function. If yes: rewrite using `bsd_create_listen_socket("0.0.0.0", 0, 0, &err)` + `bsd_local_addr` + `bsd_addr_get_port`. If only called from posix-backend tests: no action needed.
 
 ---
 
@@ -924,8 +1067,15 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 | :--- | :----- |
 | `vendor/bun-usockets/src/loop.c` (line 369) | Add `__attribute__((weak))` to `us_internal_dispatch_ready_poll` |
 | `build.zig` | Add usockets C source + include blocks (both `lib` and `lib_unit_tests`) |
-| `src/ampe/usockets/Skt.zig` | Implement using `bsd_*` wrappers |
-| `src/ampe/usockets/SocketCreator.zig` | Implement using `bsd_create_*` + `getaddrinfo` extern |
+| `src/ampe/usockets/posix_net.zig` | New — facade: re-exports from `posix_net/` subfolder |
+| `src/ampe/usockets/posix_net/ffi.zig` | New — all `bsd_*` and `us_*` C extern declarations |
+| `src/ampe/usockets/posix_net/types.zig` | New — `Addr`, `FdType`, constants (`POLL_TYPE_SOCKET`, etc.) |
+| `src/ampe/usockets/posix_net/socket.zig` | New — `sendBuf`, `recvToBuf`, `acceptSocket`, `closeSocket`, `wouldBlock`, etc. |
+| `src/ampe/usockets/posix_net/creator.zig` | New — `createListenSocket`, `createConnectSocket`, UDS variants |
+| `src/ampe/usockets/posix_net/poll.zig` | New — `createLoop`, `createPoll`, `startPoll`, `tick`, etc. |
+| `tests/ampe/posix_net_tests.zig` | New — 22 tests (7 groups); gated on `-Dnetwork=usockets` |
+| `src/ampe/usockets/Skt.zig` | Implement using `pn.*` wrappers (via `@import("posix_net.zig")`) |
+| `src/ampe/usockets/SocketCreator.zig` | Implement using `pn.create*` + `getaddrinfo` extern |
 | `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
 | `src/ampe/usockets/usockets_backend.zig` | Full implementation + export `us_internal_dispatch_ready_poll` |
 | `src/ampe/windows/adapters/sys/epoll.h` | New — wepoll redirect |
