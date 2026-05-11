@@ -117,18 +117,19 @@ pub fn build(b: *std.Build) void {
         inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
             libMod.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
         }
-        libMod.addCSourceFile(.{
-            .file = usockets_dep.path("src/eventing/epoll_kqueue.c"),
-            .flags = flags,
-        });
+        if (!is_windows) {
+            libMod.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
+        } else {
+            libMod.addCSourceFile(.{ .file = b.path("posix_net/adapters/us_epoll_win.c"), .flags = flags });
+        }
         libMod.addIncludePath(usockets_dep.path("src/"));
         libMod.addIncludePath(usockets_dep.path("src/internal"));
         libMod.addIncludePath(usockets_dep.path("src/internal/networking"));
         libMod.link_libc = true;
 
         if (is_windows) {
-            libMod.addIncludePath(b.path("src/ampe/windows/adapters"));
-            // wepoll is already linked for Windows below
+            libMod.addIncludePath(b.path("posix_net/adapters"));
+            libMod.addIncludePath(b.path("src/ampe/windows/wepoll"));
         }
     }
 
@@ -196,7 +197,7 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.linkLibC();
         lib_unit_tests.linkSystemLibrary("ws2_32");
         lib_unit_tests.linkSystemLibrary("ntdll");
-        lib_unit_tests.linkSystemLibrary("kernel32"); // Link kernel32 for event functions
+        lib_unit_tests.linkSystemLibrary("kernel32");
 
         lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
         lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
@@ -216,18 +217,19 @@ pub fn build(b: *std.Build) void {
         inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
             lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
         }
-        lib_unit_tests.addCSourceFile(.{
-            .file = usockets_dep.path("src/eventing/epoll_kqueue.c"),
-            .flags = flags,
-        });
+        if (!is_windows) {
+            lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
+        } else {
+            lib_unit_tests.addCSourceFile(.{ .file = b.path("posix_net/adapters/us_epoll_win.c"), .flags = flags });
+        }
         lib_unit_tests.addIncludePath(usockets_dep.path("src/"));
         lib_unit_tests.addIncludePath(usockets_dep.path("src/internal"));
         lib_unit_tests.addIncludePath(usockets_dep.path("src/internal/networking"));
         lib_unit_tests.linkLibC();
 
         if (is_windows) {
-            lib_unit_tests.addIncludePath(b.path("src/ampe/windows/adapters"));
-            // wepoll is already linked for Windows below
+            lib_unit_tests.addIncludePath(b.path("posix_net/adapters"));
+            lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
         }
     }
 

@@ -6,7 +6,7 @@ const pn = @import("posix_net");
 pub const Skt = @This();
 
 /// Socket descriptor.
-fd: pn.Fd = -1,
+fd: pn.Fd = pn.INVALID_FD,
 
 /// Path to Unix Domain Socket file. Used for unlinking servers and delayed connect for clients.
 uds_server_path: ?[pn.UDS_PATH_SIZE]u8 = null,
@@ -16,7 +16,7 @@ server: bool = false,
 
 /// Returns true if the socket descriptor is valid.
 pub fn isSet(skt: *const Skt) bool {
-    return skt.fd >= 0;
+    return skt.fd != pn.INVALID_FD;
 }
 
 pub fn rawFd(skt: *const Skt) i32 {
@@ -115,7 +115,7 @@ pub fn deinit(skt: *Skt) void {
 
 /// Close the socket and reset descriptor.
 pub fn close(skt: *Skt) void {
-    if (skt.fd >= 0) {
+    if (skt.fd != pn.INVALID_FD) {
         if (skt.server and skt.uds_server_path != null) {
             const path = skt.uds_server_path.?;
             var path_buf: [pn.UDS_PATH_SIZE + 1:0]u8 = undefined;
@@ -127,7 +127,7 @@ pub fn close(skt: *Skt) void {
             }
         }
         pn.closeSocket(skt.fd);
-        skt.fd = -1;
+        skt.fd = pn.INVALID_FD;
     }
 }
 

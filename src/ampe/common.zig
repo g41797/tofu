@@ -30,7 +30,11 @@ pub const TcIterator = struct {
 pub fn isSocketSet(skt: ?Socket) bool {
     if (skt) |s| {
         if (builtin.os.tag == .windows) {
-            return s != std.os.windows.ws2_32.INVALID_SOCKET;
+            if (build_options.network == .portable) {
+                return s != std.math.maxInt(usize);
+            } else {
+                return s != std.os.windows.ws2_32.INVALID_SOCKET;
+            }
         } else {
             return s != -1;
         }
@@ -43,7 +47,11 @@ pub fn isSocketSet(skt: ?Socket) bool {
 /// POSIX: returns i32 (fd_t)
 pub fn toFd(skt: Socket) FdType {
     if (builtin.os.tag == .windows) {
-        return @intFromPtr(skt);
+        if (build_options.network == .portable) {
+            return skt; // Socket is already usize on portable+windows
+        } else {
+            return @intFromPtr(skt);
+        }
     } else {
         return @as(std.posix.fd_t, @intCast(skt));
     }
@@ -61,3 +69,4 @@ const Socket = internal.Socket;
 
 const std = @import("std");
 const builtin = @import("builtin");
+const build_options = @import("build_options");

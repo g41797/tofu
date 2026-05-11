@@ -6,6 +6,9 @@ const builtin = @import("builtin");
 /// Platform-specific socket descriptor type.
 pub const Fd = if (builtin.os.tag == .windows) usize else c_int;
 
+/// Sentinel value for an unset or invalid socket descriptor.
+pub const INVALID_FD: Fd = if (builtin.os.tag == .windows) @import("std").math.maxInt(usize) else -1;
+
 /// Unix socket path size: sun_path field of sockaddr_un (Linux=108, macOS/BSD=104).
 pub const UDS_PATH_SIZE: usize = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 104 else 108;
 

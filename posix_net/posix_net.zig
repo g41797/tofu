@@ -3,6 +3,7 @@
 
 // Types
 pub const Fd = types.Fd;
+pub const INVALID_FD = types.INVALID_FD;
 pub const Addr = types.Addr;
 pub const PnError = types.PnError;
 pub const POLL_TYPE_SOCKET = types.POLL_TYPE_SOCKET;

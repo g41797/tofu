@@ -119,6 +119,7 @@ The `zbta.sh` script (and platform variants) automates this sequence.
 - **No AI filler.** No triple adjectives ("bounded, mechanical, and isolated"), no summary sentences that repeat what the paragraph already said.
 - **Tech terms are fine.** `epoll`, `kqueue`, `TriggeredChannel`, `comptime` — use them as-is. Precision over simplification.
 - **Grammar matters.** "Allows to verb" is not English. Write "Allows X to verb" or restructure.
+- **Terminology: no "shim".** Use "adapter" instead. A shim implies a hack; an adapter describes the role precisely.
 
 ---
 

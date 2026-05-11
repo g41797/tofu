@@ -123,5 +123,9 @@ pub fn addrUnixPath(addr: *const Addr) []const u8 {
 
 /// Delete a file at the given path.
 pub fn deleteUnixPath(path: [*:0]const u8) void {
-    _ = ffi.unlink(path);
+    if (comptime @import("builtin").os.tag == .windows) {
+        _ = ffi._unlink(path);
+    } else {
+        _ = ffi.unlink(path);
+    }
 }

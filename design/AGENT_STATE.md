@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 075
+**Current Version:** 076
 **Last Updated:** 2026-05-11
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stages 3 + 5 COMPLETE — next: Stage 4 (Windows adapter headers)
+**Active Phase:** Stage 4 COMPLETE — next: Stage 6 (native hardware testing + CI matrix live)
 
 ---
 
@@ -43,8 +43,9 @@
 - Loop thread affinity confirmed: `initPlatform()` has no thread affinity; loop must be created on the reactor thread → `PosixNetBackend.init()` is the right place.
 - **VERIFIED (2026-05-11, CLion):** All 99/99 tests pass including `reactor_tests.test.echo client/server test`. Previous background hang was a test runner resource issue (SIGTERM from zig build timeout), not a code bug.
 - **Stage 3 COMPLETE.**
+- **Stage 4 COMPLETE.** Windows adapter headers done. `posix_net/adapters/` contains `sys/epoll.h` (wepoll redirect), `sys/timerfd.h`, `sys/eventfd.h`, `win_compat.h`, `us_epoll_win.c`. Cross-compile `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` succeeds.
 - **Stage 5 COMPLETE.** macOS cross-compilation verified: `x86_64-macos` and `aarch64-macos` both succeed with `-Dnetwork=portable`.
-- **Next: Stage 4** — Windows adapter headers (`sys/epoll.h` → wepoll shim, `pn.Fd = -1` type fix for Windows `usize` SOCKET, `deleteUnixPath` ABI choice). Discuss before starting per plan §17.
+- **Next: Stage 6** — native hardware testing + CI network matrix live.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 
 ---
@@ -153,6 +154,41 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-11: Claude Code (Sonnet 4.6) — Stage 4 Complete: Windows adapter headers
+
+#### Summary
+Stage 4 completed. Created `posix_net/adapters/` with five files: `sys/epoll.h` (redirects epoll symbols to wepoll via HANDLE↔int cast wrappers; adds `EPOLL_CLOEXEC 0` guard), `sys/timerfd.h` (Windows Waitable Timer adapter), `sys/eventfd.h` (Windows Event adapter), `win_compat.h` (EINPROGRESS, ENAMETOOLONG, EAFNOSUPPORT), and `us_epoll_win.c` (all `us_*` epoll-path functions for Windows, replacing `epoll_kqueue.c`). The key architectural decision: upstream uSockets does NOT compile `epoll_kqueue.c` on Windows; our build follows the same rule — `epoll_kqueue.c` only when `!is_windows`, `us_epoll_win.c` only when `is_windows`. wepoll stays at `src/ampe/windows/wepoll/` (shared by both backends — no separate vendored copy). Fixed `src/ampe/common.zig` Windows portable branch for `isSocketSet`/`toFd` (portable+windows uses `usize` not `*SOCKET__opaque`). Fixed `tests/posix_net/posix_net_tests.zig` for cross-platform compatibility (TempUdsPath, `INVALID_FD`). Linux 4-mode regression: Debug/ReleaseSafe/ReleaseFast/ReleaseSmall all pass (99/99). `deleteUnixPath` ABI resolved: both `unlink` and `_unlink` declared in `ffi.zig`; `socket.zig` uses comptime branch. Windows CI: `network: [posix, portable]` matrix added to `windows.yml`.
+
+#### Changes
+- `posix_net/adapters/sys/epoll.h` — new: wepoll redirect with HANDLE↔int cast wrappers, EPOLL_CLOEXEC guard
+- `posix_net/adapters/sys/timerfd.h` — new: Windows Waitable Timer adapter
+- `posix_net/adapters/sys/eventfd.h` — new: Windows Event adapter
+- `posix_net/adapters/win_compat.h` — new: EINPROGRESS, ENAMETOOLONG, EAFNOSUPPORT
+- `posix_net/adapters/us_epoll_win.c` — new: all us_* epoll-path functions for Windows
+- `build.zig` — epoll_kqueue.c/us_epoll_win.c split; wepoll guard reverted (both backends share it); portable test block updated
+- `src/ampe/common.zig` — isSocketSet/toFd portable+windows branch; build_options import
+- `posix_net/ffi.zig` — _unlink declared alongside unlink
+- `posix_net/socket.zig` — deleteUnixPath uses comptime OS branch (_unlink on windows, unlink on posix)
+- `posix_net/types.zig` — INVALID_FD added
+- `posix_net/posix_net.zig` — INVALID_FD re-exported
+- `src/ampe/portable/Skt.zig` — all -1 → pn.INVALID_FD; >= 0 → != pn.INVALID_FD
+- `tests/posix_net/posix_net_tests.zig` — TempUdsPath, fd != pn.INVALID_FD, tofu import
+- `.github/workflows/windows.yml` — network: [posix, portable] matrix
+- `design/transition-2-bun-usockets-plan.md` — §2, §11, §12, §14, §16, §17 updated
+- `design/AGENT_STATE.md` — v075→076; Stage 4 COMPLETE
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` | ✅ 99/99 PASS |
+| `zig build test -Dnetwork=portable -Doptimize=ReleaseSafe` | ✅ 99/99 PASS |
+| `zig build test -Dnetwork=portable -Doptimize=ReleaseFast` | ✅ 99/99 PASS |
+| `zig build test -Dnetwork=portable -Doptimize=ReleaseSmall` | ✅ 99/99 PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
 
 ---
 

@@ -1,4 +1,4 @@
-name: MacOS
+name: macOS
 
 on:
   push:
@@ -8,41 +8,23 @@ on:
 jobs:
   build:
     name: Build and test
-    runs-on: ${{ matrix.os }}-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos]
+    runs-on: macos-15
 
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
-      
+
       - uses: mlugg/setup-zig@v2
         with:
-          version:   0.15.2
-          use-cache: false
+          version: 0.15.2
 
       - run: zig build test -freference-trace --summary all -Doptimize=Debug
-
-      - run: rm -rf ./.zig-cache/
-
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
-
-      - run: rm -rf ./.zig-cache/
-
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
-
-      - run: rm -rf ./.zig-cache/
-
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
-
-      - run: rm -rf ./.zig-cache/
-
       - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
-
-      - run: rm -rf ./.zig-cache/
-
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=portable
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=portable
 

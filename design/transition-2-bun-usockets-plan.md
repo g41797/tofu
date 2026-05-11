@@ -95,9 +95,11 @@ Four files in `src/ampe/usockets/`, unified across all platforms:
 **Notifier:** `src/ampe/Notifier.zig` is platform-independent. `internal.zig` already imports it unconditionally. No usockets-specific file is needed or exists.
 
 New files (Windows only, Stage 4):
-- `src/ampe/windows/adapters/sys/epoll.h`
-- `src/ampe/windows/adapters/sys/timerfd.h`
-- `src/ampe/windows/adapters/sys/eventfd.h`
+- `posix_net/adapters/sys/epoll.h` — wepoll redirect with HANDLE↔int cast wrappers; `EPOLL_CLOEXEC` guard
+- `posix_net/adapters/sys/timerfd.h` — Windows Waitable Timer adapter
+- `posix_net/adapters/sys/eventfd.h` — Windows Event adapter
+- `posix_net/adapters/win_compat.h` — `EINPROGRESS`, `ENAMETOOLONG`, `EAFNOSUPPORT` defines
+- `posix_net/adapters/us_epoll_win.c` — all `us_*` epoll-path functions for Windows (replaces `epoll_kqueue.c`)
 
 ---
 
@@ -787,76 +789,69 @@ No `usockets/Notifier.zig` exists or is needed. Notifier uses `Skt` + `SocketCre
 
 ## 11. Windows Adapter Headers (Stage 4)
 
-All three are required. bun-usockets loop init calls `us_create_timer` (needs `timerfd`) and `us_internal_create_async` (needs `eventfd`) internally. These calls happen regardless of user code.
+All adapter files live under `posix_net/adapters/`. They are included only when compiling `us_epoll_win.c` and the usockets C files on Windows.
 
-### `sys/epoll.h`
-Redirect epoll symbols to wepoll (already vendored in `src/ampe/windows/wepoll/`):
+### wepoll location
 
-```c
-#pragma once
-#include "wepoll.h"
-// Map standard names to wepoll names if they differ
-#define epoll_create1(f)          epoll_create(1)
-// epoll_ctl, epoll_wait, epoll_event — wepoll uses the same names
+wepoll (`wepoll.c` + `wepoll.h`) is vendored at `src/ampe/windows/wepoll/`. It is shared by both the posix and portable backends on Windows. No separate copy is needed under `posix_net/`.
+
+### `epoll_kqueue.c` on Windows
+
+Upstream uSockets does NOT compile `epoll_kqueue.c` on Windows. Our build follows the same rule:
+- When `!is_windows`: compile `epoll_kqueue.c` from the usockets dependency.
+- When `is_windows`: compile `posix_net/adapters/us_epoll_win.c` instead.
+
+`us_epoll_win.c` contains all `us_*` epoll-path functions extracted from `epoll_kqueue.c` plus our added `us_loop_run_tick`. The kqueue path is omitted — not applicable on Windows.
+
+### `posix_net/adapters/sys/epoll.h`
+
+Redirects `epoll_create1`, `epoll_ctl`, `epoll_wait` to wepoll via HANDLE↔int cast wrappers. wepoll uses `HANDLE` for its epoll descriptor; usockets stores it as `int`. Windows kernel handles fit in the lower 32 bits — the cast is safe.
+
+Also defines `EPOLL_CLOEXEC 0` if not already defined (wepoll does not define it).
+
+### `posix_net/adapters/sys/timerfd.h`
+
+Emulates `timerfd_create` / `timerfd_settime` via Windows Waitable Timers. The timer handle is cast to `int` for storage in `us_poll_t.state.fd`.
+
+### `posix_net/adapters/sys/eventfd.h`
+
+Emulates `eventfd` / `eventfd_write` via a Windows manual-reset event. The event handle is cast to `int`.
+
+### `posix_net/adapters/win_compat.h`
+
+Defines errno constants missing from MinGW headers:
+- `EINPROGRESS 115` — non-blocking connect in progress
+- `ENAMETOOLONG 36`
+- `EAFNOSUPPORT 47`
+
+### `posix_net/adapters/us_epoll_win.c`
+
+Contains all `us_*` epoll-path functions for Windows (replaces `epoll_kqueue.c`). Includes `libusockets.h` and `internal/internal.h`. All epoll calls go through `posix_net/adapters/sys/epoll.h` (which redirects to wepoll). Uses `closesocket()` instead of `close()` for timer and async fds. Uses `eventfd_write()` for async wakeup.
+
+### `build.zig` portable block (both `libMod` and `lib_unit_tests`)
+
+```zig
+if (!is_windows) {
+    mod.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
+} else {
+    mod.addCSourceFile(.{ .file = b.path("posix_net/adapters/us_epoll_win.c"), .flags = flags });
+}
+mod.addIncludePath(usockets_dep.path("src/"));
+mod.addIncludePath(usockets_dep.path("src/internal"));
+mod.addIncludePath(usockets_dep.path("src/internal/networking"));
+mod.link_libc = true;
+
+if (is_windows) {
+    mod.addIncludePath(b.path("posix_net/adapters"));
+    mod.addIncludePath(b.path("src/ampe/windows/wepoll"));
+}
 ```
 
-### `sys/timerfd.h`
-Emulate via Windows Waitable Timers. `timerfd` creates an fd-like handle that can be polled. Since wepoll supports `HANDLE` objects, use a thin wrapper:
-
-```c
-#pragma once
-#include <windows.h>
-#define TFD_NONBLOCK  0
-#define TFD_CLOEXEC   0
-#define CLOCK_MONOTONIC 1
-
-struct itimerspec {
-    struct timespec it_interval;
-    struct timespec it_value;
-};
-
-static inline int timerfd_create(int clockid, int flags) {
-    (void)clockid; (void)flags;
-    HANDLE h = CreateWaitableTimerW(NULL, FALSE, NULL);
-    return h ? (int)(intptr_t)h : -1;
-}
-
-static inline int timerfd_settime(int fd, int flags,
-    const struct itimerspec *new_value, struct itimerspec *old_value) {
-    (void)flags; (void)old_value;
-    HANDLE h = (HANDLE)(intptr_t)fd;
-    LARGE_INTEGER due;
-    due.QuadPart = -(LONGLONG)(new_value->it_value.tv_sec * 10000000LL
-                                + new_value->it_value.tv_nsec / 100);
-    LONG period_ms = (LONG)(new_value->it_interval.tv_sec * 1000
-                             + new_value->it_interval.tv_nsec / 1000000);
-    return SetWaitableTimer(h, &due, period_ms, NULL, NULL, FALSE) ? 0 : -1;
-}
-```
-
-### `sys/eventfd.h`
-Emulate via Windows manual-reset event:
-
-```c
-#pragma once
-#include <windows.h>
-#define EFD_NONBLOCK 0
-#define EFD_CLOEXEC  0
-
-static inline int eventfd(unsigned int initval, int flags) {
-    (void)initval; (void)flags;
-    HANDLE h = CreateEventW(NULL, TRUE, FALSE, NULL);
-    return h ? (int)(intptr_t)h : -1;
-}
-
-static inline int eventfd_write(int fd, uint64_t val) {
-    (void)val;
-    return SetEvent((HANDLE)(intptr_t)fd) ? 0 : -1;
-}
-
-static inline int eventfd_read(int fd, uint64_t *val) {
-    *val = 1;
-    return ResetEvent((HANDLE)(intptr_t)fd) ? 0 : -1;
+The unconditional Windows block (both backends share wepoll):
+```zig
+if (target.result.os.tag == .windows) {
+    lib.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+    lib.addIncludePath(b.path("src/ampe/windows/wepoll"));
 }
 ```
 
@@ -872,10 +867,11 @@ static inline int eventfd_read(int fd, uint64_t *val) {
 | **1** | `Skt.zig` + `SocketCreator.zig` (using `pn.*`) | `sockets_tests.zig` pass on Linux — **DONE** |
 | **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux — **DONE** |
 | **3** | `triggers.zig` + `usockets_backend.zig` | All 99 tests pass, 4-mode sandwich on Linux — **DONE** |
-| **4** | Windows adapter headers + build.zig include path; **discuss** `deleteUnixPath` ABI choice before starting | Cross-compile `x86_64-windows-gnu -Dnetwork=portable` succeeds; compile + run tests for 3 C library variants (exact matrix decided at Stage 4 discussion) |
+| **4** | Windows adapter headers (`posix_net/adapters/`), `us_epoll_win.c`, `build.zig` split for epoll_kqueue.c/us_epoll_win.c, windows.yml CI matrix | Cross-compile `x86_64-windows-gnu -Dnetwork=portable` succeeds — **DONE** |
 | **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=portable` and `aarch64-macos -Dnetwork=portable` succeed — **DONE** |
 | **6** | Native hardware testing + CI network matrix live | Full sandwich passes on Linux; `AGENT_STATE.md` bumped |
 | **7** | Documentation — fix and complete all docs affected by migration | All changed modules have accurate doc comments per §5; no stale references remain |
+| **Polish** | Refactor `build.zig` portable C setup into a helper (eliminate duplication between `libMod` and `lib_unit_tests`). Create `posix_net/adapters/us_epoll_linux.c` and `posix_net/adapters/us_kqueue_mac.c` as per-platform replacements for `epoll_kqueue.c`. Revert `epoll_kqueue.c` to upstream (remove 4→3 arg patch, `us_loop_run_tick`, `#ifndef _WIN32` guard). Eliminates all dual-path patching of `epoll_kqueue.c`. | `zig build test` passes; cross-compiles pass; `epoll_kqueue.c` matches upstream |
 
 **Stage 3 — Linux 4-mode sandwich (DONE — 99/99):**
 ```sh
@@ -883,6 +879,11 @@ zig build test -Doptimize=Debug        -Dnetwork=portable  # 99/99
 zig build test -Doptimize=ReleaseSafe  -Dnetwork=portable  # 99/99
 zig build test -Doptimize=ReleaseFast  -Dnetwork=portable  # 99/99
 zig build test -Doptimize=ReleaseSmall -Dnetwork=portable  # 99/99
+```
+
+**Stage 4 — Windows cross-compile (DONE):**
+```sh
+zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable  # ✅
 ```
 
 **Stage 5 — macOS cross-compile (DONE):**
@@ -1064,14 +1065,43 @@ Same change — replace `matrix.os: [macos]` with the two-dimension form and add
 
 ### `windows.yml` after Stage 4
 
-Windows CI must compile **and run tests** for a matrix of 3 C library / ABI variants:
-- `x86_64-windows-gnu` (MinGW — cross-compiled from Linux runner)
-- `x86_64-windows-msvc` (MSVC CRT — native Windows runner)
-- Third variant TBD at Stage 4 discussion (e.g. `aarch64-windows-msvc`)
+Add `network: [posix, portable]` to the matrix. Job name: `Build and test (${{ matrix.network }})`. All four `zig build test` steps gain `-Dnetwork=${{ matrix.network }}`.
 
-The exact matrix and runner configuration is decided before Stage 4 begins. `deleteUnixPath` ABI choice (`unlink` vs `_unlink` vs `DeleteFileA`) must be resolved at the same discussion — it affects `ffi.zig` and the matrix design.
+`deleteUnixPath` ABI resolution (Stage 4 decision): declare both `unlink` and `_unlink` in `ffi.zig` without OS guard. MinGW provides `unlink`; MSVC CRT provides `_unlink`. Both are declared; the linker resolves whichever is present.
 
-Windows already uses `submodules: recursive` and `shell: bash` on cache-clear steps — keep those. The `zig build test` steps gain `-Dnetwork=${{ matrix.network }}` and a `-Dtarget=${{ matrix.abi }}` dimension.
+```yaml
+jobs:
+  build:
+    name: Build and test (${{ matrix.network }})
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows]
+        network: [posix, portable]
+
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          use-cache: false
+      - run: zig build test -freference-trace --summary all -Doptimize=Debug        -Dnetwork=${{ matrix.network }}
+      - run: rm -rf ./.zig-cache/
+        shell: bash
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe  -Dnetwork=${{ matrix.network }}
+      - run: rm -rf ./.zig-cache/
+        shell: bash
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast  -Dnetwork=${{ matrix.network }}
+      - run: rm -rf ./.zig-cache/
+        shell: bash
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=${{ matrix.network }}
+```
+
+This produces 2 parallel jobs per push: `Build and test (posix)` and `Build and test (portable)`.
 
 ### Cost
 
@@ -1117,9 +1147,11 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 | `src/ampe/usockets/SocketCreator.zig` | Implement using `pn.create*` + `getaddrinfo` extern |
 | `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
 | `src/ampe/usockets/usockets_backend.zig` | Full implementation + export `us_internal_dispatch_ready_poll` |
-| `src/ampe/windows/adapters/sys/epoll.h` | New — wepoll redirect |
-| `src/ampe/windows/adapters/sys/timerfd.h` | New — Windows Waitable Timer shim |
-| `src/ampe/windows/adapters/sys/eventfd.h` | New — Windows Event shim |
+| `posix_net/adapters/sys/epoll.h` | New — wepoll redirect (HANDLE↔int cast wrappers, EPOLL_CLOEXEC guard) |
+| `posix_net/adapters/sys/timerfd.h` | New — Windows Waitable Timer adapter |
+| `posix_net/adapters/sys/eventfd.h` | New — Windows Event adapter |
+| `posix_net/adapters/win_compat.h` | New — EINPROGRESS, ENAMETOOLONG, EAFNOSUPPORT defines |
+| `posix_net/adapters/us_epoll_win.c` | New — all `us_*` epoll-path functions for Windows (replaces `epoll_kqueue.c`) |
 | `.vscode/launch.json` | Add `"c"` to sourceLanguages, add usockets config |
 | `.vscode/tasks.json` | Add usockets build and test tasks |
 
@@ -1135,9 +1167,11 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 
 - **DONE (Stage 2) — Notifier test SIGABRT fixed:** `initPlatform` now creates a thread-local loop (`threadlocal var g_loop`) via `us_loop_create`; `deinitPlatform` frees it. WSAStartup still runs first on Windows. Nesting guard: `@panic` if `initPlatform` called twice on same thread. `getLoop()` accessor added for the backend. `Notifier_tests.zig` updated to use only `initPlatform`/`deinitPlatform` (explicit `createLoop`/`freeLoop` calls removed). 92/92 tests pass; SIGABRT eliminated from Notifier test binary.
 
-- **DISCUSS BEFORE STAGE 4 — `deleteUnixPath` Windows ABI:** `unlink` exists on MinGW; MSVC CRT exports `_unlink`. A bare `extern fn unlink(...)` will fail to link on MSVC. Options: (a) comptime-select `unlink` vs `_unlink` by ABI, (b) use `DeleteFileA` from `kernel32` on all Windows variants. Decide before Stage 4 begins. The choice affects `ffi.zig` and the Windows CI matrix design.
+- **RESOLVED (Stage 4) — `deleteUnixPath` Windows ABI:** Both `unlink` and `_unlink` declared in `ffi.zig` without OS guard. `deleteUnixPath` in `posix_net/socket.zig` uses a comptime branch to call `_unlink` on Windows and `unlink` on POSIX. MinGW provides `unlink`; MSVC CRT provides `_unlink`; both declarations coexist without conflict.
 
-- **DISCUSS BEFORE STAGE 4 — Windows CI matrix:** Exact 3 C library / ABI variants for `windows.yml`. Candidates: `x86_64-windows-gnu`, `x86_64-windows-msvc`, `aarch64-windows-msvc`. Confirm runner availability and cost before committing.
+- **RESOLVED (Stage 4) — Windows CI matrix:** Single dimension: `network: [posix, portable]` on a single Windows runner. No ABI variants — `x86_64-windows-gnu` only for CI. See §14 for the final `windows.yml` form.
+
+- **Polish — `build.zig` refactor:** The portable C source setup block is duplicated between `libMod` and `lib_unit_tests`. Extract into a helper function after Stage 6.
 
 - **FIX APPLIED (2026-05-11):** Root cause of echo hang identified and fixed. `posix_net_backend.zig` was pre-wiring `*TriggeredChannel` pointers into `pollExt` before each tick — architecturally different from `epoll_backend.zig` and fragile under map changes. Fix: store `SeqN` in `pollExt` at register time (one write, never changes); dispatch reads `SeqN` from `pollExt` and calls `ws.map.get(seq)` — identical shape to epoll's `ev.data.u64` approach. Pre-wiring loop in `wait()` eliminated. `PollMap` simplified to `fd → *anyopaque`. Full test suite running to confirm fix.
 
