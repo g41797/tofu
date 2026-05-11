@@ -7,8 +7,8 @@
 /// var tup: tofu.TempUdsPath = .{};
 /// const filePath = try tup.buildPath(allocator);
 /// var adrs: Address = .{ .uds_server_addr = UDSServerAddress.init(filePath) };
-/// Unix socket path size (platform-specific: Linux=108, macOS/BSD=104)
-const UDS_PATH_SIZE: usize = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 104 else 108;
+const pn = @import("posix_net");
+const UDS_PATH_SIZE = pn.UDS_PATH_SIZE;
 
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
@@ -73,8 +73,8 @@ const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
 const build_options = @import("build_options");
-const skt_backend = if (build_options.network == .usockets)
-    @import("usockets/Skt.zig")
+const skt_backend = if (build_options.network == .portable)
+    @import("portable/Skt.zig")
 else switch (builtin.os.tag) {
     .windows => @import("windows/Skt.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),

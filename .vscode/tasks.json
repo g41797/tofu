@@ -58,7 +58,7 @@
             "label": "zig build install usockets",
             "type": "shell",
             "command": "zig",
-            "args": ["build", "install", "-Dnetwork=usockets", "--summary", "all"],
+            "args": ["build", "install", "-Dnetwork=portable", "--summary", "all"],
             "options": { "cwd": "${workspaceFolder}" },
             "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
             "problemMatcher": {
@@ -100,7 +100,7 @@
             "label": "zig build test usockets",
             "type": "shell",
             "command": "zig",
-            "args": ["build", "test", "-Dnetwork=usockets", "--summary", "all"],
+            "args": ["build", "test", "-Dnetwork=portable", "--summary", "all"],
             "options": { "cwd": "${workspaceFolder}" },
             "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
             "problemMatcher": {

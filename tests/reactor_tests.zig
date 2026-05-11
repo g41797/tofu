@@ -48,6 +48,8 @@ fn test_handle_reconnect_multithreaded() !void {
 fn test_connect_disconnect() !void {
     std.testing.log_level = .debug;
 
+    log.info("before handleStartOfTcpServerAkaListener ", .{ });
+
     const listenTcpStatus = recipes.handleStartOfTcpServerAkaListener(gpa) catch |err| {
         log.info("handleStartOfTcpServerAkaListener {any}", .{
             err,
@@ -56,8 +58,10 @@ fn test_connect_disconnect() !void {
     };
     try testing.expect(listenTcpStatus == .success);
 
+    log.info("before handleStartOfTcpListeners ", .{ });
+
     const listen2TcpStatus = recipes.handleStartOfTcpListeners(gpa) catch |err| {
-        log.info("handleStartOfTcpServerAkaListener {any}", .{
+        log.info("handleStartOfTcpListeners {any}", .{
             err,
         });
         return err;
@@ -65,6 +69,8 @@ fn test_connect_disconnect() !void {
     try testing.expect(listen2TcpStatus == .success);
 
     if (builtin.os.tag != .windows) {
+        log.info("before handleStartOfUdsServerAkaListener ", .{ });
+
         const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
             log.info("handleStartOfUdsServerAkaListener {any}", .{
                 err,
@@ -73,14 +79,18 @@ fn test_connect_disconnect() !void {
         };
         try testing.expect(listenUdsStatus == .success);
 
+        log.info("before handleStartOfUdsListeners ", .{ });
+
         const listen2UdsStatus = recipes.handleStartOfUdsListeners(gpa) catch |err| {
-            log.info("handleStartOfUdsServerAkaListener {any}", .{
+            log.info("handleStartOfUdsListeners {any}", .{
                 err,
             });
             return err;
         };
         try testing.expect(listen2UdsStatus == .success);
     }
+
+    log.info("before handleConnnectOfTcpClientServer ", .{ });
 
     const connectTcpStatus = recipes.handleConnnectOfTcpClientServer(gpa) catch |err| {
         log.info("handleConnnectOfTcpClientServer {any}", .{
@@ -91,6 +101,8 @@ fn test_connect_disconnect() !void {
     try testing.expect(connectTcpStatus == .success);
 
     if (builtin.os.tag != .windows) {
+        log.info("before handleConnnectOfUdsClientServer ", .{ });
+
         const connectUdsStatus = recipes.handleConnnectOfUdsClientServer(gpa) catch |err| {
             log.info("handleConnnectOfUdsClientServer {any}", .{
                 err,

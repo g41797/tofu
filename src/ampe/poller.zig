@@ -7,8 +7,8 @@ const build_options = @import("build_options");
 
 /// Platform-specific Poller implementation.
 /// Selected at compile time based on network backend and OS.
-pub const Poller = if (build_options.network == .usockets)
-    @import("usockets/usockets_backend.zig").Poller
+pub const Poller = if (build_options.network == .portable)
+    @import("portable/posix_net_backend.zig").Poller
 else switch (builtin.os.tag) {
     .windows => @import("windows/wepoll_backend.zig").Poller,
     .linux => @import("linux/epoll_backend.zig").Poller,
@@ -28,8 +28,8 @@ pub const poll_SEC_TIMEOUT = common.poll_SEC_TIMEOUT;
 pub const TcIterator = common.TcIterator;
 
 pub const core = @import("core.zig");
-pub const triggers = if (build_options.network == .usockets)
-    @import("usockets/triggers.zig")
+pub const triggers = if (build_options.network == .portable)
+    @import("portable/triggers.zig")
 else switch (builtin.os.tag) {
     .windows => @import("windows/triggers.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/triggers.zig"),

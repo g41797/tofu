@@ -133,6 +133,15 @@ pub const poll = @import("poll.zig");
 
 `ffi.zig` is never imported directly by consumers. Only `types.zig`, `socket.zig`, `creator.zig`, and `poll.zig` import it.
 
+### Comment requirement
+
+Every file in `src/ampe/posix_net/` must follow `design/RULES.md §5`:
+- Short sentences. No marketing language. No AI filler.
+- Each file starts with a one-line comment stating its role. Example: `// All bsd_* and us_* C externs. Never import this file directly.`
+- Public functions have a one-line comment only when the purpose is not obvious from the name.
+- Bullet lists for multi-step flows in comments.
+- Plain English. Tech terms (`bsd_addr_t`, `LIBUS_SOCKET_READABLE`) are fine as-is.
+
 ### Naming convention
 
 Zig wrapper functions use plain camelCase — no prefix. The `pn` module alias serves as the namespace prefix at call sites.
@@ -770,9 +779,9 @@ fn resolveConnect(host: [:0]const u8, port: u16) AmpeError!FdType {
 pub const Notifier = @import("Notifier.zig");  // line 9 of internal.zig — already done
 ```
 
-No `usockets/Notifier.zig` exists or is needed. Notifier uses `Skt` + `SocketCreator` internally — once those are implemented, Notifier works unchanged under `-Dnetwork=usockets`.
+No `usockets/Notifier.zig` exists or is needed. Notifier uses `Skt` + `SocketCreator` internally — once those are implemented, Notifier works unchanged under `-Dnetwork=portable`.
 
-**No `bsd_socketpair` needed.** `Notifier.zig` uses the "Manual Pair" approach — it calls `SocketCreator.createUdsListener` + `createUdsSocket`, not `std.posix.socketpair`. Once `usockets/SocketCreator.zig` is implemented with `bsd_*`, Notifier works under `-Dnetwork=usockets` without modification.
+**No `bsd_socketpair` needed.** `Notifier.zig` uses the "Manual Pair" approach — it calls `SocketCreator.createUdsListener` + `createUdsSocket`, not `std.posix.socketpair`. Once `usockets/SocketCreator.zig` is implemented with `bsd_*`, Notifier works under `-Dnetwork=portable` without modification.
 
 ---
 
@@ -859,20 +868,21 @@ static inline int eventfd_read(int fd, uint64_t *val) {
 | :---- | :--- | :------------------- |
 | **-1** | Scan `linux/*.zig` for all `std.posix` / `std.net` usage; verify each has a `bsd_*` replacer (see §12.5) | All usages accounted for; no blockers remain — **DONE** |
 | **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger — **DONE** |
-| **0.5** | `build.zig` (posix_net module + C sources) + `src/ampe/posix_net/` (6 files) + `tests/posix_net/posix_net_tests.zig` (27 tests) | `zig build test -Dnetwork=usockets` runs all 27 `posix_net_tests`; pass on Linux |
+| **0.5** | `build.zig` (posix_net module + C sources) + `src/ampe/posix_net/` (6 files) + `tests/posix_net/posix_net_tests.zig` (27 tests) | `zig build test -Dnetwork=portable` runs all 27 `posix_net_tests`; pass on Linux |
 | **1** | `Skt.zig` + `SocketCreator.zig` (using `pn.*`) | `sockets_tests.zig` pass on Linux |
 | **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux |
 | **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass, 4-mode sandwich on Linux |
-| **4** | Windows adapter headers + build.zig include path | Cross-compile `x86_64-windows-gnu -Dnetwork=usockets` succeeds |
-| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=usockets` succeeds |
-| **6** | Native hardware testing + docs | Full sandwich passes; `AGENT_STATE.md` bumped |
+| **4** | Windows adapter headers + build.zig include path; **discuss** `deleteUnixPath` ABI choice before starting | Cross-compile `x86_64-windows-gnu -Dnetwork=portable` succeeds; compile + run tests for 3 C library variants (exact matrix decided at Stage 4 discussion) |
+| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=portable` succeeds |
+| **6** | Native hardware testing + CI network matrix live | Full sandwich passes on Linux; `AGENT_STATE.md` bumped |
+| **7** | Documentation — fix and complete all docs affected by migration | All changed modules have accurate doc comments per §5; no stale references remain |
 
 **Stage 3 — Linux 4-mode sandwich:**
 ```sh
-zig build test -Doptimize=Debug        -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=Debug        -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseSafe  -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseFast  -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseSmall -Dnetwork=portable  # 64/64
 ```
 
 ---
@@ -911,7 +921,7 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
 | `std.os.linux.EPOLL.IN/OUT/ERR/HUP/RDHUP/PRI` | triggers.zig | `bsd.LIBUS_SOCKET_READABLE` (1), `bsd.LIBUS_SOCKET_WRITABLE` (2) | bun-usockets masks epoll internally |
 | `posix.errno(-1)` in `mapErrno` | Skt.zig | `pn.wouldBlock()` | Cross-platform EAGAIN check |
 
-**One open question for Stage 1:** `findFreeTcpPort()` in `linux/Skt.zig` uses raw `posix.socket` + `posix.bind` + `posix.getsockname`. Verify whether any test running under `-Dnetwork=usockets` calls this function. If yes: rewrite using `bsd_create_listen_socket("0.0.0.0", 0, 0, &err)` + `bsd_local_addr` + `bsd_addr_get_port`. If only called from posix-backend tests: no action needed.
+**One open question for Stage 1:** `findFreeTcpPort()` in `linux/Skt.zig` uses raw `posix.socket` + `posix.bind` + `posix.getsockname`. Verify whether any test running under `-Dnetwork=portable` calls this function. If yes: rewrite using `bsd_create_listen_socket("0.0.0.0", 0, 0, &err)` + `bsd_local_addr` + `bsd_addr_get_port`. If only called from posix-backend tests: no action needed.
 
 ---
 
@@ -954,7 +964,7 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
     "label": "zig build install usockets",
     "type": "shell",
     "command": "zig",
-    "args": ["build", "install", "-Dnetwork=usockets", "--summary", "all"],
+    "args": ["build", "install", "-Dnetwork=portable", "--summary", "all"],
     "options": { "cwd": "${workspaceFolder}" },
     "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
     "problemMatcher": {
@@ -971,7 +981,7 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
     "label": "zig build test usockets",
     "type": "shell",
     "command": "zig",
-    "args": ["build", "test", "-Dnetwork=usockets", "--summary", "all"],
+    "args": ["build", "test", "-Dnetwork=portable", "--summary", "all"],
     "options": { "cwd": "${workspaceFolder}" },
     "presentation": { "echo": true, "reveal": "always", "focus": false, "panel": "shared", "clear": true },
     "problemMatcher": {
@@ -992,7 +1002,7 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
 
 ## 14. CI Network Matrix
 
-Run both `-Dnetwork=posix` and `-Dnetwork=usockets` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `usockets` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
+Run both `-Dnetwork=posix` and `-Dnetwork=portable` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `usockets` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
 
 ### When to add (per platform)
 
@@ -1048,7 +1058,14 @@ Same change — replace `matrix.os: [macos]` with the two-dimension form and add
 
 ### `windows.yml` after Stage 4
 
-Same pattern with `matrix.os: [windows]`. Windows already uses `submodules: recursive` and `shell: bash` on cache-clear steps — keep those. The `zig build test` steps gain `-Dnetwork=${{ matrix.network }}`.
+Windows CI must compile **and run tests** for a matrix of 3 C library / ABI variants:
+- `x86_64-windows-gnu` (MinGW — cross-compiled from Linux runner)
+- `x86_64-windows-msvc` (MSVC CRT — native Windows runner)
+- Third variant TBD at Stage 4 discussion (e.g. `aarch64-windows-msvc`)
+
+The exact matrix and runner configuration is decided before Stage 4 begins. `deleteUnixPath` ABI choice (`unlink` vs `_unlink` vs `DeleteFileA`) must be resolved at the same discussion — it affects `ffi.zig` and the matrix design.
+
+Windows already uses `submodules: recursive` and `shell: bash` on cache-clear steps — keep those. The `zig build test` steps gain `-Dnetwork=${{ matrix.network }}` and a `-Dtarget=${{ matrix.abi }}` dimension.
 
 ### Cost
 
@@ -1062,15 +1079,15 @@ Run the full 4-mode sandwich on native Linux hardware. Cross-compile to verify W
 
 ```sh
 # Native Linux — all four optimize modes
-zig build test -Doptimize=Debug        -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSafe  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseFast  -Dnetwork=usockets  # 64/64
-zig build test -Doptimize=ReleaseSmall -Dnetwork=usockets  # 64/64
+zig build test -Doptimize=Debug        -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseSafe  -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseFast  -Dnetwork=portable  # 64/64
+zig build test -Doptimize=ReleaseSmall -Dnetwork=portable  # 64/64
 
 # Cross-compile (no native macOS or Windows machine needed for compile check)
-zig build -Dtarget=x86_64-windows-gnu -Dnetwork=usockets
-zig build -Dtarget=x86_64-macos      -Dnetwork=usockets
-zig build -Dtarget=aarch64-macos     -Dnetwork=usockets
+zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable
+zig build -Dtarget=x86_64-macos      -Dnetwork=portable
+zig build -Dtarget=aarch64-macos     -Dnetwork=portable
 ```
 
 Native macOS and Windows hardware testing follows the same sandwich pattern once the cross-compile passes.
@@ -1089,7 +1106,7 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 | `src/ampe/posix_net/socket.zig` | New — `sendBuf`, `recvToBuf`, `acceptSocket`, `closeSocket`, `wouldBlock`, `addrFamily`, `addrPort`, `addrUnixPath`, `deleteUnixPath` |
 | `src/ampe/posix_net/creator.zig` | New — `createListenSocket`, `createConnectSocket`, UDS variants |
 | `src/ampe/posix_net/poll.zig` | New — `createLoop`, `createPoll`, `startPoll`, `tick`, etc. |
-| `tests/posix_net/posix_net_tests.zig` | New — 27 tests (7 groups); gated on `-Dnetwork=usockets` |
+| `tests/posix_net/posix_net_tests.zig` | New — 27 tests (7 groups); gated on `-Dnetwork=portable` |
 | `src/ampe/usockets/Skt.zig` | Implement using `pn.*` (via `@import("posix_net")`); `fd: pn.Fd` + `uds_server_path` |
 | `src/ampe/usockets/SocketCreator.zig` | Implement using `pn.create*` + `getaddrinfo` extern |
 | `src/ampe/usockets/triggers.zig` | Add `toEvents` / `fromEvents` |
@@ -1109,6 +1126,14 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 - **Abstract UDS namespace prefix on Linux:** `Notifier.zig` already handles this pattern. Copy the same `\x00` prefix logic to `SocketCreator.createUdsServer` for consistency.
 
 - **Vendored bun-usockets commit pin:** Record the exact git commit hash of `vendor/bun-usockets` in `AGENT_STATE.md` when Stage 1 begins. This allows future vendor updates to be evaluated against the specific known-good revision that all implementation choices are based on.
+
+- **DONE (Stage 2) — Notifier test SIGABRT fixed:** `initPlatform` now creates a thread-local loop (`threadlocal var g_loop`) via `us_loop_create`; `deinitPlatform` frees it. WSAStartup still runs first on Windows. Nesting guard: `@panic` if `initPlatform` called twice on same thread. `getLoop()` accessor added for the backend. `Notifier_tests.zig` updated to use only `initPlatform`/`deinitPlatform` (explicit `createLoop`/`freeLoop` calls removed). 92/92 tests pass; SIGABRT eliminated from Notifier test binary.
+
+- **DISCUSS BEFORE STAGE 4 — `deleteUnixPath` Windows ABI:** `unlink` exists on MinGW; MSVC CRT exports `_unlink`. A bare `extern fn unlink(...)` will fail to link on MSVC. Options: (a) comptime-select `unlink` vs `_unlink` by ABI, (b) use `DeleteFileA` from `kernel32` on all Windows variants. Decide before Stage 4 begins. The choice affects `ffi.zig` and the Windows CI matrix design.
+
+- **DISCUSS BEFORE STAGE 4 — Windows CI matrix:** Exact 3 C library / ABI variants for `windows.yml`. Candidates: `x86_64-windows-gnu`, `x86_64-windows-msvc`, `aarch64-windows-msvc`. Confirm runner availability and cost before committing.
+
+- **FIX APPLIED (2026-05-11):** Root cause of echo hang identified and fixed. `posix_net_backend.zig` was pre-wiring `*TriggeredChannel` pointers into `pollExt` before each tick — architecturally different from `epoll_backend.zig` and fragile under map changes. Fix: store `SeqN` in `pollExt` at register time (one write, never changes); dispatch reads `SeqN` from `pollExt` and calls `ws.map.get(seq)` — identical shape to epoll's `ev.data.u64` approach. Pre-wiring loop in `wait()` eliminated. `PollMap` simplified to `fd → *anyopaque`. Full test suite running to confirm fix.
 
 ---
 

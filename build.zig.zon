@@ -26,6 +26,10 @@
             .url = "git+https://github.com/frmdstryr/zig-datetime?ref=master#3a39a21e6e34dcb0ade0ff828d0914d40ba535f3",
             .hash = "datetime-0.8.0-cJNXzP_YAQBxQ5hkNNP6ScnG5XsqciJmeP5RVV4xwCBA",
         },
+        .usockets = .{
+            .url = "git+https://github.com/g41797/uSockets.git#edce228e42f6d3d6668cdbce0596286a1da40def",
+            .hash = "N-V-__8AAI8iBgBz2NZLHnqt7PlggLFY8u4CBZGHmMkYIZZu",
+        },
     },
     .paths = .{
         "build.zig",

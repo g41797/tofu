@@ -399,7 +399,7 @@ They remain complete and unchanged. They are compiled only under `-Dnetwork=posi
 
 ### 16.2 The usockets backend is a single folder for all platforms
 
-`src/ampe/usockets/` is selected for all OS targets under `-Dnetwork=usockets`.
+`src/ampe/usockets/` is selected for all OS targets under `-Dnetwork=portable`.
 Because `bsd.c` absorbs OS differences internally, the Zig files in `usockets/` are
 **mostly unified** — one implementation for Linux, Windows, and macOS.
 
@@ -457,7 +457,7 @@ on all platforms:
 
 ```
 src/ampe/
-├── internal.zig          # Facade: selects usockets/ under -Dnetwork=usockets
+├── internal.zig          # Facade: selects usockets/ under -Dnetwork=portable
 ├── poller.zig            # Facade: selects usockets/usockets_backend.zig
 ├── Notifier.zig          # Shared, platform-independent (already complete)
 ├── linux/                # Posix backend — unchanged, -Dnetwork=posix only

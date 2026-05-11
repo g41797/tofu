@@ -11,8 +11,8 @@ pub const poller = @import("poller.zig");
 pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
 
-const skt_backend = if (build_options.network == .usockets)
-    @import("usockets/Skt.zig")
+const skt_backend = if (build_options.network == .portable)
+    @import("portable/Skt.zig")
 else switch (builtin.os.tag) {
     .windows => @import("windows/Skt.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
@@ -21,17 +21,17 @@ else switch (builtin.os.tag) {
 
 pub const Skt = skt_backend.Skt;
 
-// For usockets: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
+// For portable: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
 // Inlined to avoid circular import with common.zig (which imports internal.zig for Socket).
-pub const Socket = if (build_options.network == .usockets)
+pub const Socket = if (build_options.network == .portable)
     if (builtin.os.tag == .windows) usize else std.posix.fd_t
 else switch (builtin.os.tag) {
     .windows => @import("std").os.windows.ws2_32.SOCKET,
     else => @import("std").posix.socket_t,
 };
 
-const sc_backend = if (build_options.network == .usockets)
-    @import("usockets/SocketCreator.zig")
+const sc_backend = if (build_options.network == .portable)
+    @import("portable/SocketCreator.zig")
 else switch (builtin.os.tag) {
     .windows => @import("windows/SocketCreator.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/SocketCreator.zig"),
@@ -39,6 +39,9 @@ else switch (builtin.os.tag) {
 };
 pub const SocketCreator = sc_backend.SocketCreator;
 pub const triggeredSkts = @import("triggeredSkts.zig");
+
+// // Thread-local loop slot: used only by portable backend; other backends leave it null.
+// threadlocal var g_loop: ?*anyopaque = null;
 
 pub fn initPlatform() AmpeError!void {
     if (builtin.os.tag == .windows) {

@@ -48,7 +48,7 @@ shutdownFlag: Atomic(bool) = .init(false),
 //
 // Accessible from the thread - don't lock/unlock
 //
-ptcs: PollerType = undefined,
+ptcs: ?PollerType = null,
 chnlsGroup_map: ChannelsGroupMap = undefined,
 
 // Summary of triggers after poller
@@ -65,13 +65,10 @@ currTcopt: ?*TriggeredChannel = undefined,
 unpnt: Notifier.UnpackedNotification,
 
 pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
-    try internal.initPlatform();
-
     const rtr: *Reactor = gpa.create(Reactor) catch {
         return AmpeError.AllocationFailed;
     };
     errdefer {
-        internal.deinitPlatform();
         gpa.destroy(rtr);
     }
 
@@ -98,17 +95,10 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
     };
     errdefer rtr.acns.deinit();
 
-    rtr.ntfr = Notifier.init(rtr.allocator) catch {
-        return AmpeError.NotificationDisabled;
-    };
-    errdefer rtr.ntfr.deinit();
-
     rtr.pool = Pool.init(rtr.allocator, rtr.options.initialPoolMsgs, rtr.options.maxPoolMsgs, rtr.alerter()) catch {
         return AmpeError.AllocationFailed;
     };
     errdefer rtr.pool.close();
-
-    _ = try rtr.*.initPollEnv();
 
     var chnlsGroup_map = ChannelsGroupMap.init(rtr.allocator);
     errdefer chnlsGroup_map.deinit();
@@ -118,10 +108,15 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
 
     rtr.chnlsGroup_map = chnlsGroup_map;
 
-    try rtr.createNotificationChannel();
+    try internal.initPlatform();
+    errdefer internal.deinitPlatform();
 
-    rtr.createThread() catch |err| {
-        log.err("create engine thread error {s}", .{@errorName(err)});
+    // _ = try rtr.*.initPollEnv();
+
+    // try rtr.createNotificationChannel();
+
+    rtr.runEngineOnThread() catch |err| {
+        log.err("create engine on thread error {s}", .{@errorName(err)});
         return AmpeError.AllocationFailed;
     };
 
@@ -350,6 +345,11 @@ fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
 }
 
 fn createNotificationChannel(rtr: *Reactor) !void {
+    rtr.ntfr = Notifier.init(rtr.allocator) catch {
+        return AmpeError.NotificationDisabled;
+    };
+    errdefer rtr.ntfr.deinit();
+
     var ntcn = rtr.createDumbChannel();
     ntcn.acn.chn = message.SpecialMaxChannelNumber;
     ntcn.resp2ac = true;
@@ -360,7 +360,6 @@ fn createNotificationChannel(rtr: *Reactor) !void {
     try rtr.addChannel(&ntcn);
 
     rtr.ntfcsEnabled = true;
-
     return;
 }
 
@@ -372,7 +371,7 @@ inline fn next_gid() u32 {
 // Atomic counter for generating unique group id
 var gid: Atomic(u32) = .init(1);
 
-fn createThread(rtr: *Reactor) !void {
+fn runEngineOnThread(rtr: *Reactor) !void {
     rtr.crtMtx.lock();
     defer rtr.crtMtx.unlock();
 
@@ -383,6 +382,10 @@ fn createThread(rtr: *Reactor) !void {
     rtr.thread = try std.Thread.spawn(.{}, runOnThread, .{rtr});
 
     _ = try rtr.*.recv_ack();
+
+    if(rtr.*.ptcs == null) {
+        return AmpeError.UnknownError;
+    }
 
     return;
 }
@@ -445,18 +448,19 @@ inline fn recv_ack(rtr: *Reactor) !void {
 }
 
 fn loop(rtr: *Reactor) void {
-    // Declared first → runs last (Zig defers are LIFO).
-    // Posts cmpl only after all cleanup below has completed, so
-    // waitFinish()'s t.join() returns immediately after timedWait succeeds.
-    // cmpl was already consumed by recv_ack() at startup, so this second
-    // post is unambiguously the shutdown-complete signal.
-    defer rtr.cmpl.post();
+    defer rtr.cmpl.post(); //  the shutdown-complete signal
     defer rtr.*.cleanMboxes();
     defer rtr.*.deleteAll();
     defer rtr.*.chnlsGroup_map.deinit();
 
     var sendAckDone: bool = false;
     var timeOut: i32 = 0;
+
+    _ = rtr.*.initPollEnv() catch {
+        log.err("reactor initPollEnv failed!!!", .{});
+        rtr.ack();
+        return;
+    };
 
     while (true) {
         // Fallback exit: called when the notifier is broken (mostly on Windows ???) and the
@@ -1041,43 +1045,47 @@ fn cleanMboxes(rtr: *Reactor) void {
     }
 }
 
-pub inline fn initPollEnv(rtr: *Reactor) AmpeError!void {
+pub fn initPollEnv(rtr: *Reactor) AmpeError!void {
     rtr.*.ptcs = try PollerType.init(rtr.*.allocator);
+    errdefer {rtr.*.ptcs.?.deleteAll();
+        rtr.*.ptcs = null;}
+    try rtr.createNotificationChannel();
     return;
 }
 
 pub inline fn attachChannel(rtr: *Reactor, tchn: *TriggeredChannel) AmpeError!bool {
-    return rtr.ptcs.attachChannel(tchn);
+    return rtr.ptcs.?.attachChannel(tchn);
 }
 
 pub inline fn contains(rtr: *Reactor, chn: channels.ChannelNumber) bool {
-    return rtr.ptcs.contains(chn);
+    return rtr.ptcs.?.contains(chn);
 }
 
 pub inline fn trgChannel(rtr: *Reactor, chn: channels.ChannelNumber) ?*TriggeredChannel {
-    return rtr.ptcs.trgChannel(chn);
+    return rtr.ptcs.?.trgChannel(chn);
 }
 
 pub inline fn iterator(rtr: *Reactor) poller.TcIterator {
-    return rtr.ptcs.iterator();
+    return rtr.ptcs.?.iterator();
 }
 
 pub inline fn deleteAll(rtr: *Reactor) void {
-    // rtr.*.plr.deinit();
-    rtr.ptcs.deleteAll();
+    if(rtr.ptcs != null)  {
+        rtr.ptcs.?.deleteAll();
+    }
     return;
 }
 
 pub inline fn deleteGroup(rtr: *Reactor, chnls: std.ArrayList(message.ChannelNumber)) AmpeError!bool {
-    return rtr.ptcs.deleteGroup(chnls);
+    return rtr.ptcs.?.deleteGroup(chnls);
 }
 
 pub inline fn deleteMarked(rtr: *Reactor) !bool {
-    return rtr.ptcs.deleteMarked();
+    return rtr.ptcs.?.deleteMarked();
 }
 
 pub inline fn waitTriggers(rtr: *Reactor, timeout: i32) AmpeError!Triggers {
-    return rtr.*.ptcs.waitTriggers(timeout);
+    return rtr.*.ptcs.?.waitTriggers(timeout);
 }
 
 pub const TriggeredChannel = struct {

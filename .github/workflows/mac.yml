@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: false
+          submodules: recursive
       
       - uses: mlugg/setup-zig@v2
         with:
@@ -37,4 +37,12 @@ jobs:
       - run: rm -rf ./.zig-cache/
 
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
+
+      - run: rm -rf ./.zig-cache/
+
+      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
+
+      - run: rm -rf ./.zig-cache/
+
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
 

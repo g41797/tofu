@@ -100,7 +100,7 @@ fn initPair(listener: *Skt, sender: *Skt) !Notifier {
         if (connected and receiver != null) break;
         std.Thread.sleep(SLEEP_NS);
     } else return AmpeError.CommunicationFailed;
-    log.info(" notifier sender {any} receiver {any}", .{ sender.socket.?, receiver.?.socket.? });
+    log.info(" notifier sender {d} receiver {d}", .{ sender.rawFd(), receiver.?.rawFd() });
     return .{ .sender = sender.*, .receiver = receiver.? };
 }
 

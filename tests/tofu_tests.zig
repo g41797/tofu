@@ -22,6 +22,12 @@ test {
         _ = @import("ampe/sockets_tests.zig");
     }
 
+    // posix_net module contract tests (usockets backend only):
+    if (test_gate_options.portable) {
+        _ = @import("posix_net/posix_net_tests.zig");
+        _ = @import("ampe/portable_poller_tests.zig");
+    }
+
     // Poller backend contract tests (backend-independent, all platforms):
     _ = @import("ampe/poller_tests.zig");
 
@@ -41,6 +47,7 @@ test {
 
 const tofu = @import("tofu");
 const recipes = @import("recipes");
+const test_gate_options = @import("test_gate_options");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

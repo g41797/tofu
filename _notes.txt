@@ -439,4 +439,4 @@ bun
 
 uSockets
     https://github.com/uNetworking/uSockets
-
+    zig fetch --save=usockets git+https://github.com/g41797/uSockets.git

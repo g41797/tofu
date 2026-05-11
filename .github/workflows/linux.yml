@@ -4,17 +4,18 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    name: Build and test
+    name: Build and test (${{ matrix.network }})
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu]
+        network: [posix, portable]
 
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: false
+          submodules: recursive
 
       - uses: mlugg/setup-zig@v2
         with:
@@ -23,16 +24,16 @@ jobs:
 
       - run: rm -rf ./.zig-cache/
 
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug
+      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=${{ matrix.network }}
 
       - run: rm -rf ./.zig-cache/
 
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=${{ matrix.network }}
 
       - run: rm -rf ./.zig-cache/
 
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=${{ matrix.network }}
 
       - run: rm -rf ./.zig-cache/
 
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=${{ matrix.network }}

@@ -11,6 +11,10 @@ pub fn isSet(skt: *const Skt) bool {
     return skt.socket != null;
 }
 
+pub fn rawFd(skt: *const Skt) i32 {
+    return skt.socket orelse -1;
+}
+
 pub fn getPort(skt: *const Skt) ?u16 {
     return switch (skt.address.any.family) {
         std.posix.AF.INET, std.posix.AF.INET6 => skt.address.getPort(),

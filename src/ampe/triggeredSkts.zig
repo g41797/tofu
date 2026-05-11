@@ -239,7 +239,8 @@ pub const NotificationSkt = struct {
     }
 
     pub inline fn getSocket(self: *NotificationSkt) ?Socket {
-        return self.skt.socket;
+        if (!self.skt.isSet()) return null;
+        return @intCast(self.skt.rawFd());
     }
 
     pub fn tryRecvNotification(nskt: *NotificationSkt) !Notification {
@@ -272,7 +273,8 @@ pub const AcceptSkt = struct {
     }
 
     pub inline fn getSocket(self: *AcceptSkt) ?Socket {
-        return self.skt.socket;
+        if (!self.skt.isSet()) return null;
+        return @intCast(self.skt.rawFd());
     }
 
     pub fn tryAccept(askt: *AcceptSkt) AmpeError!?Skt {
@@ -386,7 +388,8 @@ pub const IoSkt = struct {
     }
 
     pub inline fn getSocket(self: *IoSkt) ?Socket {
-        return self.skt.socket;
+        if (!self.skt.isSet()) return null;
+        return @intCast(self.skt.rawFd());
     }
 
     pub fn refreshPointers(ioskt: *IoSkt) void {

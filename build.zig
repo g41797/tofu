@@ -30,11 +30,11 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const optimize = b.standardOptimizeOption(.{});
 
-    const NetworkBackend = enum { posix, usockets };
+    const NetworkBackend = enum { posix, portable };
     const network = b.option(
         NetworkBackend,
         "network",
-        "Network backend: posix (default) or usockets",
+        "Network backend: posix (default) or portable",
     ) orelse .posix;
     const build_options = b.addOptions();
     build_options.addOption(NetworkBackend, "network", network);
@@ -56,6 +56,13 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // Add the posix_net module
+    const posixNetMod = b.addModule("posix_net", .{
+        .root_source_file = b.path("posix_net/posix_net.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     // Add the tofu module
     const tofuMod = b.addModule("tofu", .{
         .root_source_file = b.path("src/tofu.zig"),
@@ -65,6 +72,7 @@ pub fn build(b: *std.Build) void {
     });
 
     tofuMod.addImport("Appendable", nats.module("Appendable"));
+    tofuMod.addImport("posix_net", posixNetMod);
     tofuMod.addImport("Formatter", nats.module("Formatter"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
@@ -80,6 +88,7 @@ pub fn build(b: *std.Build) void {
     });
 
     libMod.addImport("tofu", tofuMod);
+    libMod.addImport("posix_net", posixNetMod);
     libMod.addImport("Appendable", nats.module("Appendable"));
     libMod.addImport("Formatter", nats.module("Formatter"));
     libMod.addImport("mailbox", mailbox.module("mailbox"));
@@ -94,7 +103,7 @@ pub fn build(b: *std.Build) void {
         libMod.linkSystemLibrary("ntdll", .{});
     }
 
-    if (network == .usockets) {
+    if (network == .portable) {
         const is_kqueue = target.result.os.tag == .macos or
             target.result.os.tag == .freebsd or
             target.result.os.tag == .netbsd or
@@ -104,17 +113,17 @@ pub fn build(b: *std.Build) void {
         const backend_flag = if (is_kqueue) "-DLIBUS_USE_KQUEUE" else "-DLIBUS_USE_EPOLL";
         const flags = &.{ "-fno-sanitize=undefined", "-DLIBUS_NO_SSL", backend_flag };
 
-        const root = "vendor/bun-usockets/src/";
+        const usockets_dep = b.dependency("usockets", .{});
         inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
-            libMod.addCSourceFile(.{ .file = b.path(root ++ f), .flags = flags });
+            libMod.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
         }
         libMod.addCSourceFile(.{
-            .file = b.path(root ++ "eventing/epoll_kqueue.c"),
+            .file = usockets_dep.path("src/eventing/epoll_kqueue.c"),
             .flags = flags,
         });
-        libMod.addIncludePath(b.path(root));
-        libMod.addIncludePath(b.path(root ++ "internal"));
-        libMod.addIncludePath(b.path(root ++ "internal/networking"));
+        libMod.addIncludePath(usockets_dep.path("src/"));
+        libMod.addIncludePath(usockets_dep.path("src/internal"));
+        libMod.addIncludePath(usockets_dep.path("src/internal/networking"));
         libMod.link_libc = true;
 
         if (is_windows) {
@@ -162,6 +171,7 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
     testMod.addImport("tofu", tofuMod);
+    testMod.addImport("posix_net", posixNetMod);
     testMod.addImport("recipes", recipesMod);
     testMod.addImport("Appendable", nats.module("Appendable"));
     testMod.addImport("Formatter", nats.module("Formatter"));
@@ -169,6 +179,10 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("temp", temp.module("temp"));
     testMod.addImport("datetime", datetime.module("datetime"));
     testMod.addOptions("build_options", build_options);
+    // Separate options object so the same file is not the root of two modules.
+    const test_gate_options = b.addOptions();
+    test_gate_options.addOption(bool, "portable", network == .portable);
+    testMod.addOptions("test_gate_options", test_gate_options);
 
     // Creates unit testing artifact
     const lib_unit_tests = b.addTest(.{
@@ -188,7 +202,7 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
     }
 
-    if (network == .usockets) {
+    if (network == .portable) {
         const is_kqueue = target.result.os.tag == .macos or
             target.result.os.tag == .freebsd or
             target.result.os.tag == .netbsd or
@@ -198,17 +212,17 @@ pub fn build(b: *std.Build) void {
         const backend_flag = if (is_kqueue) "-DLIBUS_USE_KQUEUE" else "-DLIBUS_USE_EPOLL";
         const flags = &.{ "-fno-sanitize=undefined", "-DLIBUS_NO_SSL", backend_flag };
 
-        const root = "vendor/bun-usockets/src/";
+        const usockets_dep = b.dependency("usockets", .{});
         inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
-            lib_unit_tests.addCSourceFile(.{ .file = b.path(root ++ f), .flags = flags });
+            lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
         }
         lib_unit_tests.addCSourceFile(.{
-            .file = b.path(root ++ "eventing/epoll_kqueue.c"),
+            .file = usockets_dep.path("src/eventing/epoll_kqueue.c"),
             .flags = flags,
         });
-        lib_unit_tests.addIncludePath(b.path(root));
-        lib_unit_tests.addIncludePath(b.path(root ++ "internal"));
-        lib_unit_tests.addIncludePath(b.path(root ++ "internal/networking"));
+        lib_unit_tests.addIncludePath(usockets_dep.path("src/"));
+        lib_unit_tests.addIncludePath(usockets_dep.path("src/internal"));
+        lib_unit_tests.addIncludePath(usockets_dep.path("src/internal/networking"));
         lib_unit_tests.linkLibC();
 
         if (is_windows) {
