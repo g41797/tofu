@@ -26,6 +26,11 @@ pub fn rawFd(skt: *const Skt) i32 {
     return skt.fd;
 }
 
+pub fn socketHandle(skt: *const Skt) ?pn.Fd {
+    if (!skt.isSet()) return null;
+    return skt.fd;
+}
+
 /// Returns the local port of the socket.
 pub fn getPort(skt: *const Skt) ?u16 {
     var addr: pn.Addr = undefined;
@@ -49,11 +54,15 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 }
 
 /// Connect a socket. For UDS, performs delayed connect if path is stored.
+/// Returns false when connect is in progress (EINPROGRESS/EALREADY); caller waits for WRITABLE.
 pub fn connect(skt: *Skt) AmpeError!bool {
     if (skt.uds_server_path) |path| {
         if (!skt.server) {
             const len = std.mem.indexOfScalar(u8, &path, 0) orelse pn.UDS_PATH_SIZE;
-            pn.connectSocketUnix(skt.fd, path[0..len]) catch |e| return toAmpe(e);
+            pn.connectSocketUnix(skt.fd, path[0..len]) catch |e| {
+                if (e == pn.PnError.WouldBlock) return false;
+                return toAmpe(e);
+            };
         }
     }
     return true;

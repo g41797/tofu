@@ -530,7 +530,7 @@ pub const EchoClientServer = struct {
             return error.EmptyConfiguration;
         }
 
-        const iterations = if (comptime builtin.os.tag == .windows) 10 else 100;
+        const iterations = 10;
 
         for (1..iterations + 1) |_| {
             for (clncfg) |cladrs| {

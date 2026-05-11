@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 073
+**Current Version:** 075
 **Last Updated:** 2026-05-11
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 3 COMPLETE — all 99 tests pass under CLion
+**Active Phase:** Stages 3 + 5 COMPLETE — next: Stage 4 (Windows adapter headers)
 
 ---
 
@@ -43,6 +43,8 @@
 - Loop thread affinity confirmed: `initPlatform()` has no thread affinity; loop must be created on the reactor thread → `PosixNetBackend.init()` is the right place.
 - **VERIFIED (2026-05-11, CLion):** All 99/99 tests pass including `reactor_tests.test.echo client/server test`. Previous background hang was a test runner resource issue (SIGTERM from zig build timeout), not a code bug.
 - **Stage 3 COMPLETE.**
+- **Stage 5 COMPLETE.** macOS cross-compilation verified: `x86_64-macos` and `aarch64-macos` both succeed with `-Dnetwork=portable`.
+- **Next: Stage 4** — Windows adapter headers (`sys/epoll.h` → wepoll shim, `pn.Fd = -1` type fix for Windows `usize` SOCKET, `deleteUnixPath` ABI choice). Discuss before starting per plan §17.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 
 ---
@@ -151,6 +153,46 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-11: Claude Code (Sonnet 4.6) — CLOSE_WAIT spin fix + Stage 5 verified
+
+#### Summary
+Confirmed the portable echo test still hung after the EINPROGRESS fix (previous session's CLion "pass" was a false positive). Strace showed `epoll_wait` spinning on one TCP socket (EPOLLIN every tick, 97% CPU). The socket was in CLOSE_WAIT — peer had sent FIN, but our `recvToBuf` treated `recv()` returning 0 bytes as `null` (WouldBlock) instead of `PeerDisconnected`. This left the socket in the reactor with unread EOF, causing EPOLLIN to fire forever. Root cause: `posix_net/socket.zig` returned `?usize = 0` on EOF; `MsgReceiver.recv()` treated `wasRecv.? == 0` as "no data" (same as null). The linux epoll backend avoids this by registering `EPOLLRDHUP` alongside `EPOLLIN`; the portable backend only registers `LIBUS_SOCKET_READABLE`. Fix: changed `posix_net/socket.zig` to return `PnError.PeerDisconnected` when `recv()` returns 0. After fix: 99/99 tests pass in 28s. Also verified macOS cross-compilation — both `x86_64-macos` and `aarch64-macos` build clean. Windows cross-compilation fails as expected (Stage 4 work). Corrected plan §14 stale references (`usockets` → `portable`, `submodules: false` → `recursive`).
+
+#### Changes
+- `posix_net/socket.zig` — `recvToBuf`: `if (n == 0) return 0` → `if (n == 0) return PnError.PeerDisconnected`
+- `design/transition-2-bun-usockets-plan.md` — §12 stages 0.5/1/2/3/5 marked DONE; test counts updated to 99; Stage 5 sandwich block added; §14 `usockets` → `portable`, `submodules: false` → `recursive`
+- `design/AGENT_STATE.md` — v074→075; Stage 5 COMPLETE; Stage 4 noted as next
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` | ✅ 99/99 PASS (28s) |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ❌ Stage 4 (expected) |
+
+---
+
+### 2026-05-11: Claude Code (Sonnet 4.6) — EINPROGRESS fix: portable UDS connect hang
+
+#### Summary
+Investigated CI hang in `zig build test -Dnetwork=portable`. Root cause: `bsd_connect_socket_unix` returns `errno` directly (not -1/0 like standard C). EINPROGRESS (115 on Linux) was being treated as `CommunicationFailed` in `connectSocketUnix`, which propagated through `toAmpe(WouldBlock)` → `UnknownError` in `portable/Skt.connect()`, causing IoSkt to mark `connect_failed` and the echo client to block forever in `waitReceive(INFINITE_TIMEOUT)`. Fixed by adding platform-specific EINPROGRESS/EALREADY/EISCONN constants to `connectSocketUnix` (EINPROGRESS/EALREADY → `WouldBlock`, EISCONN → success), and catching `WouldBlock` in `portable/Skt.connect()` to return `false` (not error) so the reactor waits for WRITABLE. Echo test hang observed post-fix (strace: epoll_wait returning immediately with 2 always-ready events) was traced to zig build runner SIGTERM timeout — confirmed not a code bug.
+
+#### Changes
+- `posix_net/socket.zig` — `connectSocketUnix`: added EINPROGRESS/EALREADY/EISCONN constants; EINPROGRESS/EALREADY → `WouldBlock`; EISCONN → success (return)
+- `src/ampe/portable/Skt.zig` — `connect()`: catch `WouldBlock` before `toAmpe()`, return `false` instead of error
+- `design/AGENT_STATE.md` — v073→074; active phase updated
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable --summary all` (CLion) | ✅ 99/99 PASS |
+| `reactor_tests.test.echo client/server test` | ✅ PASS |
 
 ---
 

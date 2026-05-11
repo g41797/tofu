@@ -93,8 +93,8 @@ test "timeout when no data" {
     const seq: SeqN = 1;
     var tc = makeTC(.{ .recv = .on });
     try map.put(seq, &tc);
-    try p.backend.register(toFd(@intCast(accepted.rawFd())), seq, tc.exp);
-    defer p.backend.unregister(toFd(@intCast(accepted.rawFd())));
+    try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
+    defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
     // No data written — expect timeout
     const result = try p.backend.wait(50, &map);
@@ -126,8 +126,8 @@ test "readable after write" {
     const seq: SeqN = 1;
     var tc = makeTC(.{ .recv = .on });
     try map.put(seq, &tc);
-    try p.backend.register(toFd(@intCast(accepted.rawFd())), seq, tc.exp);
-    defer p.backend.unregister(toFd(@intCast(accepted.rawFd())));
+    try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
+    defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
     // Write before wait — kernel buffers it
     _ = try client.sendBuf(&[_]u8{'x'});
@@ -163,8 +163,8 @@ test "writable immediately" {
     // Register client (sender side) for send — send buffer is empty, writable immediately
     var tc = makeTC(.{ .send = .on });
     try map.put(seq, &tc);
-    try p.backend.register(toFd(@intCast(client.rawFd())), seq, tc.exp);
-    defer p.backend.unregister(toFd(@intCast(client.rawFd())));
+    try p.backend.register(toFd(client.socketHandle().?), seq, tc.exp);
+    defer p.backend.unregister(toFd(client.socketHandle().?));
 
     const result = try p.backend.wait(0, &map);
     try testing.expect(result.send == .on);
@@ -195,10 +195,10 @@ test "unregister prevents event" {
     const seq: SeqN = 1;
     var tc = makeTC(.{ .recv = .on });
     try map.put(seq, &tc);
-    try p.backend.register(toFd(@intCast(accepted.rawFd())), seq, tc.exp);
+    try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
 
     // Unregister before any write
-    p.backend.unregister(toFd(@intCast(accepted.rawFd())));
+    p.backend.unregister(toFd(accepted.socketHandle().?));
 
     _ = try client.sendBuf(&[_]u8{'x'});
     std.Thread.sleep(SLEEP_NS);
@@ -232,12 +232,12 @@ test "modify recv to send" {
     const seq: SeqN = 1;
     var tc = makeTC(.{ .recv = .on });
     try map.put(seq, &tc);
-    try p.backend.register(toFd(@intCast(accepted.rawFd())), seq, tc.exp);
-    defer p.backend.unregister(toFd(@intCast(accepted.rawFd())));
+    try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
+    defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
     // Modify to send interest
     tc.exp = .{ .send = .on };
-    try p.backend.modify(toFd(@intCast(accepted.rawFd())), seq, tc.exp);
+    try p.backend.modify(toFd(accepted.socketHandle().?), seq, tc.exp);
 
     const result = try p.backend.wait(0, &map);
     try testing.expect(result.send == .on);
@@ -279,10 +279,10 @@ test "two fds both readable" {
     var tc2 = makeTC(.{ .recv = .on });
     try map.put(1, &tc1);
     try map.put(2, &tc2);
-    try p.backend.register(toFd(@intCast(accepted1.rawFd())), 1, tc1.exp);
-    try p.backend.register(toFd(@intCast(accepted2.rawFd())), 2, tc2.exp);
-    defer p.backend.unregister(toFd(@intCast(accepted1.rawFd())));
-    defer p.backend.unregister(toFd(@intCast(accepted2.rawFd())));
+    try p.backend.register(toFd(accepted1.socketHandle().?), 1, tc1.exp);
+    try p.backend.register(toFd(accepted2.socketHandle().?), 2, tc2.exp);
+    defer p.backend.unregister(toFd(accepted1.socketHandle().?));
+    defer p.backend.unregister(toFd(accepted2.socketHandle().?));
 
     _ = try client1.sendBuf(&[_]u8{'a'});
     _ = try client2.sendBuf(&[_]u8{'b'});
@@ -319,8 +319,8 @@ test "seqN isolation" {
     // seqN=1 registered with backend AND in map
     var tc1 = makeTC(.{ .recv = .on });
     try map.put(1, &tc1);
-    try p.backend.register(toFd(@intCast(accepted.rawFd())), 1, tc1.exp);
-    defer p.backend.unregister(toFd(@intCast(accepted.rawFd())));
+    try p.backend.register(toFd(accepted.socketHandle().?), 1, tc1.exp);
+    defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
     // seqN=2 in map only — no FD registered in backend with this seqN
     var tc2 = makeTC(.{ .recv = .on });

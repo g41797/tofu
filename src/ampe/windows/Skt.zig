@@ -13,7 +13,12 @@ pub fn isSet(skt: *const Skt) bool {
 }
 
 pub fn rawFd(skt: *const Skt) i32 {
-    return @bitCast(@as(u32, @truncate(skt.socket orelse std.math.maxInt(usize))));
+    const handle: usize = if (skt.socket) |s| @intFromPtr(s) else std.math.maxInt(usize);
+    return @bitCast(@as(u32, @truncate(handle)));
+}
+
+pub fn socketHandle(skt: *const Skt) ?ws2_32.SOCKET {
+    return skt.socket;
 }
 
 pub fn getPort(skt: *const Skt) ?u16 {

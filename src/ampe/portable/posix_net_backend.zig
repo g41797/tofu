@@ -140,16 +140,3 @@ const PosixNetBackend = struct {
 
 /// Complete portable Poller type using PollerCore.
 pub const Poller = core.PollerCore(PosixNetBackend);
-
-export fn Bun__panic(msg: [*:0]const u8, len: usize) callconv(.c) noreturn {
-    _ = len;
-    @panic(std.mem.span(msg));
-}
-
-export fn Bun__isEpollPwait2SupportedOnLinuxKernel() callconv(.c) i32 {
-    return 0;
-}
-
-export fn Bun__JSC_onBeforeWait(jsc_vm: *anyopaque) callconv(.c) void {
-    _ = jsc_vm;
-}

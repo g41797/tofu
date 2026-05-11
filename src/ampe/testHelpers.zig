@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-//! Test utilities: UDS paths, free TCP ports, thread coordination.
+//! Test utilities: UDS paths thread coordination.
 
 /// Creates temp file path for UDS testing. Usage:
 /// var tup: tofu.TempUdsPath = .{};

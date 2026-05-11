@@ -25,7 +25,7 @@ pub fn recvToBuf(fd: Fd, buf: []u8) PnError!?usize {
         if (ffi.bsd_would_block() != 0) return null;
         return PnError.CommunicationFailed;
     }
-    if (n == 0) return 0;
+    if (n == 0) return PnError.PeerDisconnected;
     return @as(usize, @intCast(n));
 }
 
@@ -55,14 +55,22 @@ pub fn shutdownSocketRead(fd: Fd) void {
 }
 
 /// Connect a Unix Domain Socket to a path.
+/// Returns PnError.WouldBlock when connect is in progress (EINPROGRESS/EALREADY on non-blocking socket).
+/// Caller should return false (not yet connected) and retry when WRITABLE fires.
 pub fn connectSocketUnix(fd: Fd, path: []const u8) PnError!void {
     const rc = ffi.bsd_connect_socket_unix(fd, path.ptr, path.len);
-    if (rc != 0) {
-        const builtin = @import("builtin");
-        const ENOENT: c_int = if (builtin.os.tag == .windows) 3 else 2; // ERROR_PATH_NOT_FOUND or ENOENT
-        if (rc == ENOENT) return PnError.UDSPathNotFound;
-        return PnError.CommunicationFailed;
-    }
+    if (rc == 0) return;
+    const builtin = @import("builtin");
+    const os = builtin.os.tag;
+    const ENOENT: c_int   = if (os == .windows) 3    else 2;
+    const EINPROGRESS: c_int = if (os == .windows) 10036 else if (os == .macos) 36 else 115;
+    const EALREADY: c_int    = if (os == .windows) 10037 else if (os == .macos) 37 else 114;
+    const EISCONN: c_int     = if (os == .windows) 10056 else if (os == .macos) 56 else 106;
+    if (rc == ENOENT) return PnError.UDSPathNotFound;
+    if (rc == EINPROGRESS or rc == EALREADY) return PnError.WouldBlock;
+    // EISCONN: non-blocking connect completed in the background; already connected.
+    if (rc == EISCONN) return;
+    return PnError.CommunicationFailed;
 }
 
 /// Enable or disable TCP_NODELAY.

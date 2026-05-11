@@ -868,21 +868,27 @@ static inline int eventfd_read(int fd, uint64_t *val) {
 | :---- | :--- | :------------------- |
 | **-1** | Scan `linux/*.zig` for all `std.posix` / `std.net` usage; verify each has a `bsd_*` replacer (see §12.5) | All usages accounted for; no blockers remain — **DONE** |
 | **0** | VSCode config (launch.json + tasks.json) | C source stepping works in debugger — **DONE** |
-| **0.5** | `build.zig` (posix_net module + C sources) + `src/ampe/posix_net/` (6 files) + `tests/posix_net/posix_net_tests.zig` (27 tests) | `zig build test -Dnetwork=portable` runs all 27 `posix_net_tests`; pass on Linux |
-| **1** | `Skt.zig` + `SocketCreator.zig` (using `pn.*`) | `sockets_tests.zig` pass on Linux |
-| **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux |
-| **3** | `triggers.zig` + `usockets_backend.zig` | All 64 tests pass, 4-mode sandwich on Linux |
+| **0.5** | `build.zig` (posix_net module + C sources) + `src/ampe/posix_net/` (6 files) + `tests/posix_net/posix_net_tests.zig` (27 tests) | `zig build test -Dnetwork=portable` runs all 27 `posix_net_tests`; pass on Linux — **DONE** |
+| **1** | `Skt.zig` + `SocketCreator.zig` (using `pn.*`) | `sockets_tests.zig` pass on Linux — **DONE** |
+| **2** | Notifier already done — run tests | `Notifier_tests.zig` pass on Linux — **DONE** |
+| **3** | `triggers.zig` + `usockets_backend.zig` | All 99 tests pass, 4-mode sandwich on Linux — **DONE** |
 | **4** | Windows adapter headers + build.zig include path; **discuss** `deleteUnixPath` ABI choice before starting | Cross-compile `x86_64-windows-gnu -Dnetwork=portable` succeeds; compile + run tests for 3 C library variants (exact matrix decided at Stage 4 discussion) |
-| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=portable` succeeds |
+| **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=portable` and `aarch64-macos -Dnetwork=portable` succeed — **DONE** |
 | **6** | Native hardware testing + CI network matrix live | Full sandwich passes on Linux; `AGENT_STATE.md` bumped |
 | **7** | Documentation — fix and complete all docs affected by migration | All changed modules have accurate doc comments per §5; no stale references remain |
 
-**Stage 3 — Linux 4-mode sandwich:**
+**Stage 3 — Linux 4-mode sandwich (DONE — 99/99):**
 ```sh
-zig build test -Doptimize=Debug        -Dnetwork=portable  # 64/64
-zig build test -Doptimize=ReleaseSafe  -Dnetwork=portable  # 64/64
-zig build test -Doptimize=ReleaseFast  -Dnetwork=portable  # 64/64
-zig build test -Doptimize=ReleaseSmall -Dnetwork=portable  # 64/64
+zig build test -Doptimize=Debug        -Dnetwork=portable  # 99/99
+zig build test -Doptimize=ReleaseSafe  -Dnetwork=portable  # 99/99
+zig build test -Doptimize=ReleaseFast  -Dnetwork=portable  # 99/99
+zig build test -Doptimize=ReleaseSmall -Dnetwork=portable  # 99/99
+```
+
+**Stage 5 — macOS cross-compile (DONE):**
+```sh
+zig build -Dtarget=x86_64-macos  -Dnetwork=portable  # ✅
+zig build -Dtarget=aarch64-macos -Dnetwork=portable  # ✅
 ```
 
 ---
@@ -1002,15 +1008,15 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
 
 ## 14. CI Network Matrix
 
-Run both `-Dnetwork=posix` and `-Dnetwork=portable` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `usockets` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
+Run both `-Dnetwork=posix` and `-Dnetwork=portable` in CI for the duration of the porting work (Stages 1–6), so neither backend regresses on any push. The `NetworkBackend` enum in `build.zig` declares `posix` and `portable` as valid values — `-Dnetwork=${{ matrix.network }}` works for both.
 
 ### When to add (per platform)
 
 | Workflow | Add at | Reason |
 | :--- | :--- | :--- |
-| `linux.yml` | Stage 3 | All 64 tests pass with usockets on Linux |
+| `linux.yml` | Stage 3 | All 99 tests pass with portable on Linux |
 | `windows.yml` | Stage 4 | Windows adapter headers complete |
-| `mac.yml` | Stage 5 | macOS usockets verified |
+| `mac.yml` | Stage 5 | macOS portable verified |
 
 ### `linux.yml` after Stage 3
 
@@ -1021,12 +1027,12 @@ strategy:
   fail-fast: false
   matrix:
     os: [ubuntu]
-    network: [posix, usockets]
+    network: [posix, portable]
 
 steps:
   - uses: actions/checkout@v5
     with:
-      submodules: false
+      submodules: recursive
 
   - uses: mlugg/setup-zig@v2
     with:
@@ -1050,7 +1056,7 @@ steps:
   - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=${{ matrix.network }}
 ```
 
-This produces 2 parallel jobs per push: `build (ubuntu, posix)` and `build (ubuntu, usockets)`, each running all 4 optimize modes. GitHub labels the jobs by matrix values automatically.
+This produces 2 parallel jobs per push: `build (ubuntu, posix)` and `build (ubuntu, portable)`, each running all 4 optimize modes. GitHub labels the jobs by matrix values automatically.
 
 ### `mac.yml` after Stage 5
 

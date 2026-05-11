@@ -15,6 +15,10 @@ pub fn rawFd(skt: *const Skt) i32 {
     return skt.socket orelse -1;
 }
 
+pub fn socketHandle(skt: *const Skt) ?std.posix.socket_t {
+    return skt.socket;
+}
+
 pub fn getPort(skt: *const Skt) ?u16 {
     return switch (skt.address.any.family) {
         std.posix.AF.INET, std.posix.AF.INET6 => skt.address.getPort(),
