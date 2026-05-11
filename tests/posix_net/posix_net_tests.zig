@@ -9,6 +9,10 @@ test {
     std.log.debug("posix_net_tests\r\n", .{});
 }
 
+test "platform init" {
+    try tofu.initPlatform();
+}
+
 // ---------------------------------------------------------------------------
 // Retry helpers
 // ---------------------------------------------------------------------------
@@ -443,6 +447,10 @@ test "addrPort returns null for Unix socket addr" {
     var addr: pn.Addr = undefined;
     try pn.localAddr(fd, &addr);
     try testing.expect(pn.addrPort(&addr) == null);
+}
+
+test "platform deinit" {
+    tofu.deinitPlatform();
 }
 
 // ---------------------------------------------------------------------------

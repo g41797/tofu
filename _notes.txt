@@ -440,3 +440,7 @@ bun
 uSockets
     https://github.com/uNetworking/uSockets
     zig fetch --save=usockets git+https://github.com/g41797/uSockets.git
+
+Cross compilation for Windows
+    zig build install -Doptimize=Debug -Dnetwork=portable -Dtarget=x86_64-windows-gnu --summary all
+    wine zig-out/bin/test.exe 2>/dev/null
