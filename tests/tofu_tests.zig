@@ -17,16 +17,15 @@ test {
     _ = @import("ampe/Notifier_tests.zig");
     std.log.debug("\r\n\r\n   ****  finish Notifier tests ****\r\n\r\n", .{});
 
+    // Linux Skt/SocketCreator contract tests (baseline for posix removal):
+    if (@import("builtin").os.tag == .linux) {
+        _ = @import("ampe/sockets_tests.zig");
+    }
+
     if (@import("builtin").os.tag != .macos) {
 
-
-        // Linux Skt/SocketCreator contract tests (baseline for posix removal):
-        if (@import("builtin").os.tag == .linux) {
-            _ = @import("ampe/sockets_tests.zig");
-        }
-
-        // posix_net module contract tests (usockets backend only):
-    if (test_gate_options.portable) {
+        // posix_net module contract tests :
+        if (test_gate_options.portable) {
             _ = @import("posix_net/posix_net_tests.zig");
             _ = @import("ampe/portable_poller_tests.zig");
         }
