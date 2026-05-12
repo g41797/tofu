@@ -189,6 +189,14 @@ Stage 4 completed. Created `posix_net/adapters/` with five files: `sys/epoll.h` 
 | `zig build test -Dnetwork=portable -Doptimize=ReleaseFast` | ✅ 99/99 PASS |
 | `zig build test -Dnetwork=portable -Doptimize=ReleaseSmall` | ✅ 99/99 PASS |
 | `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
+| Wine (`x86_64-windows-gnu` test binary under wine-staging 11.0) | TCP tests PASS; UDS tests FAIL (Wine AF_UNIX path limitation — expected) |
+
+#### Addendum (2026-05-12)
+
+- `tests/posix_net/posix_net_tests.zig` — added `test "platform init"` and `test "platform deinit"` as first/last tests; calls `tofu.initPlatform()`/`deinitPlatform()` so `WSAStartup` runs before any Winsock call on Windows. Without this, all TCP tests failed under Wine with `CommunicationFailed`.
+- `.github/workflows/linux.yml` — removed `use-cache: false` from setup-zig; kept one `rm -rf ./.zig-cache/` before Debug; removed 3 intermediate cache clears between optimize modes.
+- `.github/workflows/windows.yml` — same CI optimization applied.
+- `.github/workflows/mac.yml` — no changes (already had no `use-cache: false` and no `rm -rf`).
 
 ---
 
