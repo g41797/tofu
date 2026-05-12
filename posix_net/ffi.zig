@@ -11,6 +11,7 @@ pub extern fn bsd_set_linger_abort(fd: LIBUS_SOCKET_DESCRIPTOR) void;
 pub extern fn pn_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn pn_create_listen_socket_unix(path: [*]const u8, pathlen: usize, options: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn pn_create_connect_socket_unix(path: [*]const u8, pathlen: usize, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
+pub extern fn pn_wait_writable(fd: LIBUS_SOCKET_DESCRIPTOR, timeout_ms: c_int) c_int;
 
 // BSD networking wrappers from bun-usockets
 pub extern fn bsd_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int) LIBUS_SOCKET_DESCRIPTOR;

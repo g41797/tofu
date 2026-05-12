@@ -74,7 +74,14 @@ pub fn resolveConnect(host: [:0]const u8, port: u16) PnError!Fd {
 
     if (res != null) {
         // bsd_create_connect_socket handles connection; use host+port directly.
-        return createConnectSocket(host.ptr, port, 0);
+        const fd = try createConnectSocket(host.ptr, port, 0);
+        // Non-blocking connect may be in-progress (EINPROGRESS on macOS).
+        // Wait up to 5 s for the connect to complete before returning.
+        if (ffi.pn_wait_writable(fd, 5000) != 0) {
+            ffi.bsd_close_socket(fd);
+            return PnError.CommunicationFailed;
+        }
+        return fd;
     }
     return PnError.CommunicationFailed;
 }

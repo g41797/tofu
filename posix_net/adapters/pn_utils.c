@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 #else
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stddef.h>
@@ -31,6 +32,39 @@ void bsd_set_linger_abort(LIBUS_SOCKET_DESCRIPTOR fd) {
     setsockopt((SOCKET)fd, SOL_SOCKET, SO_LINGER, (const char *)&l, (int)sizeof(l));
 #else
     setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, (socklen_t)sizeof(l));
+#endif
+}
+
+/*
+ * Wait for a non-blocking connect to complete (fd becomes writable).
+ * Uses select() + getsockopt(SO_ERROR). Returns 0 on success, -1 on timeout or error.
+ * timeout_ms < 0 means wait indefinitely.
+ */
+int pn_wait_writable(LIBUS_SOCKET_DESCRIPTOR fd, int timeout_ms) {
+#ifdef _WIN32
+    fd_set wset, eset;
+    FD_ZERO(&wset); FD_ZERO(&eset);
+    FD_SET((SOCKET)fd, &wset);
+    FD_SET((SOCKET)fd, &eset);
+    struct timeval tv;
+    tv.tv_sec  = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    if (select(0, NULL, &wset, &eset, timeout_ms < 0 ? NULL : &tv) <= 0) return -1;
+    if (FD_ISSET((SOCKET)fd, &eset)) return -1;
+    int err = 0; int len = sizeof(err);
+    if (getsockopt((SOCKET)fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len) != 0 || err != 0) return -1;
+    return 0;
+#else
+    fd_set wset;
+    FD_ZERO(&wset);
+    FD_SET(fd, &wset);
+    struct timeval tv;
+    tv.tv_sec  = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    if (select(fd + 1, NULL, &wset, NULL, timeout_ms < 0 ? NULL : &tv) <= 0) return -1;
+    int err = 0; socklen_t len = sizeof(err);
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) != 0 || err != 0) return -1;
+    return 0;
 #endif
 }
 

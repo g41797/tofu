@@ -105,7 +105,12 @@ pub fn remoteAddr(fd: Fd, addr: *Addr) PnError!void {
 
 /// Get the address family (AF_INET, AF_INET6, AF_UNIX).
 pub fn addrFamily(addr: *const Addr) u16 {
-    // mem is a byte buffer containing sockaddr_storage. family is at offset 0.
+    const builtin = @import("builtin");
+    if (comptime (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD())) {
+        // macOS/BSD: sa_len (u8) at mem[0], sa_family (u8) at mem[1]
+        return addr.mem[1];
+    }
+    // Linux/Windows: sa_family (u16) at mem[0]
     const family_ptr: *const u16 = @ptrCast(@alignCast(&addr.mem[0]));
     return family_ptr.*;
 }
