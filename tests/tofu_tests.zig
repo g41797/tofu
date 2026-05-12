@@ -28,10 +28,10 @@ test {
         _ = @import("ampe/portable_poller_tests.zig");
     }
 
-    if (@import("builtin").os.tag != .macos) {
+    // Poller backend contract tests (backend-independent, all platforms):
+    _ = @import("ampe/poller_tests.zig");
 
-        // Poller backend contract tests (backend-independent, all platforms):
-        _ = @import("ampe/poller_tests.zig");
+    if (@import("builtin").os.tag != .macos) {
 
         // PollerCore integration tests (all backends, all platforms):
         _ = @import("pollercore_tests.zig");
