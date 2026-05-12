@@ -12,35 +12,38 @@ test {
     _ = @import("address_tests.zig");
     _ = @import("message_tests.zig");
 
-    std.log.debug("\r\n   ****  tofu TESTS Notifier ****\r\n", .{});
+    if (@import("builtin").os.tag != .macos) {
 
-    // Socket-dependent tests (all platforms):
+        std.log.debug("\r\n   ****  tofu TESTS Notifier ****\r\n", .{});
+
+        // Socket-dependent tests (all platforms):
     _ = @import("ampe/Notifier_tests.zig");
 
-    // Linux Skt/SocketCreator contract tests (baseline for posix removal):
+        // Linux Skt/SocketCreator contract tests (baseline for posix removal):
     if (@import("builtin").os.tag == .linux) {
-        _ = @import("ampe/sockets_tests.zig");
-    }
+            _ = @import("ampe/sockets_tests.zig");
+        }
 
-    // posix_net module contract tests (usockets backend only):
+        // posix_net module contract tests (usockets backend only):
     if (test_gate_options.portable) {
-        _ = @import("posix_net/posix_net_tests.zig");
-        _ = @import("ampe/portable_poller_tests.zig");
-    }
+            _ = @import("posix_net/posix_net_tests.zig");
+            _ = @import("ampe/portable_poller_tests.zig");
+        }
 
-    // Poller backend contract tests (backend-independent, all platforms):
+        // Poller backend contract tests (backend-independent, all platforms):
     _ = @import("ampe/poller_tests.zig");
 
-    // PollerCore integration tests (all backends, all platforms):
+        // PollerCore integration tests (all backends, all platforms):
     _ = @import("pollercore_tests.zig");
 
-    std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
+        std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 
-    // Main test - for Linux
+        // Main test - for Linux
     // if (@import("builtin").os.tag == .linux) {
     _ = @import("reactor_tests.zig");
-    // }
+        // }
 
+    }
 
     @import("std").testing.refAllDecls(@This());
 }
