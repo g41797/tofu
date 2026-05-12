@@ -898,7 +898,9 @@ zig build -Dtarget=aarch64-macos -Dnetwork=portable  # ✅
 - Bug found (2026-05-12): `bsd_set_nonblocking` no-op on Windows → all C-layer sockets blocking. Fixed in `g41797/uSockets/src/bsd.c`. Author must push and update `build.zig.zon`.
 - Secondary bugs fixed (2026-05-12): `setLingerAbort` no-op → TIME_WAIT accumulation; backlog 512 vs 1024. Both fixed via `posix_net/adapters/pn_utils.c`.
 - **Linux result (2026-05-12):** 101/101 tests pass.
-- Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows after `build.zig.zon` update.
+- **Windows UDS fix (2026-05-12):** `bsd_create_connect_socket_unix` in usockets `bsd.c` uses `errno != EINPROGRESS` to detect connect-in-progress. On Windows, non-blocking connect sets `WSAGetLastError() == WSAEWOULDBLOCK` — usockets treated it as fatal. Fixed by adding `pn_create_connect_socket_unix` to `pn_utils.c` (Windows: check `WSAEWOULDBLOCK`; Linux: delegate to `bsd_create_connect_socket_unix`). Wired through `ffi.zig` and `creator.zig`.
+- **macOS CI fix (2026-05-12):** Two bugs. (1) `addrFamily` read `sockaddr.mem[0]` as u16 — wrong on macOS/BSD where `sa_len` (u8) precedes `sa_family` (u8). Fix: comptime branch reads `mem[1]` on Darwin/BSD. (2) Non-blocking TCP connect on macOS may return EINPROGRESS; tests called `send()`/`getpeername()` immediately. Fix: added `pn_wait_writable` to `pn_utils.c` (select + getsockopt SO_ERROR); `resolveConnect` waits up to 5 s for connect completion. See §15.2.
+- Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows after `build.zig.zon` update; macOS CI run.
 
 ---
 
@@ -1203,6 +1205,58 @@ calls in `posix_net/creator.zig` with these wrappers, passing `backlog=1024`.
 | Listener backlog 512 vs native 1024 | **FIXED (2026-05-12)** — `pn_create_listen_socket` and `pn_create_listen_socket_unix` in `pn_utils.c`; `creator.zig` uses them with `backlog=1024` |
 | `ListenFailed` root cause | TIME_WAIT accumulation from `setLingerAbort` no-op — eliminated by the fix above |
 | `bsd_set_nonblocking` fix causing Linux failure | Not the cause — Linux path unchanged |
+
+---
+
+## 15.2 Stage 6 — macOS CI Failure Analysis (2026-05-12)
+
+macOS CI failed 6/54 portable tests. Two independent root causes.
+
+### Bug 1 — `addrFamily` reads wrong bytes on macOS/BSD
+
+`posix_net/socket.zig:addrFamily` read `sockaddr.mem[0..2]` as a `u16`. On Linux/Windows, `sa_family` is a `u16` at offset 0 — correct. On macOS/BSD, `sockaddr` has:
+- `sa_len` (u8) at offset 0
+- `sa_family` (u8) at offset 1
+
+The u16 read returned `sa_family * 256 + sa_len`. For AF_INET (family=2, sa_len=16): `2*256+16 = 528`. For AF_UNIX (family=1, sa_len=80): `1*256+80 = 336`. Both wrong.
+
+**Fix:** comptime branch in `addrFamily`:
+```zig
+if (comptime (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD())) {
+    return addr.mem[1]; // sa_family is at offset 1 on macOS/BSD
+}
+```
+
+`addrUnixPath` was unaffected by this change — `sun_path` starts at offset 2 on both Linux and macOS. Once `addrFamily` returns the correct value, `addrUnixPath`'s guard passes and the path is read correctly.
+
+**Posix backend (`network=posix`) not affected.** The mac posix backend uses `std.net.Address.any.family` — Zig's standard library correctly abstracts the `sa_len` prefix. It never calls `pn.addrFamily`.
+
+### Bug 2 — TCP connect-in-progress on macOS
+
+Three TCP tests called `send()`/`getpeername()` immediately after `resolveConnect`:
+- `bsd TCP send+recv roundtrip`
+- `bsd_send returns null (WouldBlock) when send buffer full`
+- `bsd_remote_addr returns peer address after TCP connect`
+
+On Linux, non-blocking connect to localhost completes immediately (connect() returns 0). On macOS, it may return EINPROGRESS. A subsequent `send()` on an in-progress socket returns ENOTCONN (errno 57), not EAGAIN — so `bsd_would_block()` returns false and `sendBuf` returns `CommunicationFailed`.
+
+**Fix:** added `pn_wait_writable` to `pn_utils.c`:
+```c
+int pn_wait_writable(LIBUS_SOCKET_DESCRIPTOR fd, int timeout_ms) {
+    // select() on write set, then getsockopt(SO_ERROR)
+}
+```
+`resolveConnect` in `creator.zig` calls `pn_wait_writable(fd, 5000)` after `bsd_create_connect_socket`. On Linux, the connected socket is immediately writable — select returns at once. On macOS, select waits for EINPROGRESS to complete.
+
+**Impact on portable SocketCreator:** `createTcpClient` calls `resolveConnect`. The returned fd is now guaranteed connected. The event loop will find it immediately writable (connect already done) — correct behaviour.
+
+### Summary
+
+| Failure | Cause | Fix |
+| :------ | :---- | :-- |
+| `addrFamily` returns 528/336 | `sa_len` byte at offset 0 on macOS/BSD | `mem[1]` on Darwin/BSD; u16 at `mem[0]` on Linux |
+| 3 TCP tests: `CommunicationFailed` | EINPROGRESS not waited; `send` → ENOTCONN | `pn_wait_writable` in `pn_utils.c`; called from `resolveConnect` |
+| `addrUnixPath` returns empty | `addrFamily` guard failed (528 ≠ 1) | Fixed by Bug 1 fix |
 
 ---
 

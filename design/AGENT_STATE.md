@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 078
+**Current Version:** 079
 **Last Updated:** 2026-05-12
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 in progress — Windows native testing; blocking-socket and setLingerAbort/backlog bugs fixed; Linux 101/101 passes
+**Active Phase:** Stage 6 in progress — Windows UDS WSAEWOULDBLOCK fix + macOS addrFamily + TCP connect fix; Linux 101/101 passes
 
 ---
 
@@ -55,6 +55,9 @@
   - **DONE** `posix_net/creator.zig` — `createListenSocket` and `createListenSocketUnix` use `pn_create_listen_socket`/`pn_create_listen_socket_unix` with `backlog=1024`.
   - **DONE** `build.zig` — `pn_utils.c` wired into both `libMod` and `lib_unit_tests` portable blocks.
   - **Linux result:** 101/101 tests pass.
+- **Windows UDS CI fix (2026-05-12):** `bsd_create_connect_socket_unix` in usockets `bsd.c` checks `errno != EINPROGRESS` after `connect()`. On Windows, non-blocking UDS connect sets `WSAGetLastError() == WSAEWOULDBLOCK`, not `errno == EINPROGRESS` — usockets treats it as a fatal error. Fixed by adding `pn_create_connect_socket_unix` to `posix_net/adapters/pn_utils.c`: Windows path re-implements the connect with `WSAGetLastError() != WSAEWOULDBLOCK` check; Linux path delegates to `bsd_create_connect_socket_unix`. Wired through `ffi.zig` and `creator.zig`.
+- **macOS CI fix (2026-05-12):** Two bugs fixed. (1) `addrFamily` in `posix_net/socket.zig` read 2 bytes as `u16` from `sockaddr.mem[0]`. On macOS/BSD, `sockaddr` has `sa_len` (u8) at offset 0 and `sa_family` (u8) at offset 1 — the u16 read returns `sa_family * 256 + sa_len` instead of `sa_family`. Fixed with a comptime branch: macOS/BSD returns `addr.mem[1]`; Linux/Windows keeps the u16 read. (2) On macOS, non-blocking TCP connect to localhost may return `EINPROGRESS`; the tests then call `send()`/`getpeername()` immediately and get `ENOTCONN`. Fixed by adding `pn_wait_writable` to `pn_utils.c`: uses `select()` + `getsockopt(SO_ERROR)` to wait for connect completion. `resolveConnect` in `creator.zig` now calls `pn_wait_writable(fd, 5000)` after creating the connect socket.
+- **Pending:** Windows native 4-mode verification (`zbta_win.cmd`) after `build.zig.zon` update; macOS CI run to confirm 54/54.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 - **Proposal (deferred):** After TCP listener creation, embed the assigned port in `WelcomeResponse` text headers. Client parses port and connects via protocol, not out-of-band `getPort()`. Implement at Stage 7 or earlier if cross-platform test failures require it.
 
@@ -164,6 +167,48 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-12: Claude Code (Sonnet 4.6) — Stage 6: macOS CI portable fixes
+
+#### Summary
+macOS CI failed 6/54 portable tests. Two independent root causes. (1) `addrFamily` in `posix_net/socket.zig` read `sockaddr.mem[0..2]` as a `u16` — correct on Linux where `sa_family` is a `u16` at offset 0, wrong on macOS/BSD where `sa_len` (u8) precedes `sa_family` (u8). The u16 read returned `sa_family * 256 + sa_len` (e.g., 528 for AF_INET, 336 for AF_UNIX). Fixed with a comptime branch that returns `addr.mem[1]` on Darwin/BSD. (2) Three TCP tests called `send()`/`getpeername()` immediately after `resolveConnect`. On macOS, non-blocking connect to localhost may return EINPROGRESS; a subsequent `send()` or `getpeername()` returns ENOTCONN. On Linux the same connect completes immediately so no delay is needed. Fixed by adding `pn_wait_writable` to `pn_utils.c`: uses `select()` + `getsockopt(SO_ERROR)` with a 5-second timeout to wait for connect completion. `resolveConnect` now calls `pn_wait_writable` before returning the fd. Linux portable tests confirmed 101/101 after both fixes.
+
+#### Changes
+- `posix_net/socket.zig` — `addrFamily`: comptime branch reads `mem[1]` on Darwin/BSD, `u16` at `mem[0]` on Linux/Windows
+- `posix_net/adapters/pn_utils.c` — added `pn_wait_writable` (select + getsockopt SO_ERROR); added `<sys/select.h>` include on non-Windows
+- `posix_net/ffi.zig` — extern declaration for `pn_wait_writable`
+- `posix_net/creator.zig` — `resolveConnect` calls `pn_wait_writable(fd, 5000)` after connect; closes fd and returns `CommunicationFailed` on timeout
+- `design/AGENT_STATE.md` — v078→079; macOS CI fix recorded
+- `design/transition-2-bun-usockets-plan.md` — §12 Stage 6 note; §15.2 macOS CI analysis added
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` (Linux) | ✅ 101/101 PASS |
+| macOS CI run | pending |
+
+---
+
+### 2026-05-12: Claude Code (Sonnet 4.6) — Stage 6: Windows CI portable UDS fix
+
+#### Summary
+Windows CI (portable) failed 2/83 tests: `bsd UDS connect socket to listener creates valid fd` and `bsd UDS send+recv roundtrip`. Root cause: `bsd_create_connect_socket_unix` in vendored usockets `bsd.c` checks `errno != EINPROGRESS` to detect connect-in-progress. On Windows, non-blocking connect sets `WSAGetLastError() == WSAEWOULDBLOCK`, not `errno == EINPROGRESS` — so usockets closed the fd and returned `LIBUS_SOCKET_ERROR`. Fixed by adding `pn_create_connect_socket_unix` to `posix_net/adapters/pn_utils.c`. Windows path re-implements the connect using `bsd_create_socket(AF_UNIX)` + `connect()` + `WSAGetLastError() != WSAEWOULDBLOCK` check. Linux path delegates to `bsd_create_connect_socket_unix` (already correct). `createConnectSocketUnix` in `creator.zig` updated to call `pn_create_connect_socket_unix`. Linux portable 101/101 confirmed.
+
+#### Changes
+- `posix_net/adapters/pn_utils.c` — new function `pn_create_connect_socket_unix` with Windows/Linux branches; includes `<afunix.h>` (Windows) / `<sys/un.h>` (Linux)
+- `posix_net/ffi.zig` — extern declaration for `pn_create_connect_socket_unix`
+- `posix_net/creator.zig` — `createConnectSocketUnix` calls `pn_create_connect_socket_unix` instead of `bsd_create_connect_socket_unix`
+- `design/AGENT_STATE.md` — stage 6 Windows UDS fix recorded
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` (Linux) | ✅ 101/101 PASS |
+| Windows CI UDS tests | pending (requires CI run) |
 
 ---
 
