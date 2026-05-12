@@ -27,7 +27,7 @@
             .hash = "datetime-0.8.0-cJNXzP_YAQBxQ5hkNNP6ScnG5XsqciJmeP5RVV4xwCBA",
         },
         .usockets = .{
-            .url = "git+https://github.com/g41797/uSockets.git",
+            .url = "git+https://github.com/g41797/uSockets.git#03cc4f6112a78ed7712c7128871a9dd8ed404a9d",
             .hash = "N-V-__8AAJgiBgDScguFso1evr-0R_1yO_N4mkqFAO33pe_7",
         },
     },
