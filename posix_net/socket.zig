@@ -73,6 +73,11 @@ pub fn connectSocketUnix(fd: Fd, path: []const u8) PnError!void {
     return PnError.CommunicationFailed;
 }
 
+/// Set SO_LINGER with l_linger=0: close sends RST, no TIME_WAIT.
+pub fn setLingerAbort(fd: Fd) void {
+    ffi.bsd_set_linger_abort(fd);
+}
+
 /// Enable or disable TCP_NODELAY.
 pub fn nodelay(fd: Fd, enabled: bool) void {
     ffi.bsd_socket_nodelay(fd, if (enabled) 1 else 0);

@@ -33,6 +33,7 @@ pub const addrFamily = socket.addrFamily;
 pub const addrPort = socket.addrPort;
 pub const addrUnixPath = socket.addrUnixPath;
 pub const deleteUnixPath = socket.deleteUnixPath;
+pub const setLingerAbort = socket.setLingerAbort;
 
 // Socket creation and resolution
 pub const createSocket = creator.createSocket;

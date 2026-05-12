@@ -16,14 +16,14 @@ pub fn createSocket(domain: i32, socket_type: i32, protocol: i32) PnError!Fd {
 
 /// Create a listening TCP socket.
 pub fn createListenSocket(host: [*:0]const u8, port: u16, options: i32) PnError!Fd {
-    const fd = ffi.bsd_create_listen_socket(host, @intCast(port), @intCast(options));
+    const fd = ffi.pn_create_listen_socket(host, @intCast(port), @intCast(options), 1024);
     if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
     return fd;
 }
 
 /// Create a listening Unix Domain Socket. Supports abstract namespace (path[0] == 0).
 pub fn createListenSocketUnix(path: [*]const u8, pathlen: usize, options: i32) PnError!Fd {
-    const fd = ffi.bsd_create_listen_socket_unix(path, pathlen, @intCast(options));
+    const fd = ffi.pn_create_listen_socket_unix(path, pathlen, @intCast(options), 1024);
     if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
     return fd;
 }

@@ -73,9 +73,9 @@ pub fn setREUSE(skt: *Skt) !void {
     _ = skt;
 }
 
-/// No-op: Already handled by pn.closeSocket in bun-usockets.
+/// Set SO_LINGER l_linger=0 so close sends RST instead of FIN (no TIME_WAIT).
 pub fn setLingerAbort(skt: *Skt) AmpeError!void {
-    _ = skt;
+    pn.setLingerAbort(skt.fd);
 }
 
 /// Enable or disable TCP_NODELAY.

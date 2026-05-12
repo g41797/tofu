@@ -895,9 +895,10 @@ zig build -Dtarget=aarch64-macos -Dnetwork=portable  # ✅
 ```
 
 **Stage 6 — Windows native testing (IN PROGRESS):**
-- Bug found (2026-05-12): `bsd_set_nonblocking` no-op on Windows → all C-layer sockets blocking.
-- Fixed in `g41797/uSockets/src/bsd.c`. Author must push and update `build.zig.zon`.
-- Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows.
+- Bug found (2026-05-12): `bsd_set_nonblocking` no-op on Windows → all C-layer sockets blocking. Fixed in `g41797/uSockets/src/bsd.c`. Author must push and update `build.zig.zon`.
+- Secondary bugs fixed (2026-05-12): `setLingerAbort` no-op → TIME_WAIT accumulation; backlog 512 vs 1024. Both fixed via `posix_net/adapters/pn_utils.c`.
+- **Linux result (2026-05-12):** 101/101 tests pass.
+- Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows after `build.zig.zon` update.
 
 ---
 
@@ -1137,6 +1138,74 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 
 ---
 
+## 15.1 Stage 6 — Linux Portable Test Failure Analysis (2026-05-12)
+
+After the `bsd_set_nonblocking` Windows fix was pushed and `build.zig.zon` updated,
+`zig build test -Dnetwork=portable -Doptimize=Debug` on Linux failed:
+
+```
+handleReConnnectOfTcpClientServerST error.ListenFailed
+thread panic: attempt to unwrap error: ListenFailed
+```
+
+`bsd_create_listen_socket` returns `LIBUS_SOCKET_ERROR` only if `bind()` or `listen()` fails.
+The port was freshly allocated by `FindFreeTcpPort()`.
+
+### What is definitely wrong — fix regardless
+
+`portable/Skt.zig:setLingerAbort` (line 77) is a no-op. The comment "Already handled by
+pn.closeSocket in bun-usockets" is **wrong**: `bsd_close_socket` just calls `close(fd)` with no
+`SO_LINGER`. Native backends (linux, windows, mac) all set `SO_LINGER l_onoff=1 l_linger=0`
+before close → RST instead of FIN → immediate socket release, no TIME_WAIT.
+
+Fix required:
+- Add `bsd_set_linger_abort(fd)` to new file `posix_net/adapters/pn_utils.c` (our own C file, not vendored uSockets). `bsd_set_linger_abort` is not called from any `bsd_*` internal path — it is called only from the Zig side, so it can live in any C file we own.
+- Declare `pub extern fn bsd_set_linger_abort(fd: LIBUS_SOCKET_DESCRIPTOR) void;` in `posix_net/ffi.zig`.
+- Add `pub fn setLingerAbort(fd: Fd) void` wrapper in `posix_net/socket.zig` and re-export from `posix_net/posix_net.zig`.
+- Implement `setLingerAbort` in `src/ampe/portable/Skt.zig` to call `pn.setLingerAbort(skt.fd)`. Fix the wrong comment.
+- Wire `posix_net/adapters/pn_utils.c` into `build.zig` (add as C source for both `libMod` and `lib_unit_tests` when `network == .portable`).
+
+### What needs to be checked before knowing the cause of ListenFailed
+
+Three candidates:
+
+**1. Port race between concurrent tests.**
+`FindFreeTcpPort()` allocates a port then releases it. Another concurrent test thread can grab
+the same port in the gap. The test log shows multiple threads active simultaneously. If two
+threads get the same port from `FindFreeTcpPort()`, one `bind()` fails. Check: is
+`handleReConnnectOfTcpClientServerST` running concurrently with other listener-creating tests?
+
+**2. File descriptor exhaustion.**
+The reconnect test makes 1000 connect attempts. If each attempt in the portable backend leaves
+a socket open (not properly closed before the next attempt), `socket()` inside
+`bsd_create_listen_socket` may fail with `EMFILE`. Check: does each failed connect attempt close
+its socket before the Reactor processes the next HelloRequest?
+
+**3. Pre-existing flakiness.**
+The `_WIN32` branch change cannot affect Linux. The failure may be a timing-sensitive race that
+was always possible but rarely triggered. Check: does the test fail consistently or
+intermittently across multiple runs?
+
+**4. Listener backlog discrepancy.**
+`bsd_create_listen_socket` hardcodes `listen(fd, 512)`. The native Linux backend uses
+`posix.listen(fd, 1024)`. This is not a `ListenFailed` cause, but it is an inconsistency.
+Fix in our code (not in vendored `bsd.c`): add `pn_create_listen_socket(host, port, options, backlog)`
+and `pn_create_listen_socket_unix(path, pathlen, options, backlog)` to
+`posix_net/adapters/pn_utils.c`. Each calls the corresponding `bsd_create_listen_socket*` then
+re-calls `listen(fd, backlog)` to set the correct value. Replace the `bsd_create_listen_socket`
+calls in `posix_net/creator.zig` with these wrappers, passing `backlog=1024`.
+
+### Summary table
+
+| Issue | Action |
+| :---- | :----- |
+| `setLingerAbort` no-op in portable | **FIXED (2026-05-12)** — `bsd_set_linger_abort` in `posix_net/adapters/pn_utils.c`; wired through ffi/socket/posix_net/Skt |
+| Listener backlog 512 vs native 1024 | **FIXED (2026-05-12)** — `pn_create_listen_socket` and `pn_create_listen_socket_unix` in `pn_utils.c`; `creator.zig` uses them with `backlog=1024` |
+| `ListenFailed` root cause | TIME_WAIT accumulation from `setLingerAbort` no-op — eliminated by the fix above |
+| `bsd_set_nonblocking` fix causing Linux failure | Not the cause — Linux path unchanged |
+
+---
+
 ## 16. Critical Files
 
 | File | Action |
@@ -1179,6 +1248,8 @@ Native macOS and Windows hardware testing follows the same sandwich pattern once
 - **RESOLVED (Stage 4) — Windows CI matrix:** Single dimension: `network: [posix, portable]` on a single Windows runner. No ABI variants — `x86_64-windows-gnu` only for CI. See §14 for the final `windows.yml` form.
 
 - **Polish — `build.zig` refactor:** The portable C source setup block is duplicated between `libMod` and `lib_unit_tests`. Extract into a helper function after Stage 6.
+
+- **WelcomeResponse port header (deferred):** After TCP listener creation, the Reactor adds the assigned listener port to `WelcomeResponse` text headers. Client reads the port from the response instead of calling `getPort()` out-of-band. Current tests use `listener.getPort()` directly (works because both sides are in the same process). This proposal makes the protocol self-describing. Implement at Stage 7 (protocol stabilisation) or earlier if cross-platform test coordination requires it. UDS listeners: no port header (not applicable).
 
 - **FIX APPLIED (2026-05-11):** Root cause of echo hang identified and fixed. `posix_net_backend.zig` was pre-wiring `*TriggeredChannel` pointers into `pollExt` before each tick — architecturally different from `epoll_backend.zig` and fragile under map changes. Fix: store `SeqN` in `pollExt` at register time (one write, never changes); dispatch reads `SeqN` from `pollExt` and calls `ws.map.get(seq)` — identical shape to epoll's `ev.data.u64` approach. Pre-wiring loop in `wait()` eliminated. `PollMap` simplified to `fd → *anyopaque`. Full test suite running to confirm fix.
 

@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 077
+**Current Version:** 078
 **Last Updated:** 2026-05-12
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 in progress — Windows native testing; blocking-socket bug found and fixed in vendored uSockets
+**Active Phase:** Stage 6 in progress — Windows native testing; blocking-socket and setLingerAbort/backlog bugs fixed; Linux 101/101 passes
 
 ---
 
@@ -46,7 +46,17 @@
 - **Stage 4 COMPLETE.** Windows adapter headers done. `posix_net/adapters/` contains `sys/epoll.h` (wepoll redirect), `sys/timerfd.h`, `sys/eventfd.h`, `win_compat.h`, `us_epoll_win.c`. Cross-compile `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` succeeds.
 - **Stage 5 COMPLETE.** macOS cross-compilation verified: `x86_64-macos` and `aarch64-macos` both succeed with `-Dnetwork=portable`.
 - **Stage 6 in progress.** Windows native testing (CLion). Bug found: `bsd_set_nonblocking()` in vendored uSockets was a no-op on Windows — every socket created or accepted through the C layer was blocking. Fixed by replacing the `_WIN32` no-op with `ioctlsocket((SOCKET)fd, FIONBIO, &mode)` in `g41797/uSockets/src/bsd.c`. Affects the **portable backend only**: native Windows backend (`windows/SocketCreator.zig`) uses `std.posix.socket()` + explicit `ioctlsocket` directly, so `bsd_set_nonblocking` was never in its path. After author pushes this fix and updates `build.zig.zon` commit+hash, all portable-backend sockets (TCP/UDS, listener/client/accepted) will be non-blocking on Windows.
+- **Stage 6 secondary issue — FIXED.** After `build.zig.zon` update, Linux portable test `handleReConnnectOfTcpClientServerST` failed with `ListenFailed`. Root cause was `setLingerAbort` being a no-op (sockets stayed in TIME_WAIT, blocking port reuse) and listener backlog mismatch (512 vs native 1024). Both fixed:
+  - **DONE** `portable/Skt.zig:setLingerAbort` — was no-op with wrong comment. Now calls `pn.setLingerAbort(skt.fd)`.
+  - **DONE** `posix_net/adapters/pn_utils.c` — new file: `bsd_set_linger_abort`, `pn_create_listen_socket`, `pn_create_listen_socket_unix`. Uses `bsd.h` (internal header — defines `LIBUS_SOCKET_ERROR`).
+  - **DONE** `posix_net/ffi.zig` — 3 new extern declarations.
+  - **DONE** `posix_net/socket.zig` — `setLingerAbort` wrapper.
+  - **DONE** `posix_net/posix_net.zig` — `setLingerAbort` re-exported.
+  - **DONE** `posix_net/creator.zig` — `createListenSocket` and `createListenSocketUnix` use `pn_create_listen_socket`/`pn_create_listen_socket_unix` with `backlog=1024`.
+  - **DONE** `build.zig` — `pn_utils.c` wired into both `libMod` and `lib_unit_tests` portable blocks.
+  - **Linux result:** 101/101 tests pass.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
+- **Proposal (deferred):** After TCP listener creation, embed the assigned port in `WelcomeResponse` text headers. Client parses port and connects via protocol, not out-of-band `getPort()`. Implement at Stage 7 or earlier if cross-platform test failures require it.
 
 ---
 
@@ -154,6 +164,30 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-12: Claude Code (Sonnet 4.6) — Stage 6: setLingerAbort fix + listener backlog fix
+
+#### Summary
+Linux portable tests failed with `ListenFailed` after the `bsd_set_nonblocking` fix was activated. Root cause: `portable/Skt.zig:setLingerAbort` was a no-op — sockets accumulated in TIME_WAIT, preventing port reuse by subsequent tests. Secondary: `bsd_create_listen_socket` hardcodes `listen(fd, 512)` while native backends use 1024. Fixed both via a new file `posix_net/adapters/pn_utils.c` containing `bsd_set_linger_abort` (calls `setsockopt SO_LINGER l_linger=0`), `pn_create_listen_socket`, and `pn_create_listen_socket_unix`. The file uses `bsd.h` (internal header) rather than `libusockets.h` — `LIBUS_SOCKET_ERROR` is only defined in `bsd.h`. After wiring all layers, 101/101 tests pass on Linux.
+
+#### Changes
+- `posix_net/adapters/pn_utils.c` — new: `bsd_set_linger_abort`, `pn_create_listen_socket`, `pn_create_listen_socket_unix`; includes `bsd.h` not `libusockets.h`
+- `posix_net/ffi.zig` — added extern declarations for all 3 pn_utils functions
+- `posix_net/socket.zig` — added `setLingerAbort` wrapper calling `ffi.bsd_set_linger_abort`
+- `posix_net/posix_net.zig` — re-exported `setLingerAbort`
+- `posix_net/creator.zig` — `createListenSocket` and `createListenSocketUnix` now call pn_utils wrappers with `backlog=1024`
+- `src/ampe/portable/Skt.zig` — `setLingerAbort` calls `pn.setLingerAbort(skt.fd)`; fixed wrong comment
+- `build.zig` — `pn_utils.c` added to both portable C source blocks (`libMod` and `lib_unit_tests`)
+- `design/AGENT_STATE.md` — v077→078; secondary issue marked FIXED
+- `design/transition-2-bun-usockets-plan.md` — §15.1 summary table updated; Stage 6 Linux result noted
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` | ✅ 101/101 PASS |
 
 ---
 

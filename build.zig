@@ -127,6 +127,7 @@ pub fn build(b: *std.Build) void {
         libMod.addIncludePath(usockets_dep.path("src/internal/networking"));
         libMod.link_libc = true;
 
+        libMod.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
             libMod.addIncludePath(b.path("posix_net/adapters"));
             libMod.addIncludePath(b.path("src/ampe/windows/wepoll"));
@@ -227,6 +228,7 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.addIncludePath(usockets_dep.path("src/internal/networking"));
         lib_unit_tests.linkLibC();
 
+        lib_unit_tests.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
             lib_unit_tests.addIncludePath(b.path("posix_net/adapters"));
             lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
