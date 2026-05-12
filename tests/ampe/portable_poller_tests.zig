@@ -181,10 +181,12 @@ test "portable backend: accept flow" {
     const seq: SeqN = 1;
     try map.put(seq, &listener_tc);
 
+    // Initiate non-blocking connect; listener fires accept shortly after.
+    _ = try client.connect();
+
     const listener_fd = toFd(@intCast(listener.rawFd()));
     try p.backend.register(listener_fd, seq, listener_tc.exp);
 
-    // Wait for accept event — client already connected via bsd_create_connect_socket
     const total_act = try p.backend.wait(200, &map);
 
     try testing.expect(total_act.accept == .on);
@@ -213,7 +215,9 @@ test "portable backend: full echo" {
     var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
     defer client.deinit();
 
-    // Spin until accept succeeds (client connected via bsd_create_connect_socket)
+    _ = try client.connect();
+
+    // Spin until accept succeeds
     var accepted: Skt = undefined;
     for (0..200) |_| {
         if (try listener.accept()) |s| {
@@ -498,6 +502,7 @@ test "portable backend: map stability with notifier" {
     const port2 = l2.getPort().?;
     var c2 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port2) });
     defer c2.deinit();
+    _ = try c2.connect();
 
     var got2 = false;
     for (0..20) |_| {
@@ -521,6 +526,7 @@ test "portable backend: map stability with notifier" {
     const port3 = l3.getPort().?;
     var c3 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port3) });
     defer c3.deinit();
+    _ = try c3.connect();
 
     var got3 = false;
     for (0..20) |_| {

@@ -54,6 +54,16 @@ pub fn shutdownSocketRead(fd: Fd) void {
     ffi.bsd_shutdown_socket_read(fd);
 }
 
+/// Connect an existing non-blocking socket to addr.
+/// Returns PnError.WouldBlock when in progress (EINPROGRESS / WSAEWOULDBLOCK).
+/// Caller returns false and waits for WRITABLE, then calls connect again to confirm.
+pub fn connectSocket(fd: Fd, addr: *const anyopaque, addrlen: c_int) PnError!void {
+    const rc: c_int = ffi.pn_connect_socket(fd, addr, addrlen);
+    if (rc == 0) return;
+    if (rc == 1) return PnError.WouldBlock;
+    return PnError.CommunicationFailed;
+}
+
 /// Connect a Unix Domain Socket to a path.
 /// Returns PnError.WouldBlock when connect is in progress (EINPROGRESS/EALREADY on non-blocking socket).
 /// Caller should return false (not yet connected) and retry when WRITABLE fires.

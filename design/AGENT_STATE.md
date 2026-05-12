@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 079
-**Last Updated:** 2026-05-12
+**Current Version:** 081
+**Last Updated:** 2026-05-13
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 in progress — Windows UDS WSAEWOULDBLOCK fix + macOS addrFamily + TCP connect fix; Linux 101/101 passes
+**Active Phase:** Stage 6 in progress — portable/linux subfolder complete; macOS CI pending; windows/mac subfolders next
 
 ---
 
@@ -60,6 +60,12 @@
 - **Pending:** Windows native 4-mode verification (`zbta_win.cmd`) after `build.zig.zon` update; macOS CI run to confirm 54/54.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 - **Proposal (deferred):** After TCP listener creation, embed the assigned port in `WelcomeResponse` text headers. Client parses port and connects via protocol, not out-of-band `getPort()`. Implement at Stage 7 or earlier if cross-platform test failures require it.
+- **Architectural gap identified (2026-05-12):** Root cause: portable backend used one-step create+connect+blocking wait vs two-step (create socket only → explicit `Skt.connect()`). Fixed in Phase 1 + Phase 2/3/4 below.
+- **New rules (2026-05-12):** `design/RULES.md` §6 added — Portable Mirrors Posix Structure, No Silent No-ops, Addendum A Maintenance, Per-Stage Diff Check, Per-OS Subfolder Build Verification, Per-OS subfolders proposal (deferred).
+- **Addendum A added (2026-05-12):** `design/transition-2-bun-usockets-plan.md` Addendum A — four tables comparing `Skt` and `SocketCreator` across linux/mac, windows, and portable backends. Status column (OK/FIX) pending.
+- **Phase 1 COMPLETE (2026-05-12/13):** posix_net layer additions. `pn_connect_socket` in C returns 0=connected, 1=EINPROGRESS, -1=error. `connectSocket` in socket.zig maps 1→WouldBlock. `createClientSocket` in creator.zig (create+set_nonblocking, no connect). `resolveConnect` updated to check `< 0` and still calls `pn_wait_writable` (synchronous for legacy path). All exported from posix_net.zig. `pn_create_listen_socket_from_sockaddr` added: creates TCP/IP listen socket from `sockaddr*` (SO_REUSEADDR+SO_REUSEPORT, bind, listen) — needed by portable/linux backend.
+- **Phase 2/3/4 COMPLETE (2026-05-13):** `src/ampe/portable/linux/` created. `Skt.zig` stores `std.net.Address` + `pn.Fd`; two-step `connect()` for TCP and UDS; `setLingerAbort` on accepted socket; family-aware `disableNagle`; `deleteUDSPath` via family check. `SocketCreator.zig` mirrors posix linux structure: `createListenerSocket(std.net.Address)` + `createConnectSocket(std.net.Address)`; `createListenSocketFromSockaddr` for TCP; `createListenSocketUnix` for UDS. Dispatch added: `portable/Skt.zig` and `portable/SocketCreator.zig` redirect `.linux` to subfolders, other OS to legacy files. `portable_poller_tests.zig` updated: three tests that assumed one-step connect now call `client.connect()` explicitly.
+- **Verification COMPLETE (2026-05-13):** portable 4-mode (Debug/Safe/Fast/Small) all 101/101 pass. Posix regression Debug+Fast all 64/64 pass. Windows cross-compile (portable+posix) OK. macOS cross-compile (arm64+x86_64) OK. Linux sandwich pass.
 
 ---
 
@@ -167,6 +173,24 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-12: Claude Code (Sonnet 4.6) — Stage 6: portable backend structural alignment (planning)
+
+#### Summary
+Planning session — no code written. `poller_tests` added to mac CI revealed two failures (`writable immediately`, `modify recv to send`). Root cause: portable backend's `createTcpClient` calls `resolveConnect` which does socket+connect+blocking `pn_wait_writable` in one step. Posix backends (linux, mac, windows) all use two-step: create socket only, then explicit non-blocking `Skt.connect()`. Additional gaps identified by comparing all four backends line by line: `accept()` missing `setLingerAbort` on accepted socket; `disableNagle` calls `pn.nodelay` unconditionally (wrong for UDS); `createListenerSocket` returns `NotImplementedYet`; no `address` field in portable Skt (needed for `connect()`, `setREUSE`, `disableNagle`, `deleteUDSPath`). Full API audit of `bsd.h` confirmed: two-step primitives exist (`bsd_create_socket`, `bsd_set_nonblocking`, `bsd_connect_socket_unix`); one-step functions (`bsd_create_connect_socket`, `bsd_create_connect_socket_unix`) should not be used going forward. New C function `pn_connect_socket(fd, sockaddr*, addrlen)` needed in `pn_utils.c` as TCP equivalent of `bsd_connect_socket_unix`. Iterative fix approach approved: add `portable/linux/` subfolder, redirect `portable/Skt.zig` and `portable/SocketCreator.zig` to it with legacy fallback for other OSes, verify builds, implement.
+
+#### Changes
+- `design/RULES.md` — §6 added: Portable Mirrors Posix Structure, No Silent No-ops, Addendum A Maintenance, Per-Stage Diff Check, Per-OS Subfolder Build Verification, Per-OS subfolders proposal (deferred)
+- `design/transition-2-bun-usockets-plan.md` — Addendum A added: four cross-backend comparison tables (linux/mac vs portable, windows vs portable) for `Skt` and `SocketCreator`
+- `design/AGENT_STATE.md` — v079→080; architectural gap and plan recorded
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Planning session only | No code written |
 
 ---
 

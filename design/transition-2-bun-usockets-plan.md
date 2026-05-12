@@ -1258,6 +1258,24 @@ int pn_wait_writable(LIBUS_SOCKET_DESCRIPTOR fd, int timeout_ms) {
 | 3 TCP tests: `CommunicationFailed` | EINPROGRESS not waited; `send` → ENOTCONN | `pn_wait_writable` in `pn_utils.c`; called from `resolveConnect` |
 | `addrUnixPath` returns empty | `addrFamily` guard failed (528 ≠ 1) | Fixed by Bug 1 fix |
 
+## 15.3 Stage 6 — Portable Backend Structural Alignment (2026-05-12)
+
+After adding `poller_tests` to macOS CI, two new failures appeared: `writable immediately` and `modify recv to send`. Root cause is an architectural mismatch between the portable backend and posix backends.
+
+**Root cause:** portable `createTcpClient` calls `resolveConnect` which does socket+connect+blocking `pn_wait_writable` in one step. Posix backends (linux, mac, windows) all use two-step: `createConnectSocket` creates socket only → upper layer calls `Skt.connect()` (non-blocking, returns false on EINPROGRESS) → poller waits for WRITABLE → `Skt.connect()` returns true.
+
+`pn_wait_writable` in `resolveConnect` is architecturally wrong — it blocks in a non-blocking system.
+
+**Additional gaps found (cross-backend comparison, Addendum A):**
+- `accept()` — portable missing `setLingerAbort` on accepted socket
+- `disableNagle()` — portable calls `pn.nodelay` unconditionally; must check address family
+- `createListenerSocket` — portable returns `NotImplementedYet`; posix has full implementation
+- `Skt` state — portable stores `fd` only; posix backends store `address: std.net.Address` (needed for `connect()`, `setREUSE`, `disableNagle`, `deleteUDSPath`)
+
+**Fix approach:** iterative per-OS subfolders. Add `portable/linux/` first. `portable/Skt.zig` and `portable/SocketCreator.zig` become redirect files dispatching to OS subfolders with legacy fallback. New C function `pn_connect_socket(fd, sockaddr*, addrlen)` added to `pn_utils.c` as TCP equivalent of `bsd_connect_socket_unix`.
+
+See implementation plan in plan file for full details.
+
 ---
 
 ## 16. Critical Files
@@ -1369,4 +1387,86 @@ The concern was that `POLL_TYPE_SOCKET` triggers high-level socket callbacks. Th
 
 **`POLL_TYPE_CALLBACK` recommendation — superseded.**
 Based on the old approach before the dispatch override was confirmed. With the Zig override, `POLL_TYPE_SOCKET` is correct and simpler. (Now in §4.3.)
+
+---
+
+## Addendum A: Skt and SocketCreator — cross-backend public API comparison
+
+These tables document the behavioral differences between the native posix backends (linux, mac, windows) and the portable (posix_net) backend. They drive the portable backend alignment fix.
+
+**Status legend:** `OK` = no meaningful difference. `OK (linux)` = fixed for Linux via `portable/linux/`; mac and win targets still use legacy. `FIX (mac)` = still differs for macOS target (needs `portable/mac/`). `FIX (win)` = still differs for Windows target (needs `portable/win/`).
+
+**Last updated:** 2026-05-13 after `portable/linux/` implementation complete.
+
+### A.1 `Skt` — linux/mac vs portable
+
+| Function | linux/mac | portable — linux target | portable — mac target (legacy) | Status |
+|---|---|---|---|---|
+| `isSet` | `socket != null` | `fd != INVALID_FD` | same | OK |
+| `rawFd` | `socket orelse -1` | bitcasts `fd` | same | OK |
+| `socketHandle` | `?std.posix.socket_t` | `?pn.Fd` | same | OK |
+| `getPort` | `address.getPort()` | `pn.localAddr(fd)` + `pn.addrPort` | same | OK |
+| `listen` | full: setREUSE, bind, listen, getsockname | no-op — done in `pn_create_listen_socket` | same | OK |
+| `accept` | syscall; sets NONBLOCK+CLOEXEC; `setLingerAbort` on accepted fd | `pn.acceptSocket` + `pn.setLingerAbort` on accepted fd | missing `setLingerAbort` on accepted fd | OK (linux) / FIX (mac) |
+| **`connect`** | calls `connectOs()` against stored `address`; returns `false` on EINPROGRESS, `true` on EISCONN | calls `pn.connectSocket`/`pn.connectSocketUnix`; returns `false` on WouldBlock | **TCP: always `true`** — no syscall; only UDS delayed connect | OK (linux) / FIX (mac) |
+| `setREUSE` | `setsockopt(SO_REUSEPORT/SO_REUSEADDR)` | no-op — set inside `pn_create_listen_socket` | same | OK |
+| `setLingerAbort` | `setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | same | OK |
+| `disableNagle` | `setsockopt(TCP_NODELAY)` — TCP only | checks `address.any.family`; calls `pn.nodelay` for INET/INET6 only | `pn.nodelay` unconditionally (ignores family) | OK (linux) / FIX (mac) |
+| `findFreeTcpPort` | `posix.socket` + bind 0 + getsockname | `pn.findFreeTcpPort` | same | OK |
+| `sendBuf/recvToBuf` | `std.posix.send/recv` | `pn.sendBuf/recvToBuf` | same | OK |
+| `close` | `setLingerAbort` + `posix.close` + UDS unlink if server | `pn.closeSocket` + UDS unlink via `address.any.family` check | `pn.closeSocket` + UDS unlink via `uds_server_path` field | OK |
+| **State** | `socket: ?socket_t` + `address: std.net.Address` | `fd: pn.Fd` + `address: std.net.Address` | `fd: pn.Fd` only — **no address stored** | OK (linux) / FIX (mac) |
+
+### A.2 `SocketCreator` — linux/mac vs portable
+
+| Function | linux/mac | portable — linux target | portable — mac target (legacy) | Status |
+|---|---|---|---|---|
+| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `resolveIp` → `createListenerSocket` via `pn_create_listen_socket_from_sockaddr` | `pn.createListenSocket` (string-based) | OK (linux) / FIX (mac) |
+| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only, no connect) | `getAddressList` → `createConnectSocket` (socket only, no connect) | `pn.resolveConnect` = socket + connect + blocking wait | OK (linux) / FIX (mac) |
+| `createUdsServer` | `initUnix` → `createListenerSocket` | `pn.createListenSocketUnix` (handles abstract namespace + unlink) | same | OK |
+| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | `initUnix` → `createConnectSocket` (socket only) | `pn.createSocket` + stores path in Skt | OK (linux) / FIX (mac) |
+| **`createConnectSocket`** | socket only (NONBLOCK+CLOEXEC) + `setLingerAbort`; stores `address` in Skt | `pn.createClientSocket` + `pn.setLingerAbort`; stores `address` in Skt | `pn.createClientSocket` only — no `setLingerAbort`, no `address` stored | OK (linux) / FIX (mac) |
+| `createListenerSocket` | socket + bind + listen | `pn.createListenSocketFromSockaddr` (SO_REUSEADDR + SO_REUSEPORT + bind + listen) | returns `AmpeError.NotImplementedYet` | OK (linux) / FIX (mac) |
+
+### A.3 `Skt` — windows vs portable
+
+All rows below describe the Windows-target portable path, which still uses the legacy `Skt_legacy.zig`. No `portable/win/` subfolder exists yet.
+
+| Function | windows | portable — win target (legacy) | Status |
+|---|---|---|---|
+| `isSet` | `socket != null` | `fd != INVALID_FD` | OK |
+| `rawFd` | truncates `SOCKET` ptr to i32 | bitcasts `fd` | OK |
+| `socketHandle` | `?ws2_32.SOCKET` | `?pn.Fd` | OK |
+| `getPort` | `address.getPort()` from stored `address` | `pn.localAddr(fd)` + `pn.addrPort` | OK |
+| `listen` | full: setREUSE, `ws2_32.bind` (5-retry), `ws2_32.listen`, `ws2_32.getsockname` | no-op | OK |
+| `accept` | `ws2_32.accept`; WSAEWOULDBLOCK→null; `setLingerAbort` | `pn.acceptSocket`; **missing `setLingerAbort`** | FIX (win) |
+| **`connect`** | `ws2_32.connect`; returns `false` on WSAEWOULDBLOCK, `true` on WSAEISCONN | **TCP: always `true`** — no syscall | FIX (win) |
+| `setREUSE` | `ws2_32.setsockopt(SO_REUSEADDR)` | no-op — set inside C layer | OK |
+| `setLingerAbort` | `ws2_32.setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | OK |
+| `disableNagle` | `ws2_32.setsockopt(IPPROTO.TCP, TCP.NODELAY)` | `pn.nodelay` unconditionally (ignores family) | FIX (win) |
+| `findFreeTcpPort` | `std.posix.socket` + `ws2_32.bind` + `ws2_32.getsockname` | `pn.findFreeTcpPort` | OK |
+| `sendBuf/recvToBuf` | `ws2_32.send/recv` | `pn.sendBuf/recvToBuf` | OK |
+| `close` | `setLingerAbort` + `ws2_32.closesocket` | `pn.closeSocket` + UDS unlink via `uds_server_path` field | OK |
+| **State** | `socket: ?ws2_32.SOCKET` + `address: std.net.Address` + `base_handle` | `fd: pn.Fd` only — **no address stored** | FIX (win) |
+
+### A.4 `SocketCreator` — windows vs portable
+
+All rows describe the Windows-target portable path (legacy `SocketCreator_legacy.zig`).
+
+| Function | windows | portable — win target (legacy) | Status |
+|---|---|---|---|
+| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `pn.createListenSocket` (string-based) | FIX (win) |
+| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only) | `pn.resolveConnect` = socket + connect + blocking wait | FIX (win) |
+| `createUdsServer` | `initUnix` → `createListenerSocket` | `pn.createListenSocketUnix` | OK |
+| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | `pn.createSocket` + stores path in Skt | FIX (win) |
+| **`createConnectSocket`** | `posix.socket` (NONBLOCK) + `ioctlsocket(FIONBIO)` + `setLingerAbort`; NO connect; stores `address` | `pn.createClientSocket` only — no `setLingerAbort`, no `address` | FIX (win) |
+| `createListenerSocket` | `posix.socket` + `ioctlsocket(FIONBIO)` + `setLingerAbort` + `listen()` | returns `AmpeError.NotImplementedYet` | FIX (win) |
+
+### A.5 Cross-backend pattern summary
+
+linux, mac, and windows native backends share the same two-step flow: `createConnectSocket` creates a non-blocking socket only (no connect), stores the resolved `address` in `Skt`; then `Skt.connect()` issues the real connect syscall and returns `false` while EINPROGRESS/WSAEWOULDBLOCK, allowing the poller to wait for WRITABLE before confirming.
+
+The portable backend now dispatches by OS:
+- **Linux target** (`portable/linux/`): aligned with the two-step flow. `createConnectSocket` creates a socket only via `pn.createClientSocket`; stores `std.net.Address` in `Skt`; `Skt.connect()` calls `pn.connectSocket`/`pn.connectSocketUnix` and returns `false` on WouldBlock. All gaps listed above are closed.
+- **macOS/Windows targets** (legacy fallback): still use one-step `resolveConnect` (blocking). These targets need `portable/mac/` and `portable/win/` subfolders respectively.
 

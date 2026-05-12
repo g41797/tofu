@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 #else
+#include <errno.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -92,6 +93,57 @@ LIBUS_SOCKET_DESCRIPTOR pn_create_listen_socket_unix(const char *path, size_t pa
 #endif
     }
     return fd;
+}
+
+/*
+ * Create a TCP/IP listen socket from an existing sockaddr (IPv4 or IPv6).
+ * Sets SO_REUSEADDR, binds, and listens. Used by the portable backend to
+ * avoid reformatting std.net.Address back to a host string.
+ */
+LIBUS_SOCKET_DESCRIPTOR pn_create_listen_socket_from_sockaddr(const struct sockaddr *addr, int addrlen, int backlog) {
+#ifdef _WIN32
+    LIBUS_SOCKET_DESCRIPTOR fd = bsd_create_socket(addr->sa_family, SOCK_STREAM, 0);
+    if (fd == LIBUS_SOCKET_ERROR) return LIBUS_SOCKET_ERROR;
+    int opt = 1;
+    setsockopt((SOCKET)fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
+    if (bind((SOCKET)fd, addr, addrlen) != 0) { bsd_close_socket(fd); return LIBUS_SOCKET_ERROR; }
+    if (listen((SOCKET)fd, backlog) != 0) { bsd_close_socket(fd); return LIBUS_SOCKET_ERROR; }
+    return fd;
+#else
+    LIBUS_SOCKET_DESCRIPTOR fd = bsd_create_socket(addr->sa_family, SOCK_STREAM, 0);
+    if (fd == LIBUS_SOCKET_ERROR) return LIBUS_SOCKET_ERROR;
+    int opt = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#ifdef SO_REUSEPORT
+    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+    if (bind(fd, addr, (socklen_t)addrlen) != 0) { bsd_close_socket(fd); return LIBUS_SOCKET_ERROR; }
+    if (listen(fd, backlog) != 0) { bsd_close_socket(fd); return LIBUS_SOCKET_ERROR; }
+    return fd;
+#endif
+}
+
+/*
+ * Non-blocking connect on an existing fd.
+ * TCP equivalent of bsd_connect_socket_unix.
+ * Returns 0 if immediately connected.
+ * Returns 1 if in progress (EINPROGRESS / WSAEWOULDBLOCK) — caller waits for WRITABLE.
+ * Returns -1 on hard error.
+ */
+int pn_connect_socket(LIBUS_SOCKET_DESCRIPTOR fd, const struct sockaddr *addr, int addrlen) {
+#ifdef _WIN32
+    if (connect((SOCKET)fd, addr, addrlen) != 0) {
+        if (WSAGetLastError() == WSAEWOULDBLOCK) return 1;
+        return -1;
+    }
+    return 0;
+#else
+    if (connect(fd, addr, (socklen_t)addrlen) != 0) {
+        if (errno == EINPROGRESS) return 1;
+        return -1;
+    }
+    return 0;
+#endif
 }
 
 /*

@@ -12,13 +12,13 @@ pub extern fn pn_create_listen_socket(host: [*:0]const u8, port: c_int, options:
 pub extern fn pn_create_listen_socket_unix(path: [*]const u8, pathlen: usize, options: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn pn_create_connect_socket_unix(path: [*]const u8, pathlen: usize, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn pn_wait_writable(fd: LIBUS_SOCKET_DESCRIPTOR, timeout_ms: c_int) c_int;
+pub extern fn pn_connect_socket(fd: LIBUS_SOCKET_DESCRIPTOR, addr: *const anyopaque, addrlen: c_int) c_int;
+pub extern fn pn_create_listen_socket_from_sockaddr(addr: *const anyopaque, addrlen: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
 
 // BSD networking wrappers from bun-usockets
 pub extern fn bsd_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn bsd_create_listen_socket_unix(path: [*]const u8, pathlen: usize, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
-pub extern fn bsd_create_connect_socket(host: [*:0]const u8, port: c_int, source_host: ?[*:0]const u8, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn bsd_create_socket(domain: c_int, type: c_int, protocol: c_int) LIBUS_SOCKET_DESCRIPTOR;
-pub extern fn bsd_create_connect_socket_unix(path: [*]const u8, pathlen: usize, options: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn bsd_connect_socket_unix(fd: LIBUS_SOCKET_DESCRIPTOR, path: [*]const u8, pathlen: usize) c_int;
 pub extern fn bsd_accept_socket(fd: LIBUS_SOCKET_DESCRIPTOR, addr: *anyopaque) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn bsd_recv(fd: LIBUS_SOCKET_DESCRIPTOR, buf: [*]u8, length: c_int, flags: c_int) c_int;

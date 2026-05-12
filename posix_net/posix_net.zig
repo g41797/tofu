@@ -23,6 +23,7 @@ pub const acceptSocket = socket.acceptSocket;
 pub const closeSocket = socket.closeSocket;
 pub const shutdownSocket = socket.shutdownSocket;
 pub const shutdownSocketRead = socket.shutdownSocketRead;
+pub const connectSocket = socket.connectSocket;
 pub const connectSocketUnix = socket.connectSocketUnix;
 pub const nodelay = socket.nodelay;
 pub const keepalive = socket.keepalive;
@@ -37,10 +38,11 @@ pub const setLingerAbort = socket.setLingerAbort;
 
 // Socket creation and resolution
 pub const createSocket = creator.createSocket;
+pub const createClientSocket = creator.createClientSocket;
 pub const createListenSocket = creator.createListenSocket;
 pub const createListenSocketUnix = creator.createListenSocketUnix;
-pub const createConnectSocket = creator.createConnectSocket;
 pub const createConnectSocketUnix = creator.createConnectSocketUnix;
+pub const createListenSocketFromSockaddr = creator.createListenSocketFromSockaddr;
 pub const findFreeTcpPort = creator.findFreeTcpPort;
 pub const resolveConnect = creator.resolveConnect;
 

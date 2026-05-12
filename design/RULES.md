@@ -123,4 +123,65 @@ The `zbta.sh` script (and platform variants) automates this sequence.
 
 ---
 
+## 6. Portable Backend Alignment Rules
+
+### Addendum A Maintenance (MANDATORY)
+`design/transition-2-bun-usockets-plan.md` contains Addendum A: four tables comparing `Skt` and `SocketCreator` across linux/mac, windows, and portable backends.
+
+Every time any posix backend (linux, mac, windows) or the portable backend is changed, Addendum A must be updated to reflect the new state of all four tables before the task is considered complete.
+
+### Portable Mirrors Posix Structure (MANDATORY)
+The portable backend (`src/ampe/portable/`) must mirror the structure of the posix backends (linux, mac, windows) — not only public functions but also private/internal helpers.
+
+Every private function that exists in linux, mac, or windows (`createListenerSocket`, `createConnectSocket`, `deleteUDSPath`, `connectOs`, `acceptOs`, etc.) must have an equivalent in portable, even if its body delegates to `pn.*` instead of Zig stdlib or syscalls.
+
+Rule: **same shape, different engine.** Posix uses Zig stdlib/syscalls. Portable delegates to `posix_net` C wrappers. The function names and call structure must match so that line-by-line comparison is always possible.
+
+When a new private helper is added to any posix backend, a matching function must be added to portable in the same session.
+
+### No Silent No-ops or Stubs (MANDATORY)
+Every function that has a real implementation in any posix backend (linux, mac, windows) must have a real implementation in portable — not a no-op, not a stub returning `NotImplementedYet`.
+
+If a real implementation is not possible because the `posix_net`/`bsd.c` layer has no equivalent, the AI agent MUST:
+1. Stop.
+2. Explicitly report the gap to the author, naming the function and the missing capability.
+3. Wait for the author's decision before leaving any no-op or stub in place.
+
+Silently leaving a no-op where posix does real work is a bug, not a known limitation.
+
+### Per-OS Subfolder Build Verification (MANDATORY)
+When adding a new OS subfolder under `portable/` (e.g. `portable/linux/`), the first step before writing any logic is to verify that the build system correctly resolves all module imports from the new location.
+
+Steps:
+1. Create the subfolder.
+2. Create minimal `Skt.zig` and `SocketCreator.zig` stubs (compiling but empty structs).
+3. Add the redirect in `portable/Skt.zig` and `portable/SocketCreator.zig` for that OS.
+4. Run `zig build` (Debug) for all three platforms (Linux, Windows, macOS cross-compile).
+5. Only after all builds pass — start writing actual logic.
+
+A build failure at step 4 means the module path or build.zig wiring is wrong. Fix it before proceeding.
+
+### Proposal: Per-OS Subfolders Under portable/ (NOT DECIDED — for discussion)
+
+Currently `src/ampe/portable/` is a flat folder. A possible future direction: create subfolders `portable/linux/`, `portable/mac/`, `portable/windows/` mirroring the top-level backend layout.
+
+Motivation: as portable grows to mirror posix structure (public + private), OS-specific divergence inside portable (e.g. `setLingerAbort` differences, `accept` flags, UDS path handling) may become large enough that per-OS files are cleaner than `comptime` branches inside single files.
+
+Open questions before deciding:
+- Does the divergence inside portable justify per-OS files, or are `comptime` branches sufficient?
+- Would per-OS subfolders duplicate too much of the top-level backend structure, making the portable layer redundant?
+- At what point does portable become indistinguishable from the native backends?
+
+**Discuss after the full alignment fix is complete and the scope of OS-specific divergence inside portable is known.**
+
+### Per-Stage Diff Check (MANDATORY)
+At the end of every implementation stage, the Addendum A tables must be reviewed line by line.
+For each remaining difference, confirm one of two things:
+1. The difference is intentional — a known architectural difference (e.g. portable delegates to C, posix uses Zig stdlib).
+2. The difference is a gap — not yet fixed, and must be tracked as an open task.
+
+No stage is complete while unintentional gaps remain unmarked.
+
+---
+
 *End of Rules*

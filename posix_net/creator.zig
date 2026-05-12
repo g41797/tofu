@@ -28,16 +28,25 @@ pub fn createListenSocketUnix(path: [*]const u8, pathlen: usize, options: i32) P
     return fd;
 }
 
-/// Create a connecting TCP socket. bsd_create_connect_socket handles DNS resolution internally.
-pub fn createConnectSocket(host: [*:0]const u8, port: u16, options: i32) PnError!Fd {
-    const fd = ffi.bsd_create_connect_socket(host, @intCast(port), null, @intCast(options));
+/// Create a non-blocking client socket (TCP or UDS). No connect — caller calls connectSocket/connectSocketUnix.
+pub fn createClientSocket(family: i32) PnError!Fd {
+    const fd = ffi.bsd_create_socket(@intCast(family), @intCast(types.SOCK_STREAM), 0);
     if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
+    _ = ffi.bsd_set_nonblocking(fd);
     return fd;
 }
 
 /// Create a connecting Unix Domain Socket. Supports abstract namespace (path[0] == 0).
 pub fn createConnectSocketUnix(path: [*]const u8, pathlen: usize, options: i32) PnError!Fd {
     const fd = ffi.pn_create_connect_socket_unix(path, pathlen, @intCast(options));
+    if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
+    return fd;
+}
+
+/// Create a listening TCP/IP socket from an existing sockaddr. Used by portable backend
+/// to avoid reformatting std.net.Address back to a host string.
+pub fn createListenSocketFromSockaddr(addr: *const anyopaque, addrlen: usize) PnError!Fd {
+    const fd = ffi.pn_create_listen_socket_from_sockaddr(addr, @intCast(addrlen), 1024);
     if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
     return fd;
 }
@@ -73,10 +82,12 @@ pub fn resolveConnect(host: [:0]const u8, port: u16) PnError!Fd {
     defer if (res) |r| ffi.freeaddrinfo(r);
 
     if (res != null) {
-        // bsd_create_connect_socket handles connection; use host+port directly.
-        const fd = try createConnectSocket(host.ptr, port, 0);
-        // Non-blocking connect may be in-progress (EINPROGRESS on macOS).
-        // Wait up to 5 s for the connect to complete before returning.
+        const fd: Fd = try createClientSocket(@intCast(res.?.ai_family));
+        if (ffi.pn_connect_socket(fd, @ptrCast(res.?.ai_addr), @intCast(res.?.ai_addrlen)) < 0) {
+            ffi.bsd_close_socket(fd);
+            return PnError.CommunicationFailed;
+        }
+        // Wait for non-blocking connect to complete (EINPROGRESS on macOS is common).
         if (ffi.pn_wait_writable(fd, 5000) != 0) {
             ffi.bsd_close_socket(fd);
             return PnError.CommunicationFailed;
