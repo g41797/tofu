@@ -257,6 +257,8 @@ void bsd_socket_nodelay(LIBUS_SOCKET_DESCRIPTOR fd, int enabled);
 int bsd_socket_keepalive(LIBUS_SOCKET_DESCRIPTOR fd, int on, unsigned int delay);
 ```
 
+**Windows note (portable backend):** `bsd_set_nonblocking` was originally a no-op on `_WIN32` (comment said "Libuv will set windows sockets as non-blocking"). This project does not use Libuv. Fixed in the `g41797/uSockets` fork (2026-05-12): the `_WIN32` branch now calls `ioctlsocket((SOCKET)fd, FIONBIO, &mode)`. Affects the portable backend only — all `bsd_create_*` and `bsd_accept_socket` paths in the portable backend are now non-blocking on Windows. The native Windows backend (`windows/SocketCreator.zig`) uses `std.posix.socket()` + explicit `ioctlsocket` and is unaffected.
+
 ### 3.4 POLL_TYPE constants (`internal/internal.h`)
 
 ```c
@@ -892,6 +894,11 @@ zig build -Dtarget=x86_64-macos  -Dnetwork=portable  # ✅
 zig build -Dtarget=aarch64-macos -Dnetwork=portable  # ✅
 ```
 
+**Stage 6 — Windows native testing (IN PROGRESS):**
+- Bug found (2026-05-12): `bsd_set_nonblocking` no-op on Windows → all C-layer sockets blocking.
+- Fixed in `g41797/uSockets/src/bsd.c`. Author must push and update `build.zig.zon`.
+- Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows.
+
 ---
 
 ## 12.5 std.posix / std.net → bsd_* Mapping (Stage -1 result)
@@ -904,7 +911,7 @@ Scanned from `linux/Skt.zig` and `linux/SocketCreator.zig` on 2026-05-06. **No b
 | `std.net.Address` | Skt.zig, SocketCreator.zig | Not needed — `bsd_*` take host string or `sockaddr*` | Remove from usockets/Skt.zig struct |
 | `std.posix.AF.INET`, `AF.INET6` | Skt.zig | Not needed — `bsd_create_listen_socket` handles all families internally | |
 | `std.posix.AF.UNIX` | Skt.zig | `bsd.bsd_create_listen_socket_unix` / `bsd.bsd_create_connect_socket_unix` | |
-| `std.posix.SOCK.NONBLOCK`, `SOCK.CLOEXEC` | Skt.zig, SocketCreator.zig | `bsd_set_nonblocking(fd)` — called inside `bsd_create_*` already | `bsd_create_*` always sets NONBLOCK |
+| `std.posix.SOCK.NONBLOCK`, `SOCK.CLOEXEC` | Skt.zig, SocketCreator.zig | `bsd_set_nonblocking(fd)` — called inside `bsd_create_*` already | `bsd_create_*` always sets NONBLOCK (fixed for Windows in fork 2026-05-12) |
 | `std.posix.setsockopt` (REUSEADDR, REUSEPORT) | Skt.zig | `bsd_create_listen_socket` calls `bsd_set_reuse` internally | No Zig call needed |
 | `std.posix.SO.LINGER`, `posix.SOL.SOCKET` | Skt.zig | `bsd_close_socket` handles linger-on-close internally | No `setLingerAbort` needed |
 | `std.posix.IPPROTO.TCP`, `std.posix.TCP.NODELAY` | Skt.zig | `pn.nodelay(fd)` | Direct replacement |

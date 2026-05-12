@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 076
-**Last Updated:** 2026-05-11
+**Current Version:** 077
+**Last Updated:** 2026-05-12
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 4 COMPLETE — next: Stage 6 (native hardware testing + CI matrix live)
+**Active Phase:** Stage 6 in progress — Windows native testing; blocking-socket bug found and fixed in vendored uSockets
 
 ---
 
@@ -45,7 +45,7 @@
 - **Stage 3 COMPLETE.**
 - **Stage 4 COMPLETE.** Windows adapter headers done. `posix_net/adapters/` contains `sys/epoll.h` (wepoll redirect), `sys/timerfd.h`, `sys/eventfd.h`, `win_compat.h`, `us_epoll_win.c`. Cross-compile `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` succeeds.
 - **Stage 5 COMPLETE.** macOS cross-compilation verified: `x86_64-macos` and `aarch64-macos` both succeed with `-Dnetwork=portable`.
-- **Next: Stage 6** — native hardware testing + CI network matrix live.
+- **Stage 6 in progress.** Windows native testing (CLion). Bug found: `bsd_set_nonblocking()` in vendored uSockets was a no-op on Windows — every socket created or accepted through the C layer was blocking. Fixed by replacing the `_WIN32` no-op with `ioctlsocket((SOCKET)fd, FIONBIO, &mode)` in `g41797/uSockets/src/bsd.c`. Affects the **portable backend only**: native Windows backend (`windows/SocketCreator.zig`) uses `std.posix.socket()` + explicit `ioctlsocket` directly, so `bsd_set_nonblocking` was never in its path. After author pushes this fix and updates `build.zig.zon` commit+hash, all portable-backend sockets (TCP/UDS, listener/client/accepted) will be non-blocking on Windows.
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 
 ---
@@ -154,6 +154,34 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-12: Claude Code (Sonnet 4.6) — Stage 6: bsd_set_nonblocking Windows fix
+
+#### Summary
+Windows native debugging (CLion) revealed that `acceptSocket` blocks instead of returning `WouldBlock`. Root cause: `bsd_set_nonblocking()` in vendored uSockets `bsd.c` was a no-op on Windows (`/* Libuv will set windows sockets as non-blocking */`). This project does not use Libuv. Fixed by replacing the no-op with `ioctlsocket((SOCKET)fd, FIONBIO, &mode)`. Scope: **portable backend only** — `bsd_create_socket()` and `bsd_accept_socket()` are in the portable path. The native Windows backend (`windows/SocketCreator.zig`) uses `std.posix.socket()` + explicit `ioctlsocket` and was never in this code path. The `ioctlsocket` blocks in `linux/SocketCreator.zig` and `mac/SocketCreator.zig` are intentionally kept — they document the required non-blocking pattern and were the clue that revealed the C-layer gap.
+
+#### Changes
+- `g41797/uSockets/src/bsd.c` — `bsd_set_nonblocking`: replaced `_WIN32` no-op with `ioctlsocket((SOCKET)fd, FIONBIO, &mode)`
+- `design/transition-2-bun-usockets-plan.md` — §3.3 note added for `bsd_set_nonblocking` Windows behavior; Stage 6 status updated
+- `design/AGENT_STATE.md` — v076→077; Stage 6 in-progress; bug and fix recorded
+
+#### How to activate on Windows
+After author pushes the fix to `github.com/g41797/uSockets`:
+1. Note the new commit hash.
+2. On Windows: `zig fetch git+https://github.com/g41797/uSockets.git#<new-commit-hash>`
+3. Update `build.zig.zon`: new commit hash in `.url` and new package hash in `.hash`.
+
+#### Verification
+To be run by author on Windows after `build.zig.zon` update:
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable -Doptimize=Debug` (Windows) | pending |
+| `zbta_win.cmd` (all 4 modes) | pending |
+| `zig build test -Dnetwork=portable` (all 4 modes, Windows) | pending |
+| Linux 4-mode sandwich | pending |
 
 ---
 
