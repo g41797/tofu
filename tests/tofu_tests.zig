@@ -12,15 +12,16 @@ test {
     _ = @import("address_tests.zig");
     _ = @import("message_tests.zig");
 
+    // Socket-dependent tests (all platforms):
+    std.log.debug("\r\n\r\n   ****  start Notifier tests ****\r\n\r\n", .{});
+    _ = @import("ampe/Notifier_tests.zig");
+    std.log.debug("\r\n\r\n   ****  finish Notifier tests ****\r\n\r\n", .{});
+
     if (@import("builtin").os.tag != .macos) {
 
-        std.log.debug("\r\n   ****  tofu TESTS Notifier ****\r\n", .{});
-
-        // Socket-dependent tests (all platforms):
-    _ = @import("ampe/Notifier_tests.zig");
 
         // Linux Skt/SocketCreator contract tests (baseline for posix removal):
-    if (@import("builtin").os.tag == .linux) {
+        if (@import("builtin").os.tag == .linux) {
             _ = @import("ampe/sockets_tests.zig");
         }
 
