@@ -1394,79 +1394,78 @@ Based on the old approach before the dispatch override was confirmed. With the Z
 
 These tables document the behavioral differences between the native posix backends (linux, mac, windows) and the portable (posix_net) backend. They drive the portable backend alignment fix.
 
-**Status legend:** `OK` = no meaningful difference. `OK (linux)` = fixed for Linux via `portable/linux/`; mac and win targets still use legacy. `FIX (mac)` = still differs for macOS target (needs `portable/mac/`). `FIX (win)` = still differs for Windows target (needs `portable/win/`).
+**Status legend:** `OK` = no meaningful difference across all targets. `OK (linux, mac)` = fixed for Linux and macOS; Windows still needs verification. `OK (linux, mac, win)` = fixed for all three targets. `FIX` = still differs (pending).
 
-**Last updated:** 2026-05-13 after `portable/linux/` implementation complete.
+**Last updated:** 2026-05-13 after `portable/linux/`, `portable/mac/`, `portable/win/` all complete.
 
 ### A.1 `Skt` — linux/mac vs portable
 
-| Function | linux/mac | portable — linux target | portable — mac target (legacy) | Status |
-|---|---|---|---|---|
-| `isSet` | `socket != null` | `fd != INVALID_FD` | same | OK |
-| `rawFd` | `socket orelse -1` | bitcasts `fd` | same | OK |
-| `socketHandle` | `?std.posix.socket_t` | `?pn.Fd` | same | OK |
-| `getPort` | `address.getPort()` | `pn.localAddr(fd)` + `pn.addrPort` | same | OK |
-| `listen` | full: setREUSE, bind, listen, getsockname | no-op — done in `pn_create_listen_socket` | same | OK |
-| `accept` | syscall; sets NONBLOCK+CLOEXEC; `setLingerAbort` on accepted fd | `pn.acceptSocket` + `pn.setLingerAbort` on accepted fd | missing `setLingerAbort` on accepted fd | OK (linux) / FIX (mac) |
-| **`connect`** | calls `connectOs()` against stored `address`; returns `false` on EINPROGRESS, `true` on EISCONN | calls `pn.connectSocket`/`pn.connectSocketUnix`; returns `false` on WouldBlock | **TCP: always `true`** — no syscall; only UDS delayed connect | OK (linux) / FIX (mac) |
-| `setREUSE` | `setsockopt(SO_REUSEPORT/SO_REUSEADDR)` | no-op — set inside `pn_create_listen_socket` | same | OK |
-| `setLingerAbort` | `setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | same | OK |
-| `disableNagle` | `setsockopt(TCP_NODELAY)` — TCP only | checks `address.any.family`; calls `pn.nodelay` for INET/INET6 only | `pn.nodelay` unconditionally (ignores family) | OK (linux) / FIX (mac) |
-| `findFreeTcpPort` | `posix.socket` + bind 0 + getsockname | `pn.findFreeTcpPort` | same | OK |
-| `sendBuf/recvToBuf` | `std.posix.send/recv` | `pn.sendBuf/recvToBuf` | same | OK |
-| `close` | `setLingerAbort` + `posix.close` + UDS unlink if server | `pn.closeSocket` + UDS unlink via `address.any.family` check | `pn.closeSocket` + UDS unlink via `uds_server_path` field | OK |
-| **State** | `socket: ?socket_t` + `address: std.net.Address` | `fd: pn.Fd` + `address: std.net.Address` | `fd: pn.Fd` only — **no address stored** | OK (linux) / FIX (mac) |
+| Function | linux/mac native | portable (all targets) | Status |
+|---|---|---|---|
+| `isSet` | `socket != null` | `fd != INVALID_FD` | OK |
+| `rawFd` | `socket orelse -1` | bitcasts `fd` (handles Windows `usize`) | OK |
+| `socketHandle` | `?std.posix.socket_t` | `?pn.Fd` | OK |
+| `getPort` | `address.getPort()` | `pn.localAddr(fd)` + `pn.addrPort` | OK |
+| `listen` | full: setREUSE, bind, listen, getsockname | no-op — done inside `pn_create_listen_socket` | OK |
+| `accept` | syscall; `setLingerAbort` on accepted fd | `pn.acceptSocket` + `pn.setLingerAbort` on accepted fd | OK (linux, mac, win) |
+| **`connect`** | calls `connectOs()` against stored `address`; returns `false` on EINPROGRESS | calls `pn.connectSocket`/`pn.connectSocketUnix`; returns `false` on WouldBlock | OK (linux, mac, win) |
+| `setREUSE` | `setsockopt(SO_REUSEPORT/SO_REUSEADDR)` | no-op — set inside `pn_create_listen_socket` | OK |
+| `setLingerAbort` | `setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | OK |
+| `disableNagle` | `setsockopt(TCP_NODELAY)` — TCP only | checks `address.any.family` (or `uds_path` on win); calls `pn.nodelay` for INET/INET6 | OK (linux, mac, win) |
+| `findFreeTcpPort` | `posix.socket` + bind 0 + getsockname | `pn.findFreeTcpPort` | OK |
+| `sendBuf/recvToBuf` | `std.posix.send/recv` | `pn.sendBuf/recvToBuf` | OK |
+| `close` | `setLingerAbort` + `posix.close` + UDS unlink | `pn.closeSocket` + UDS unlink (via `address.any.family` on linux/mac; via `uds_path` on win) | OK |
+| **State** | `socket: ?socket_t` + `address: std.net.Address` | linux/mac: `fd + address`; win: `fd + address + uds_path` | OK (linux, mac, win) |
 
 ### A.2 `SocketCreator` — linux/mac vs portable
 
-| Function | linux/mac | portable — linux target | portable — mac target (legacy) | Status |
-|---|---|---|---|---|
-| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `resolveIp` → `createListenerSocket` via `pn_create_listen_socket_from_sockaddr` | `pn.createListenSocket` (string-based) | OK (linux) / FIX (mac) |
-| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only, no connect) | `getAddressList` → `createConnectSocket` (socket only, no connect) | `pn.resolveConnect` = socket + connect + blocking wait | OK (linux) / FIX (mac) |
-| `createUdsServer` | `initUnix` → `createListenerSocket` | `pn.createListenSocketUnix` (handles abstract namespace + unlink) | same | OK |
-| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | `initUnix` → `createConnectSocket` (socket only) | `pn.createSocket` + stores path in Skt | OK (linux) / FIX (mac) |
-| **`createConnectSocket`** | socket only (NONBLOCK+CLOEXEC) + `setLingerAbort`; stores `address` in Skt | `pn.createClientSocket` + `pn.setLingerAbort`; stores `address` in Skt | `pn.createClientSocket` only — no `setLingerAbort`, no `address` stored | OK (linux) / FIX (mac) |
-| `createListenerSocket` | socket + bind + listen | `pn.createListenSocketFromSockaddr` (SO_REUSEADDR + SO_REUSEPORT + bind + listen) | returns `AmpeError.NotImplementedYet` | OK (linux) / FIX (mac) |
+| Function | linux/mac native | portable (all targets) | Status |
+|---|---|---|---|
+| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `resolveIp` → `createListenerSocket` via `pn_create_listen_socket_from_sockaddr` | OK (linux, mac, win) |
+| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only, no connect) | `getAddressList` → `createConnectSocket` (socket only, no connect) | OK (linux, mac, win) |
+| `createUdsServer` | `initUnix` → `createListenerSocket` | linux/mac: `initUnix` → `pn.createListenSocketUnix`; win: `pn.createListenSocketUnix` + `uds_path` | OK (linux, mac, win) |
+| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | linux/mac: `initUnix` → `createConnectSocket`; win: `pn.createClientSocket(AF_UNIX)` + `uds_path` | OK (linux, mac, win) |
+| **`createConnectSocket`** | socket only + `setLingerAbort`; stores `address` in Skt | `pn.createClientSocket` + `pn.setLingerAbort`; stores `address` in Skt | OK (linux, mac, win) |
+| `createListenerSocket` | socket + bind + listen | `pn.createListenSocketFromSockaddr` (SO_REUSEADDR + SO_REUSEPORT + bind + listen) | OK (linux, mac, win) |
 
 ### A.3 `Skt` — windows vs portable
 
-All rows below describe the Windows-target portable path, which still uses the legacy `Skt_legacy.zig`. No `portable/win/` subfolder exists yet.
-
-| Function | windows | portable — win target (legacy) | Status |
+| Function | windows native | portable/win | Status |
 |---|---|---|---|
 | `isSet` | `socket != null` | `fd != INVALID_FD` | OK |
-| `rawFd` | truncates `SOCKET` ptr to i32 | bitcasts `fd` | OK |
+| `rawFd` | truncates `SOCKET` ptr to i32 | bitcasts `fd` (usize→u32→i32) | OK |
 | `socketHandle` | `?ws2_32.SOCKET` | `?pn.Fd` | OK |
 | `getPort` | `address.getPort()` from stored `address` | `pn.localAddr(fd)` + `pn.addrPort` | OK |
-| `listen` | full: setREUSE, `ws2_32.bind` (5-retry), `ws2_32.listen`, `ws2_32.getsockname` | no-op | OK |
-| `accept` | `ws2_32.accept`; WSAEWOULDBLOCK→null; `setLingerAbort` | `pn.acceptSocket`; **missing `setLingerAbort`** | FIX (win) |
-| **`connect`** | `ws2_32.connect`; returns `false` on WSAEWOULDBLOCK, `true` on WSAEISCONN | **TCP: always `true`** — no syscall | FIX (win) |
+| `listen` | full: setREUSE, `ws2_32.bind`, `ws2_32.listen`, `ws2_32.getsockname` | no-op — done inside `pn_create_listen_socket` | OK |
+| `accept` | `ws2_32.accept`; WSAEWOULDBLOCK→null; `setLingerAbort` | `pn.acceptSocket` + `pn.setLingerAbort` | OK |
+| **`connect`** | `ws2_32.connect`; returns `false` on WSAEWOULDBLOCK, `true` on WSAEISCONN | `pn.connectSocket`/`pn.connectSocketUnix`; returns `false` on WouldBlock | OK |
 | `setREUSE` | `ws2_32.setsockopt(SO_REUSEADDR)` | no-op — set inside C layer | OK |
 | `setLingerAbort` | `ws2_32.setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | OK |
-| `disableNagle` | `ws2_32.setsockopt(IPPROTO.TCP, TCP.NODELAY)` | `pn.nodelay` unconditionally (ignores family) | FIX (win) |
+| `disableNagle` | `ws2_32.setsockopt(IPPROTO.TCP, TCP.NODELAY)` | checks `uds_path == null`; then `address.any.family` for INET/INET6 | OK |
 | `findFreeTcpPort` | `std.posix.socket` + `ws2_32.bind` + `ws2_32.getsockname` | `pn.findFreeTcpPort` | OK |
 | `sendBuf/recvToBuf` | `ws2_32.send/recv` | `pn.sendBuf/recvToBuf` | OK |
-| `close` | `setLingerAbort` + `ws2_32.closesocket` | `pn.closeSocket` + UDS unlink via `uds_server_path` field | OK |
-| **State** | `socket: ?ws2_32.SOCKET` + `address: std.net.Address` + `base_handle` | `fd: pn.Fd` only — **no address stored** | FIX (win) |
+| `close` | `setLingerAbort` + `ws2_32.closesocket` | `pn.closeSocket` + `deleteUDSPath` via `uds_path` | OK |
+| **State** | `socket: ?ws2_32.SOCKET` + `address` + `base_handle` | `fd: pn.Fd` + `address: std.net.Address` + `uds_path: ?[UDS_PATH_SIZE]u8` | OK |
 
 ### A.4 `SocketCreator` — windows vs portable
 
-All rows describe the Windows-target portable path (legacy `SocketCreator_legacy.zig`).
-
-| Function | windows | portable — win target (legacy) | Status |
+| Function | windows native | portable/win | Status |
 |---|---|---|---|
-| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `pn.createListenSocket` (string-based) | FIX (win) |
-| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only) | `pn.resolveConnect` = socket + connect + blocking wait | FIX (win) |
-| `createUdsServer` | `initUnix` → `createListenerSocket` | `pn.createListenSocketUnix` | OK |
-| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | `pn.createSocket` + stores path in Skt | FIX (win) |
-| **`createConnectSocket`** | `posix.socket` (NONBLOCK) + `ioctlsocket(FIONBIO)` + `setLingerAbort`; NO connect; stores `address` | `pn.createClientSocket` only — no `setLingerAbort`, no `address` | FIX (win) |
-| `createListenerSocket` | `posix.socket` + `ioctlsocket(FIONBIO)` + `setLingerAbort` + `listen()` | returns `AmpeError.NotImplementedYet` | FIX (win) |
+| `createTcpServer` | `resolveIp` → `createListenerSocket` (socket+bind+listen) | `resolveIp` → `pn_create_listen_socket_from_sockaddr` | OK |
+| **`createTcpClient`** | `getAddressList` → `createConnectSocket` (socket only) | `getAddressList` → `createConnectSocket` (socket only, no connect) | OK |
+| `createUdsServer` | `initUnix` → `createListenerSocket` | `pn.createListenSocketUnix` + stores path in `uds_path` | OK |
+| `createUdsClient` | `initUnix` → `createConnectSocket` (socket only) | `pn.createClientSocket(AF_UNIX)` + stores path in `uds_path` | OK |
+| **`createConnectSocket`** | `posix.socket` + `ioctlsocket(FIONBIO)` + `setLingerAbort`; stores `address` | `pn.createClientSocket` + `pn.setLingerAbort`; stores `address` | OK |
+| `createListenerSocket` | `posix.socket` + `ioctlsocket(FIONBIO)` + `setLingerAbort` + `listen()` | `pn.createListenSocketFromSockaddr` (SO_REUSEADDR + SO_REUSEPORT + bind + listen) | OK |
 
 ### A.5 Cross-backend pattern summary
 
-linux, mac, and windows native backends share the same two-step flow: `createConnectSocket` creates a non-blocking socket only (no connect), stores the resolved `address` in `Skt`; then `Skt.connect()` issues the real connect syscall and returns `false` while EINPROGRESS/WSAEWOULDBLOCK, allowing the poller to wait for WRITABLE before confirming.
+All native backends (linux, mac, windows) share the same two-step flow: `createConnectSocket` creates a non-blocking socket only (no connect), stores the resolved `address` in `Skt`; then `Skt.connect()` issues the real connect syscall and returns `false` while EINPROGRESS/WSAEWOULDBLOCK, allowing the poller to wait for WRITABLE before confirming.
 
-The portable backend now dispatches by OS:
-- **Linux target** (`portable/linux/`): aligned with the two-step flow. `createConnectSocket` creates a socket only via `pn.createClientSocket`; stores `std.net.Address` in `Skt`; `Skt.connect()` calls `pn.connectSocket`/`pn.connectSocketUnix` and returns `false` on WouldBlock. All gaps listed above are closed.
-- **macOS/Windows targets** (legacy fallback): still use one-step `resolveConnect` (blocking). These targets need `portable/mac/` and `portable/win/` subfolders respectively.
+The portable backend now implements this two-step flow for all three OS targets:
+- **Linux** (`portable/linux/`): stores `std.net.Address`; `connect()` uses `pn.connectSocket`/`pn.connectSocketUnix`. UDS path read from `address.un.path`.
+- **macOS** (`portable/mac/`): identical to linux — `std.net.Address.un` is available on macOS. `pn.AF_INET6 = 30` (corrected from 10).
+- **Windows** (`portable/win/`): `std.net.Address.un = void` on Windows, so UDS path stored in a separate `uds_path: ?[UDS_PATH_SIZE]u8` field. TCP path uses `std.net.Address`. `pn.AF_INET6 = 23` (Windows value).
+
+The legacy fallback (`Skt_legacy.zig`, `SocketCreator_legacy.zig`) remains for any other OS targets that may appear in the future.
 

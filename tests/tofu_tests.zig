@@ -31,7 +31,7 @@ test {
     // Poller backend contract tests (backend-independent, all platforms):
     _ = @import("ampe/poller_tests.zig");
 
-    if (@import("builtin").os.tag != .macos) {
+    // if (@import("builtin").os.tag != .macos) {
 
         // PollerCore integration tests (all backends, all platforms):
         _ = @import("pollercore_tests.zig");
@@ -39,7 +39,7 @@ test {
         std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 
         _ = @import("reactor_tests.zig");
-    }
+    // }
 
     @import("std").testing.refAllDecls(@This());
 }

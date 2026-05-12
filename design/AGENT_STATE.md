@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 081
+**Current Version:** 082
 **Last Updated:** 2026-05-13
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 in progress — portable/linux subfolder complete; macOS CI pending; windows/mac subfolders next
+**Active Phase:** Stage 6 in progress — portable/linux/mac/win subfolders complete; macOS CI pending; Windows native 4-mode pending
 
 ---
 
@@ -62,7 +62,10 @@
 - **Proposal (deferred):** After TCP listener creation, embed the assigned port in `WelcomeResponse` text headers. Client parses port and connects via protocol, not out-of-band `getPort()`. Implement at Stage 7 or earlier if cross-platform test failures require it.
 - **Architectural gap identified (2026-05-12):** Root cause: portable backend used one-step create+connect+blocking wait vs two-step (create socket only → explicit `Skt.connect()`). Fixed in Phase 1 + Phase 2/3/4 below.
 - **New rules (2026-05-12):** `design/RULES.md` §6 added — Portable Mirrors Posix Structure, No Silent No-ops, Addendum A Maintenance, Per-Stage Diff Check, Per-OS Subfolder Build Verification, Per-OS subfolders proposal (deferred).
-- **Addendum A added (2026-05-12):** `design/transition-2-bun-usockets-plan.md` Addendum A — four tables comparing `Skt` and `SocketCreator` across linux/mac, windows, and portable backends. Status column (OK/FIX) pending.
+- **Addendum A added (2026-05-12):** `design/transition-2-bun-usockets-plan.md` Addendum A — four tables comparing `Skt` and `SocketCreator` across linux/mac, windows, and portable backends. Status column fully updated (OK for all rows, all three targets).
+- **Phase 2/3/4 mac COMPLETE (2026-05-13):** `src/ampe/portable/mac/` created. Identical to `linux/` (same two-step connect, `std.net.Address.initUnix` available on macOS). `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch updated: `.macos => mac/`.
+- **Phase 2/3/4 win COMPLETE (2026-05-13):** `src/ampe/portable/win/` created. `std.net.Address.un = void` on Windows — UDS path stored in `uds_path: ?[pn.UDS_PATH_SIZE]u8` field in Skt. `SocketCreator` uses `pn.createListenSocketUnix`/`pn.createClientSocket(pn.AF_UNIX)` for UDS (no `std.net.Address.initUnix`). `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch updated: `.windows => win/`. `Skt_legacy.zig`/`SocketCreator_legacy.zig` remain for non-linux/mac/win targets.
+- **Verification COMPLETE (2026-05-13, mac+win):** All three OS targets cross-compile: `x86_64-windows-gnu` portable+posix OK; `x86_64-macos` portable OK; `aarch64-macos` portable OK. Linux 101/101 still pass after mac+win dispatch changes.
 - **Phase 1 COMPLETE (2026-05-12/13):** posix_net layer additions. `pn_connect_socket` in C returns 0=connected, 1=EINPROGRESS, -1=error. `connectSocket` in socket.zig maps 1→WouldBlock. `createClientSocket` in creator.zig (create+set_nonblocking, no connect). `resolveConnect` updated to check `< 0` and still calls `pn_wait_writable` (synchronous for legacy path). All exported from posix_net.zig. `pn_create_listen_socket_from_sockaddr` added: creates TCP/IP listen socket from `sockaddr*` (SO_REUSEADDR+SO_REUSEPORT, bind, listen) — needed by portable/linux backend.
 - **Phase 2/3/4 COMPLETE (2026-05-13):** `src/ampe/portable/linux/` created. `Skt.zig` stores `std.net.Address` + `pn.Fd`; two-step `connect()` for TCP and UDS; `setLingerAbort` on accepted socket; family-aware `disableNagle`; `deleteUDSPath` via family check. `SocketCreator.zig` mirrors posix linux structure: `createListenerSocket(std.net.Address)` + `createConnectSocket(std.net.Address)`; `createListenSocketFromSockaddr` for TCP; `createListenSocketUnix` for UDS. Dispatch added: `portable/Skt.zig` and `portable/SocketCreator.zig` redirect `.linux` to subfolders, other OS to legacy files. `portable_poller_tests.zig` updated: three tests that assumed one-step connect now call `client.connect()` explicitly.
 - **Verification COMPLETE (2026-05-13):** portable 4-mode (Debug/Safe/Fast/Small) all 101/101 pass. Posix regression Debug+Fast all 64/64 pass. Windows cross-compile (portable+posix) OK. macOS cross-compile (arm64+x86_64) OK. Linux sandwich pass.
@@ -285,6 +288,70 @@ To be run by author on Windows after `build.zig.zon` update:
 | `zbta_win.cmd` (all 4 modes) | pending |
 | `zig build test -Dnetwork=portable` (all 4 modes, Windows) | pending |
 | Linux 4-mode sandwich | pending |
+
+---
+
+### 2026-05-13: Claude Code (Sonnet 4.6) — Stage 6: portable/linux, mac, win subfolders + Addendum A
+
+#### Summary
+
+Completed the portable backend two-step connect alignment for all three OS targets. Root cause of macOS CI failures was the one-step create+connect+blocking-wait flow in the old `portable/` files. Fixed by creating per-OS subfolders that mirror the posix `linux/`, `mac/`, `windows/` structure.
+
+Three independent workstreams:
+
+**posix_net additions (Phase 1):**
+- `pn_connect_socket` in C: returns 0=connected, 1=EINPROGRESS, -1=error.
+- `pn_create_listen_socket_from_sockaddr`: creates TCP/IP listen socket from `sockaddr*` (SO_REUSEADDR+SO_REUSEPORT, bind, listen). Avoids reformatting `std.net.Address` back to a host string.
+- `createClientSocket`, `connectSocket`, `createListenSocketFromSockaddr` exported from `posix_net.zig`.
+- `AF_INET6` fixed in `types.zig`: Linux=10, macOS/BSD=30, Windows=23 (was always 10).
+
+**portable/linux subfolder (Phase 2/3/4):**
+- `Skt.zig`: `std.net.Address` + `pn.Fd`; two-step `connect()` (TCP via `connectSocket`, UDS via `connectSocketUnix`); `setLingerAbort` on accepted sockets; family-aware `disableNagle`.
+- `SocketCreator.zig`: `createListenSocketFromSockaddr` for TCP; `createListenSocketUnix` for UDS; socket-only `createConnectSocket`.
+- `portable_poller_tests.zig`: three tests updated to call `client.connect()` explicitly.
+- Root cause of secondary failures: `SO_REUSEPORT` missing from `pn_create_listen_socket_from_sockaddr` — second bind in `handleStartOfTcpListeners` failed. Fixed by adding `SO_REUSEPORT` setsockopt.
+
+**portable/mac and portable/win subfolders:**
+- `mac/`: identical to `linux/` — `std.net.Address.initUnix` available on macOS.
+- `win/`: `std.net.Address.un = void` on Windows — UDS path in `uds_path: ?[pn.UDS_PATH_SIZE]u8` field. `SocketCreator` uses `pn.createListenSocketUnix` / `pn.createClientSocket(pn.AF_UNIX)` (no `std.net.Address.initUnix`). `connect()` checks `uds_path` first.
+- Dispatch files `portable/Skt.zig` and `portable/SocketCreator.zig` updated: `.linux => linux/`, `.macos => mac/`, `.windows => win/`, else legacy.
+
+**Addendum A:** All four tables A.1–A.4 updated with `portable (all targets)` / `portable/win` columns; all rows show `OK`. A.5 summary updated.
+
+#### Changes
+- `posix_net/adapters/pn_utils.c` — `pn_connect_socket`, `pn_create_listen_socket_from_sockaddr`
+- `posix_net/ffi.zig` — extern declarations; removed `bsd_create_connect_socket`
+- `posix_net/socket.zig` — `connectSocket` (rc==1 → WouldBlock)
+- `posix_net/creator.zig` — `createClientSocket`, `createListenSocketFromSockaddr`; `resolveConnect` checks `< 0`
+- `posix_net/types.zig` — `AF_INET6` per-OS fix
+- `posix_net/posix_net.zig` — new exports; removed `createConnectSocket`
+- `src/ampe/portable/linux/Skt.zig` — new
+- `src/ampe/portable/linux/SocketCreator.zig` — new
+- `src/ampe/portable/mac/Skt.zig` — new (identical to linux/)
+- `src/ampe/portable/mac/SocketCreator.zig` — new (identical to linux/)
+- `src/ampe/portable/win/Skt.zig` — new (uds_path field)
+- `src/ampe/portable/win/SocketCreator.zig` — new (no initUnix)
+- `src/ampe/portable/Skt.zig` — dispatch to per-OS subfolders
+- `src/ampe/portable/SocketCreator.zig` — dispatch to per-OS subfolders
+- `src/ampe/portable/Skt_legacy.zig` — renamed from old Skt.zig
+- `src/ampe/portable/SocketCreator_legacy.zig` — renamed from old SocketCreator.zig
+- `tests/ampe/portable_poller_tests.zig` — explicit `connect()` calls in 3 tests
+- `design/AGENT_STATE.md` — v081→082
+- `design/transition-2-bun-usockets-plan.md` — Addendum A tables fully updated
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable` Debug (Linux) | 101/101 ✅ |
+| `zig build test -Dnetwork=portable` ReleaseSafe/Fast/Small (Linux) | 101/101 ✅ |
+| `zig build test` Debug+Fast (posix, Linux) | 64/64 ✅ |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ |
+| `zig build -Dtarget=x86_64-windows-gnu` | ✅ |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ |
+| macOS CI (`writable immediately`, `modify recv to send`) | pending |
+| Windows native 4-mode (`zbta_win.cmd`) | pending |
 
 ---
 

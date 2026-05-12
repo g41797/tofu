@@ -1,20 +1,14 @@
 const std = @import("std");
-const tofu = @import("../../tofu.zig");
+const tofu = @import("../../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
 const pn = @import("posix_net");
 
 pub const Skt = @This();
 
-/// Socket descriptor.
 fd: pn.Fd = pn.INVALID_FD,
-
-/// Path to Unix Domain Socket file. Used for unlinking servers and delayed connect for clients.
-uds_server_path: ?[pn.UDS_PATH_SIZE]u8 = null,
-
-/// Flag to distinguish server sockets for UDS unlinking.
+address: std.net.Address = undefined,
 server: bool = false,
 
-/// Returns true if the socket descriptor is valid.
 pub fn isSet(skt: *const Skt) bool {
     return skt.fd != pn.INVALID_FD;
 }
@@ -31,107 +25,105 @@ pub fn socketHandle(skt: *const Skt) ?pn.Fd {
     return skt.fd;
 }
 
-/// Returns the local port of the socket.
 pub fn getPort(skt: *const Skt) ?u16 {
     var addr: pn.Addr = undefined;
     pn.localAddr(skt.fd, &addr) catch return null;
     return pn.addrPort(&addr);
 }
 
-/// No-op: Socket creation in SocketCreator already performs listen.
-pub fn listen(skt: *Skt) !void {
-    _ = skt;
-}
+// No-op: bind+listen are done by pn_create_listen_socket in SocketCreator.
+pub fn listen(_: *Skt) !void {}
 
-/// Accept a new connection.
 pub fn accept(askt: *Skt) AmpeError!?Skt {
     var addr: pn.Addr = undefined;
     const client_fd = pn.acceptSocket(askt.fd, &addr) catch |e| {
         if (e == pn.PnError.WouldBlock) return null;
         return toAmpe(e);
     };
-    return Skt{ .fd = client_fd };
+    pn.setLingerAbort(client_fd);
+    return Skt{ .fd = client_fd, .address = askt.address };
 }
 
-/// Connect a socket. For UDS, performs delayed connect if path is stored.
-/// Returns false when connect is in progress (EINPROGRESS/EALREADY); caller waits for WRITABLE.
+/// Connect the socket to the stored address.
+/// Returns false when connect is in progress (EINPROGRESS/WSAEWOULDBLOCK); caller waits for WRITABLE.
+/// Returns true when immediately connected.
 pub fn connect(skt: *Skt) AmpeError!bool {
-    if (skt.uds_server_path) |path| {
-        if (!skt.server) {
-            const len = std.mem.indexOfScalar(u8, &path, 0) orelse pn.UDS_PATH_SIZE;
-            pn.connectSocketUnix(skt.fd, path[0..len]) catch |e| {
-                if (e == pn.PnError.WouldBlock) return false;
-                return toAmpe(e);
-            };
-        }
+    const family = skt.address.any.family;
+    if (family == pn.AF_UNIX) {
+        const path = skt.address.un.path[0..];
+        const len = std.mem.indexOfScalar(u8, path, 0) orelse path.len;
+        pn.connectSocketUnix(skt.fd, path[0..len]) catch |e| {
+            if (e == pn.PnError.WouldBlock) return false;
+            return toAmpe(e);
+        };
+        return true;
     }
+    pn.connectSocket(skt.fd, &skt.address.any, @intCast(skt.address.getOsSockLen())) catch |e| {
+        if (e == pn.PnError.WouldBlock) return false;
+        return toAmpe(e);
+    };
     return true;
 }
 
-/// No-op: Already handled by pn.createListenSocket.
-pub fn setREUSE(skt: *Skt) !void {
-    _ = skt;
-}
+// No-op: SO_REUSEADDR is set internally by bsd_create_listen_socket.
+pub fn setREUSE(_: *Skt) !void {}
 
-/// Set SO_LINGER l_linger=0 so close sends RST instead of FIN (no TIME_WAIT).
 pub fn setLingerAbort(skt: *Skt) AmpeError!void {
     pn.setLingerAbort(skt.fd);
 }
 
-/// Enable or disable TCP_NODELAY.
 pub fn disableNagle(skt: *Skt) !void {
-    pn.nodelay(skt.fd, true);
+    const family = skt.address.any.family;
+    if (family == pn.AF_INET or family == pn.AF_INET6) {
+        pn.nodelay(skt.fd, true);
+    }
 }
 
-/// Find a free TCP port by binding to port 0.
 pub fn findFreeTcpPort() !u16 {
     return pn.findFreeTcpPort() catch |e| toAmpe(e);
 }
 
-/// Send data from a buffer using raw descriptor.
 pub fn sendBufFd(socket: pn.Fd, buf: []const u8) AmpeError!?usize {
     return pn.sendBuf(socket, buf) catch |e| toAmpe(e);
 }
 
-/// Receive data into a buffer using raw descriptor.
 pub fn recvToBufFd(socket: pn.Fd, buf: []u8) AmpeError!?usize {
     return pn.recvToBuf(socket, buf) catch |e| toAmpe(e);
 }
 
-/// Send data from a buffer.
 pub fn sendBuf(skt: *Skt, buf: []const u8) AmpeError!?usize {
     return sendBufFd(skt.fd, buf);
 }
 
-/// Receive data into a buffer.
 pub fn recvToBuf(skt: *Skt, buf: []u8) AmpeError!?usize {
     return recvToBufFd(skt.fd, buf);
 }
 
-/// Close socket and cleanup UDS path if necessary.
 pub fn deinit(skt: *Skt) void {
     skt.close();
 }
 
-/// Close the socket and reset descriptor.
 pub fn close(skt: *Skt) void {
     if (skt.fd != pn.INVALID_FD) {
-        if (skt.server and skt.uds_server_path != null) {
-            const path = skt.uds_server_path.?;
-            var path_buf: [pn.UDS_PATH_SIZE + 1:0]u8 = undefined;
-            @memcpy(path_buf[0..pn.UDS_PATH_SIZE], &path);
-            path_buf[pn.UDS_PATH_SIZE] = 0;
-            const len = std.mem.indexOfScalar(u8, &path_buf, 0) orelse pn.UDS_PATH_SIZE;
-            if (len > 0 and path_buf[0] != 0) {
-                pn.deleteUnixPath(@ptrCast(&path_buf));
-            }
-        }
+        deleteUDSPath(skt);
         pn.closeSocket(skt.fd);
         skt.fd = pn.INVALID_FD;
     }
 }
 
-/// Translate PnError to AmpeError.
+fn deleteUDSPath(skt: *Skt) void {
+    if (!skt.server) return;
+    if (skt.address.any.family != pn.AF_UNIX) return;
+    const path = skt.address.un.path[0..];
+    const len = std.mem.indexOfScalar(u8, path, 0) orelse path.len;
+    if (len == 0 or path[0] == 0) return;
+    // Fixed 109-byte buffer: 108 for sun_path + 1 null terminator.
+    var path_buf: [109:0]u8 = .{0} ** 109;
+    const copy_len = @min(len, 108);
+    @memcpy(path_buf[0..copy_len], path[0..copy_len]);
+    pn.deleteUnixPath(@ptrCast(&path_buf));
+}
+
 fn toAmpe(e: pn.PnError) AmpeError {
     return switch (e) {
         pn.PnError.WouldBlock => AmpeError.UnknownError,

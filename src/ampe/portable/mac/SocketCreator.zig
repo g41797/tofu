@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const tofu = @import("../../tofu.zig");
+const log = std.log;
+const tofu = @import("../../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
 const Skt = @import("Skt.zig").Skt;
 const message = tofu.message;
@@ -10,11 +11,7 @@ const address = tofu.address;
 const Address = address.Address;
 const TCPServerAddress = address.TCPServerAddress;
 const TCPClientAddress = address.TCPClientAddress;
-const UDSServerAddress = address.UDSServerAddress;
-const UDSClientAddress = address.UDSClientAddress;
 const TempUdsPath = tofu.TempUdsPath;
-const log = std.log;
-const builtin = @import("builtin");
 
 pub const SocketCreator = @This();
 
@@ -43,22 +40,25 @@ pub fn fromAddress(sc: *SocketCreator, addrs: Address) AmpeError!Skt {
 
 pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     const cnf = &sc.addrs.tcp_server_addr;
-    const host = cnf.addrToSlice();
-    const fd = pn.createListenSocket(@ptrCast(host.ptr), cnf.port orelse 0, 0) catch |e| {
-        log.warn("createTcpServer failed: {s}", .{@errorName(e)});
-        return AmpeError.ListenFailed;
+    const addr = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port orelse 0) catch |e| {
+        log.warn("createTcpServer resolveIp failed: {s}", .{@errorName(e)});
+        return AmpeError.InvalidAddress;
     };
-    return Skt{ .fd = fd, .server = true };
+    return createListenerSocket(&addr) catch AmpeError.ListenFailed;
 }
 
 pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
     const cnf = &sc.addrs.tcp_client_addr;
-    const host = cnf.addrToSlice();
-    const fd = pn.resolveConnect(host.ptr[0..host.len :0], cnf.port orelse 0) catch |e| {
-        log.warn("createTcpClient failed: {s}", .{@errorName(e)});
-        return if (e == pn.PnError.InvalidAddress) AmpeError.InvalidAddress else AmpeError.ConnectFailed;
+    var list = std.net.getAddressList(sc.allocator, cnf.addrToSlice(), cnf.port orelse 0) catch {
+        return AmpeError.InvalidAddress;
     };
-    return Skt{ .fd = fd };
+    defer list.deinit();
+    if (list.addrs.len == 0) return AmpeError.InvalidAddress;
+    for (list.addrs) |addr| {
+        const skt = createConnectSocket(&addr) catch continue;
+        return skt;
+    }
+    return AmpeError.InvalidAddress;
 }
 
 pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
@@ -72,18 +72,13 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
         tup = TempUdsPath{};
         udsPath = tup.?.buildPath(allocator) catch return AmpeError.UnknownError;
     }
-
+    // Use pn.createListenSocketUnix which handles abstract namespace and unlinks stale sockets.
     const fd = pn.createListenSocketUnix(udsPath.ptr, udsPath.len, 0) catch |e| {
         log.warn("createUdsListener failed: {s}", .{@errorName(e)});
         return AmpeError.ListenFailed;
     };
-
-    var skt = Skt{ .fd = fd, .server = true, .uds_server_path = [_]u8{0} ** pn.UDS_PATH_SIZE };
-    if (udsPath.len > 0 and udsPath[0] != 0) {
-        const copy_len = @min(udsPath.len, pn.UDS_PATH_SIZE);
-        @memcpy(skt.uds_server_path.?[0..copy_len], udsPath[0..copy_len]);
-    }
-    return skt;
+    const addr = std.net.Address.initUnix(udsPath) catch return AmpeError.InvalidAddress;
+    return Skt{ .fd = fd, .address = addr, .server = true };
 }
 
 pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
@@ -91,21 +86,19 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    const fd = pn.createSocket(pn.AF_UNIX, pn.SOCK_STREAM, 0) catch |e| {
-        log.warn("createUdsSocket createSocket failed: {s}", .{@errorName(e)});
-        return AmpeError.InvalidAddress;
-    };
-    var skt = Skt{ .fd = fd, .uds_server_path = [_]u8{0} ** pn.UDS_PATH_SIZE };
-    const copy_len = @min(path.len, pn.UDS_PATH_SIZE);
-    @memcpy(skt.uds_server_path.?[0..copy_len], path[0..copy_len]);
-    return skt;
+    var addr = std.net.Address.initUnix(path) catch return AmpeError.InvalidAddress;
+    return createConnectSocket(&addr) catch AmpeError.InvalidAddress;
 }
 
-pub fn createListenerSocket(_: *const std.net.Address) !Skt {
-    return AmpeError.NotImplementedYet;
+/// Create a TCP/IP listening socket from std.net.Address (IPv4 or IPv6).
+pub fn createListenerSocket(addr: *const std.net.Address) !Skt {
+    const fd = pn.createListenSocketFromSockaddr(&addr.any, addr.getOsSockLen()) catch return AmpeError.ListenFailed;
+    return Skt{ .fd = fd, .address = addr.*, .server = true };
 }
 
+/// Create a non-blocking client socket (no connect). Caller calls Skt.connect() next.
 pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
     const fd = pn.createClientSocket(@intCast(addr.any.family)) catch return AmpeError.ConnectFailed;
-    return Skt{ .fd = fd };
+    pn.setLingerAbort(fd);
+    return Skt{ .fd = fd, .address = addr.* };
 }
