@@ -37,7 +37,7 @@ pub fn createConnectSocket(host: [*:0]const u8, port: u16, options: i32) PnError
 
 /// Create a connecting Unix Domain Socket. Supports abstract namespace (path[0] == 0).
 pub fn createConnectSocketUnix(path: [*]const u8, pathlen: usize, options: i32) PnError!Fd {
-    const fd = ffi.bsd_create_connect_socket_unix(path, pathlen, @intCast(options));
+    const fd = ffi.pn_create_connect_socket_unix(path, pathlen, @intCast(options));
     if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
     return fd;
 }
