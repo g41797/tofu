@@ -28,7 +28,7 @@
         },
         .usockets = .{
             .url = "git+https://github.com/g41797/uSockets.git#edce228e42f6d3d6668cdbce0596286a1da40def",
-            .hash = "N-V-__8AAI8iBgBz2NZLHnqt7PlggLFY8u4CBZGHmMkYIZZu",
+            .hash = "N-V-__8AAJgiBgDScguFso1evr-0R_1yO_N4mkqFAO33pe_7",
         },
     },
     .paths = .{
