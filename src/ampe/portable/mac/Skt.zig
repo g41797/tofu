@@ -117,9 +117,8 @@ fn deleteUDSPath(skt: *Skt) void {
     const path = skt.address.un.path[0..];
     const len = std.mem.indexOfScalar(u8, path, 0) orelse path.len;
     if (len == 0 or path[0] == 0) return;
-    // Fixed 109-byte buffer: 108 for sun_path + 1 null terminator.
-    var path_buf: [109:0]u8 = .{0} ** 109;
-    const copy_len = @min(len, 108);
+    var path_buf: [pn.UDS_PATH_SIZE + 1:0]u8 = .{0} ** (pn.UDS_PATH_SIZE + 1);
+    const copy_len = @min(len, pn.UDS_PATH_SIZE);
     @memcpy(path_buf[0..copy_len], path[0..copy_len]);
     pn.deleteUnixPath(@ptrCast(&path_buf));
 }
