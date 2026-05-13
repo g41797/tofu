@@ -47,6 +47,6 @@ pub const POLL_TYPE_SOCKET_SHUT_DOWN: c_int = 1;
 // LIBUS_SOCKET events — must match epoll_kqueue.h: EPOLLIN=1, EPOLLOUT=4. (WINDOWS/LINUX)
 // But mac uses bsd kqueue - values are 1 & 2
 pub const LIBUS_SOCKET_READABLE: c_int = 1;
-pub const LIBUS_SOCKET_WRITABLE: c_int = if (builtin.os.tag == .macos) 2 else 4;
+pub const LIBUS_SOCKET_WRITABLE: c_int = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 2 else 4;
 
 
