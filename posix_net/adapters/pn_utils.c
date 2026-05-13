@@ -133,13 +133,20 @@ LIBUS_SOCKET_DESCRIPTOR pn_create_listen_socket_from_sockaddr(const struct socka
 int pn_connect_socket(LIBUS_SOCKET_DESCRIPTOR fd, const struct sockaddr *addr, int addrlen) {
 #ifdef _WIN32
     if (connect((SOCKET)fd, addr, addrlen) != 0) {
-        if (WSAGetLastError() == WSAEWOULDBLOCK) return 1;
+        int err = WSAGetLastError();
+        /* WSAEWOULDBLOCK: in progress; WSAEINPROGRESS/WSAEALREADY: already connecting */
+        if (err == WSAEWOULDBLOCK || err == WSAEINPROGRESS || err == WSAEALREADY) return 1;
+        /* WSAEISCONN: connection already established (retry after WouldBlock) */
+        if (err == WSAEISCONN) return 0;
         return -1;
     }
     return 0;
 #else
     if (connect(fd, addr, (socklen_t)addrlen) != 0) {
-        if (errno == EINPROGRESS) return 1;
+        /* EINPROGRESS: in progress; EALREADY: already connecting (retry call) */
+        if (errno == EINPROGRESS || errno == EALREADY) return 1;
+        /* EISCONN: already connected (retry call after connect completed) */
+        if (errno == EISCONN) return 0;
         return -1;
     }
     return 0;

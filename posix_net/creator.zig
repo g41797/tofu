@@ -82,8 +82,9 @@ pub fn resolveConnect(host: [:0]const u8, port: u16) PnError!Fd {
     defer if (res) |r| ffi.freeaddrinfo(r);
 
     if (res != null) {
+        const ai_addr = res.?.ai_addr orelse return PnError.InvalidAddress;
         const fd: Fd = try createClientSocket(@intCast(res.?.ai_family));
-        if (ffi.pn_connect_socket(fd, @ptrCast(res.?.ai_addr), @intCast(res.?.ai_addrlen)) < 0) {
+        if (ffi.pn_connect_socket(fd, @ptrCast(ai_addr), @intCast(res.?.ai_addrlen)) < 0) {
             ffi.bsd_close_socket(fd);
             return PnError.CommunicationFailed;
         }

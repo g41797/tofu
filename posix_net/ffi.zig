@@ -54,7 +54,19 @@ pub extern fn unlink(path: [*:0]const u8) c_int;   // POSIX (Linux, macOS)
 pub extern fn _unlink(path: [*:0]const u8) c_int;  // Windows (gnu + msvc)
 
 // DNS resolution via libc
-pub const addrinfo = extern struct {
+// Windows ADDRINFOA: ai_addrlen is SIZE_T (8 bytes on x64); ai_canonname before ai_addr.
+// POSIX addrinfo: ai_addrlen is socklen_t (4 bytes); ai_addr before ai_canonname.
+const addrinfo_win = extern struct {
+    ai_flags: c_int,
+    ai_family: c_int,
+    ai_socktype: c_int,
+    ai_protocol: c_int,
+    ai_addrlen: usize,
+    ai_canonname: ?[*:0]u8,
+    ai_addr: ?*std.c.sockaddr,
+    ai_next: ?*addrinfo_win,
+};
+const addrinfo_posix = extern struct {
     ai_flags: c_int,
     ai_family: c_int,
     ai_socktype: c_int,
@@ -62,8 +74,9 @@ pub const addrinfo = extern struct {
     ai_addrlen: std.c.socklen_t,
     ai_addr: ?*std.c.sockaddr,
     ai_canonname: ?[*:0]u8,
-    ai_next: ?*addrinfo,
+    ai_next: ?*addrinfo_posix,
 };
+pub const addrinfo = if (@import("builtin").os.tag == .windows) addrinfo_win else addrinfo_posix;
 
 pub extern fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*const addrinfo, res: *?*addrinfo) c_int;
 pub extern fn freeaddrinfo(res: *addrinfo) void;
