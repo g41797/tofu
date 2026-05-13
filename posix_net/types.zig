@@ -44,7 +44,9 @@ pub const PnError = error{
 pub const POLL_TYPE_SOCKET: c_int = 0;
 pub const POLL_TYPE_SOCKET_SHUT_DOWN: c_int = 1;
 
-// LIBUS_SOCKET events — must match epoll_kqueue.h: EPOLLIN=1, EPOLLOUT=4.
-// (Not the ASIO/GCD header values of 1/2; those are for different backends.)
-pub const LIBUS_SOCKET_READABLE: c_int = 1; // EPOLLIN on Linux, EVFILT_READ on macOS
-pub const LIBUS_SOCKET_WRITABLE: c_int = 4; // EPOLLOUT on Linux, EVFILT_WRITE on macOS
+// LIBUS_SOCKET events — must match epoll_kqueue.h: EPOLLIN=1, EPOLLOUT=4. (WINDOWS/LINUX)
+// But mac uses bsd kqueue - values are 1 & 2
+pub const LIBUS_SOCKET_READABLE: c_int = 1;
+pub const LIBUS_SOCKET_WRITABLE: c_int = if (builtin.os.tag == .macos) 2 else 4;
+
+
