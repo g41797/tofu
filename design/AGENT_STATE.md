@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 082
+**Current Version:** 083
 **Last Updated:** 2026-05-13
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 in progress — portable/linux/mac/win subfolders complete; macOS CI pending; Windows native 4-mode pending
+**Active Phase:** Stage 6 in progress — macOS CI fixes applied (addrinfo layout + EALREADY handling); awaiting CI confirmation; Windows native 4-mode pending
 
 ---
 
@@ -57,14 +57,16 @@
   - **Linux result:** 101/101 tests pass.
 - **Windows UDS CI fix (2026-05-12):** `bsd_create_connect_socket_unix` in usockets `bsd.c` checks `errno != EINPROGRESS` after `connect()`. On Windows, non-blocking UDS connect sets `WSAGetLastError() == WSAEWOULDBLOCK`, not `errno == EINPROGRESS` — usockets treats it as a fatal error. Fixed by adding `pn_create_connect_socket_unix` to `posix_net/adapters/pn_utils.c`: Windows path re-implements the connect with `WSAGetLastError() != WSAEWOULDBLOCK` check; Linux path delegates to `bsd_create_connect_socket_unix`. Wired through `ffi.zig` and `creator.zig`.
 - **macOS CI fix (2026-05-12):** Two bugs fixed. (1) `addrFamily` in `posix_net/socket.zig` read 2 bytes as `u16` from `sockaddr.mem[0]`. On macOS/BSD, `sockaddr` has `sa_len` (u8) at offset 0 and `sa_family` (u8) at offset 1 — the u16 read returns `sa_family * 256 + sa_len` instead of `sa_family`. Fixed with a comptime branch: macOS/BSD returns `addr.mem[1]`; Linux/Windows keeps the u16 read. (2) On macOS, non-blocking TCP connect to localhost may return `EINPROGRESS`; the tests then call `send()`/`getpeername()` immediately and get `ENOTCONN`. Fixed by adding `pn_wait_writable` to `pn_utils.c`: uses `select()` + `getsockopt(SO_ERROR)` to wait for connect completion. `resolveConnect` in `creator.zig` now calls `pn_wait_writable(fd, 5000)` after creating the connect socket.
-- **Pending:** Windows native 4-mode verification (`zbta_win.cmd`) after `build.zig.zon` update; macOS CI run to confirm 54/54.
+- **macOS/Windows CI portable fixes (2026-05-13):** Two bugs fixed for CI. (1) `addrinfo` struct in `posix_net/ffi.zig` used wrong field layout on macOS/Windows. Linux glibc: `ai_addr` before `ai_canonname` with `ai_addrlen = socklen_t (4 bytes)`. macOS/BSD/Windows: `ai_canonname` before `ai_addr` with `ai_addrlen = SIZE_T (8 bytes on x64)`. Added two struct types (`addrinfo_posix` / `addrinfo_win`) and comptime dispatch: `if (.linux) addrinfo_posix else addrinfo_win`. Also added null guard for `ai_addr` in `creator.zig:resolveConnect`. (2) `pn_connect_socket` in `pn_utils.c` did not handle EALREADY/EISCONN on POSIX or WSAEALREADY/WSAEISCONN on Windows. The `initPair` retry loop calls `connect()` multiple times; second call returns EALREADY (already connecting) or EISCONN (already connected). Fixed: EALREADY → 1 (in progress), EISCONN → 0 (connected) on both platforms.
+- **Pending:** Windows native 4-mode verification (`zbta_win.cmd`) after `build.zig.zon` update; macOS CI run to confirm 8 failures fixed (5 resolveConnect + 1 map stability + 2 writable/modify tests).
 - **Note:** For every stub in `usockets/`, use the corresponding `linux/` file as reference.
 - **Proposal (deferred):** After TCP listener creation, embed the assigned port in `WelcomeResponse` text headers. Client parses port and connects via protocol, not out-of-band `getPort()`. Implement at Stage 7 or earlier if cross-platform test failures require it.
 - **Architectural gap identified (2026-05-12):** Root cause: portable backend used one-step create+connect+blocking wait vs two-step (create socket only → explicit `Skt.connect()`). Fixed in Phase 1 + Phase 2/3/4 below.
 - **New rules (2026-05-12):** `design/RULES.md` §6 added — Portable Mirrors Posix Structure, No Silent No-ops, Addendum A Maintenance, Per-Stage Diff Check, Per-OS Subfolder Build Verification, Per-OS subfolders proposal (deferred).
 - **Addendum A added (2026-05-12):** `design/transition-2-bun-usockets-plan.md` Addendum A — four tables comparing `Skt` and `SocketCreator` across linux/mac, windows, and portable backends. Status column fully updated (OK for all rows, all three targets).
 - **Phase 2/3/4 mac COMPLETE (2026-05-13):** `src/ampe/portable/mac/` created. Identical to `linux/` (same two-step connect, `std.net.Address.initUnix` available on macOS). `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch updated: `.macos => mac/`.
-- **Phase 2/3/4 win COMPLETE (2026-05-13):** `src/ampe/portable/win/` created. `std.net.Address.un = void` on Windows — UDS path stored in `uds_path: ?[pn.UDS_PATH_SIZE]u8` field in Skt. `SocketCreator` uses `pn.createListenSocketUnix`/`pn.createClientSocket(pn.AF_UNIX)` for UDS (no `std.net.Address.initUnix`). `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch updated: `.windows => win/`. `Skt_legacy.zig`/`SocketCreator_legacy.zig` remain for non-linux/mac/win targets.
+- **Phase 2/3/4 win COMPLETE (2026-05-13):** `src/ampe/portable/win/` created. `std.net.Address.un = void` on Windows — UDS path stored in `uds_path: ?[pn.UDS_PATH_SIZE]u8` field in Skt. `SocketCreator` uses `pn.createListenSocketUnix`/`pn.createClientSocket(pn.AF_UNIX)` for UDS (no `std.net.Address.initUnix`). `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch updated: `.windows => win/`.
+- **Legacy files deleted (2026-05-13):** `Skt_legacy.zig` and `SocketCreator_legacy.zig` deleted. `portable/Skt.zig` and `portable/SocketCreator.zig` dispatch now use `@compileError("portable backend: unsupported OS")` for any OS other than linux/macos/windows.
 - **Verification COMPLETE (2026-05-13, mac+win):** All three OS targets cross-compile: `x86_64-windows-gnu` portable+posix OK; `x86_64-macos` portable OK; `aarch64-macos` portable OK. Linux 101/101 still pass after mac+win dispatch changes.
 - **Phase 1 COMPLETE (2026-05-12/13):** posix_net layer additions. `pn_connect_socket` in C returns 0=connected, 1=EINPROGRESS, -1=error. `connectSocket` in socket.zig maps 1→WouldBlock. `createClientSocket` in creator.zig (create+set_nonblocking, no connect). `resolveConnect` updated to check `< 0` and still calls `pn_wait_writable` (synchronous for legacy path). All exported from posix_net.zig. `pn_create_listen_socket_from_sockaddr` added: creates TCP/IP listen socket from `sockaddr*` (SO_REUSEADDR+SO_REUSEPORT, bind, listen) — needed by portable/linux backend.
 - **Phase 2/3/4 COMPLETE (2026-05-13):** `src/ampe/portable/linux/` created. `Skt.zig` stores `std.net.Address` + `pn.Fd`; two-step `connect()` for TCP and UDS; `setLingerAbort` on accepted socket; family-aware `disableNagle`; `deleteUDSPath` via family check. `SocketCreator.zig` mirrors posix linux structure: `createListenerSocket(std.net.Address)` + `createConnectSocket(std.net.Address)`; `createListenSocketFromSockaddr` for TCP; `createListenSocketUnix` for UDS. Dispatch added: `portable/Skt.zig` and `portable/SocketCreator.zig` redirect `.linux` to subfolders, other OS to legacy files. `portable_poller_tests.zig` updated: three tests that assumed one-step connect now call `client.connect()` explicitly.
@@ -176,6 +178,34 @@ One paragraph. What was done and why.
 | `zig build -Dtarget=x86_64-macos` | ✅ PASS |
 | `zig build -Dtarget=aarch64-macos` | ✅ PASS |
 ```
+
+---
+
+### 2026-05-13: Claude Code (Sonnet 4.6) — Stage 6: macOS/Windows CI portable fixes + legacy file cleanup
+
+#### Summary
+
+Three fixes for macOS CI (8 failures) and Windows CI (Notifier CommunicationFailed). Root cause 1: `addrinfo` struct in `posix_net/ffi.zig` used Linux glibc field order everywhere. macOS/BSD/Windows use BSD order — `ai_canonname` before `ai_addr`, with `ai_addrlen` as 8-byte `SIZE_T`. On macOS, the wrong layout caused `ai_addr` to read as null (field at wrong offset), triggering a "pointer cast to null" panic in `resolveConnect`. Fixed by splitting into `addrinfo_posix` (Linux) and `addrinfo_win` (everything else) with comptime dispatch. Root cause 2: `pn_connect_socket` returned -1 for EALREADY (POSIX) and WSAEALREADY (Windows). The `initPair` retry loop calls `connect()` in a loop; after first EINPROGRESS/WSAEWOULDBLOCK, subsequent calls get EALREADY. Treating EALREADY as a hard error caused Notifier `initPair` to fail on Windows and macOS connect-retry tests to fail. Fixed in `pn_utils.c`: EALREADY → 1 (in progress), EISCONN → 0 (connected) on both platforms. Also added null guard for `ai_addr` in `resolveConnect`. Cleanup: deleted `Skt_legacy.zig` and `SocketCreator_legacy.zig` (dead code — all three supported OSes have per-OS subfolders). Dispatch now uses `@compileError` for unsupported OS.
+
+#### Changes
+- `posix_net/ffi.zig` — split into `addrinfo_posix` + `addrinfo_win`; comptime dispatch `if (.linux) posix else win`; comment explaining layout difference
+- `posix_net/creator.zig` — `resolveConnect`: null guard for `ai_addr` before `@ptrCast`; check `< 0` for `pn_connect_socket`
+- `posix_net/adapters/pn_utils.c` — `pn_connect_socket`: EALREADY/EISCONN → in-progress/connected on POSIX; WSAEALREADY/WSAEISCONN same on Windows
+- `src/ampe/portable/Skt.zig` — dispatch: `else => @compileError("portable backend: unsupported OS")`
+- `src/ampe/portable/SocketCreator.zig` — dispatch: same
+- `src/ampe/portable/Skt_legacy.zig` — DELETED
+- `src/ampe/portable/SocketCreator_legacy.zig` — DELETED
+- `design/AGENT_STATE.md` — v082→083
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable` (Linux, Debug) | ✅ 101/101 |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ cross-compile OK |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ cross-compile OK |
+| macOS CI (8 failures) | pending CI run |
+| Windows CI (Notifier CommunicationFailed) | pending CI run |
 
 ---
 

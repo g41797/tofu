@@ -76,7 +76,8 @@ const addrinfo_posix = extern struct {
     ai_canonname: ?[*:0]u8,
     ai_next: ?*addrinfo_posix,
 };
-pub const addrinfo = if (@import("builtin").os.tag == .windows) addrinfo_win else addrinfo_posix;
+// Linux glibc: ai_addr before ai_canonname. macOS/BSD/Windows: ai_canonname before ai_addr.
+pub const addrinfo = if (@import("builtin").os.tag == .linux) addrinfo_posix else addrinfo_win;
 
 pub extern fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*const addrinfo, res: *?*addrinfo) c_int;
 pub extern fn freeaddrinfo(res: *addrinfo) void;
