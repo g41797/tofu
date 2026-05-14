@@ -51,10 +51,10 @@ fn makeTCPPair(sc: *SocketCreator) !struct { listener: Skt, accepted: Skt, clien
 
 // Minimal TriggeredChannel for backend tests.
 // The backend only reads .exp and writes .act — all other fields are left undefined.
-fn makeTC(exp: Triggers) TriggeredChannel {
-    var tc: TriggeredChannel = undefined;
-    tc.exp = exp;
-    tc.act = Triggers{};
+fn makeTC(exp: Triggers) *TriggeredChannel {
+    const tc = gpa.create(TriggeredChannel) catch unreachable;
+    tc.*.exp = exp;
+    tc.*.act = Triggers{};
     return tc;
 }
 
@@ -91,8 +91,10 @@ test "timeout when no data" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
     const seq: SeqN = 1;
-    var tc = makeTC(.{ .recv = .on });
-    try map.put(seq, &tc);
+    const tc = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc);
+
+    try map.put(seq, tc);
     try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
     defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
@@ -124,8 +126,10 @@ test "readable after write" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
     const seq: SeqN = 1;
-    var tc = makeTC(.{ .recv = .on });
-    try map.put(seq, &tc);
+    const tc = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc);
+
+    try map.put(seq, tc);
     try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
     defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
@@ -161,8 +165,10 @@ test "writable immediately" {
     defer map.deinit();
     const seq: SeqN = 1;
     // Register client (sender side) for send — send buffer is empty, writable immediately
-    var tc = makeTC(.{ .send = .on });
-    try map.put(seq, &tc);
+    const tc = makeTC(.{ .send = .on });
+    defer gpa.destroy(tc);
+
+    try map.put(seq, tc);
     try p.backend.register(toFd(client.socketHandle().?), seq, tc.exp);
     defer p.backend.unregister(toFd(client.socketHandle().?));
 
@@ -193,8 +199,10 @@ test "unregister prevents event" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
     const seq: SeqN = 1;
-    var tc = makeTC(.{ .recv = .on });
-    try map.put(seq, &tc);
+    const tc = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc);
+
+    try map.put(seq, tc);
     try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
 
     // Unregister before any write
@@ -231,7 +239,9 @@ test "modify recv to send" {
     defer map.deinit();
     const seq: SeqN = 1;
     var tc = makeTC(.{ .recv = .on });
-    try map.put(seq, &tc);
+    defer gpa.destroy(tc);
+
+    try map.put(seq, tc);
     try p.backend.register(toFd(accepted.socketHandle().?), seq, tc.exp);
     defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
@@ -275,10 +285,15 @@ test "two fds both readable" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    var tc1 = makeTC(.{ .recv = .on });
-    var tc2 = makeTC(.{ .recv = .on });
-    try map.put(1, &tc1);
-    try map.put(2, &tc2);
+    const tc1 = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc1);
+
+    const tc2 = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc2);
+
+    try map.put(1, tc1);
+    try map.put(2, tc2);
+
     try p.backend.register(toFd(accepted1.socketHandle().?), 1, tc1.exp);
     try p.backend.register(toFd(accepted2.socketHandle().?), 2, tc2.exp);
     defer p.backend.unregister(toFd(accepted1.socketHandle().?));
@@ -317,14 +332,18 @@ test "seqN isolation" {
     defer map.deinit();
 
     // seqN=1 registered with backend AND in map
-    var tc1 = makeTC(.{ .recv = .on });
-    try map.put(1, &tc1);
+    const tc1 = makeTC(.{ .recv = .on });
+    try map.put(1, tc1);
+    defer gpa.destroy(tc1);
+
     try p.backend.register(toFd(accepted.socketHandle().?), 1, tc1.exp);
     defer p.backend.unregister(toFd(accepted.socketHandle().?));
 
     // seqN=2 in map only — no FD registered in backend with this seqN
-    var tc2 = makeTC(.{ .recv = .on });
-    try map.put(2, &tc2);
+    const tc2 = makeTC(.{ .recv = .on });
+    defer gpa.destroy(tc2);
+
+    try map.put(2, tc2);
 
     _ = try client.sendBuf(&[_]u8{'x'});
     std.Thread.sleep(SLEEP_NS);
