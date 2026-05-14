@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2025 g41797
-// SPDX-License-Identifier: MIT
-
 // Contract tests for the posix_net module.
 // All operations use bsd_* wrappers — no std.posix calls.
 
@@ -21,8 +18,8 @@ const MAX_RETRIES = 10_000;
 const SLEEP_NS = 1 * std.time.ns_per_ms;
 
 // AF constants (Linux/macOS standard values)
-const AF_INET: u16 = 2;
-const AF_UNIX: u16 = 1;
+const AF_INET: u16 = pn.AF_INET;
+const AF_UNIX: u16 = pn.AF_UNIX;
 
 fn acceptFd(listen_fd: pn.Fd, addr: *pn.Addr) !pn.Fd {
     for (0..MAX_RETRIES) |_| {

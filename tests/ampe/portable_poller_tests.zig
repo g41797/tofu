@@ -232,7 +232,13 @@ test "portable backend: full echo" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    var server_tc = TriggeredChannel{
+    // Heap-Nallocate TriggeredChannel to ensure stable pointer
+    var server_tc_ptr = try gpa.create(TriggeredChannel);
+    var client_tc_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(server_tc_ptr);
+    defer gpa.destroy(client_tc_ptr);
+
+    server_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -243,7 +249,7 @@ test "portable backend: full echo" {
         .st = null,
         .firstRecvFinished = false,
     };
-    var client_tc = TriggeredChannel{
+    client_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -257,13 +263,13 @@ test "portable backend: full echo" {
 
     const server_seq: SeqN = 1;
     const client_seq: SeqN = 2;
-    try map.put(server_seq, &server_tc);
-    try map.put(client_seq, &client_tc);
+    try map.put(server_seq, server_tc_ptr);
+    try map.put(client_seq, client_tc_ptr);
 
     const accepted_fd = toFd(@intCast(accepted.rawFd()));
     const client_fd = toFd(@intCast(client.rawFd()));
-    try p.backend.register(accepted_fd, server_seq, server_tc.exp);
-    try p.backend.register(client_fd, client_seq, client_tc.exp);
+    try p.backend.register(accepted_fd, server_seq, server_tc_ptr.exp);
+    try p.backend.register(client_fd, client_seq, client_tc_ptr.exp);
 
     // Client sends ping
     _ = try client.sendBuf("ping");
@@ -271,10 +277,10 @@ test "portable backend: full echo" {
     // Wait until server recv fires
     var got_server_recv = false;
     for (0..50) |_| {
-        server_tc.act = .{};
-        client_tc.act = .{};
+        server_tc_ptr.act = .{};
+        client_tc_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (server_tc.act.recv == .on) {
+        if (server_tc_ptr.act.recv == .on) {
             got_server_recv = true;
             break;
         }
@@ -292,10 +298,10 @@ test "portable backend: full echo" {
     // Wait until client recv fires
     var got_client_recv = false;
     for (0..50) |_| {
-        server_tc.act = .{};
-        client_tc.act = .{};
+        server_tc_ptr.act = .{};
+        client_tc_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (client_tc.act.recv == .on) {
+        if (client_tc_ptr.act.recv == .on) {
             got_client_recv = true;
             break;
         }
