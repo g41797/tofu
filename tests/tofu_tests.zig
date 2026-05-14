@@ -4,6 +4,13 @@
 test {
     std.testing.log_level = .debug;
 
+    // if (@import("builtin").os.tag != .macos) {
+
+        std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
+
+        _ = @import("reactor_tests.zig");
+    // }
+
     std.log.debug("\r\n   ****  tofu TESTS no sockets ****\r\n", .{});
 
     // Platform-independent tests (no sockets):
@@ -33,13 +40,6 @@ test {
 
     // PollerCore integration tests (all backends, all platforms):
         _ = @import("pollercore_tests.zig");
-
-    if (@import("builtin").os.tag != .macos) {
-
-        std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
-
-        _ = @import("reactor_tests.zig");
-    }
 
     @import("std").testing.refAllDecls(@This());
 }
