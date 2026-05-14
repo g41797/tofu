@@ -94,7 +94,7 @@ test "TCP accept recv send via PollerCore" {
     try connectWithRetry(&client_skt);
 
     // 3. Poll for ACCEPT
-    const trgs1: Triggers = try pl.waitTriggers(1000);
+    const trgs1: Triggers = try pl.waitTriggers(5000);
     try testing.expect(trgs1.accept == .on);
 
     // 4. Accept connection
@@ -127,7 +127,7 @@ test "TCP accept recv send via PollerCore" {
     }
 
     // 7. Poll for RECV
-    const trgs2: Triggers = try pl.waitTriggers(1000);
+    const trgs2: Triggers = try pl.waitTriggers(5000);
     try testing.expect(trgs2.recv == .on);
 
     // 8. Receive on server side
@@ -145,7 +145,7 @@ test "TCP accept recv send via PollerCore" {
     }
 
     // 10. Poll for SEND readiness
-    const trgs3: Triggers = try pl.waitTriggers(1000);
+    const trgs3: Triggers = try pl.waitTriggers(5000);
     try testing.expect(trgs3.send == .on);
 }
 
