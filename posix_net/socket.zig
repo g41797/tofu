@@ -125,6 +125,16 @@ pub fn addrFamily(addr: *const Addr) u16 {
     return family_ptr.*;
 }
 
+/// Convert an internal address to a standard library address.
+pub fn toStdAddress(addr: *const Addr) std.net.Address {
+    var std_addr: std.net.Address = undefined;
+    const dest = std.mem.asBytes(&std_addr);
+    // Copy the raw bytes into the union.
+    // sockaddr_storage (Addr.mem) is large enough for all address types.
+    @memcpy(dest, addr.mem[0..dest.len]);
+    return std_addr;
+}
+
 /// Get the port from an address.
 pub fn addrPort(addr: *const Addr) ?u16 {
     const port = ffi.bsd_addr_get_port(addr);

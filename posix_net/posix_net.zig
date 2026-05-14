@@ -35,6 +35,7 @@ pub const addrPort = socket.addrPort;
 pub const addrUnixPath = socket.addrUnixPath;
 pub const deleteUnixPath = socket.deleteUnixPath;
 pub const setLingerAbort = socket.setLingerAbort;
+pub const toStdAddress = socket.toStdAddress;
 
 // Socket creation and resolution
 pub const createSocket = creator.createSocket;

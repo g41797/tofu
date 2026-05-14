@@ -55,7 +55,8 @@ pub extern fn _unlink(path: [*:0]const u8) c_int;  // Windows (gnu + msvc)
 
 // DNS resolution via libc
 // Windows ADDRINFOA: ai_addrlen is SIZE_T (8 bytes on x64); ai_canonname before ai_addr.
-// POSIX addrinfo: ai_addrlen is socklen_t (4 bytes); ai_addr before ai_canonname.
+// Linux glibc: ai_addrlen is socklen_t (4 bytes); ai_addr before ai_canonname.
+// macOS/BSD: ai_addrlen is socklen_t (4 bytes); ai_canonname before ai_addr.
 const addrinfo_win = extern struct {
     ai_flags: c_int,
     ai_family: c_int,
@@ -76,8 +77,24 @@ const addrinfo_posix = extern struct {
     ai_canonname: ?[*:0]u8,
     ai_next: ?*addrinfo_posix,
 };
-// Linux glibc: ai_addr before ai_canonname. macOS/BSD/Windows: ai_canonname before ai_addr.
-pub const addrinfo = if (@import("builtin").os.tag == .linux) addrinfo_posix else addrinfo_win;
+const addrinfo_bsd = extern struct {
+    ai_flags: c_int,
+    ai_family: c_int,
+    ai_socktype: c_int,
+    ai_protocol: c_int,
+    ai_addrlen: std.c.socklen_t,
+    ai_canonname: ?[*:0]u8,
+    ai_addr: ?*std.c.sockaddr,
+    ai_next: ?*addrinfo_bsd,
+};
+
+const builtin = @import("builtin");
+pub const addrinfo = if (builtin.os.tag == .linux)
+    addrinfo_posix
+else if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD())
+    addrinfo_bsd
+else
+    addrinfo_win;
 
 pub extern fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*const addrinfo, res: *?*addrinfo) c_int;
 pub extern fn freeaddrinfo(res: *addrinfo) void;

@@ -41,7 +41,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
         return toAmpe(e);
     };
     pn.setLingerAbort(client_fd);
-    return Skt{ .fd = client_fd, .address = askt.address };
+    return Skt{ .fd = client_fd, .address = pn.toStdAddress(&addr) };
 }
 
 /// Connect the socket to the stored address.

@@ -899,7 +899,7 @@ zig build -Dtarget=aarch64-macos -Dnetwork=portable  # ✅
 - Secondary bugs fixed (2026-05-12): `setLingerAbort` no-op → TIME_WAIT accumulation; backlog 512 vs 1024. Both fixed via `posix_net/adapters/pn_utils.c`.
 - **Linux result (2026-05-12):** 101/101 tests pass.
 - **Windows UDS fix (2026-05-12):** `bsd_create_connect_socket_unix` in usockets `bsd.c` uses `errno != EINPROGRESS` to detect connect-in-progress. On Windows, non-blocking connect sets `WSAGetLastError() == WSAEWOULDBLOCK` — usockets treated it as fatal. Fixed by adding `pn_create_connect_socket_unix` to `pn_utils.c` (Windows: check `WSAEWOULDBLOCK`; Linux: delegate to `bsd_create_connect_socket_unix`). Wired through `ffi.zig` and `creator.zig`.
-- **macOS CI fix (2026-05-12):** Two bugs. (1) `addrFamily` read `sockaddr.mem[0]` as u16 — wrong on macOS/BSD where `sa_len` (u8) precedes `sa_family` (u8). Fix: comptime branch reads `mem[1]` on Darwin/BSD. (2) Non-blocking TCP connect on macOS may return EINPROGRESS; tests called `send()`/`getpeername()` immediately. Fix: added `pn_wait_writable` to `pn_utils.c` (select + getsockopt SO_ERROR); `resolveConnect` waits up to 5 s for connect completion. See §15.2.
+- **macOS CI fixes — Second Round (2026-05-13):** Four critical bugs fixed. (1) `LIBUS_SOCKET_WRITABLE` corrected to `2` for kqueue. (2) `triggers.zig` updated to treat `EV_EOF` on a `READ` filter as read-ready, matching native macOS logic. (3) `accept()` in all portable backends fixed to correctly initialize client address (was reusing listener address). (4) `addrinfo` layout corrected for BSD systems. See §15.2.
 - Pending: full Windows 4-mode verification (`zbta_win.cmd`) + portable 4-mode on Windows after `build.zig.zon` update; macOS CI run.
 
 ---
