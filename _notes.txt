@@ -444,3 +444,215 @@ uSockets
 Cross compilation for Windows
     zig build install -Doptimize=Debug -Dnetwork=portable -Dtarget=x86_64-windows-gnu --summary all
     wine zig-out/bin/test.exe 2>/dev/null
+
+
+Mac os on Fedora VM
+
+# Best path for you
+
+Use:
+
+* QEMU
+* KVM
+* OpenCore
+* [OSX-KVM project](https://github.com/kholia/OSX-KVM)
+
+This is the easiest and most stable route on Fedora.
+
+---
+
+# Exact install
+
+## 1. clone
+
+```bash
+cd ~
+git clone https://github.com/kholia/OSX-KVM.git
+cd OSX-KVM
+```
+
+---
+
+## 2. fetch macOS recovery
+
+For Sonoma:
+
+```bash
+./fetch-macOS-v2.py
+```
+
+Pick latest stable.
+
+---
+
+## 3. create disk
+
+```bash
+qemu-img create -f qcow2 mac_hdd_ng.img 160G
+```
+
+160G is comfortable.
+
+---
+
+## 4. start installer
+
+```bash
+./OpenCore-Boot.sh
+```
+
+If it errors on permissions:
+
+```bash
+chmod +x *.sh
+```
+
+---
+
+## 5. in installer
+
+Open:
+
+**Disk Utility**
+
+Then:
+
+* View → Show all devices
+* Erase target qcow2 disk
+* format: APFS
+* GUID partition map
+
+Install macOS.
+
+Reboots several times.
+
+Always boot:
+
+**macOS Installer** until finished, then boot installed system.
+
+---
+
+# VM tuning for your CPU
+
+Edit:
+
+`OpenCore-Boot.sh`
+
+Set:
+
+```bash
+-smp 8,cores=4
+-m 16384
+```
+
+That gives:
+
+* 8 threads
+* 16 GB RAM
+
+Ideal on your 5700U.
+
+---
+
+# For smoother desktop
+
+Enable SPICE display acceleration if available in project config.
+
+And inside macOS:
+
+disable animations:
+
+System Settings → Accessibility → Display → Reduce Motion
+
+Huge improvement in VMs.
+
+---
+
+## I’d configure it like this
+
+**VM resources**
+
+* 12–16 GB RAM
+* 6–8 vCPUs
+* 160–200 GB disk
+
+**Inside macOS install**
+
+* Xcode Command Line Tools
+
+```bash
+xcode-select --install
+```
+
+* Homebrew
+  [Homebrew](https://brew.sh)
+
+Then:
+
+```bash
+brew install zig cmake ninja lldb
+```
+
+Install:
+
+* [CLion download page](https://www.jetbrains.com/clion/download/)
+
+Then point CLion toolchain to:
+
+* compiler: Apple clang
+* debugger: LLDB
+* CMake: brew cmake
+* Zig binary: brew zig
+
+That gets you very close to GitHub Actions mac runners.
+
+---
+
+## Small warning: GitHub mac runners are Intel/Apple Silicon depending on workflow
+
+Check your workflow.
+
+If your CI says:
+
+```yaml
+runs-on: macos-latest
+```
+
+Today that can move over time.
+
+If your issue is architecture-sensitive:
+
+* x86_64
+* arm64
+* Rosetta behavior
+
+you’ll want to pin explicitly.
+
+Example:
+
+```yaml
+runs-on: macos-13
+```
+
+or
+
+```yaml
+runs-on: macos-14
+```
+
+to match what you reproduce locally.
+
+This avoids “works locally in VM but fails in Actions because Apple changed host image.”
+
+---
+
+For Zig/mac CI failures specifically, the most common causes I’ve seen are:
+
+* SDK path resolution
+* implicit libc assumptions
+* `-framework` linker differences
+* case-sensitive path bugs
+* missing entitlement/codesign handling
+* `std.build` Darwin target branching
+* CLion using bundled CMake instead of system one
+
