@@ -107,7 +107,10 @@ test "portable backend: wait with data" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    var tc = TriggeredChannel{
+    // Heap-allocate TriggeredChannel to ensure stable pointer
+    const tc_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(tc_ptr);
+    tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -119,10 +122,10 @@ test "portable backend: wait with data" {
         .firstRecvFinished = false,
     };
     const seq: SeqN = 1;
-    try map.put(seq, &tc);
+    try map.put(seq, tc_ptr);
 
     const accepted_fd = toFd(@intCast(accepted.rawFd()));
-    try p.backend.register(accepted_fd, seq, tc.exp);
+    try p.backend.register(accepted_fd, seq, tc_ptr.exp);
 
     // Write data from client
     _ = try client.sendBuf("ping");
@@ -131,7 +134,7 @@ test "portable backend: wait with data" {
     const total_act = try p.backend.wait(100, &map);
 
     try testing.expect(total_act.recv == .on);
-    try testing.expect(tc.act.recv == .on);
+    try testing.expect(tc_ptr.act.recv == .on);
 }
 
 test "portable backend: timeout" {
@@ -167,7 +170,10 @@ test "portable backend: accept flow" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    var listener_tc = TriggeredChannel{
+    // Heap-allocate TriggeredChannel to ensure stable pointer
+    const listener_tc_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(listener_tc_ptr);
+    listener_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -179,18 +185,18 @@ test "portable backend: accept flow" {
         .firstRecvFinished = false,
     };
     const seq: SeqN = 1;
-    try map.put(seq, &listener_tc);
+    try map.put(seq, listener_tc_ptr);
 
     // Initiate non-blocking connect; listener fires accept shortly after.
     _ = try client.connect();
 
     const listener_fd = toFd(@intCast(listener.rawFd()));
-    try p.backend.register(listener_fd, seq, listener_tc.exp);
+    try p.backend.register(listener_fd, seq, listener_tc_ptr.exp);
 
     const total_act = try p.backend.wait(200, &map);
 
     try testing.expect(total_act.accept == .on);
-    try testing.expect(listener_tc.act.accept == .on);
+    try testing.expect(listener_tc_ptr.act.accept == .on);
 
     // Accept must succeed
     const accepted = try listener.accept();
@@ -232,9 +238,9 @@ test "portable backend: full echo" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    // Heap-Nallocate TriggeredChannel to ensure stable pointer
-    var server_tc_ptr = try gpa.create(TriggeredChannel);
-    var client_tc_ptr = try gpa.create(TriggeredChannel);
+    // Heap-allocate TriggeredChannel to ensure stable pointer
+    const server_tc_ptr = try gpa.create(TriggeredChannel);
+    const client_tc_ptr = try gpa.create(TriggeredChannel);
     defer gpa.destroy(server_tc_ptr);
     defer gpa.destroy(client_tc_ptr);
 
@@ -350,7 +356,13 @@ test "portable backend: UDS echo" {
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    var server_tc = TriggeredChannel{
+    // Heap-allocate TriggeredChannel to ensure stable pointer
+    const server_tc_ptr = try gpa.create(TriggeredChannel);
+    const client_tc_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(server_tc_ptr);
+    defer gpa.destroy(client_tc_ptr);
+
+    server_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -361,7 +373,7 @@ test "portable backend: UDS echo" {
         .st = null,
         .firstRecvFinished = false,
     };
-    var client_tc = TriggeredChannel{
+    client_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -375,22 +387,22 @@ test "portable backend: UDS echo" {
 
     const server_seq: SeqN = 1;
     const client_seq: SeqN = 2;
-    try map.put(server_seq, &server_tc);
-    try map.put(client_seq, &client_tc);
+    try map.put(server_seq, server_tc_ptr);
+    try map.put(client_seq, client_tc_ptr);
 
     const accepted_fd = toFd(@intCast(accepted.rawFd()));
     const client_fd = toFd(@intCast(client.rawFd()));
-    try p.backend.register(accepted_fd, server_seq, server_tc.exp);
-    try p.backend.register(client_fd, client_seq, client_tc.exp);
+    try p.backend.register(accepted_fd, server_seq, server_tc_ptr.exp);
+    try p.backend.register(client_fd, client_seq, client_tc_ptr.exp);
 
     _ = try client.sendBuf("ping");
 
     var got_server_recv = false;
     for (0..50) |_| {
-        server_tc.act = .{};
-        client_tc.act = .{};
+        server_tc_ptr.act = .{};
+        client_tc_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (server_tc.act.recv == .on) {
+        if (server_tc_ptr.act.recv == .on) {
             got_server_recv = true;
             break;
         }
@@ -405,10 +417,10 @@ test "portable backend: UDS echo" {
 
     var got_client_recv = false;
     for (0..50) |_| {
-        server_tc.act = .{};
-        client_tc.act = .{};
+        server_tc_ptr.act = .{};
+        client_tc_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (client_tc.act.recv == .on) {
+        if (client_tc_ptr.act.recv == .on) {
             got_client_recv = true;
             break;
         }
@@ -459,7 +471,11 @@ test "portable backend: map stability with notifier" {
 
     // Notifier TC registered first — mirrors reactor's createNotificationChannel order.
     const ntfr_seq: SeqN = SpecialMaxChannelNumber;
-    var ntfr_tc = TriggeredChannel{
+    // Heap-allocate TriggeredChannel to ensure stable pointer
+    const ntfr_tc_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(ntfr_tc_ptr);
+
+    ntfr_tc_ptr.* = TriggeredChannel{
         .engine = undefined,
         .acn = undefined,
         .tskt = undefined,
@@ -470,9 +486,9 @@ test "portable backend: map stability with notifier" {
         .st = null,
         .firstRecvFinished = false,
     };
-    try map.put(ntfr_seq, &ntfr_tc);
+    try map.put(ntfr_seq, ntfr_tc_ptr);
     const ntfr_fd = toFd(@intCast(ntfr.receiver.rawFd()));
-    try p.backend.register(ntfr_fd, ntfr_seq, ntfr_tc.exp);
+    try p.backend.register(ntfr_fd, ntfr_seq, ntfr_tc_ptr.exp);
 
     // 3 TCP listeners.
     var sc = SocketCreator.init(gpa);
@@ -484,25 +500,33 @@ test "portable backend: map stability with notifier" {
     defer l3.deinit();
 
     const exp_accept = Triggers{ .accept = .on };
-    var tc1 = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+    // Heap-allocate TriggeredChannel instances for listeners
+    const tc1_ptr = try gpa.create(TriggeredChannel);
+    const tc2_ptr = try gpa.create(TriggeredChannel);
+    const tc3_ptr = try gpa.create(TriggeredChannel);
+    defer gpa.destroy(tc1_ptr);
+    defer gpa.destroy(tc2_ptr);
+    defer gpa.destroy(tc3_ptr);
+
+    tc1_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
-    var tc2 = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+    tc2_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
-    var tc3 = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+    tc3_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
 
     const seq1: SeqN = 1;
     const seq2: SeqN = 2;
     const seq3: SeqN = 3;
-    try map.put(seq1, &tc1);
-    try map.put(seq2, &tc2);
-    try map.put(seq3, &tc3);
+    try map.put(seq1, tc1_ptr);
+    try map.put(seq2, tc2_ptr);
+    try map.put(seq3, tc3_ptr);
     try p.backend.register(toFd(@intCast(l1.rawFd())), seq1, exp_accept);
     try p.backend.register(toFd(@intCast(l2.rawFd())), seq2, exp_accept);
     try p.backend.register(toFd(@intCast(l3.rawFd())), seq3, exp_accept);
 
     // Baseline: Notifier fires before any structural change.
-    try assertNotifierFires(&p, &map, &ntfr, &ntfr_tc);
+    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
 
     // Connect to l2 — triggers accept on TC2.
     const port2 = l2.getPort().?;
@@ -512,21 +536,21 @@ test "portable backend: map stability with notifier" {
 
     var got2 = false;
     for (0..20) |_| {
-        tc2.act = .{};
+        tc2_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (tc2.act.accept == .on) { got2 = true; break; }
+        if (tc2_ptr.act.accept == .on) { got2 = true; break; }
     }
     try testing.expect(got2);
 
     // After accept event: Notifier must still fire.
-    try assertNotifierFires(&p, &map, &ntfr, &ntfr_tc);
+    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
 
     // Remove l1 (seq1): swapRemove shifts l3 (last entry) into l1's slot.
     p.backend.unregister(toFd(@intCast(l1.rawFd())));
     _ = map.swapRemove(seq1);
 
     // After swapRemove: Notifier must still fire.
-    try assertNotifierFires(&p, &map, &ntfr, &ntfr_tc);
+    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
 
     // Connect to l3 — TC3 must still dispatch correctly after its position shifted.
     const port3 = l3.getPort().?;
@@ -536,12 +560,12 @@ test "portable backend: map stability with notifier" {
 
     var got3 = false;
     for (0..20) |_| {
-        tc3.act = .{};
+        tc3_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
-        if (tc3.act.accept == .on) { got3 = true; break; }
+        if (tc3_ptr.act.accept == .on) { got3 = true; break; }
     }
     try testing.expect(got3);
 
     // Final: Notifier still fires after l3 accepted.
-    try assertNotifierFires(&p, &map, &ntfr, &ntfr_tc);
+    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
 }

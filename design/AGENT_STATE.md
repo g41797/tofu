@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 084
-**Last Updated:** 2026-05-13
+**Current Version:** 085
+**Last Updated:** 2026-05-14
 **Last Agent:** Gemini CLI
-**Active Phase:** Stage 6 in progress — macOS CI fixes applied (addrinfo layout + LIBUS_SOCKET_WRITABLE + EV_EOF mapping + accept address bug); awaiting CI confirmation; Windows native 4-mode pending
+**Active Phase:** Stage 6 — Finalizing portable backend tests with heap allocation; preparing documentation updates.
 
 ---
 
@@ -190,6 +190,22 @@ Fixed several critical issues causing macOS CI failures for the portable backend
 | `zig build test -Dnetwork=portable` (Linux, Debug) | ✅ PASS (101/101) |
 | `addrinfo` layout (macOS) | ✅ verified vs std.c.zig |
 | `LIBUS_SOCKET_WRITABLE` (macOS) | ✅ verified vs epoll_kqueue.h |
+
+---
+
+### 2026-05-14: Gemini CLI — Stage 6: Heap allocation for TriggeredChannel in portable tests
+
+#### Summary
+Migrated `TriggeredChannel` instances in `tests/ampe/portable_poller_tests.zig` from stack allocation to heap allocation using `gpa.create()`. This change ensures pointer stability for `TriggeredChannel` objects, particularly when `ArrayHashMap.swapRemove` might cause map reallocations. Heap allocation guarantees that pointers remain valid throughout the test execution, preventing potential issues with stale data and improving test reliability. Corresponding `defer gpa.destroy()` calls have been added for proper memory management.
+
+#### Changes
+- `tests/ampe/portable_poller_tests.zig` — Updated `portable backend: map stability with notifier`, `wait with data`, `accept flow`, and `full echo` tests to use heap-allocated `TriggeredChannel` instances via `gpa.create()` and `gpa.destroy()`.
+
+#### Verification
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Dnetwork=portable` (Linux, Debug) | ✅ PASS (after previous fixes) |
+| `zig build test -Dnetwork=portable` (macOS, Debug) | pending CI run |
 
 ---
 
