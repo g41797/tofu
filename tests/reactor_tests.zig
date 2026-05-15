@@ -69,7 +69,7 @@ test "handle reconnect multithreaded" {
 }
 
 test "loop tests" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
 
         for (0..5) |i| {
@@ -90,7 +90,7 @@ test "loop tests" {
                 try test_handle_reconnect_multithreaded();
             }
         }
-    }
+    // }
 }
 
 test "simm test" {
