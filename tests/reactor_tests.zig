@@ -94,7 +94,7 @@ test "loop tests" {
 }
 
 test "simm test" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
 
         const tests = &[_]*const fn () void{
@@ -107,7 +107,7 @@ test "simm test" {
         tofu.RunTasks(gpa, tests) catch unreachable;
 
         std.debug.print("All tests completed\n", .{});
-    }
+    // }
 }
 
 test "echo client/server test" {
