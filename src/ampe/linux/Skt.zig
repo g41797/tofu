@@ -310,14 +310,8 @@ pub fn acceptOs(
         else
             system.accept(sock, addr, addr_size);
 
-        // Darwin accept returns c_int (sign-extend to usize); Linux accept4 returns usize directly.
-        const rc_usize: usize = if (@TypeOf(rc) == c_int)
-            @as(usize, @bitCast(@as(isize, @intCast(rc))))
-        else
-            rc;
-
-        switch (posix.errno(rc_usize)) {
-            .SUCCESS => break @intCast(rc_usize),
+        switch (posix.errno(rc)) {
+            .SUCCESS => break @intCast(rc),
             .INTR => continue,
             .AGAIN => return error.WouldBlock,
             .CONNABORTED => return error.ConnectionAborted,

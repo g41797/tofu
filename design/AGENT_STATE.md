@@ -1,6 +1,6 @@
 # Agent State & Handover
 
-**Current Version:** 086
+**Current Version:** 087
 **Last Updated:** 2026-05-15
 **Last Agent:** Gemini CLI
 **Active Phase:** Stage 6 — Investigating macOS POSIX backend failures; diagnostic testing.
@@ -31,6 +31,7 @@
 - **Diagnostic steps (2026-05-15):** 
   - Added `Raw TCP connectivity` test to `tests/pollercore_tests.zig` to verify basic socket wrappers without poller logic.
   - Added explicit assertions for `sendBuf` return values to detect premature success or `WouldBlock` conditions.
+  - **FIXED:** Panic in `acceptOs` on macOS (`integer does not fit in destination type`). Root cause was manual conversion to `usize` for `errno` check. Simplified to use `std.posix.errno(rc)` directly.
   - Identified discrepancy in `mac/Skt.zig`: `EALREADY` is treated as "connected" (`true`), which may cause premature sends before the TCP handshake completes.
   - Noted Darwin-specific socket creation constraints (missing `SOCK_NONBLOCK`/`SOCK_CLOEXEC` in `socket()` call) and verified they are handled via `fcntl` in `acceptOs` but checked `SocketCreator.zig` for similar logic.
 
@@ -116,6 +117,22 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-15: Gemini CLI — Fix for macOS panic and simplified error handling
+
+#### Summary
+Fixed a critical panic on macOS in `acceptOs` where casting a negative return value to `usize` for `errno` checking caused an "integer does not fit" error. Simplified the logic to pass the syscall return value directly to `std.posix.errno`, which is platform-aware. Applied the same simplification to the Linux backend for consistency. Verified both changes pass the full test suite on Linux.
+
+#### Changes
+- `src/ampe/mac/Skt.zig` — Removed manual `rc_usize` conversion; passed `rc` directly to `posix.errno`.
+- `src/ampe/linux/Skt.zig` — Same simplification.
+- `tests/pollercore_tests.zig` — Corrected `actual_body_len()` call on `Message` struct.
+
+#### Verification
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (65/65) |
+| macOS panic fix | Verified by user log analysis |
 
 ### 2026-05-15: Gemini CLI — Investigation of macOS POSIX backend failures
 

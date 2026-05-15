@@ -310,14 +310,8 @@ pub fn acceptOs(
         else
             system.accept(sock, addr, addr_size);
 
-        // Convert to usize for errno check (handles both c_int and usize)
-        const rc_usize: usize = if (@typeInfo(@TypeOf(rc)) == .int)
-            @as(usize, @intCast(@as(isize, @intCast(rc))))
-        else
-            rc;
-
-        switch (posix.errno(rc_usize)) {
-            .SUCCESS => break @intCast(rc_usize),
+        switch (posix.errno(rc)) {
+            .SUCCESS => break @intCast(rc),
             .INTR => continue,
             .AGAIN => return error.WouldBlock,
             .CONNABORTED => return error.ConnectionAborted,
