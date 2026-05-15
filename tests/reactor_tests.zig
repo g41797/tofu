@@ -19,9 +19,9 @@ test "find free TCP/IP port" {
 }
 
 test "send illegal messages" {
-    if (!isMac) {
+    // if (!isMac) {
         try send_illegal_messages();
-    }
+    // }
 }
 
 test "update receiver" {
