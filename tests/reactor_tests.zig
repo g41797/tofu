@@ -62,10 +62,10 @@ test "handle reconnect single threaded" {
 }
 
 test "handle reconnect multithreaded" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
         try test_handle_reconnect_multithreaded();
-    }
+    // }
 }
 
 test "loop tests" {
