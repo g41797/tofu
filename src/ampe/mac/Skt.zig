@@ -88,7 +88,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
             connected = false;
         },
         error.ConnectionPending => {
-            connected = true; // for macOs
+            connected = false;
         },
         error.ConnectionRefused => {
             return AmpeError.PeerDisconnected;

@@ -1,6 +1,6 @@
 # Agent State & Handover
 
-**Current Version:** 087
+**Current Version:** 088
 **Last Updated:** 2026-05-15
 **Last Agent:** Gemini CLI
 **Active Phase:** Stage 6 — Investigating macOS POSIX backend failures; diagnostic testing.
@@ -27,13 +27,13 @@
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
 - Stage 0.5 through Stage 6 (portable) are largely complete; cross-platform CI is passing for portable.
-- **Current investigation:** `pollercore_tests.zig` fails on macOS for the native (`posix`) backend. Specifically, `TCP accept recv send via PollerCore` triggers a `recv` event but returns an empty queue.
-- **Diagnostic steps (2026-05-15):** 
-  - Added `Raw TCP connectivity` test to `tests/pollercore_tests.zig` to verify basic socket wrappers without poller logic.
-  - Added explicit assertions for `sendBuf` return values to detect premature success or `WouldBlock` conditions.
-  - **FIXED:** Panic in `acceptOs` on macOS (`integer does not fit in destination type`). Root cause was manual conversion to `usize` for `errno` check. Simplified to use `std.posix.errno(rc)` directly.
-  - Identified discrepancy in `mac/Skt.zig`: `EALREADY` is treated as "connected" (`true`), which may cause premature sends before the TCP handshake completes.
-  - Noted Darwin-specific socket creation constraints (missing `SOCK_NONBLOCK`/`SOCK_CLOEXEC` in `socket()` call) and verified they are handled via `fcntl` in `acceptOs` but checked `SocketCreator.zig` for similar logic.
+- **Current investigation:** `pollercore_tests.zig` fails on macOS for the native (`posix`) backend. 
+- **Diagnostic steps & Findings (2026-05-15):** 
+  - **FIXED:** Panic in `acceptOs` on macOS (`integer does not fit in destination type`). Root cause was manual conversion of negative syscall results to `usize` for `errno` check. Simplified to use `std.posix.errno(rc)` directly.
+  - **FIXED:** Mismapped `EALREADY` in `connect()`. Native backends (mac/linux) were returning `true` (success) for "connection in progress", leading to premature sends. Now returns `false` (would block) to align with Reactor expectations.
+  - **VERIFIED:** macOS `kqueue` correctly reports `EV_EOF` on read filters. Tofu's `triggers.zig` maps this to `recv=on` to allow draining data before closure.
+  - **VERIFIED:** Darwin lack of `accept4` is correctly handled by Tofu's `acceptOs` via `accept` + manual `fcntl` for `NONBLOCK` and `CLOEXEC` flags.
+  - **VERIFIED:** Portable backend already handled `WouldBlock` and `EALREADY` correctly via `posix_net` C-layer logic.
 
 ---
 
@@ -117,6 +117,22 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-15: Gemini CLI — Behavioral alignment and macOS stability fixes
+
+#### Summary
+Resolved critical behavioral mismatches between macOS and Linux native backends. Fixed a panic in `acceptOs` by simplifying error handling. Corrected the `connect()` logic to return `false` on `EALREADY`, preventing race conditions during TCP handshakes. Verified that the portable backend was already aligned with these requirements. Added diagnostic tests to `pollercore_tests.zig` to ensure low-level socket stability.
+
+#### Changes
+- `src/ampe/mac/Skt.zig` — Fixed `acceptOs` panic; mapped `EALREADY` to `false` in `connect()`.
+- `src/ampe/linux/Skt.zig` — Aligned `acceptOs` and `connect()` logic with macOS fixes.
+- `tests/pollercore_tests.zig` — Added `Raw TCP connectivity` test; improved `sendBuf` assertions.
+
+#### Verification
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (65/65) |
+| macOS stability | Awaiting hardware verification |
 
 ### 2026-05-15: Gemini CLI — Fix for macOS panic and simplified error handling
 

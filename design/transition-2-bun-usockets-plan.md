@@ -1411,6 +1411,7 @@ These tables document the behavioral differences between the native posix backen
 | `listen` | full: setREUSE, bind, listen, getsockname | no-op — done inside `pn_create_listen_socket` | OK |
 | `accept` | syscall; `setLingerAbort` on accepted fd | `pn.acceptSocket` + `pn.setLingerAbort` on accepted fd | OK (linux, mac, win) |
 | **`connect`** | calls `connectOs()` against stored `address`; returns `false` on EINPROGRESS | calls `pn.connectSocket`/`pn.connectSocketUnix`; returns `false` on WouldBlock | OK (linux, mac, win) |
+
 | `setREUSE` | `setsockopt(SO_REUSEPORT/SO_REUSEADDR)` | no-op — set inside `pn_create_listen_socket` | OK |
 | `setLingerAbort` | `setsockopt(SO_LINGER)` | `pn.setLingerAbort` → `bsd_set_linger_abort` | OK |
 | `disableNagle` | `setsockopt(TCP_NODELAY)` — TCP only | checks `address.any.family` (or `uds_path` on win); calls `pn.nodelay` for INET/INET6 | OK (linux, mac, win) |
