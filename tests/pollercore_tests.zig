@@ -91,6 +91,7 @@ test "Raw TCP connectivity" {
     defer list_skt.deinit();
     const port: u16 = list_skt.getPort().?;
 
+
     // 2. Connect client
     var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
     defer client_skt.deinit();
@@ -136,25 +137,41 @@ test "Raw TCP connectivity" {
 // ---------------------------------------------------------------------------
 
 test "TCP accept recv send via PollerCore" {
+
+    var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
+    defer pool.close();
+
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
 
     var pl = try Poller.init(testing.allocator);
     defer pl.deleteAll();
 
-    // 1. Setup listener; port 0 lets the OS assign a free port
+    // 1. Setup listener
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
-    const list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+    // 1. Setup listener
+    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+    defer list_skt.deinit();
     const port: u16 = list_skt.getPort().?;
 
     const tc_list: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
-    defer testing.allocator.destroy(tc_list);
+    defer {
+        tc_list.tskt.deinit();
+        testing.allocator.destroy(tc_list);
+    }
     tc_list.* = TriggeredChannel{
         .tskt = .{ .accept = .{ .skt = list_skt } },
         .acn = .{ .chn = 1 },
     };
     tc_list.tskt.refreshPointers();
     _ = try pl.attachChannel(tc_list);
+    
+    var chnls = try std.ArrayList(tofu.message.ChannelNumber).initCapacity(testing.allocator, 1);
+    try chnls.append(testing.allocator, 1);
+    defer {
+        _ = pl.deleteGroup(chnls) catch {};
+        chnls.deinit(testing.allocator);
+    }
 
     // 2. Connect client
     var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
@@ -163,22 +180,20 @@ test "TCP accept recv send via PollerCore" {
 
     // 3. Poll for ACCEPT
     const trgs1: Triggers = try pl.waitTriggers(5000);
-    if (trgs1.accept == .off) {
-        std.debug.print("\nUnexpected triggers in TCP accept poll: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs1)});
-    }
     try testing.expect(trgs1.accept == .on);
 
     // 4. Accept connection
     const tc_list_ptr: *TriggeredChannel = pl.trgChannel(1).?;
-    const server_skt: Skt = (try tc_list_ptr.*.tskt.tryAccept()).?;
+    var server_skt: Skt = (try tc_list_ptr.*.tskt.tryAccept()).?;
+    defer server_skt.deinit();
 
-    // 5. Setup IO channel for accepted connection
-    var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
-    defer pool.close();
-
+    // 5. Setup IO channel
     const srv_io: IoSkt = try IoSkt.initServerSide(&pool, 2, server_skt);
     const tc_srv: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
-    defer testing.allocator.destroy(tc_srv);
+    defer {
+        tc_srv.tskt.deinit();
+        testing.allocator.destroy(tc_srv);
+    }
     tc_srv.* = TriggeredChannel{
         .tskt = .{ .io = srv_io },
         .acn = .{ .chn = 2 },
