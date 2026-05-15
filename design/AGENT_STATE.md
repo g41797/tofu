@@ -1,9 +1,9 @@
 # Agent State & Handover
 
-**Current Version:** 085
-**Last Updated:** 2026-05-14
+**Current Version:** 086
+**Last Updated:** 2026-05-15
 **Last Agent:** Gemini CLI
-**Active Phase:** Stage 6 — Finalizing portable backend tests with heap allocation; preparing documentation updates.
+**Active Phase:** Stage 6 — Investigating macOS POSIX backend failures; diagnostic testing.
 
 ---
 
@@ -26,40 +26,13 @@
 **Update this section at the start and end of every session.**
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
-- Stage -1 (std.posix/std.net → bsd_* mapping scan) is COMPLETE.
-- Stage 0 (VSCode config) is COMPLETE.
-- Stage 0.5 (`posix_net/` module + forked uSockets integration + 27 tests) is COMPLETE.
-- Stage 1 (`portable/Skt.zig` + `portable/SocketCreator.zig`) is COMPLETE.
-- Stage 2 (Notifier + loop init) is COMPLETE.
-- Gemini session (2026-05-10): moved loop creation OUT of `initPlatform` and INTO `PosixNetBackend.init()` (called on reactor thread). `initPlatform` is now Windows-only WSAStartup. Fixed `modify()` fallback to `register()` for unregistered fds. Fixed nullable TC pointer in dispatch.
-- After Gemini changes: 84/84 lower-level tests pass. `reactor_tests.test.echo client/server test` hangs (stuck for 15-22 min at 98% CPU). `send illegal messages` error-code mismatch fixed in this session (InvalidAddress mapping in createTcpClient).
-- **Current blocker:** reactor echo test hangs. Root cause unknown — could be posix_net/uSockets layer or TriggeredSocket state machine.
-- **CONFIRMED (2026-05-11):** 35/35 tests pass with only posix_net + portable_poller suites active. "accept flow", "full echo" (TCP), "UDS echo" all pass. posix_net/uSockets layer is sound.
-- **Bug location narrowed:** reactor echo test hang is NOT in posix_net/uSockets. Hypothesis: `swapRemove` in `SeqnTrcMap` shifts TC pointer positions; backend's `pollExt` wiring in `wait()` may reference stale/wrong TC after a removal.
-- **Architecture fix (2026-05-11):** `posix_net_backend.zig` restructured to match `epoll_backend.zig` shape. `SeqN` is now stored in `pollExt` at register time (like epoll stores it in `ev.data.u64`). Dispatch reads `SeqN` from `pollExt` then calls `ws.map.get(seq)` — no pre-wiring loop before each tick, no stale `*TriggeredChannel` pointers. `PollMap` simplified to `fd → *anyopaque` (poll handle only).
-- **New test:** "portable backend: map stability with notifier" — registers Notifier receiver first (seq=65535, `notify=.on`), then 3 TCP listeners. After each structural change (accept event, unregister/swapRemove), sends a Notifier notification and asserts the Notifier TC still dispatches correctly.
-- **RESTORED:** `src/ampe/Notifier.zig` `init()` back to original UDS-first logic.
-- `tofu_tests.zig` restored to full suite.
-- Loop thread affinity confirmed: `initPlatform()` has no thread affinity; loop must be created on the reactor thread → `PosixNetBackend.init()` is the right place.
-- **VERIFIED (2026-05-11, CLion):** All 99/99 tests pass including `reactor_tests.test.echo client/server test`. Previous background hang was a test runner resource issue (SIGTERM from zig build timeout), not a code bug.
-- **Stage 3 COMPLETE.**
-- **Stage 4 COMPLETE.** Windows adapter headers done. `posix_net/adapters/` contains `sys/epoll.h` (wepoll redirect), `sys/timerfd.h`, `sys/eventfd.h`, `win_compat.h`, `us_epoll_win.c`. Cross-compile `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` succeeds.
-- **Stage 5 COMPLETE.** macOS cross-compilation verified: `x86_64-macos` and `aarch64-macos` both succeed with `-Dnetwork=portable`.
-- **Stage 6 in progress.** Windows native testing (CLion). Bug found: `bsd_set_nonblocking()` in vendored uSockets was a no-op on Windows — every socket created or accepted through the C layer was blocking. Fixed by replacing the `_WIN32` no-op with `ioctlsocket((SOCKET)fd, FIONBIO, &mode)` in `g41797/uSockets/src/bsd.c`. Affects the **portable backend only**: native Windows backend (`windows/SocketCreator.zig`) uses `std.posix.socket()` + explicit `ioctlsocket` directly, so `bsd_set_nonblocking` was never in its path. After author pushes this fix and updates `build.zig.zon` commit+hash, all portable-backend sockets (TCP/UDS, listener/client/accepted) will be non-blocking on Windows.
-- **Stage 6 secondary issue — FIXED.** After `build.zig.zon` update, Linux portable test `handleReConnnectOfTcpClientServerST` failed with `ListenFailed`. Root cause was `setLingerAbort` being a no-op (sockets stayed in TIME_WAIT, blocking port reuse) and listener backlog mismatch (512 vs native 1024). Both fixed:
-  - **DONE** `portable/Skt.zig:setLingerAbort` — was no-op with wrong comment. Now calls `pn.setLingerAbort(skt.fd)`.
-  - **DONE** `posix_net/adapters/pn_utils.c` — new file: `bsd_set_linger_abort`, `pn_create_listen_socket`, `pn_create_listen_socket_unix`. Uses `bsd.h` (internal header — defines `LIBUS_SOCKET_ERROR`).
-  - **DONE** `posix_net/ffi.zig` — 3 new extern declarations.
-  - **DONE** `posix_net/socket.zig` — `setLingerAbort` wrapper.
-  - **DONE** `posix_net/posix_net.zig` — `setLingerAbort` re-exported.
-  - **DONE** `posix_net/creator.zig` — `createListenSocket` and `createListenSocketUnix` use `pn_create_listen_socket`/`pn_create_listen_socket_unix` with `backlog=1024`.
-  - **DONE** `build.zig` — `pn_utils.c` wired into both `libMod` and `lib_unit_tests` portable blocks.
-  - **Linux result:** 101/101 tests pass.
-- **Windows UDS CI fix (2026-05-12):** `bsd_create_connect_socket_unix` in usockets `bsd.c` checks `errno != EINPROGRESS` after `connect()`. On Windows, non-blocking UDS connect sets `WSAGetLastError() == WSAEWOULDBLOCK`, not `errno == EINPROGRESS` — usockets treats it as a fatal error. Fixed by adding `pn_create_connect_socket_unix` to `posix_net/adapters/pn_utils.c`: Windows path re-implements the connect with `WSAGetLastError() != WSAEWOULDBLOCK` check; Linux path delegates to `bsd_create_connect_socket_unix`. Wired through `ffi.zig` and `creator.zig`.
-- **macOS CI fix (2026-05-12):** Two bugs fixed. (1) `addrFamily` in `posix_net/socket.zig` read 2 bytes as `u16` from `sockaddr.mem[0]`. On macOS/BSD, `sockaddr` has `sa_len` (u8) at offset 0 and `sa_family` (u8) at offset 1 — the u16 read returns `sa_family * 256 + sa_len` instead of `sa_family`. Fixed with a comptime branch: macOS/BSD returns `addr.mem[1]`; Linux/Windows keeps the u16 read. (2) On macOS, non-blocking TCP connect to localhost may return `EINPROGRESS`; the tests then call `send()`/`getpeername()` immediately and get `ENOTCONN`. Fixed by adding `pn_wait_writable` to `pn_utils.c`: uses `select()` + `getsockopt(SO_ERROR)` to wait for connect completion. `resolveConnect` in `creator.zig` now calls `pn_wait_writable(fd, 5000)` after creating the connect socket.
-- **macOS/Windows CI portable fixes (2026-05-13):** Two bugs fixed for CI. (1) `addrinfo` struct in `posix_net/ffi.zig` used wrong field layout on macOS/Windows. Linux glibc: `ai_addr` before `ai_canonname` with `ai_addrlen = socklen_t (4 bytes)`. macOS/BSD/Windows: `ai_canonname` before `ai_addr` with `ai_addrlen = SIZE_T (8 bytes on x64)`. Added two struct types (`addrinfo_posix` / `addrinfo_win`) and comptime dispatch: `if (.linux) addrinfo_posix else addrinfo_win`. Also added null guard for `ai_addr` in `creator.zig:resolveConnect`. (2) `pn_connect_socket` in `pn_utils.c` did not handle EALREADY/EISCONN on POSIX or WSAEALREADY/WSAEISCONN on Windows. The `initPair` retry loop calls `connect()` multiple times; second call returns EALREADY (already connecting) or EISCONN (already connected). Fixed: EALREADY → 1 (in progress), EISCONN → 0 (connected) on both platforms.
-- **macOS CI portable fixes — Second Round (2026-05-13):** Four critical bugs fixed. (1) `LIBUS_SOCKET_WRITABLE` was defined as `4` (Linux/Windows bit) on Darwin/BSD, but uSockets uses `2` for kqueue; fixed in `types.zig`. (2) `fromEvents` in `triggers.zig` treated `EV_EOF` on a `READ` filter as a hard error; aligned with native macOS logic where `EV_EOF` is a read-ready event. (3) `accept()` in all portable backends incorrectly assigned the listener's address to new client sockets; added `toStdAddress` helper and fixed initialization in `Skt.zig`. (4) `addrinfo` struct layout corrected for BSD-based systems (`canonname` before `addr`, with `socklen_t` addrlen).
-- **Pending:** Windows native 4-mode verification (`zbta_win.cmd`) after `build.zig.zon` update; macOS CI run to confirm final fixes pass.
+- Stage 0.5 through Stage 6 (portable) are largely complete; cross-platform CI is passing for portable.
+- **Current investigation:** `pollercore_tests.zig` fails on macOS for the native (`posix`) backend. Specifically, `TCP accept recv send via PollerCore` triggers a `recv` event but returns an empty queue.
+- **Diagnostic steps (2026-05-15):** 
+  - Added `Raw TCP connectivity` test to `tests/pollercore_tests.zig` to verify basic socket wrappers without poller logic.
+  - Added explicit assertions for `sendBuf` return values to detect premature success or `WouldBlock` conditions.
+  - Identified discrepancy in `mac/Skt.zig`: `EALREADY` is treated as "connected" (`true`), which may cause premature sends before the TCP handshake completes.
+  - Noted Darwin-specific socket creation constraints (missing `SOCK_NONBLOCK`/`SOCK_CLOEXEC` in `socket()` call) and verified they are handled via `fcntl` in `acceptOs` but checked `SocketCreator.zig` for similar logic.
 
 ---
 
@@ -143,6 +116,20 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-15: Gemini CLI — Investigation of macOS POSIX backend failures
+
+#### Summary
+Investigated failing `pollercore_tests.zig` on macOS. The test `TCP accept recv send via PollerCore` fails because the server receives a `recv` trigger but `tryRecv()` returns an empty message queue. Suspect issues with non-blocking socket initialization or premature connection success reporting. Added diagnostic tests to isolate the failure between raw socket logic and kqueue/poller logic.
+
+#### Changes
+- `tests/pollercore_tests.zig` — Added `Raw TCP connectivity` diagnostic test; added assertions for `sendBuf` results.
+
+#### Verification
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (65/65) |
+| macOS failure analysis | Pending diagnostic run |
 
 ### Template — use for every session entry
 

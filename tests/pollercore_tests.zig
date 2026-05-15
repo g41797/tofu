@@ -66,8 +66,64 @@ test "Notifier wakeup" {
     try testing.expect(trgs3.timeout == .on);
 }
 
+
 // ---------------------------------------------------------------------------
-// Test 2 — TCP accept / recv / send readiness
+// Test 2 — Raw TCP connectivity (diagnostics)
+// ---------------------------------------------------------------------------
+
+test "Raw TCP connectivity" {
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
+
+    var sc: SocketCreator = SocketCreator.init(testing.allocator);
+
+    // 1. Setup listener
+    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+    defer list_skt.deinit();
+    const port: u16 = list_skt.getPort().?;
+
+    // 2. Connect client
+    var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
+    defer client_skt.deinit();
+
+    // Since it's non-blocking, connect might return false (WouldBlock)
+    const connected = try client_skt.connect();
+    if (!connected) {
+        try connectWithRetry(&client_skt);
+    }
+
+    // 3. Accept on server
+    var server_skt: Skt = undefined;
+    while (true) {
+        if (try list_skt.accept()) |s| {
+            server_skt = s;
+            break;
+        }
+        std.Thread.sleep(SLEEP_NS);
+    }
+    defer server_skt.deinit();
+
+    // 4. Send/Recv
+    const test_data = "Hello diagnostic";
+    _ = try client_skt.sendBuf(test_data);
+
+    var buf: [100]u8 = undefined;
+    var rcvd_len: usize = 0;
+    while (rcvd_len < test_data.len) {
+        if (try server_skt.recvToBuf(buf[rcvd_len..])) |n| {
+            if (n == 0) return error.UnexpectedEOF;
+            rcvd_len += n;
+        } else {
+            std.Thread.sleep(SLEEP_NS);
+        }
+    }
+
+    try testing.expectEqualStrings(test_data, buf[0..rcvd_len]);
+}
+
+
+// ---------------------------------------------------------------------------
+// Test 3 — TCP accept / recv / send readiness
 // ---------------------------------------------------------------------------
 
 test "TCP accept recv send via PollerCore" {
@@ -152,60 +208,6 @@ test "TCP accept recv send via PollerCore" {
     // 10. Poll for SEND readiness
     const trgs3: Triggers = try pl.waitTriggers(5000);
     try testing.expect(trgs3.send == .on);
-}
-
-// ---------------------------------------------------------------------------
-// Test 3 — Raw TCP connectivity (diagnostics)
-// ---------------------------------------------------------------------------
-
-test "Raw TCP connectivity" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
-
-    var sc: SocketCreator = SocketCreator.init(testing.allocator);
-
-    // 1. Setup listener
-    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
-    defer list_skt.deinit();
-    const port: u16 = list_skt.getPort().?;
-
-    // 2. Connect client
-    var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
-    defer client_skt.deinit();
-
-    // Since it's non-blocking, connect might return false (WouldBlock)
-    const connected = try client_skt.connect();
-    if (!connected) {
-        try connectWithRetry(&client_skt);
-    }
-
-    // 3. Accept on server
-    var server_skt: Skt = undefined;
-    while (true) {
-        if (try list_skt.accept()) |s| {
-            server_skt = s;
-            break;
-        }
-        std.Thread.sleep(SLEEP_NS);
-    }
-    defer server_skt.deinit();
-
-    // 4. Send/Recv
-    const test_data = "Hello diagnostic";
-    _ = try client_skt.sendBuf(test_data);
-
-    var buf: [100]u8 = undefined;
-    var rcvd_len: usize = 0;
-    while (rcvd_len < test_data.len) {
-        if (try server_skt.recvToBuf(buf[rcvd_len..])) |n| {
-            if (n == 0) return error.UnexpectedEOF;
-            rcvd_len += n;
-        } else {
-            std.Thread.sleep(SLEEP_NS);
-        }
-    }
-
-    try testing.expectEqualStrings(test_data, buf[0..rcvd_len]);
 }
 
 // ---------------------------------------------------------------------------
