@@ -111,13 +111,13 @@ test "simm test" {
 }
 
 test "echo client/server test" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
 
         const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
 
         try testing.expect(est == .success);
-    }
+    // }
 }
 
 fn test_handle_reconnect_single_threaded() !void {
