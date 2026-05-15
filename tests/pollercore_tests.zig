@@ -87,7 +87,7 @@ test "Raw TCP connectivity" {
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
 
     // 1. Setup listener
-    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("", 0) });
     defer list_skt.deinit();
     const port: u16 = list_skt.getPort().?;
 
@@ -150,7 +150,7 @@ test "TCP accept recv send via PollerCore" {
     // 1. Setup listener
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
     // 1. Setup listener
-    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+    var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("", 0) });
     defer list_skt.deinit();
     const port: u16 = list_skt.getPort().?;
 

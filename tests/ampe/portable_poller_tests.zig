@@ -451,6 +451,9 @@ fn assertNotifierFires(
             break;
         }
     }
+    if (!fired) {
+        std.debug.print("\nNotifier failed to fire. ntfr_tc.act.notify: {any}\n", .{ntfr_tc.act.notify});
+    }
     try testing.expect(fired);
     _ = try ntfr.recvNotification();
 }

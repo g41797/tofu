@@ -44,10 +44,13 @@ pub fn fromAddress(sc: *SocketCreator, addrs: Address) AmpeError!Skt {
 
 pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     const cnf = &sc.addrs.tcp_server_addr;
-    const addr = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port orelse 0) catch |e| {
-        log.warn("createTcpServer resolveIp failed: {s}", .{@errorName(e)});
-        return AmpeError.InvalidAddress;
-    };
+    const addr = if (cnf.addrToSlice().len == 0)
+        std.net.Address.initIp4(.{ 0, 0, 0, 0 }, cnf.port orelse 0)
+    else
+        std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port orelse 0) catch |e| {
+            log.warn("createTcpServer resolveIp failed: {s}", .{@errorName(e)});
+            return AmpeError.InvalidAddress;
+        };
     return createListenerSocket(&addr) catch AmpeError.ListenFailed;
 }
 
