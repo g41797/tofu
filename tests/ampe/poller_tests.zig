@@ -45,7 +45,8 @@ fn makeTCPPair(sc: *SocketCreator) !struct { listener: Skt, accepted: Skt, clien
     var client = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
     errdefer client.deinit();
     try connectWithRetry(&client);
-    const accepted = try acceptWithRetry(&listener);
+    var accepted = try acceptWithRetry(&listener);
+    errdefer accepted.deinit();
     return .{ .listener = listener, .accepted = accepted, .client = client };
 }
 
@@ -320,39 +321,31 @@ test "seqN isolation" {
     defer p.deleteAll();
 
     var sc = SocketCreator.init(gpa);
-    const pair = try makeTCPPair(&sc);
-    var listener = pair.listener;
-    defer listener.deinit();
-    var accepted = pair.accepted;
-    defer accepted.deinit();
-    var client = pair.client;
-    defer client.deinit();
+    var pair = try makeTCPPair(&sc);
+    defer pair.listener.deinit();
+    defer pair.accepted.deinit();
+    defer pair.client.deinit();
 
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
 
-    // seqN=1 registered with backend AND in map
+    // Register 1
     const tc1 = makeTC(.{ .recv = .on });
-    try map.put(1, tc1);
     defer gpa.destroy(tc1);
+    try map.put(1, tc1);
+    try p.backend.register(toFd(pair.accepted.socketHandle().?), 1, tc1.exp);
 
-    try p.backend.register(toFd(accepted.socketHandle().?), 1, tc1.exp);
-    defer p.backend.unregister(toFd(accepted.socketHandle().?));
-
-    // seqN=2 in map only — no FD registered in backend with this seqN
+    // Register 2
     const tc2 = makeTC(.{ .recv = .on });
     defer gpa.destroy(tc2);
-
     try map.put(2, tc2);
 
-    _ = try client.sendBuf(&[_]u8{'x'});
+    _ = try pair.client.sendBuf(&[_]u8{'x'});
     std.Thread.sleep(SLEEP_NS);
 
     _ = try p.backend.wait(TIMEOUT_MS, &map);
 
-    // seqN=1 should fire because its FD is registered
     try testing.expect(tc1.act.recv == .on);
-    // seqN=2 should not fire — no FD registered in backend with seqN=2
     try testing.expect(tc2.act.recv != .on);
 }
 

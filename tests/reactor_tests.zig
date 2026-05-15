@@ -3,7 +3,7 @@
 
 test {
     std.testing.log_level = .debug;
-    std.log.debug("engine_tests\r\n", .{});
+    std.debug.print("engine_tests\r\n", .{});
 }
 
 test "find free TCP/IP port" {
@@ -13,7 +13,7 @@ test "find free TCP/IP port" {
 
     const port = try tofu.FindFreeTcpPort();
 
-    log.debug("free TCP/IP port {d}", .{port});
+    std.debug.print("free TCP/IP port {d}", .{port});
 
     try std.testing.expect(port > 0); // Ensure a valid port is returned
 }
@@ -74,19 +74,19 @@ test "loop tests" {
 
         for (0..5) |i| {
             {
-                log.debug("test_ampe_just_create_destroy {d}", .{i});
+                std.debug.print("test_ampe_just_create_destroy {d}", .{i});
                 try test_ampe_just_create_destroy();
             }
             {
-                log.debug("test_connect_disconnect {d}", .{i});
+                std.debug.print("test_connect_disconnect {d}", .{i});
                 try test_connect_disconnect();
             }
             {
-                log.debug("test_handle_reconnect_single_threaded {d}", .{i});
+                std.debug.print("test_handle_reconnect_single_threaded {d}", .{i});
                 try test_handle_reconnect_single_threaded();
             }
             {
-                log.debug("test_handle_reconnect_multithreaded {d}", .{i});
+                std.debug.print("test_handle_reconnect_multithreaded {d}", .{i});
                 try test_handle_reconnect_multithreaded();
             }
         }

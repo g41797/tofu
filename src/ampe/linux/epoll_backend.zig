@@ -58,9 +58,8 @@ const EpollBackend = struct {
 
     pub fn unregister(self: *EpollBackend, fd: std.posix.fd_t) void {
         std.posix.epoll_ctl(self.epfd, std.os.linux.EPOLL.CTL_DEL, fd, null) catch |e| {
-            // Ignore errors if fd is already closed or not found
-            if (e != error.BadFd and e != error.FileNotFound) {
-                std.log.err("epoll_ctl CTL_DEL failed: {s}", .{@errorName(e)});
+            if (e != error.BadFd and e != error.FileNotFound and e != error.FileDescriptorNotRegistered) {
+                // std.log.err("epoll_ctl CTL_DEL failed: {s}", .{@errorName(e)});
             }
         };
     }

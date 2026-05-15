@@ -155,17 +155,16 @@ test "TCP accept recv send via PollerCore" {
     const port: u16 = list_skt.getPort().?;
 
     const tc_list: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
-    defer {
-        tc_list.tskt.deinit();
-        testing.allocator.destroy(tc_list);
-    }
+    errdefer tc_list.tskt.deinit();
+    defer testing.allocator.destroy(tc_list);
+
     tc_list.* = TriggeredChannel{
         .tskt = .{ .accept = .{ .skt = list_skt } },
         .acn = .{ .chn = 1 },
     };
     tc_list.tskt.refreshPointers();
     _ = try pl.attachChannel(tc_list);
-    
+
     var chnls = try std.ArrayList(tofu.message.ChannelNumber).initCapacity(testing.allocator, 1);
     try chnls.append(testing.allocator, 1);
     defer {
@@ -185,7 +184,7 @@ test "TCP accept recv send via PollerCore" {
     // 4. Accept connection
     const tc_list_ptr: *TriggeredChannel = pl.trgChannel(1).?;
     var server_skt: Skt = (try tc_list_ptr.*.tskt.tryAccept()).?;
-    defer server_skt.deinit();
+    errdefer server_skt.deinit();
 
     // 5. Setup IO channel
     const srv_io: IoSkt = try IoSkt.initServerSide(&pool, 2, server_skt);

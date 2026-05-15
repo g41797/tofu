@@ -43,9 +43,17 @@ After completing each stage:
 
 ---
 
-## 1. Architecture: What We Are Implementing
+# Reactor Shutdown & Thread Affinity Constraints
 
-Tofu's `ampe` layer is a single-threaded reactor. The backend interface is defined by `PollerCore` (comptime generic). The backend must implement exactly six functions:
+The Reactor maintains strict thread affinity for its event loop (e.g., kqueue, epoll). Resource initialization (`initPollEnv`) and deinitialization (`deleteAll`, `chnlsGroup_map.deinit`) must occur on the same thread (the I/O thread).
+
+**Required Shutdown Protocol:**
+1. **Signal Shutdown**: Main thread sets `shutdownFlag` to `true`.
+2. **Best-Effort Notification**: Main thread sends an alert if the notifier is healthy, but the `shutdownFlag` handles the case where the notifier is already broken.
+3. **Synchronize**: Main thread calls `waitFinish()` (join).
+4. **Thread-Local Cleanup**: The I/O thread, upon seeing `shutdownFlag`, exits `loop()`. The `defer` blocks in `loop()` are then executed *on the I/O thread*, ensuring clean teardown of event loop resources.
+5. **Final Destruction**: Only after the I/O thread has finished (thread join) does the main thread proceed to `gpa.destroy(rtr)`.
+
 
 ```zig
 fn init(allocator: Allocator) AmpeError!Backend

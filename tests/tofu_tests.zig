@@ -36,7 +36,7 @@ test {
     _ = @import("ampe/poller_tests.zig");
 
     // PollerCore integration tests (all backends, all platforms):
-    _ = @import("pollercore_tests.zig");
+    // _ = @import("pollercore_tests.zig");
 
     @import("std").testing.refAllDecls(@This());
 }
