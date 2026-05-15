@@ -41,10 +41,10 @@ test "update receiver" {
 }
 
 test "ampe just create/destroy" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
         try test_ampe_just_create_destroy();
-    }
+    // }
 }
 
 test "connect_disconnect" {
