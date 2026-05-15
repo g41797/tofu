@@ -37,15 +37,21 @@ test "Notifier wakeup" {
     defer pl.deleteAll();
 
     const ntfr_skt: NotificationSkt = NotificationSkt.init(&ntfr.receiver);
-    var tc: TriggeredChannel = TriggeredChannel{
+    const tc: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
+    defer testing.allocator.destroy(tc);
+    tc.* = TriggeredChannel{
         .tskt = .{ .notification = ntfr_skt },
         .acn = .{ .chn = tofu.message.SpecialMaxChannelNumber },
     };
+    tc.tskt.refreshPointers();
 
-    _ = try pl.attachChannel(&tc);
+    _ = try pl.attachChannel(tc);
 
     // Initial poll — must timeout
     const trgs1: Triggers = try pl.waitTriggers(100);
+    if (trgs1.timeout == .off) {
+        std.debug.print("\nUnexpected triggers in trgs1: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs1)});
+    }
     try testing.expect(trgs1.timeout == .on);
 
     // Send notification
@@ -54,6 +60,9 @@ test "Notifier wakeup" {
 
     // Poll — must trigger notify
     const trgs2: Triggers = try pl.waitTriggers(1000);
+    if (trgs2.notify == .off) {
+        std.debug.print("\nUnexpected triggers in trgs2: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+    }
     try testing.expect(trgs2.notify == .on);
 
     // Verify received notification
@@ -138,11 +147,14 @@ test "TCP accept recv send via PollerCore" {
     const list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
     const port: u16 = list_skt.getPort().?;
 
-    var tc_list: TriggeredChannel = TriggeredChannel{
+    const tc_list: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
+    defer testing.allocator.destroy(tc_list);
+    tc_list.* = TriggeredChannel{
         .tskt = .{ .accept = .{ .skt = list_skt } },
         .acn = .{ .chn = 1 },
     };
-    _ = try pl.attachChannel(&tc_list);
+    tc_list.tskt.refreshPointers();
+    _ = try pl.attachChannel(tc_list);
 
     // 2. Connect client
     var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
@@ -151,6 +163,9 @@ test "TCP accept recv send via PollerCore" {
 
     // 3. Poll for ACCEPT
     const trgs1: Triggers = try pl.waitTriggers(5000);
+    if (trgs1.accept == .off) {
+        std.debug.print("\nUnexpected triggers in TCP accept poll: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs1)});
+    }
     try testing.expect(trgs1.accept == .on);
 
     // 4. Accept connection
@@ -162,11 +177,14 @@ test "TCP accept recv send via PollerCore" {
     defer pool.close();
 
     const srv_io: IoSkt = try IoSkt.initServerSide(&pool, 2, server_skt);
-    var tc_srv: TriggeredChannel = TriggeredChannel{
+    const tc_srv: *TriggeredChannel = try testing.allocator.create(TriggeredChannel);
+    defer testing.allocator.destroy(tc_srv);
+    tc_srv.* = TriggeredChannel{
         .tskt = .{ .io = srv_io },
         .acn = .{ .chn = 2 },
     };
-    _ = try pl.attachChannel(&tc_srv);
+    tc_srv.tskt.refreshPointers();
+    _ = try pl.attachChannel(tc_srv);
 
     // 6. Send a formatted message from the client
     {
@@ -189,12 +207,18 @@ test "TCP accept recv send via PollerCore" {
 
     // 7. Poll for RECV
     const trgs2: Triggers = try pl.waitTriggers(5000);
+    if (trgs2.recv == .off) {
+        std.debug.print("\nUnexpected triggers in TCP recv poll: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+    }
     try testing.expect(trgs2.recv == .on);
 
     // 8. Receive on server side
     const tc_srv_ptr: *TriggeredChannel = pl.trgChannel(2).?;
     var mq: tofu.message.MessageQueue = try tc_srv_ptr.*.tskt.tryRecv();
     defer tofu.message.clearQueue(&mq);
+    if (mq.count() == 0) {
+        std.debug.print("\nMessage queue is empty after RECV trigger. Triggers: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+    }
     try testing.expect(mq.count() > 0);
     try testing.expectEqualStrings("Hello", mq.first.?.*.body.body().?);
 
