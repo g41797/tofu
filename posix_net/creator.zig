@@ -53,7 +53,7 @@ pub fn createListenSocketFromSockaddr(addr: *const anyopaque, addrlen: usize) Pn
 
 /// Find a free TCP port by binding to port 0.
 pub fn findFreeTcpPort() PnError!u16 {
-    const fd = try createListenSocket("127.0.0.1", 0, 0);
+    const fd = try createListenSocket("0.0.0.0", 0, 0);
     defer socket.closeSocket(fd);
 
     var addr: types.Addr = undefined;

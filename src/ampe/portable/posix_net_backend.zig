@@ -46,7 +46,10 @@ export fn us_internal_dispatch_ready_poll(
     if (pn.poll.pollType(poll) != pn.POLL_TYPE_SOCKET) return;
 
     const seq_ptr: *SeqN = @ptrCast(@alignCast(pn.poll.pollExt(poll)));
-    const tc = ws.map.get(seq_ptr.*) orelse return;
+    const tc = ws.map.get(seq_ptr.*) orelse {
+        std.log.err("Dispatch lookup failed for seq: {d}", .{seq_ptr.*});
+        return;
+    };
 
     const act = triggers_mod.usockets.fromEvents(events, err, tc.exp);
     tc.act = tc.act.lor(act);
