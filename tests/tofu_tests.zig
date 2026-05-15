@@ -4,12 +4,9 @@
 test {
     std.testing.log_level = .debug;
 
-    // if (@import("builtin").os.tag != .macos) {
+    std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 
-        std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
-
-        _ = @import("reactor_tests.zig");
-    // }
+    _ = @import("reactor_tests.zig");
 
     std.log.debug("\r\n   ****  tofu TESTS no sockets ****\r\n", .{});
 
@@ -39,17 +36,18 @@ test {
     _ = @import("ampe/poller_tests.zig");
 
     // PollerCore integration tests (all backends, all platforms):
-        _ = @import("pollercore_tests.zig");
+    _ = @import("pollercore_tests.zig");
 
     @import("std").testing.refAllDecls(@This());
 }
-
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const gpa = std.testing.allocator;
 
+const builtin = @import("builtin");
+const isMac = builtin.os.tag == .macos;
+
 const recipes = @import("recipes");
 const test_gate_options = @import("test_gate_options");
 const tofu = @import("tofu");
-

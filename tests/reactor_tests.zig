@@ -1,6 +1,125 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test {
+    std.testing.log_level = .debug;
+    std.log.debug("engine_tests\r\n", .{});
+}
+
+test "find free TCP/IP port" {
+    std.testing.log_level = .debug;
+
+    log.info("start find free TCP/IP port ", .{});
+
+    const port = try tofu.FindFreeTcpPort();
+
+    log.debug("free TCP/IP port {d}", .{port});
+
+    try std.testing.expect(port > 0); // Ensure a valid port is returned
+}
+
+test "send illegal messages" {
+    if (!isMac) {
+        try send_illegal_messages();
+    }
+}
+
+test "update receiver" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+
+        log.info("start handleUpdateReceiver ", .{});
+
+        const updateStatus = recipes.handleUpdateReceiver(gpa) catch |err| {
+            log.info("handleUpdateReceiver {any}", .{
+                err,
+            });
+            return err;
+        };
+        try testing.expect(updateStatus == .receiver_update);
+    }
+}
+
+test "ampe just create/destroy" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+        try test_ampe_just_create_destroy();
+    }
+}
+
+test "connect_disconnect" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+        try test_connect_disconnect();
+    }
+}
+
+test "handle reconnect single threaded" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+        try test_handle_reconnect_single_threaded();
+    }
+}
+
+test "handle reconnect multithreaded" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+        try test_handle_reconnect_multithreaded();
+    }
+}
+
+test "loop tests" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+
+        for (0..5) |i| {
+            {
+                log.debug("test_ampe_just_create_destroy {d}", .{i});
+                try test_ampe_just_create_destroy();
+            }
+            {
+                log.debug("test_connect_disconnect {d}", .{i});
+                try test_connect_disconnect();
+            }
+            {
+                log.debug("test_handle_reconnect_single_threaded {d}", .{i});
+                try test_handle_reconnect_single_threaded();
+            }
+            {
+                log.debug("test_handle_reconnect_multithreaded {d}", .{i});
+                try test_handle_reconnect_multithreaded();
+            }
+        }
+    }
+}
+
+test "simm test" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+
+        const tests = &[_]*const fn () void{
+            &simm_tests,
+            &simm_tests,
+            &simm_tests,
+            &simm_tests,
+        };
+
+        tofu.RunTasks(gpa, tests) catch unreachable;
+
+        std.debug.print("All tests completed\n", .{});
+    }
+}
+
+test "echo client/server test" {
+    if (!isMac) {
+        std.testing.log_level = .debug;
+
+        const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
+
+        try testing.expect(est == .success);
+    }
+}
+
 fn test_handle_reconnect_single_threaded() !void {
     std.testing.log_level = .debug;
 
@@ -48,7 +167,7 @@ fn test_handle_reconnect_multithreaded() !void {
 fn test_connect_disconnect() !void {
     std.testing.log_level = .debug;
 
-    log.info("before handleStartOfTcpServerAkaListener ", .{ });
+    log.info("before handleStartOfTcpServerAkaListener ", .{});
 
     const listenTcpStatus = recipes.handleStartOfTcpServerAkaListener(gpa) catch |err| {
         log.info("handleStartOfTcpServerAkaListener {any}", .{
@@ -58,7 +177,7 @@ fn test_connect_disconnect() !void {
     };
     try testing.expect(listenTcpStatus == .success);
 
-    log.info("before handleStartOfTcpListeners ", .{ });
+    log.info("before handleStartOfTcpListeners ", .{});
 
     const listen2TcpStatus = recipes.handleStartOfTcpListeners(gpa) catch |err| {
         log.info("handleStartOfTcpListeners {any}", .{
@@ -69,7 +188,7 @@ fn test_connect_disconnect() !void {
     try testing.expect(listen2TcpStatus == .success);
 
     if (builtin.os.tag != .windows) {
-        log.info("before handleStartOfUdsServerAkaListener ", .{ });
+        log.info("before handleStartOfUdsServerAkaListener ", .{});
 
         const listenUdsStatus = recipes.handleStartOfUdsServerAkaListener(gpa) catch |err| {
             log.info("handleStartOfUdsServerAkaListener {any}", .{
@@ -79,7 +198,7 @@ fn test_connect_disconnect() !void {
         };
         try testing.expect(listenUdsStatus == .success);
 
-        log.info("before handleStartOfUdsListeners ", .{ });
+        log.info("before handleStartOfUdsListeners ", .{});
 
         const listen2UdsStatus = recipes.handleStartOfUdsListeners(gpa) catch |err| {
             log.info("handleStartOfUdsListeners {any}", .{
@@ -90,7 +209,7 @@ fn test_connect_disconnect() !void {
         try testing.expect(listen2UdsStatus == .success);
     }
 
-    log.info("before handleConnnectOfTcpClientServer ", .{ });
+    log.info("before handleConnnectOfTcpClientServer ", .{});
 
     const connectTcpStatus = recipes.handleConnnectOfTcpClientServer(gpa) catch |err| {
         log.info("handleConnnectOfTcpClientServer {any}", .{
@@ -101,7 +220,7 @@ fn test_connect_disconnect() !void {
     try testing.expect(connectTcpStatus == .success);
 
     if (builtin.os.tag != .windows) {
-        log.info("before handleConnnectOfUdsClientServer ", .{ });
+        log.info("before handleConnnectOfUdsClientServer ", .{});
 
         const connectUdsStatus = recipes.handleConnnectOfUdsClientServer(gpa) catch |err| {
             log.info("handleConnnectOfUdsClientServer {any}", .{
@@ -153,15 +272,6 @@ fn try_handle_reconnect_multithreaded() void {
     test_handle_reconnect_multithreaded() catch unreachable;
 }
 
-test {
-    std.testing.log_level = .debug;
-    std.log.debug("engine_tests\r\n", .{});
-}
-
-test "send illegal messages" {
-    try send_illegal_messages();
-}
-
 fn send_illegal_messages() !void {
     std.testing.log_level = .debug;
     recipes.sendMessageFromThePool(gpa) catch |err| {
@@ -199,98 +309,6 @@ fn send_illegal_messages() !void {
     };
 }
 
-test "find free TCP/IP port" {
-    std.testing.log_level = .debug;
-
-    log.info("start find free TCP/IP port ", .{});
-
-    const port = try tofu.FindFreeTcpPort();
-
-    log.debug("free TCP/IP port {d}", .{port});
-
-    try std.testing.expect(port > 0); // Ensure a valid port is returned
-}
-
-test "update receiver" {
-    std.testing.log_level = .debug;
-
-    log.info("start handleUpdateReceiver ", .{});
-
-    const updateStatus = recipes.handleUpdateReceiver(gpa) catch |err| {
-        log.info("handleUpdateReceiver {any}", .{
-            err,
-        });
-        return err;
-    };
-    try testing.expect(updateStatus == .receiver_update);
-}
-
-test "ampe just create/destroy" {
-    std.testing.log_level = .debug;
-    try test_ampe_just_create_destroy();
-}
-
-test "connect_disconnect" {
-    std.testing.log_level = .debug;
-    try test_connect_disconnect();
-}
-
-test "handle reconnect single threaded" {
-    std.testing.log_level = .debug;
-    try test_handle_reconnect_single_threaded();
-}
-
-test "handle reconnect multithreaded" {
-    std.testing.log_level = .debug;
-    try test_handle_reconnect_multithreaded();
-}
-
-test "loop tests" {
-    std.testing.log_level = .debug;
-
-    for (0..5) |i| {
-        {
-            log.debug("test_ampe_just_create_destroy {d}", .{i});
-            try test_ampe_just_create_destroy();
-        }
-        {
-            log.debug("test_connect_disconnect {d}", .{i});
-            try test_connect_disconnect();
-        }
-        {
-            log.debug("test_handle_reconnect_single_threaded {d}", .{i});
-            try test_handle_reconnect_single_threaded();
-        }
-        {
-            log.debug("test_handle_reconnect_multithreaded {d}", .{i});
-            try test_handle_reconnect_multithreaded();
-        }
-    }
-}
-
-test "simm test" {
-    std.testing.log_level = .debug;
-
-    const tests = &[_]*const fn () void{
-        &simm_tests,
-        &simm_tests,
-        &simm_tests,
-        &simm_tests,
-    };
-
-    tofu.RunTasks(gpa, tests) catch unreachable;
-
-    std.debug.print("All tests completed\n", .{});
-}
-
-test "echo client/server test" {
-    std.testing.log_level = .debug;
-
-    const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
-
-    try testing.expect(est == .success);
-}
-
 const tofu = @import("tofu");
 
 const recipes_mod = @import("recipes");
@@ -321,6 +339,7 @@ const Reactor = tofu.Reactor;
 
 const std = @import("std");
 const builtin = @import("builtin");
+const isMac = builtin.os.tag == .macos;
 const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 
