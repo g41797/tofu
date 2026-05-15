@@ -48,10 +48,10 @@ test "ampe just create/destroy" {
 }
 
 test "connect_disconnect" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
         try test_connect_disconnect();
-    }
+    // }
 }
 
 test "handle reconnect single threaded" {
