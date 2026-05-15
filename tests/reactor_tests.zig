@@ -25,7 +25,7 @@ test "send illegal messages" {
 }
 
 test "update receiver" {
-    if (!isMac) {
+    // if (!isMac) {
         std.testing.log_level = .debug;
 
         log.info("start handleUpdateReceiver ", .{});
@@ -37,7 +37,7 @@ test "update receiver" {
             return err;
         };
         try testing.expect(updateStatus == .receiver_update);
-    }
+    // }
 }
 
 test "ampe just create/destroy" {

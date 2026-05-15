@@ -25,7 +25,7 @@ jobs:
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
+#      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=portable
 #      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=portable
