@@ -6,18 +6,6 @@ test {
     std.debug.print("engine_tests\r\n", .{});
 }
 
-test "find free TCP/IP port" {
-    std.testing.log_level = .debug;
-
-    log.info("start find free TCP/IP port ", .{});
-
-    const port = try tofu.FindFreeTcpPort();
-
-    std.debug.print("free TCP/IP port {d}", .{port});
-
-    try std.testing.expect(port > 0); // Ensure a valid port is returned
-}
-
 test "send illegal messages" {
     // if (!isMac) {
         try send_illegal_messages();

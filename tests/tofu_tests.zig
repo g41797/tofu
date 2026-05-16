@@ -1,8 +1,23 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
+test "find free TCP/IP port" {
+    std.testing.log_level = .debug;
+
+    std.log.info("start find free TCP/IP port ", .{});
+
+    const port = try tofu.FindFreeTcpPort();
+
+    std.debug.print("free TCP/IP port {d}", .{port});
+
+    try std.testing.expect(port > 0); // Ensure a valid port is returned
+}
+
 test {
     std.testing.log_level = .debug;
+
+    // // PollerCore integration tests (all backends, all platforms):
+    // _ = @import("pollercore_tests.zig");
 
     std.log.debug("\r\n   ****  tofu TESTS Reactor ****\r\n", .{});
 
@@ -34,9 +49,6 @@ test {
 
     // Poller backend contract tests (backend-independent, all platforms):
     _ = @import("ampe/poller_tests.zig");
-
-    // PollerCore integration tests (all backends, all platforms):
-    // _ = @import("pollercore_tests.zig");
 
     @import("std").testing.refAllDecls(@This());
 }
