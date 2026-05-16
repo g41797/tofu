@@ -10,6 +10,7 @@ pub const Notifier = @import("Notifier.zig");
 pub const poller = @import("poller.zig");
 pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
+pub const Appendable = @import("Appendable.zig");
 
 const skt_backend = if (build_options.network == .portable)
     switch (builtin.os.tag) {

@@ -10,10 +10,6 @@
     .minimum_zig_version = "0.15.2",
 
     .dependencies = .{
-        .nats = .{
-            .url = "git+https://github.com/g41797/nats#b4655d4154457b8f4af31a34f93ef4445da66fd3",
-            .hash = "nats-0.0.3-obw1dFV7BgDV_yIz3BlpO5ThGIbOHoYDsl_9gAvgqDwX",
-        },
         .mailbox = .{
             .url = "git+https://github.com/g41797/mailbox#09ce9a443d17a36df47925e8927252fcde3c6940",
             .hash = "mailbox-0.0.13-a-vFm3lcAAD33j3q2G2Hj6lnDahYuT1ESGBq99aVehow",

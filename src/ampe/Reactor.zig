@@ -1273,7 +1273,7 @@ const poller = internal.poller;
 const poll_INFINITE_TIMEOUT: u32 = @import("poller.zig").poll_INFINITE_TIMEOUT;
 const poll_SEC_TIMEOUT: u32 = @import("poller.zig").poll_SEC_TIMEOUT;
 
-const Appendable = @import("Appendable");
+const Appendable = internal.Appendable;
 
 const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);

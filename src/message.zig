@@ -825,7 +825,7 @@ pub const status = @import("status.zig");
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
 pub const status_to_raw = status.status_to_raw;
-pub const Appendable = @import("Appendable");
+pub const Appendable = @import("ampe/Appendable.zig");
 const message = @This();
 
 const std = @import("std");

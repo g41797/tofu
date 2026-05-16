@@ -215,7 +215,7 @@ const Notifier = internal.Notifier;
 const channels = internal.channels;
 const ActiveChannels = channels.ActiveChannels;
 
-const Appendable = @import("Appendable");
+const Appendable = internal.Appendable;
 const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 
 const std = @import("std");

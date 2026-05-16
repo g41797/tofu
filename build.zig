@@ -39,10 +39,6 @@ pub fn build(b: *std.Build) void {
     const build_options = b.addOptions();
     build_options.addOption(NetworkBackend, "network", network);
 
-    const nats = b.dependency("nats", .{
-        .target = target,
-        .optimize = optimize,
-    });
     const mailbox = b.dependency("mailbox", .{
         .target = target,
         .optimize = optimize,
@@ -67,9 +63,7 @@ pub fn build(b: *std.Build) void {
         .single_threaded = false,
     });
 
-    tofuMod.addImport("Appendable", nats.module("Appendable"));
     tofuMod.addImport("posix_net", posixNetMod);
-    tofuMod.addImport("Formatter", nats.module("Formatter"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
     tofuMod.addOptions("build_options", build_options);
@@ -84,8 +78,6 @@ pub fn build(b: *std.Build) void {
 
     libMod.addImport("tofu", tofuMod);
     libMod.addImport("posix_net", posixNetMod);
-    libMod.addImport("Appendable", nats.module("Appendable"));
-    libMod.addImport("Formatter", nats.module("Formatter"));
     libMod.addImport("mailbox", mailbox.module("mailbox"));
     libMod.addImport("temp", temp.module("temp"));
     libMod.addOptions("build_options", build_options);
@@ -169,8 +161,6 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("tofu", tofuMod);
     testMod.addImport("posix_net", posixNetMod);
     testMod.addImport("recipes", recipesMod);
-    testMod.addImport("Appendable", nats.module("Appendable"));
-    testMod.addImport("Formatter", nats.module("Formatter"));
     testMod.addImport("mailbox", mailbox.module("mailbox"));
     testMod.addImport("temp", temp.module("temp"));
     testMod.addOptions("build_options", build_options);
