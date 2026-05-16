@@ -21,6 +21,7 @@ pub fn PollerCore(comptime Backend: type) type {
         crseqN: SeqN = 0,
         allocator: Allocator,
         backend: Backend,
+        fordeletion: std.ArrayList(struct { chN: message.ChannelNumber, seqN: SeqN }),
 
         pub fn init(alktr: Allocator) AmpeError!Self {
             var chn_map = ChnSeqnMap.init(alktr);
@@ -38,6 +39,7 @@ pub fn PollerCore(comptime Backend: type) type {
                 .chn_seqn_map = chn_map,
                 .seqn_trc_map = seq_map,
                 .backend = backend,
+                .fordeletion = .empty,
             };
         }
 
@@ -95,26 +97,49 @@ pub fn PollerCore(comptime Backend: type) type {
 
         pub fn deleteMarked(self: *Self) !bool {
             var result = false;
-            var i: usize = self.chn_seqn_map.count();
-            while (i > 0) {
-                i -= 1;
-                const chN = self.chn_seqn_map.keys()[i];
-                const seqN = self.chn_seqn_map.values()[i];
-                const tcPtr = self.seqn_trc_map.get(seqN).?;
-                if (!tcPtr.mrk4del) continue;
+            self.fordeletion.clearRetainingCapacity();
 
+            {// collect
+                var i: usize = self.chn_seqn_map.count();
+                while (i > 0) {
+                    i -= 1;
+                    const chN = self.chn_seqn_map.keys()[i];
+                    const seqN = self.chn_seqn_map.values()[i];
+
+                    const tcPtr = self.seqn_trc_map.get(seqN) orelse continue;
+                    if (tcPtr.mrk4del) {
+                        self.fordeletion.append(self.allocator, .{
+                            .chN = chN,
+                            .seqN = seqN,
+                        }) catch |e| {
+                            // If we fail to append, we can still continue with what we have
+                            std.log.warn("fordeletion append failed: {}", .{e});
+                            break;
+                        };
+                    }
+                }
+            }
+
+            for (self.fordeletion.items) |item| { // delete !!!
+                const tcPtr = self.seqn_trc_map.get(item.seqN) orelse continue;
+
+                // Perform cleanup
                 const socket = tcPtr.tskt.getSocket();
                 if (common.isSocketSet(socket)) {
                     self.backend.unregister(common.toFd(socket.?));
                 }
+
                 tcPtr.updateReceiver();
                 tcPtr.deinit();
-                tcPtr.engine.removeChannelOnT(chN);
-                _ = self.chn_seqn_map.swapRemove(chN);
-                _ = self.seqn_trc_map.swapRemove(seqN);
+                tcPtr.engine.removeChannelOnT(item.chN);
+
+                _ = self.chn_seqn_map.swapRemove(item.chN);
+                _ = self.seqn_trc_map.swapRemove(item.seqN);
+
                 self.allocator.destroy(tcPtr);
                 result = true;
             }
+
             return result;
         }
 
@@ -132,6 +157,7 @@ pub fn PollerCore(comptime Backend: type) type {
             self.seqn_trc_map.deinit();
             self.chn_seqn_map.deinit();
             self.crseqN = 0;
+            self.fordeletion.deinit(self.allocator);
         }
 
         pub fn waitTriggers(self: *Self, timeout: i32) AmpeError!Triggers {
