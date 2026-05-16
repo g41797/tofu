@@ -74,6 +74,8 @@ LIBUS_SOCKET_DESCRIPTOR pn_create_listen_socket(const char *host, int port, int 
     LIBUS_SOCKET_DESCRIPTOR fd = bsd_create_listen_socket(host, port, options);
     if (fd != LIBUS_SOCKET_ERROR) {
 #ifdef _WIN32
+        int opt = 1;
+        setsockopt((SOCKET)fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
         listen((SOCKET)fd, backlog);
 #else
         listen(fd, backlog);
