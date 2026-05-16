@@ -51,10 +51,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const datetime = b.dependency("datetime", .{
-        .target = target,
-        .optimize = optimize,
-    });
 
     // Add the posix_net module
     const posixNetMod = b.addModule("posix_net", .{
@@ -76,7 +72,6 @@ pub fn build(b: *std.Build) void {
     tofuMod.addImport("Formatter", nats.module("Formatter"));
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
     tofuMod.addImport("temp", temp.module("temp"));
-    tofuMod.addImport("datetime", datetime.module("datetime"));
     tofuMod.addOptions("build_options", build_options);
 
     // Create the library module
@@ -93,7 +88,6 @@ pub fn build(b: *std.Build) void {
     libMod.addImport("Formatter", nats.module("Formatter"));
     libMod.addImport("mailbox", mailbox.module("mailbox"));
     libMod.addImport("temp", temp.module("temp"));
-    libMod.addImport("datetime", datetime.module("datetime"));
     libMod.addOptions("build_options", build_options);
 
     // Link libraries for Windows sockets
@@ -179,7 +173,6 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("Formatter", nats.module("Formatter"));
     testMod.addImport("mailbox", mailbox.module("mailbox"));
     testMod.addImport("temp", temp.module("temp"));
-    testMod.addImport("datetime", datetime.module("datetime"));
     testMod.addOptions("build_options", build_options);
     // Separate options object so the same file is not the root of two modules.
     const test_gate_options = b.addOptions();

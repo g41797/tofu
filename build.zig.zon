@@ -22,13 +22,9 @@
             .url = "git+https://github.com/abhinav/temp.zig#cf2317e06d32f3f0abdfc743c7a5950d9fdb2d19",
             .hash = "temp-0.3.0-Ogl1Ff5-AABRtiHj_zDFI0CZVU8ORLPko6iQiw63Znrz",
         },
-        .datetime = .{
-            .url = "git+https://github.com/frmdstryr/zig-datetime?ref=master#3a39a21e6e34dcb0ade0ff828d0914d40ba535f3",
-            .hash = "datetime-0.8.0-cJNXzP_YAQBxQ5hkNNP6ScnG5XsqciJmeP5RVV4xwCBA",
-        },
         .usockets = .{
-            .url = "git+https://github.com/g41797/uSockets.git#03cc4f6112a78ed7712c7128871a9dd8ed404a9d",
-            .hash = "N-V-__8AAJgiBgDScguFso1evr-0R_1yO_N4mkqFAO33pe_7",
+            .url = "git+https://github.com/g41797/uSockets.git#dcb96884f0f622b9f964bed19beb94b44d3d43e2",
+            .hash = "N-V-__8AAOIhBgCyWohtUHwdE9AA1qooPOEffqvZ7eciYx16",
         },
     },
     .paths = .{
