@@ -36,7 +36,7 @@
   - **FIXED:** Windows portable bind failure in `FindFreeTcpPort()` by explicitly initializing IPv4 wildcard address (`0.0.0.0`) on Windows when an empty host string is provided.
   - **FIXED:** Memory leak in `Reactor.informPoolEmpty` by ensuring `Message` is destroyed after `sendToCtx`.
   - **FIXED:** macOS CI test flakiness in `portable_poller_tests.zig` by increasing wait tolerance.
-  - **FIXED:** Windows `FindFreeTcpPort` binding failures by updating `uSockets` to correctly handle `port == 0` in `getaddrinfo`.
+  - **FIXED:** Windows `FindFreeTcpPort` binding failures by calling `tofu.initPlatform()` to correctly initialize the Windows socket layer.
 
 ---
 
