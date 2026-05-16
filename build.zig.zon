@@ -24,7 +24,7 @@
         },
         .usockets = .{
             .url = "git+https://github.com/g41797/uSockets.git#master",
-            .hash = "N-V-__8AAOIhBgCyWohtUHwdE9AA1qooPOEffqvZ7eciYx16", // let Zig tell you the real one
+            .hash = "N-V-__8AALwjBgA3LAMIs1wy-EY8ATSedwDeOKjPRG8U1K18",
         }
     },
     .paths = .{

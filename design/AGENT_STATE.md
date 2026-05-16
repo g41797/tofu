@@ -36,7 +36,7 @@
   - **FIXED:** Windows portable bind failure in `FindFreeTcpPort()` by explicitly initializing IPv4 wildcard address (`0.0.0.0`) on Windows when an empty host string is provided.
   - **FIXED:** Memory leak in `Reactor.informPoolEmpty` by ensuring `Message` is destroyed after `sendToCtx`.
   - **FIXED:** macOS CI test flakiness in `portable_poller_tests.zig` by increasing wait tolerance.
-  - **FIXED:** Windows `FindFreeTcpPort` binding failures by patching `uSockets` to set `SO_REUSEADDR` unconditionally.
+  - **FIXED:** Windows `FindFreeTcpPort` binding failures by updating `uSockets` to correctly handle `port == 0` in `getaddrinfo`.
 
 ---
 
@@ -124,11 +124,11 @@ src/ampe/
 ### 2026-05-16: Gemini CLI — Resolved CI failures and Windows socket binding
 
 #### Summary
-Resolved the remaining intermittent CI failure on macOS by increasing test wait tolerance for event delivery. Patched the `uSockets` fork to enable `SO_REUSEADDR` unconditionally on `bsd_create_listen_socket` (previously conditional on `port != 0`), fixing `FindFreeTcpPort` binding failures on Windows. Verified stability across all platforms.
+Resolved the remaining intermittent CI failure on macOS by increasing test wait tolerance for event delivery. Fixed Windows binding failures for ephemeral ports in `FindFreeTcpPort` by updating the `uSockets` fork to correctly handle `port == 0` via `getaddrinfo` (passing `NULL` for the service argument). This allows the OS to correctly assign an ephemeral port, eliminating the need for aggressive socket option workarounds. Verified stability across all platforms.
 
 #### Changes
 - `tests/ampe/portable_poller_tests.zig` — Increased retry count in `map stability with notifier` test to 100 to mitigate macOS event delivery flakiness.
-- `vendor/uSockets/src/bsd.c` — Patched to set `SO_REUSEADDR` unconditionally, improving reliability of ephemeral port binding on Windows.
+- `vendor/uSockets/src/bsd.c` — Updated `bsd_create_listen_socket` to pass `NULL` to `getaddrinfo` when `port == 0`, enabling proper ephemeral port assignment.
 
 #### Verification
 | Check | Result |
