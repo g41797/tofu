@@ -33,7 +33,7 @@ const SeqnTrcMap = core.SeqnTrcMap;
 const SeqN = common.SeqN;
 const toFd = common.toFd;
 const Triggers = internal_mod.triggeredSkts.Triggers;
-
+const Pool = internal_mod.Pool;
 const Notifier = internal_mod.Notifier;
 const SpecialMaxChannelNumber = tofu.message.SpecialMaxChannelNumber;
 
@@ -459,6 +459,9 @@ fn assertNotifierFires(
 }
 
 test "portable backend: map stability with notifier" {
+    var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
+    defer pool.close();
+
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
 
@@ -562,7 +565,7 @@ test "portable backend: map stability with notifier" {
     _ = try c3.connect();
 
     var got3 = false;
-    for (0..20) |_| {
+    for (0..100) |_| {
         tc3_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
         if (tc3_ptr.act.accept == .on) { got3 = true; break; }

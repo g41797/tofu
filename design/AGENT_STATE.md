@@ -1,6 +1,6 @@
 # Agent State & Handover
 
-**Current Version:** 093
+**Current Version:** 094
 **Last Updated:** 2026-05-15
 **Last Agent:** Gemini CLI
 **Active Phase:** Stage 6 — Finalized investigation and stability fixes.
@@ -34,6 +34,7 @@
   - **FIXED:** Memory leaks in test suite by ensuring explicit heap-allocated object deinitialization.
   - **FIXED:** `signal 6` (abort) in test suite teardown by fixing race conditions in `unregister` and removing redundant cleanup calls.
   - **FIXED:** Windows portable bind failure in `FindFreeTcpPort()` by explicitly initializing IPv4 wildcard address (`0.0.0.0`) on Windows when an empty host string is provided.
+  - **FIXED:** Memory leak in `Reactor.informPoolEmpty` by ensuring `Message` is destroyed after `sendToCtx`.
 
 ---
 
@@ -117,6 +118,22 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-15: Gemini CLI — Finalized investigation and memory leak fix
+
+#### Summary
+Resolved a memory leak in `Reactor.informPoolEmpty` by ensuring `Message` objects created via `buildStatusSignal` are correctly destroyed if sending to the context fails or after successful handling. Verified the fix by running the full test suite in Debug, ReleaseSafe, and ReleaseSmall modes, confirming no leaks remain.
+
+#### Changes
+- `src/ampe/Reactor.zig` — Updated `informPoolEmpty` to use `Message.DestroySendMsg` to guarantee proper `Message` deallocation.
+
+#### Verification
+| Check | Result |
+| :---- | :----- |
+| `zig build test -Doptimize=Debug` | ✅ PASS |
+| `zig build test -Doptimize=ReleaseSafe` | ✅ PASS |
+| `zig build test -Doptimize=ReleaseSmall` | ✅ PASS |
+| Leak check | ✅ Zero leaks |
 
 ### 2026-05-15: Gemini CLI — Finalized Windows portable bind stability
 
