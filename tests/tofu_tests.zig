@@ -4,6 +4,9 @@
 test "find free TCP/IP port" {
     std.testing.log_level = .debug;
 
+    try tofu.initPlatform();
+    defer tofu.deinitPlatform();
+
     std.log.info("start find free TCP/IP port ", .{});
 
     const port = try tofu.FindFreeTcpPort();
