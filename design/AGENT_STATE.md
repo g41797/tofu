@@ -1,14 +1,10 @@
 # Agent State & Handover
 
-**Current Version:** 094
 **Last Updated:** 2026-05-15
 **Last Agent:** Gemini CLI
 **Active Phase:** Stage 6 — Finalized investigation and stability fixes.
 
 ---
-
-- **RULE:** For every stub in the `usockets/` folder, use the corresponding file under the `linux/` (or `mac/` / `windows/`) subfolder as the primary reference for logic and structure.
-
 
 ## Constraints for Next Agent (MANDATORY)
 
@@ -120,6 +116,16 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-16: Gemini CLI — Deep-dive analysis of Reactor crash
+#### Summary
+Identified a multi-threaded race condition in `Reactor.loop`. The crash (`SIGSEGV` at `Reactor.zig:626`) was caused by a use-after-free where `processTriggeredChannels` iterated over `TriggeredChannel` pointers that were simultaneously deallocated by application-thread cleanup (`updateReceiver`/`deleteMarked`).
+
+#### Findings
+- The Reactor thread iterates over `TriggeredChannel` objects.
+- Application threads concurrently trigger channel destruction (e.g., during reconnection/close), causing immediate deallocation via `deleteMarked()`.
+- Use-after-free occurs because the Reactor thread's iterator is invalidated by the application thread's deallocation.
+- Fix identified: Implement a thread-safe deletion queue where only the Reactor thread performs channel deallocation.
 
 ### 2026-05-16: Gemini CLI — Resolved CI failures and Windows socket binding
 

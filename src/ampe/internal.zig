@@ -12,7 +12,11 @@ pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
 
 const skt_backend = if (build_options.network == .portable)
-    @import("portable/Skt.zig")
+    switch (builtin.os.tag) {
+        .linux => @import("portable/linux/Skt.zig").Skt,
+        .macos => @import("portable/mac/Skt.zig").Skt,
+        .windows => @import("portable/windows/Skt.zig").Skt,
+        else => @compileError("portable backend: unsupported OS"),    }
 else switch (builtin.os.tag) {
     .windows => @import("windows/Skt.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
@@ -31,7 +35,11 @@ else switch (builtin.os.tag) {
 };
 
 const sc_backend = if (build_options.network == .portable)
-    @import("portable/SocketCreator.zig")
+    switch (builtin.os.tag) {
+        .linux => @import("portable/linux/SocketCreator.zig").SocketCreator,
+        .macos => @import("portable/mac/SocketCreator.zig").SocketCreator,
+        .windows => @import("portable/windows/SocketCreator.zig").SocketCreator,
+        else => @compileError("portable backend: unsupported OS"), }
 else switch (builtin.os.tag) {
     .windows => @import("windows/SocketCreator.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/SocketCreator.zig"),

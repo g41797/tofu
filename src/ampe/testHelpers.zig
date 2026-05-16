@@ -74,7 +74,7 @@ const AmpeError = status.AmpeError;
 
 const build_options = @import("build_options");
 const skt_backend = if (build_options.network == .portable)
-    @import("portable/Skt.zig")
+    @import("internal.zig").Skt
 else switch (builtin.os.tag) {
     .windows => @import("windows/Skt.zig"),
     .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
