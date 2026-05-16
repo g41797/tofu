@@ -23,9 +23,9 @@
             .hash = "temp-0.3.0-Ogl1Ff5-AABRtiHj_zDFI0CZVU8ORLPko6iQiw63Znrz",
         },
         .usockets = .{
-            .url = "git+https://github.com/g41797/uSockets.git#dcb96884f0f622b9f964bed19beb94b44d3d43e2",
-            .hash = "N-V-__8AAOIhBgCyWohtUHwdE9AA1qooPOEffqvZ7eciYx16",
-        },
+            .url = "git+https://github.com/g41797/uSockets.git#master",
+            .hash = "N-V-__8AAOIhBgCyWohtUHwdE9AA1qooPOEffqvZ7eciYx16", // let Zig tell you the real one
+        }
     },
     .paths = .{
         "build.zig",
