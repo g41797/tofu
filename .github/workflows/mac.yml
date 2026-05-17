@@ -7,8 +7,13 @@ on:
 
 jobs:
   build:
-    name: Build and test
+    name: Build and test (${{ matrix.network }}, ${{ matrix.optimize }})
     runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        network: [posix, portable]
+        optimize: [Debug, ReleaseSafe, ReleaseFast, ReleaseSmall]
 
     steps:
       - uses: actions/checkout@v5
@@ -19,13 +24,4 @@ jobs:
         with:
           version: 0.15.2
 
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=portable
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=portable
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
-
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall
-
+      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }} -Dnetwork=${{ matrix.network }}
