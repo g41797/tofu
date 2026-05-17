@@ -237,13 +237,16 @@ inline fn _destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
     rtr.crtMtx.lock();
     defer rtr.crtMtx.unlock();
 
-    if (rtr.shtdwnStrt) {
-        return AmpeError.ShutdownStarted;
-    }
-
     if (chnlsimpl == null) {
         return AmpeError.InvalidAddress;
     }
+
+    if (rtr.shtdwnStrt) {
+        const grp: *MchnGroup = @ptrCast(@alignCast(chnlsimpl.?));
+        grp.destroy();
+        return AmpeError.ShutdownStarted;
+    }
+
     return try rtr.*.send_destroy(chnlsimpl);
 }
 

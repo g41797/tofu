@@ -1480,3 +1480,31 @@ The portable backend now implements this two-step flow for all three OS targets:
 
 The legacy fallback (`Skt_legacy.zig`, `SocketCreator_legacy.zig`) remains for any other OS targets that may appear in the future.
 
+---
+
+## 19. Stage 6 Stability — Reactor `_destroy` Mailbox Drain Fix (2026-05-17)
+
+**Problem.**
+`_destroy` returned `AmpeError.ShutdownStarted` immediately when `shtdwnStrt` was true,
+skipping `grp.destroy()`.
+Messages left in `grp.msgs[0]` (createCG success-ack) and `grp.msgs[1]`
+(buildStatusSignal pool_empty) were never returned to the pool or freed.
+GPA reported 3 leaked addresses in ReleaseSafe mode on macOS aarch64.
+All leak stacks pointed to `createCG` → `send_channels_cmd` → `Pool.get` → `Message.create`.
+
+**Fix.**
+When `shtdwnStrt` is true, `_destroy` now calls `grp.destroy()` on the calling thread
+before returning `ShutdownStarted`.
+`destroy()` calls `deinit()` → `cleanMboxes()` internally, draining both mailboxes.
+File: `src/ampe/Reactor.zig`, function `_destroy`.
+
+**Why safe.**
+When `shtdwnStrt` is true, the reactor thread has already exited (joined via `waitFinish`).
+No concurrent access to `grp` exists.
+`pool.put()` inside `cleanMboxes` handles a closed pool by freeing the message immediately.
+`grp.destroy()` calls `allocator.destroy(grp)` — no double-free risk.
+
+**Verification.**
+All 4 optimization modes passed on Linux x86_64.
+Cross-compile targets (x86_64-macos, aarch64-macos, x86_64-windows-gnu) built clean.
+

@@ -1,8 +1,8 @@
 # Agent State & Handover
 
-**Last Updated:** 2026-05-15
-**Last Agent:** Gemini CLI
-**Active Phase:** Stage 6 — Finalized investigation and stability fixes.
+**Last Updated:** 2026-05-17
+**Last Agent:** Claude Code (Sonnet 4.6)
+**Active Phase:** Stage 6 — GPA leak in `_destroy` resolved.
 
 ---
 
@@ -33,6 +33,7 @@
   - **FIXED:** Memory leak in `Reactor.informPoolEmpty` by ensuring `Message` is destroyed after `sendToCtx`.
   - **FIXED:** macOS CI test flakiness in `portable_poller_tests.zig` by increasing wait tolerance.
   - **FIXED:** Windows `FindFreeTcpPort` binding failures by calling `tofu.initPlatform()` to correctly initialize the Windows socket layer.
+  - **FIXED:** GPA memory leak in `_destroy`: when `shtdwnStrt` is true, `grp.destroy()` is now called before returning `ShutdownStarted`, draining mailboxes and freeing the group allocation.
 
 ---
 
@@ -116,6 +117,28 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-17: Claude Code (Sonnet 4.6) — Stage 6: Fix GPA leak in `_destroy`
+
+#### Summary
+Fixed a GPA memory leak reported in ReleaseSafe mode on macOS aarch64. `_destroy` returned `AmpeError.ShutdownStarted` immediately when `shtdwnStrt` was true, skipping `grp.destroy()`. Messages in `grp.msgs[0]` (createCG success-ack) and `grp.msgs[1]` (buildStatusSignal pool_empty) were never freed. The fix calls `grp.destroy()` — which internally calls `deinit()` → `cleanMboxes()` — on the calling thread before returning. Safe because the reactor thread is already joined at this point.
+
+#### Changes
+- `src/ampe/Reactor.zig` — `_destroy`: moved `null` check before `shtdwnStrt` check; added `grp.destroy()` call on the shutdown path before returning `ShutdownStarted`.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSafe` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseFast` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSmall` (Linux) | ✅ PASS (62/62) |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
+
+---
 
 ### 2026-05-16: Gemini CLI — Deep-dive analysis of Reactor crash
 #### Summary
