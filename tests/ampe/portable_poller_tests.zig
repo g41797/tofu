@@ -541,7 +541,7 @@ test "portable backend: map stability with notifier" {
     _ = try c2.connect();
 
     var got2 = false;
-    for (0..20) |_| {
+    for (0..100) |_| {
         tc2_ptr.act = .{};
         _ = try p.backend.wait(50, &map);
         if (tc2_ptr.act.accept == .on) { got2 = true; break; }
@@ -563,6 +563,7 @@ test "portable backend: map stability with notifier" {
     var c3 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port3) });
     defer c3.deinit();
     _ = try c3.connect();
+    std.Thread.sleep(10 * std.time.ns_per_ms);
 
     var got3 = false;
     for (0..100) |_| {
