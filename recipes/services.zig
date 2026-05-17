@@ -589,8 +589,8 @@ pub const EchoClientServer = struct {
             assert(ecs.*.clcCount > 0);
             ecs.*.clcCount -= 1;
             ecs.*.echoes += client.?.*.count;
-            client.?.*.destroy();
             const next: ?*EchoClient = client.?.*.next;
+            client.?.*.destroy();
             client = next;
         }
         return;
