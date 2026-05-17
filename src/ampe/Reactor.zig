@@ -392,14 +392,10 @@ fn runEngineOnThread(rtr: *Reactor) !void {
 
 inline fn waitFinish(rtr: *Reactor) void {
     if (rtr.thread) |t| {
-        // cmpl was posted once at startup and consumed by recv_ack().
-        // The reactor loop posts it again just before exiting — that is
-        // the shutdown-complete signal. A timed wait ensures a stuck
-        // thread produces a clear error rather than a silent hang.
         rtr.cmpl.timedWait(10 * std.time.ns_per_s) catch {
             log.err("reactor thread did not exit in 10s, detaching", .{});
-            t.detach();
-            return;
+            // t.detach();
+            // return;
         };
         t.join();
     }
