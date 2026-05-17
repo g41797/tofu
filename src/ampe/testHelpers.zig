@@ -10,12 +10,18 @@
 const pn = @import("posix_net");
 const UDS_PATH_SIZE = pn.UDS_PATH_SIZE;
 
+var uds_counter = std.atomic.Value(u64).init(0);
+
 pub const TempUdsPath = struct {
     tempFile: temp.TempFile = undefined,
     socket_path: [UDS_PATH_SIZE:0]u8 = undefined,
 
     pub fn buildPath(tup: *TempUdsPath, allocator: Allocator) ![]u8 {
-        tup.tempFile = try temp.create_file(allocator, "tofu*.port");
+        const n = uds_counter.fetchAdd(1, .monotonic);
+        var buf: [32]u8 = undefined;
+        const pattern = std.fmt.bufPrint(&buf, "tofu{d}_*.port", .{n}) catch "tofu*.port";
+
+        tup.tempFile = try temp.create_file(allocator, pattern);
         tup.tempFile.retain = false;
         defer tup.tempFile.deinit();
 

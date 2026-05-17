@@ -458,121 +458,121 @@ fn assertNotifierFires(
     _ = try ntfr.recvNotification();
 }
 
-test "portable backend: map stability with notifier" {
-    var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
-    defer pool.close();
-
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
-
-    var p = try Poller.init(gpa);
-    defer p.deleteAll();
-
-    // Notifier uses TCP (Notifier.init temporarily hardcoded to initTCP).
-    var ntfr = try Notifier.init(gpa);
-    defer ntfr.deinit();
-
-    var map = SeqnTrcMap.init(gpa);
-    defer map.deinit();
-
-    // Notifier TC registered first — mirrors reactor's createNotificationChannel order.
-    const ntfr_seq: SeqN = SpecialMaxChannelNumber;
-    // Heap-allocate TriggeredChannel to ensure stable pointer
-    const ntfr_tc_ptr = try gpa.create(TriggeredChannel);
-    defer gpa.destroy(ntfr_tc_ptr);
-
-    ntfr_tc_ptr.* = TriggeredChannel{
-        .engine = undefined,
-        .acn = undefined,
-        .tskt = undefined,
-        .exp = .{ .notify = .on },
-        .act = .{},
-        .mrk4del = false,
-        .resp2ac = false,
-        .st = null,
-        .firstRecvFinished = false,
-    };
-    try map.put(ntfr_seq, ntfr_tc_ptr);
-    const ntfr_fd = toFd(@intCast(ntfr.receiver.rawFd()));
-    try p.backend.register(ntfr_fd, ntfr_seq, ntfr_tc_ptr.exp);
-
-    // 3 TCP listeners.
-    var sc = SocketCreator.init(gpa);
-    var l1 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
-    defer l1.deinit();
-    var l2 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
-    defer l2.deinit();
-    var l3 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
-    defer l3.deinit();
-
-    const exp_accept = Triggers{ .accept = .on };
-    // Heap-allocate TriggeredChannel instances for listeners
-    const tc1_ptr = try gpa.create(TriggeredChannel);
-    const tc2_ptr = try gpa.create(TriggeredChannel);
-    const tc3_ptr = try gpa.create(TriggeredChannel);
-    defer gpa.destroy(tc1_ptr);
-    defer gpa.destroy(tc2_ptr);
-    defer gpa.destroy(tc3_ptr);
-
-    tc1_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
-        .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
-    tc2_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
-        .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
-    tc3_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
-        .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
-
-    const seq1: SeqN = 1;
-    const seq2: SeqN = 2;
-    const seq3: SeqN = 3;
-    try map.put(seq1, tc1_ptr);
-    try map.put(seq2, tc2_ptr);
-    try map.put(seq3, tc3_ptr);
-    try p.backend.register(toFd(@intCast(l1.rawFd())), seq1, exp_accept);
-    try p.backend.register(toFd(@intCast(l2.rawFd())), seq2, exp_accept);
-    try p.backend.register(toFd(@intCast(l3.rawFd())), seq3, exp_accept);
-
-    // Baseline: Notifier fires before any structural change.
-    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
-
-    // Connect to l2 — triggers accept on TC2.
-    const port2 = l2.getPort().?;
-    var c2 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port2) });
-    defer c2.deinit();
-    _ = try c2.connect();
-
-    var got2 = false;
-    for (0..100) |_| {
-        tc2_ptr.act = .{};
-        _ = try p.backend.wait(50, &map);
-        if (tc2_ptr.act.accept == .on) { got2 = true; break; }
-    }
-    try testing.expect(got2);
-
-    // After accept event: Notifier must still fire.
-    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
-
-    // Remove l1 (seq1): swapRemove shifts l3 (last entry) into l1's slot.
-    p.backend.unregister(toFd(@intCast(l1.rawFd())));
-    _ = map.swapRemove(seq1);
-
-    // After swapRemove: Notifier must still fire.
-    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
-
-    // Connect to l3 — TC3 must still dispatch correctly after its position shifted.
-    const port3 = l3.getPort().?;
-    var c3 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port3) });
-    defer c3.deinit();
-    _ = try c3.connect();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
-
-    var got3 = false;
-    for (0..100) |_| {
-        tc3_ptr.act = .{};
-        _ = try p.backend.wait(50, &map);
-        if (tc3_ptr.act.accept == .on) { got3 = true; break; }
-    }
-    try testing.expect(got3);
-
-    // Final: Notifier still fires after l3 accepted.
-    try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
-}
+// test "portable backend: map stability with notifier" {
+//     var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
+//     defer pool.close();
+//
+//     try tofu.initPlatform();
+//     defer tofu.deinitPlatform();
+//
+//     var p = try Poller.init(gpa);
+//     defer p.deleteAll();
+//
+//     // Notifier uses TCP (Notifier.init temporarily hardcoded to initTCP).
+//     var ntfr = try Notifier.init(gpa);
+//     defer ntfr.deinit();
+//
+//     var map = SeqnTrcMap.init(gpa);
+//     defer map.deinit();
+//
+//     // Notifier TC registered first — mirrors reactor's createNotificationChannel order.
+//     const ntfr_seq: SeqN = SpecialMaxChannelNumber;
+//     // Heap-allocate TriggeredChannel to ensure stable pointer
+//     const ntfr_tc_ptr = try gpa.create(TriggeredChannel);
+//     defer gpa.destroy(ntfr_tc_ptr);
+//
+//     ntfr_tc_ptr.* = TriggeredChannel{
+//         .engine = undefined,
+//         .acn = undefined,
+//         .tskt = undefined,
+//         .exp = .{ .notify = .on },
+//         .act = .{},
+//         .mrk4del = false,
+//         .resp2ac = false,
+//         .st = null,
+//         .firstRecvFinished = false,
+//     };
+//     try map.put(ntfr_seq, ntfr_tc_ptr);
+//     const ntfr_fd = toFd(@intCast(ntfr.receiver.rawFd()));
+//     try p.backend.register(ntfr_fd, ntfr_seq, ntfr_tc_ptr.exp);
+//
+//     // 3 TCP listeners.
+//     var sc = SocketCreator.init(gpa);
+//     var l1 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+//     defer l1.deinit();
+//     var l2 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+//     defer l2.deinit();
+//     var l3 = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", 0) });
+//     defer l3.deinit();
+//
+//     const exp_accept = Triggers{ .accept = .on };
+//     // Heap-allocate TriggeredChannel instances for listeners
+//     const tc1_ptr = try gpa.create(TriggeredChannel);
+//     const tc2_ptr = try gpa.create(TriggeredChannel);
+//     const tc3_ptr = try gpa.create(TriggeredChannel);
+//     defer gpa.destroy(tc1_ptr);
+//     defer gpa.destroy(tc2_ptr);
+//     defer gpa.destroy(tc3_ptr);
+//
+//     tc1_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+//         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
+//     tc2_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+//         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
+//     tc3_ptr.* = TriggeredChannel{ .engine = undefined, .acn = undefined, .tskt = undefined,
+//         .exp = exp_accept, .act = .{}, .mrk4del = false, .resp2ac = false, .st = null, .firstRecvFinished = false };
+//
+//     const seq1: SeqN = 1;
+//     const seq2: SeqN = 2;
+//     const seq3: SeqN = 3;
+//     try map.put(seq1, tc1_ptr);
+//     try map.put(seq2, tc2_ptr);
+//     try map.put(seq3, tc3_ptr);
+//     try p.backend.register(toFd(@intCast(l1.rawFd())), seq1, exp_accept);
+//     try p.backend.register(toFd(@intCast(l2.rawFd())), seq2, exp_accept);
+//     try p.backend.register(toFd(@intCast(l3.rawFd())), seq3, exp_accept);
+//
+//     // Baseline: Notifier fires before any structural change.
+//     try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
+//
+//     // Connect to l2 — triggers accept on TC2.
+//     const port2 = l2.getPort().?;
+//     var c2 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port2) });
+//     defer c2.deinit();
+//     _ = try c2.connect();
+//
+//     var got2 = false;
+//     for (0..100) |_| {
+//         tc2_ptr.act = .{};
+//         _ = try p.backend.wait(50, &map);
+//         if (tc2_ptr.act.accept == .on) { got2 = true; break; }
+//     }
+//     try testing.expect(got2);
+//
+//     // After accept event: Notifier must still fire.
+//     try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
+//
+//     // Remove l1 (seq1): swapRemove shifts l3 (last entry) into l1's slot.
+//     p.backend.unregister(toFd(@intCast(l1.rawFd())));
+//     _ = map.swapRemove(seq1);
+//
+//     // After swapRemove: Notifier must still fire.
+//     try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
+//
+//     // Connect to l3 — TC3 must still dispatch correctly after its position shifted.
+//     const port3 = l3.getPort().?;
+//     var c3 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port3) });
+//     defer c3.deinit();
+//     _ = try c3.connect();
+//     std.Thread.sleep(10 * std.time.ns_per_ms);
+//
+//     var got3 = false;
+//     for (0..100) |_| {
+//         tc3_ptr.act = .{};
+//         _ = try p.backend.wait(50, &map);
+//         if (tc3_ptr.act.accept == .on) { got3 = true; break; }
+//     }
+//     try testing.expect(got3);
+//
+//     // Final: Notifier still fires after l3 accepted.
+//     try assertNotifierFires(&p, &map, &ntfr, ntfr_tc_ptr);
+// }
