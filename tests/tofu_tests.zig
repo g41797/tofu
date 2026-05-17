@@ -58,7 +58,11 @@ test {
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const gpa = std.testing.allocator;
+const gpa = if (isMac)
+    std.heap.c_allocator
+else
+    std.testing.allocator;
+
 
 const builtin = @import("builtin");
 const isMac = builtin.os.tag == .macos;
