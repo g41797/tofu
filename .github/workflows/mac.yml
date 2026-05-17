@@ -19,10 +19,10 @@ jobs:
         with:
           version: 0.15.2
 
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=portable
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=portable
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast -Dnetwork=portable
+      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe -Dnetwork=portable
+      - run: zig build test -freference-trace --summary all -Doptimize=Debug -Dnetwork=portable
 
       - run: zig build test -freference-trace --summary all -Doptimize=Debug
       - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe
