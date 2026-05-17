@@ -757,7 +757,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             }
 
             while (true) {
-                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT) catch |err| {
+                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT*2) catch |err| {
                     log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
                     return;
                 };
@@ -952,8 +952,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         try std.Thread.spawn(.{}, TofuClient.runOnThread, .{clnt});
     defer clntThread.join();
 
-    sleep10MlSec();
-    sleep10MlSec();
+    sleep1Sec();
 
     var srvr: *TofuServer = try TofuServer.create(gpa, ampe, srvCfg);
     defer srvr.destroy();
@@ -963,7 +962,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
     defer srvrThread.join();
 
     while (true) {
-        sleep1MlSec();
+        sleep10MlSec();
 
         if (clnt.*.result == null) {
             continue;
@@ -974,13 +973,19 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         break;
     }
 
+    var result: AmpeStatus = .success;
+
     var nullMsg: ?*Message = null;
 
-    clnt.*.chnls.?.updateReceiver(&nullMsg) catch {};
+    clnt.*.chnls.?.updateReceiver(&nullMsg) catch |err| {
+        result = status.errorToStatus(err);
+    };
 
-    srvr.*.chnls.?.updateReceiver(&nullMsg) catch {};
+    srvr.*.chnls.?.updateReceiver(&nullMsg) catch |err| {
+        result = status.errorToStatus(err);
+    };
 
-    return .success;
+    return result;
 }
 
 pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
@@ -1894,6 +1899,10 @@ pub inline fn sleep1MlSec() void {
 
 pub inline fn sleep10MlSec() void {
     std.Thread.sleep(1_000_000_0);
+}
+
+pub inline fn sleep1Sec() void {
+    std.Thread.sleep(1_000_000_000);
 }
 
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
