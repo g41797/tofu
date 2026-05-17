@@ -721,7 +721,10 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
 
                 self.*.adr.format(helloRequest.?) catch unreachable;
 
-                _ = self.*.chnls.?.post(&helloRequest) catch unreachable;
+                _ = self.*.chnls.?.post(&helloRequest)  catch |err| {
+                    log.info("On client thread - post error {s}", .{@errorName(err)});
+                    return;
+                };
 
                 var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_INFINITE_TIMEOUT) catch |err| {
                     log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
@@ -751,7 +754,10 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
 
                     // Disconnect from server
                     recvMsg.?.*.bhdr.proto = .default(.ByeSignal);
-                    _ = self.*.chnls.?.post(&recvMsg) catch unreachable;
+                    _ = self.*.chnls.?.post(&recvMsg) catch |err| {
+                        log.info("On client thread - post error {s}", .{@errorName(err)});
+                        return;
+                    };
                     return;
                 }
             }
