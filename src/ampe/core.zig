@@ -194,6 +194,10 @@ pub fn PollerCore(comptime Backend: type) type {
             const os_triggers = try self.backend.wait(wait_timeout, &self.seqn_trc_map);
             total_act = total_act.lor(os_triggers);
 
+            if(total_act.accept == .on) {
+                try self.ensureCapacityForNewClients();
+            }
+
             return total_act;
         }
 
@@ -201,6 +205,33 @@ pub fn PollerCore(comptime Backend: type) type {
             var res = common.TcIterator.init(&self.seqn_trc_map);
             res.reset();
             return res;
+        }
+
+        fn ensureCapacityForNewClients(self: *Self) AmpeError!void {
+
+            var newClients: usize = 0;
+
+            const values = self.seqn_trc_map.values();
+            for (values) |tc| {
+                if(tc.*.act.accept == .on) {
+                    newClients += 1;
+                }
+            }
+
+            if(newClients == 0) {
+                return;
+            }
+
+            const reqCapacity : usize = self.seqn_trc_map.count() + newClients;
+
+            if(reqCapacity <= self.seqn_trc_map.capacity()) {
+                return;
+            }
+
+            self.seqn_trc_map.ensureTotalCapacity(reqCapacity) catch return AmpeError.AllocationFailed;
+            self.chn_seqn_map.ensureTotalCapacity(reqCapacity) catch return AmpeError.AllocationFailed;
+
+            return;
         }
     };
 }
