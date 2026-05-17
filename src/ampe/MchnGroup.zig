@@ -57,8 +57,7 @@ fn deinit(grp: *MchnGroup) void {
 
 pub fn cleanMboxes(grp: *MchnGroup) void {
     for (0..2) |i| {
-        var mbx = grp.msgs[i];
-        var allocated = mbx.close();
+        var allocated = grp.msgs[i].close();
         while (allocated != null) {
             const next = allocated.?.next;
             grp.engine.pool.put(allocated.?);

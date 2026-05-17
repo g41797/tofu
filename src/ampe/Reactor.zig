@@ -1031,8 +1031,7 @@ inline fn createChannelOnT(rtr: *Reactor, mid: MessageID, intr: ?message.ProtoFi
 
 fn cleanMboxes(rtr: *Reactor) void {
     for (rtr.msgs, 0..) |_, i| {
-        var mbx = rtr.msgs[i];
-        var allocated = mbx.close();
+        var allocated = rtr.msgs[i].close();
         while (allocated != null) {
             const next = allocated.?.next;
             allocated.?.destroy();
