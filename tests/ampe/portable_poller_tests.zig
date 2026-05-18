@@ -329,7 +329,7 @@ test "portable backend: UDS echo" {
     defer p.deleteAll();
 
     var tup = TempUdsPath{};
-    const uds_path = try tup.buildPath(gpa);
+    const uds_path = try tup.buildPath();
 
     var sc = SocketCreator.init(gpa);
 

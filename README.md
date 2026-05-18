@@ -162,13 +162,7 @@ For the impatient:
 
 ## Credits
 - [Karl Seguin](https://github.com/karlseguin) — for introducing me to [Zig networking](https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/)
-- [tardy](https://github.com/tardy-org/tardy) — I peeked into 2 files of the project (the author will guess which ones)
-- [temp.zig](https://github.com/abhinav/temp.zig) — helped me (and will help you) work with temporary files
 - [Gemini AI image generator](https://gemini.google.com/app) — the only one out of six I managed to convince to seat Ziggy and Zero at the same table
-- Zig Community Forums (in order of my registration) - for your help and patience with my posts
-  - [Zig on Reddit](https://www.reddit.com/r/Zig/)
-  - [Zig on Discord](https://discord.com/invite/zig)
-  - [Zig on Discourse](https://ziggit.dev/)
 
 ---
 

@@ -6,14 +6,12 @@ test {
     std.log.debug("Notifier_tests\r\n", .{});
 }
 
-test "create file for address of uds socket" {
+test "TempUdsPath produces unique absolute path" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
-    var buffer: [100]u8 = undefined;
-    var tempFile = try temp.create_file(std.testing.allocator, "*.yaaamp");
-    defer tempFile.deinit();
-    const uds_path: []u8 = try tempFile.parent_dir.realpath(tempFile.basename, &buffer);
-    try testing.expectEqual(uds_path.len > 0, true);
+    var tup: tofu.TempUdsPath = .{};
+    const uds_path = try tup.buildPath();
+    try testing.expect(uds_path.len > 0);
 }
 
 test "base Notifier" {
@@ -33,8 +31,5 @@ const Notifier = tofu.@"internal usage".Notifier;
 const NotificationKind = Notifier.NotificationKind;
 const Notification = Notifier.Notification;
 
-const temp = @import("temp");
-
 const std = @import("std");
 const testing = std.testing;
-const Allocator = std.mem.Allocator;

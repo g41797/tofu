@@ -59,14 +59,6 @@ By "**smell**," I mean the core philosophy:
 - **Gradual Evolution**: Start with something simple and grow it into a powerful system over time.
 - **The Mantra**: "Connect your developers. Then connect your applications."
 
-## Credits
-- [Karl Seguin](https://github.com/karlseguin) — for introducing me to [Zig networking](https://www.openmymind.net/TCP-Server-In-Zig-Part-1-Single-Threaded/)
-- [Franck Blettner](https://github.com/fblettner) — for creating [the template repository](https://github.com/fblettner/fblettner.github.io) for documentation sites, which this documentation is based on
-- Zig Community Forums (in order of my registration) - for your help and patience with my posts
-    - [Zig on Reddit](https://www.reddit.com/r/Zig/)
-    - [Zig on Discord](https://discord.com/invite/zig)
-    - [Zig on Discourse](https://ziggit.dev/)
-
 ---
 
 ## Last but not least

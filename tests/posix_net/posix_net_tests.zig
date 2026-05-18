@@ -65,7 +65,7 @@ test "bsd TCP listen socket on 127.0.0.1 creates valid fd" {
 
 test "bsd UDS listen socket on temp path creates valid fd" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     const fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     defer pn.closeSocket(fd);
@@ -83,7 +83,7 @@ test "bsd TCP resolveConnect to listening server creates valid fd" {
 
 test "bsd UDS connect socket to listener creates valid fd" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     const listen_fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     defer pn.closeSocket(listen_fd);
@@ -226,7 +226,7 @@ fn udsServerRecv(ctx: *UdsCtx) void {
 
 test "bsd UDS send+recv roundtrip" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
@@ -403,7 +403,7 @@ test "addrFamily returns AF_INET for TCP listener" {
 
 test "addrFamily returns AF_UNIX for UDS listener" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     const fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     defer pn.closeSocket(fd);
@@ -414,7 +414,7 @@ test "addrFamily returns AF_UNIX for UDS listener" {
 
 test "addrUnixPath returns path matching what was passed to createListenSocketUnix" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     const fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     defer pn.closeSocket(fd);
@@ -426,7 +426,7 @@ test "addrUnixPath returns path matching what was passed to createListenSocketUn
 
 test "deleteUnixPath removes the socket file" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     const fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     pn.closeSocket(fd);
     try std.fs.accessAbsolute(path, .{});
@@ -437,7 +437,7 @@ test "deleteUnixPath removes the socket file" {
 
 test "addrPort returns null for Unix socket addr" {
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(testing.allocator);
+    const path = try tup.buildPath();
     defer _ = pn.deleteUnixPath(@ptrCast(path.ptr));
     const fd: pn.Fd = try pn.createListenSocketUnix(path.ptr, path.len, 0);
     defer pn.closeSocket(fd);

@@ -55,7 +55,7 @@ pub fn init(allocator: Allocator) !Notifier {
     if (comptime builtin.os.tag == .windows) {
         return initTCP(allocator);
     }
-    return initUDS(allocator) catch {
+    return initUDS() catch {
         return initTCP(allocator);
     };
 }
@@ -69,9 +69,9 @@ fn initTCP(allocator: Allocator) !Notifier {
     return initPair(&listener, &sender);
 }
 
-fn initUDS(allocator: Allocator) !Notifier {
+fn initUDS() !Notifier {
     var tup: TempUdsPath = .{};
-    var socket_file: []u8 = try tup.buildPath(allocator);
+    var socket_file: []u8 = try tup.buildPath();
 
     const original_sub: []const u8 = "port";
     const replacement: []const u8 = "ntfr";
@@ -83,7 +83,7 @@ fn initUDS(allocator: Allocator) !Notifier {
         socket_file[0] = 0;
     }
 
-    var listener = try SCreator.createUdsListener(allocator, socket_file);
+    var listener = try SCreator.createUdsListener(socket_file);
     defer listener.deinit();
     var sender = try SCreator.createUdsSocket(socket_file);
     errdefer sender.deinit();

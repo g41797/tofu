@@ -81,7 +81,7 @@ test "SocketCreator UDS server socket is set and server-flagged" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(gpa);
+    const path = try tup.buildPath();
     var sc = SocketCreator.init(gpa);
     var skt = try sc.fromAddress(.{ .uds_server_addr = UDSServerAddress.init(path) });
     defer skt.deinit();
@@ -128,7 +128,7 @@ test "SocketCreator findFreeTcpPort returns bindable port" {
 test "SocketCreator createUdsListener with empty path auto-creates" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
-    var skt = try SocketCreator.createUdsListener(gpa, "");
+    var skt = try SocketCreator.createUdsListener("");
     defer skt.deinit();
     try testing.expect(skt.isSet());
     try testing.expect(skt.server == true);
@@ -352,7 +352,7 @@ test "UDS connect and accept" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(gpa);
+    const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
     @memcpy(ctx.path[0..path.len], path);
@@ -371,7 +371,7 @@ test "UDS sendBuf recvToBuf round-trip" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(gpa);
+    const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
     @memcpy(ctx.path[0..path.len], path);
@@ -394,7 +394,7 @@ test "UDS server socket file removed after deinit" {
     try tofu.initPlatform();
     defer tofu.deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath(gpa);
+    const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
     @memcpy(ctx.path[0..path.len], path);

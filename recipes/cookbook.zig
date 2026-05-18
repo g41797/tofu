@@ -340,7 +340,7 @@ pub fn handleStartOfUdsServerAkaListener(gpa: Allocator) !AmpeStatus {
 
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     // Create address for UDS server.
     var adrs: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
@@ -366,7 +366,7 @@ pub fn handleStartOfUdsListeners(gpa: Allocator) !AmpeStatus {
 
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     // Create address for UDS server.
     var adrs: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
@@ -436,7 +436,7 @@ pub fn handleConnnectOfTcpClientServer(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleConnnectOfUdsClientServer(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
     var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
@@ -687,7 +687,7 @@ pub fn handleReConnnectOfTcpClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleReConnnectOfUdsClientServerMT(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
     var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
@@ -1005,7 +1005,7 @@ pub fn handleReConnnectOfTcpClientServerST(gpa: Allocator) anyerror!AmpeStatus {
 pub fn handleReConnnectOfUdsClientServerST(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
     var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
@@ -1450,7 +1450,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
 pub fn handleReConnnectOfUdsClientServerSTViaConnector(gpa: Allocator) anyerror!AmpeStatus {
     var tup: tofu.TempUdsPath = .{};
 
-    const filePath: []u8 = try tup.buildPath(gpa);
+    const filePath: []u8 = try tup.buildPath();
 
     var srvCfg: Address = .{ .uds_server_addr = address.UDSServerAddress.init(filePath) };
     var cltCfg: Address = .{ .uds_client_addr = address.UDSClientAddress.init(filePath) };
@@ -1928,7 +1928,7 @@ pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
     }
 
     var tup: tofu.TempUdsPath = .{};
-    const udsPath: []u8 = try tup.buildPath(allocator);
+    const udsPath: []u8 = try tup.buildPath();
 
     var mhCnfg: [2]Address = [_]Address{
         .{ .tcp_server_addr = address.TCPServerAddress.init("127.0.0.1", tcpPort) },

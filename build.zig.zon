@@ -14,10 +14,6 @@
             .url = "git+https://github.com/g41797/mailbox#09ce9a443d17a36df47925e8927252fcde3c6940",
             .hash = "mailbox-0.0.13-a-vFm3lcAAD33j3q2G2Hj6lnDahYuT1ESGBq99aVehow",
         },
-        .temp = .{
-            .url = "git+https://github.com/abhinav/temp.zig#cf2317e06d32f3f0abdfc743c7a5950d9fdb2d19",
-            .hash = "temp-0.3.0-Ogl1Ff5-AABRtiHj_zDFI0CZVU8ORLPko6iQiw63Znrz",
-        },
         .usockets = .{
             .url = "git+https://github.com/g41797/uSockets.git#master",
             .hash = "N-V-__8AALwjBgA3LAMIs1wy-EY8ATSedwDeOKjPRG8U1K18",

@@ -57,15 +57,15 @@ pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
-    return createUdsListener(sc.allocator, sc.addrs.uds_server_addr.addrToSlice());
+    return createUdsListener(sc.addrs.uds_server_addr.addrToSlice());
 }
 
-pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
+pub fn createUdsListener(path: []const u8) AmpeError!Skt {
     var udsPath = path;
     var tup: ?TempUdsPath = null;
     if (udsPath.len == 0) {
         tup = TempUdsPath{};
-        udsPath = tup.?.buildPath(allocator) catch return AmpeError.UnknownError;
+        udsPath = tup.?.buildPath() catch return AmpeError.UnknownError;
     }
     const fd = pn.createListenSocketUnix(udsPath.ptr, udsPath.len, 0) catch |e| {
         log.warn("createUdsListener failed: {s}", .{@errorName(e)});

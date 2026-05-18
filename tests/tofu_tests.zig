@@ -24,6 +24,7 @@ test {
     _ = @import("ampe/channels_tests.zig");
     _ = @import("address_tests.zig");
     _ = @import("message_tests.zig");
+    _ = @import("ampe/temp_uds_path_tests.zig");
 
     // Linux Skt/SocketCreator
     if (@import("builtin").os.tag == .linux) {

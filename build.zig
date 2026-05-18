@@ -43,10 +43,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const temp = b.dependency("temp", .{
-        .target = target,
-        .optimize = optimize,
-    });
+
 
     // Add the posix_net module
     const posixNetMod = b.addModule("posix_net", .{
@@ -65,7 +62,6 @@ pub fn build(b: *std.Build) void {
 
     tofuMod.addImport("posix_net", posixNetMod);
     tofuMod.addImport("mailbox", mailbox.module("mailbox"));
-    tofuMod.addImport("temp", temp.module("temp"));
     tofuMod.addOptions("build_options", build_options);
 
     // Create the library module
@@ -79,7 +75,6 @@ pub fn build(b: *std.Build) void {
     libMod.addImport("tofu", tofuMod);
     libMod.addImport("posix_net", posixNetMod);
     libMod.addImport("mailbox", mailbox.module("mailbox"));
-    libMod.addImport("temp", temp.module("temp"));
     libMod.addOptions("build_options", build_options);
 
     // Link libc for all builds: getaddrinfo/freeaddrinfo are libc functions
@@ -165,7 +160,6 @@ pub fn build(b: *std.Build) void {
     testMod.addImport("posix_net", posixNetMod);
     testMod.addImport("recipes", recipesMod);
     testMod.addImport("mailbox", mailbox.module("mailbox"));
-    testMod.addImport("temp", temp.module("temp"));
     testMod.addOptions("build_options", build_options);
     // Separate options object so the same file is not the root of two modules.
     const test_gate_options = b.addOptions();

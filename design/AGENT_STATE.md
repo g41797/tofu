@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-05-18
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 — std.net removal (Part 1 COMPLETE; Part 2 deferred).
+**Active Phase:** Stage 7 — `temp` module removed; `buildPath()` and `createUdsListener()` allocator-free.
 
 ---
 
@@ -38,7 +38,7 @@
   - **REFACTORED:** `IoSkt.trySend` pool lifecycle: sent messages are now returned to pool inside `trySend` at the point of send completion. Return type changed from `AmpeError!MessageQueue` to `AmpeError!void`. Caller no longer needs a dequeue loop. Eliminates the latent leak where error exit dropped already-sent messages.
   - **DONE (Part 1):** Removed all `std.net.*` from the codebase. Replaced `std.net.Address` with `pn.Addr` everywhere. Added pure-Zig helpers to `posix_net/types.zig` and `posix_net/socket.zig`. Exported `getaddrinfo`/`freeaddrinfo` from `posix_net`. Removed `toStdAddress`. Replaced `parseIp4`/`parseIp6` workarounds with `getaddrinfo`-based `resolveAddr` (all backends). Added `libMod.link_libc = true` and `lib_unit_tests.linkLibC()` to `build.zig`. Verified: 8/8 test modes pass (62 posix + 98 portable), 3/3 cross-compile targets pass. See `design/transition-2-bun-usockets-plan.md §21` for full design reference.
   - **FIXED (macOS UDS):** `initAddrUnix` in `posix_net/types.zig` wrote `family: u16` in little-endian, placing AF_UNIX=1 at `mem[0]` and 0 at `mem[1]`. On macOS/BSD, `addrFamily()` reads `mem[1]` (BSD `sa_family` byte) → got AF_UNSPEC=0 → `posix.socket(0,...)` → EAFNOSUPPORT. Fixed: `initAddrUnix` now uses platform-aware byte writes: BSD writes `mem[0]=sa_len`, `mem[1]=AF_UNIX`; Linux/Windows writes `family: u16 LE` at `mem[0..2]`.
-  - **DEFERRED (Part 2):** Investigate removing stored `address: pn.Addr` field from Skt structs — replace with minimal `{ family, port, uds_path? }`. Non-trivial; depends on Part 1 completion.
+  - **CLOSED (Part 2):** Investigated removing stored `address: pn.Addr` from Skt structs. Hard blocker: `connect(skt: *Skt)` reads `skt.address.mem`+`len` to pass the target IP/port to the OS; the kernel never stores the outbound target before connect succeeds. Eliminating the field requires `connect(skt, addr)` — a cascading API change through Reactor and all call sites. UDS path also cannot come from the kernel. Size saving is ~36 bytes/socket — not worth the surgery. Decision: keep `address: pn.Addr` in all Skt structs permanently.
 
 ---
 
@@ -122,6 +122,68 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 7: Remove `temp` module + allocator-free `buildPath`
+
+#### Summary
+Removed the external `temp` module dependency entirely. It was used only to generate unique
+UDS socket paths for tests. Replaced with inline Zig using C extern calls (`getenv`/`getpid`
+on Unix, `GetTempPathA`/`GetCurrentProcessId` on Windows) + `std.fmt.bufPrintZ`. No file is
+created — path is `{TMPDIR}/{pid}_{counter}.port`. Also removed the now-unused `allocator`
+parameter from `TempUdsPath.buildPath()` and all call sites (12 test/src files, cookbook).
+`createUdsListener(allocator, path)` signatures initially kept with `_ = allocator`; subsequently
+removed `allocator` parameter from all 6 `createUdsListener` definitions and all callers
+(`Notifier.zig::initUDS`, `sockets_tests.zig`). 5 new `TempUdsPath` unit tests added.
+
+#### Changes
+- `src/ampe/testHelpers.zig` — Replaced `temp.TempFile` field with inline path build; removed `temp` import; `buildPath(allocator)` → `buildPath()`.
+- `tests/ampe/Notifier_tests.zig` — Replaced direct `temp.create_file()` test with `TempUdsPath` test; removed `temp` import; updated call site.
+- `tests/ampe/temp_uds_path_tests.zig` — New file: 5 `TempUdsPath` unit tests.
+- `tests/tofu_tests.zig` — Wired in `temp_uds_path_tests.zig`.
+- `src/ampe/Notifier.zig` — Updated `buildPath` call site.
+- `src/ampe/linux/SocketCreator.zig`, `mac/`, `windows/` — Updated `buildPath` call sites; removed `allocator` from `createUdsListener`.
+- `src/ampe/portable/linux/SocketCreator.zig`, `portable/mac/`, `portable/windows/` — Same.
+- `src/ampe/Notifier.zig` — Removed `allocator` from `initUDS`; updated call site in `init`.
+- `recipes/cookbook.zig` — Updated 7 `buildPath` call sites.
+- `tests/ampe/sockets_tests.zig`, `portable_poller_tests.zig`, `tests/posix_net/posix_net_tests.zig` — Updated all call sites.
+- `build.zig` — Removed all `temp` dependency and import lines.
+- `build.zig.zon` — Removed `temp` entry from `.dependencies`.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
+| `grep -r '"temp"' src/ tests/` | ✅ 0 results |
+| Linux 8-mode test matrix | pending CI |
+| macOS CI | pending CI |
+
+---
+
+### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Part 2 investigation (CLOSED)
+
+#### Summary
+Investigated whether the stored `address: pn.Addr` field (~148 bytes) in all 6 Skt files
+could be replaced with a minimal `{ family: u16, port: u16, uds_path: [108]u8 }` struct.
+Mapped every use of the field across native (linux, mac, windows) and portable backends.
+
+Hard blocker: `connect(skt: *Skt)` reads `skt.address.mem` + `skt.address.len` to pass
+the target remote address to the OS connect syscall. This is called lazily after Skt
+construction. The kernel does not store the outbound target address before the call.
+Eliminating the field would require `connect(skt: *Skt, addr: pn.Addr)` — a cascading
+API change through SocketCreator and Reactor. UDS path (104–108 bytes) also cannot
+be recovered from the kernel after bind.
+
+Size saving: ~36 bytes/socket. Not worth the API surgery and cross-platform re-testing.
+
+**Decision: Part 2 closed. Keep `address: pn.Addr` in all Skt structs.**
+
+#### Changes
+None — investigation only.
+
+---
 
 ### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Fix `initAddrUnix` macOS/BSD sockaddr layout
 
