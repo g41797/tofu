@@ -37,6 +37,7 @@
   - **FIXED:** GPA memory leak in `IoSkt.tryRecv` (Mac/portable only): completed pool messages enqueued in `ret` were dropped when a subsequent `recv()` returned `PeerDisconnected`. Fixed by returning `ret` to the caller when non-empty instead of propagating the error immediately.
   - **REFACTORED:** `IoSkt.trySend` pool lifecycle: sent messages are now returned to pool inside `trySend` at the point of send completion. Return type changed from `AmpeError!MessageQueue` to `AmpeError!void`. Caller no longer needs a dequeue loop. Eliminates the latent leak where error exit dropped already-sent messages.
   - **DONE (Part 1):** Removed all `std.net.*` from the codebase. Replaced `std.net.Address` with `pn.Addr` everywhere. Added pure-Zig helpers to `posix_net/types.zig` and `posix_net/socket.zig`. Exported `getaddrinfo`/`freeaddrinfo` from `posix_net`. Removed `toStdAddress`. Replaced `parseIp4`/`parseIp6` workarounds with `getaddrinfo`-based `resolveAddr` (all backends). Added `libMod.link_libc = true` and `lib_unit_tests.linkLibC()` to `build.zig`. Verified: 8/8 test modes pass (62 posix + 98 portable), 3/3 cross-compile targets pass. See `design/transition-2-bun-usockets-plan.md §21` for full design reference.
+  - **FIXED (macOS UDS):** `initAddrUnix` in `posix_net/types.zig` wrote `family: u16` in little-endian, placing AF_UNIX=1 at `mem[0]` and 0 at `mem[1]`. On macOS/BSD, `addrFamily()` reads `mem[1]` (BSD `sa_family` byte) → got AF_UNSPEC=0 → `posix.socket(0,...)` → EAFNOSUPPORT. Fixed: `initAddrUnix` now uses platform-aware byte writes: BSD writes `mem[0]=sa_len`, `mem[1]=AF_UNIX`; Linux/Windows writes `family: u16 LE` at `mem[0..2]`.
   - **DEFERRED (Part 2):** Investigate removing stored `address: pn.Addr` field from Skt structs — replace with minimal `{ family, port, uds_path? }`. Non-trivial; depends on Part 1 completion.
 
 ---
@@ -121,6 +122,32 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Fix `initAddrUnix` macOS/BSD sockaddr layout
+
+#### Summary
+`initAddrUnix` in `posix_net/types.zig` stored `AF_UNIX` as a `u16` in little-endian at
+`mem[0..2]`, placing the value byte at `mem[0]` and zero at `mem[1]`. On macOS/BSD the
+sockaddr layout has `sa_len: u8` at `mem[0]` and `sa_family: u8` at `mem[1]`, so
+`addrFamily()` read `mem[1]` = 0 = AF_UNSPEC. Every UDS socket creation then called
+`posix.socket(0, ...)` → EAFNOSUPPORT → all 4 UDS-dependent tests failed on macOS CI.
+Fixed by making `initAddrUnix` platform-aware: BSD path writes `mem[0]=sa_len`,
+`mem[1]=AF_UNIX` directly; Linux/Windows path writes `family: u16 LE` at `mem[0..2]`.
+
+#### Changes
+- `posix_net/types.zig` — `initAddrUnix`: replaced `SockaddrUn` overlay write with
+  platform-aware byte-level writes matching BSD vs Linux/Windows sockaddr layout.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
+| macOS CI (UDS tests) | pending CI run |
+
+---
 
 ### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: std.net removal (Part 1)
 

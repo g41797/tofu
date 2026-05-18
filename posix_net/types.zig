@@ -57,10 +57,18 @@ pub const SockaddrUn = extern struct {
 pub fn initAddrUnix(path: []const u8) error{NameTooLong}!Addr {
     if (path.len >= UDS_PATH_SIZE) return error.NameTooLong;
     var a: Addr = std.mem.zeroes(Addr);
-    var sun: SockaddrUn = .{ .family = @intCast(AF_UNIX), .path = .{0} ** UDS_PATH_SIZE };
-    @memcpy(sun.path[0..path.len], path);
-    @memcpy(a.mem[0..@sizeOf(SockaddrUn)], std.mem.asBytes(&sun));
-    a.len = @sizeOf(SockaddrUn);
+    const struct_size: u32 = @sizeOf(SockaddrUn);
+    // BSD layout: mem[0]=sa_len (u8), mem[1]=sa_family (u8).
+    // Linux/Windows layout: mem[0..2]=sa_family (u16 LE).
+    if (comptime builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) {
+        a.mem[0] = @intCast(struct_size);
+        a.mem[1] = @intCast(AF_UNIX);
+    } else {
+        const family_ptr: *u16 = @ptrCast(@alignCast(&a.mem[0]));
+        family_ptr.* = @intCast(AF_UNIX);
+    }
+    @memcpy(a.mem[2..2 + path.len], path);
+    a.len = struct_size;
     return a;
 }
 
