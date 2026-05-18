@@ -163,7 +163,7 @@ pub const TriggeredSkt = union(enum) {
         };
     }
 
-    pub fn trySend(tsk: *TriggeredSkt) !MessageQueue {
+    pub fn trySend(tsk: *TriggeredSkt) !void {
         return switch (tsk.*) {
             .io => tsk.*.io.trySend(),
             inline else => return AmpeError.NotAllowed,
@@ -496,9 +496,7 @@ pub const IoSkt = struct {
         return ret;
     }
 
-    pub fn trySend(ioskt: *IoSkt) AmpeError!MessageQueue {
-        var ret: MessageQueue = .{};
-
+    pub fn trySend(ioskt: *IoSkt) AmpeError!void {
         if (!ioskt.connected) {
             return AmpeError.NotAllowed;
         }
@@ -521,14 +519,12 @@ pub const IoSkt = struct {
                 ioskt.byeWasSend = true;
             }
 
-            ret.enqueue(wasSend.?);
+            ioskt.pool.put(wasSend.?);
 
             if (ioskt.byeWasSend) {
                 break;
             }
         }
-
-        return ret;
     }
 
     pub fn deinit(ioskt: *IoSkt) void {

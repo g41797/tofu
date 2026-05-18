@@ -674,15 +674,10 @@ fn processTriggeredChannels(rtr: *Reactor) !void {
         }
 
         if (trgrs.send == .on) {
-            var wereSend: message.MessageQueue = tc.trySend() catch {
+            tc.trySend() catch {
                 tc.markForDelete(.send_failed);
                 continue;
             };
-            var next: ?*Message = wereSend.dequeue();
-            while (next != null) {
-                rtr.pool.put(next.?);
-                next = wereSend.dequeue();
-            }
         }
 
         if (trgrs.recv == .on) {
@@ -1199,7 +1194,7 @@ pub const TriggeredChannel = struct {
         return mq;
     }
 
-    pub inline fn trySend(tchn: *TriggeredChannel) !MessageQueue {
+    pub inline fn trySend(tchn: *TriggeredChannel) !void {
         return tchn.tskt.trySend();
     }
 

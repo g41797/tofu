@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-05-18
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 — GPA leak in `IoSkt.tryRecv` (Mac-only) resolved.
+**Active Phase:** Stage 6 — GPA leaks resolved; `trySend` pool lifecycle moved inside.
 
 ---
 
@@ -35,6 +35,7 @@
   - **FIXED:** Windows `FindFreeTcpPort` binding failures by calling `tofu.initPlatform()` to correctly initialize the Windows socket layer.
   - **FIXED:** GPA memory leak in `_destroy`: when `shtdwnStrt` is true, `grp.destroy()` is now called before returning `ShutdownStarted`, draining mailboxes and freeing the group allocation.
   - **FIXED:** GPA memory leak in `IoSkt.tryRecv` (Mac/portable only): completed pool messages enqueued in `ret` were dropped when a subsequent `recv()` returned `PeerDisconnected`. Fixed by returning `ret` to the caller when non-empty instead of propagating the error immediately.
+  - **REFACTORED:** `IoSkt.trySend` pool lifecycle: sent messages are now returned to pool inside `trySend` at the point of send completion. Return type changed from `AmpeError!MessageQueue` to `AmpeError!void`. Caller no longer needs a dequeue loop. Eliminates the latent leak where error exit dropped already-sent messages.
 
 ---
 
@@ -119,6 +120,35 @@ src/ampe/
 
 ## Session History
 
+### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Refactor `IoSkt.trySend` pool lifecycle
+
+#### Summary
+Moved pool return responsibility inside `IoSkt.trySend()`. Previously, sent messages were
+collected into a local `ret` queue and returned to the caller, which then called `pool.put()`
+on each. The caller did nothing except return them to pool — the split was redundant and
+created a latent leak: if `trySend()` exited via error after partial sends, the caller
+never saw `ret` and those messages were dropped. The fix returns sent messages to pool at
+the point of send completion inside `trySend()`. Return type changed to `AmpeError!void`;
+caller simplified to a single catch.
+
+#### Changes
+- `src/ampe/triggeredSkts.zig` — `IoSkt.trySend`: removed `ret` queue; `ret.enqueue(wasSend.?)` → `ioskt.pool.put(wasSend.?)`; return type `AmpeError!MessageQueue` → `AmpeError!void`.
+- `src/ampe/triggeredSkts.zig` — `TriggeredSkt.trySend`: return type updated to `!void`.
+- `src/ampe/Reactor.zig` — `TriggeredChannel.trySend`: return type updated to `!void`.
+- `src/ampe/Reactor.zig` — `processTriggeredChannels`: removed `wereSend` dequeue loop.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSafe` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseFast` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSmall` (Linux) | ✅ PASS (62/62) |
+| Mac CI (all modes) | pending |
+
+---
+
 ### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Fix GPA leak in `IoSkt.tryRecv` (Mac-only)
 
 #### Summary
@@ -139,10 +169,11 @@ for delete on the next reactor loop when `tryRecv()` is called again with an emp
 
 | Check | Result |
 | :---- | :----- |
-| `zig build test` (Mac, Debug) | pending |
-| `zig build test -Doptimize=ReleaseSafe` (Mac) | pending |
-| `zig build test -Doptimize=ReleaseFast` (Mac) | pending |
-| `zig build test -Doptimize=ReleaseSmall` (Mac) | pending |
+| `zig build test` (Linux, Debug) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSafe` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseFast` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSmall` (Linux) | ✅ PASS (62/62) |
+| `zig build test` (Mac, all modes) | pending Mac CI |
 
 ---
 
@@ -429,7 +460,7 @@ On Mac, it routes to the receive path — `tryRecv` is called on a closing socke
 | Operation | Mac kqueue EV_EOF effect | Safe? | Notes |
 |---|---|---|---|
 | `tryRecv` | EV_EOF on READ → `act.recv = .on` → `tryRecv` called | ✅ Fixed (Fix 7) | Was leaking completed messages in `ret` |
-| `trySend` | EV_EOF on WRITE → `act.err = .on` → channel marked for delete, `trySend` not called | ✅ Safe | Unrelated send errors could leak sent msgs in `ret` — see Proposed Fix 8 |
+| `trySend` | EV_EOF on WRITE → `act.err = .on` → channel marked for delete, `trySend` not called | ✅ Safe | Pool return moved inside `trySend` (Fix 8) — no `ret` queue, no leak possible |
 | `tryConnect` | Connect failure → `act.err = .on` via connect filter | ✅ Safe | EV_EOF not relevant here |
 | `tryAccept` | EV_EOF on a listener socket not expected in normal operation | ✅ Safe | Listener failure goes via `act.err` |
 | Pool trigger | `act.pool` set internally by `informPoolEmpty`, not by kqueue | ✅ Safe | Independent of EV_EOF |
@@ -447,35 +478,27 @@ No message data is lost. Channel cleanup is delayed by at most one reactor loop 
 
 ---
 
-## Proposed Fix 8: `IoSkt.trySend()` drops already-sent messages on send error
+## Fix 8: `IoSkt.trySend()` — pool lifecycle moved inside `trySend`
 
 ### Problem
 
-In `trySend()`, messages fully sent to the OS are enqueued in `ret`. If a subsequent
-`send()` returns an error (broken pipe, network failure), `try` propagates it. The caller
-catches the error and marks the channel for delete — but `ret` is dropped without cleanup.
-Already-sent pool messages are never returned to the pool. Potential GPA leak.
+Previously, `trySend()` collected fully-sent messages in a local `ret` queue and returned
+it to the caller. The caller (in `processTriggeredChannels`) dequeued `ret` and called
+`pool.put()` on each message. The split was redundant. If `trySend()` exited via error
+after partial sends, the caller never saw `ret` — already-sent pool messages were dropped.
 
-This is NOT triggered by Mac kqueue EV_EOF (write-side EOF → `act.err`, `trySend` not called).
-It could occur on any platform on a network-layer send error after partial success.
+### Fix
 
-### Proposed fix
-
-Add before the `while` loop in `IoSkt.trySend()`:
-
-```zig
-errdefer {
-    var leak = ret.dequeue();
-    while (leak != null) {
-        ioskt.pool.put(leak.?);
-        leak = ret.dequeue();
-    }
-}
-```
+Pool return moved inside `trySend()`. At the point of each successful send,
+`ioskt.pool.put(wasSend.?)` is called directly. The local `ret` queue was removed.
+Return type changed from `AmpeError!MessageQueue` to `AmpeError!void`.
+Caller simplified to a single `catch { markForDelete; continue; }`.
 
 ### Why different from Fix 7
 
 - Fix 7 (recv): completed messages are received application data → return to CALLER for delivery.
-- Fix 8 (send): already-sent messages have their data on the wire → return buffer to POOL.
+- Fix 8 (send): already-sent messages have their data on the wire → return buffer to POOL immediately.
 
-**Status: proposed. Not yet implemented. Awaiting separate approval.**
+### Status
+
+Approved and implemented 2026-05-18. Linux 62/62 all 4 modes. Mac CI pending.

@@ -74,6 +74,22 @@ Upon starting a session, every AI agent MUST:
 - Must maintain `design/AGENT_STATE.md` as the handover document.
 - Must not execute git commands.
 
+### Code Change Approval (MANDATORY)
+**Do not change any source file without explicit approval from the author.**
+
+This rule applies to every change, including:
+- Bug fixes
+- Refactors
+- Cleanups
+- Changes the agent believes are "obviously correct"
+
+The required sequence for every code change:
+1. Propose the change. Describe what, why, and which files will be affected.
+2. Wait for the author to say "yes", "approved", "do it", or equivalent.
+3. Only then write or edit any source file.
+
+Plan approval (ExitPlanMode) does NOT count as code change approval unless the plan explicitly states "implement immediately" or the author separately says "go ahead". Each fix in a multi-fix plan needs its own explicit approval before implementation.
+
 ---
 
 ## 4. Mandatory Testing Protocol

@@ -1544,7 +1544,8 @@ No message data is lost. Cleanup is delayed by at most one reactor loop iteratio
 File: `src/ampe/triggeredSkts.zig`, function `IoSkt.tryRecv`.
 
 **Verification.**
-Pending Mac CI run (all 4 optimization modes).
+All 4 optimization modes passed on Linux x86_64 (62/62 tests each).
+Mac CI pending.
 
 ---
 
@@ -1600,5 +1601,15 @@ errdefer {
 - Recv fix: completed messages are received application data → return to CALLER for delivery.
 - Send fix: already-sent messages have data on the wire → return buffer to POOL.
 
-**Status: proposed. Not yet implemented. Awaiting separate approval.**
+**Status: implemented 2026-05-18.**
+
+**Changes.**
+- `src/ampe/triggeredSkts.zig` — `IoSkt.trySend`: removed `ret` queue; `ret.enqueue(wasSend.?)` → `ioskt.pool.put(wasSend.?)`; return type `AmpeError!MessageQueue` → `AmpeError!void`.
+- `src/ampe/triggeredSkts.zig` — `TriggeredSkt.trySend`: return type updated to `!void`.
+- `src/ampe/Reactor.zig` — `TriggeredChannel.trySend`: return type updated to `!void`.
+- `src/ampe/Reactor.zig` — `processTriggeredChannels`: removed `wereSend` dequeue loop.
+
+**Verification.**
+All 4 optimization modes passed on Linux x86_64 (62/62 tests each).
+Mac CI pending.
 
