@@ -140,6 +140,8 @@ pub fn destroy(rtr: *Reactor) void {
         // state (e.g. HUP after rapid reconnect cycles on Windows) this
         // may fail — that is fine because shutdownFlag is already set.
         rtr._sendAlert(.shutdownStarted) catch {};
+        rtr.ntfcsEnabled = false;
+        rtr.shtdwnStrt = true;
 
         // Always wait. Skipping waitFinish() when the alert failed was
         // the root cause of the race: resources were freed while the
@@ -338,11 +340,6 @@ fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
         .kind = .alert,
         .alert = alrt,
     });
-
-    if (alrt == .shutdownStarted) {
-        rtr.ntfcsEnabled = false;
-        rtr.shtdwnStrt = true;
-    }
 
     return;
 }
