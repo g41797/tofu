@@ -4,7 +4,7 @@
 pub const Skt = @This();
 
 socket: ?ws2_32.SOCKET = null,
-address: std.net.Address = undefined,
+address: pn.Addr = std.mem.zeroes(pn.Addr),
 server: bool = false,
 base_handle: windows.HANDLE = windows.INVALID_HANDLE_VALUE,
 
@@ -22,10 +22,7 @@ pub fn socketHandle(skt: *const Skt) ?ws2_32.SOCKET {
 }
 
 pub fn getPort(skt: *const Skt) ?u16 {
-    return switch (skt.address.any.family) {
-        std.posix.AF.INET, std.posix.AF.INET6 => skt.address.getPort(),
-        else => null,
-    };
+    return pn.addrPort(&skt.address);
 }
 
 pub fn listen(skt: *Skt) !void {
@@ -38,7 +35,7 @@ pub fn listen(skt: *Skt) !void {
     var retry: usize = 0;
     const max_retries = 5;
     while (retry < max_retries) : (retry += 1) {
-        const bind_res: i32 = ws2_32.bind(skt.*.socket.?, &skt.*.address.any, @intCast(skt.*.address.getOsSockLen()));
+        const bind_res: i32 = ws2_32.bind(skt.*.socket.?, @ptrCast(&skt.*.address.mem[0]), @intCast(skt.*.address.len));
         if (bind_res != ws2_32.SOCKET_ERROR) break;
 
         if (retry == max_retries - 1) return error.BindFailed;
@@ -51,8 +48,8 @@ pub fn listen(skt: *Skt) !void {
     }
 
     // set address to the OS-chosen information
-    var slen: i32 = @intCast(skt.*.address.getOsSockLen());
-    const getsockname_res: i32 = ws2_32.getsockname(skt.*.socket.?, &skt.*.address.any, &slen);
+    var slen: i32 = @intCast(skt.*.address.len);
+    const getsockname_res: i32 = ws2_32.getsockname(skt.*.socket.?, @ptrCast(&skt.*.address.mem[0]), &slen);
     if (getsockname_res == ws2_32.SOCKET_ERROR) {
         return error.GetsocknameFailed;
     }
@@ -63,10 +60,11 @@ pub fn listen(skt: *Skt) !void {
 pub fn accept(askt: *Skt) AmpeError!?Skt {
     var skt: Skt = .{};
 
-    var addr: std.net.Address = undefined;
-    var addr_len: i32 = @intCast(askt.*.address.getOsSockLen());
+    var addr: pn.Addr = std.mem.zeroes(pn.Addr);
+    addr.len = askt.*.address.len;
+    var addr_len: i32 = @intCast(askt.*.address.len);
 
-    skt.socket = ws2_32.accept(askt.*.socket.?, &addr.any, &addr_len);
+    skt.socket = ws2_32.accept(askt.*.socket.?, @ptrCast(&addr.mem[0]), &addr_len);
 
     if (skt.socket == ws2_32.INVALID_SOCKET) {
         const err: ws2_32.WinsockError = ws2_32.WSAGetLastError();
@@ -81,6 +79,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 
     try skt.setLingerAbort();
 
+    addr.len = @intCast(addr_len);
     skt.address = addr;
 
     return skt;
@@ -90,7 +89,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
     var retry: usize = 0;
     const max_retries = 5;
     while (retry < max_retries) : (retry += 1) {
-        const rc: i32 = ws2_32.connect(skt.socket.?, &skt.address.any, @intCast(skt.address.getOsSockLen()));
+        const rc: i32 = ws2_32.connect(skt.socket.?, @ptrCast(&skt.address.mem[0]), @intCast(skt.address.len));
         if (rc == 0) {
             try skt.setLingerAbort();
             return true;
@@ -118,8 +117,8 @@ pub fn connect(skt: *Skt) AmpeError!bool {
 }
 
 pub fn setREUSE(skt: *Skt) !void {
-    switch (skt.*.address.any.family) {
-        ws2_32.AF.INET, ws2_32.AF.INET6 => {
+    switch (@as(u32, pn.addrFamily(&skt.*.address))) {
+        @as(u32, @intCast(ws2_32.AF.INET)), @as(u32, @intCast(ws2_32.AF.INET6)) => {
             const on: c_int = 1;
             _ = ws2_32.setsockopt(skt.*.socket.?, ws2_32.SOL.SOCKET, ws2_32.SO.REUSEADDR, @ptrCast(&on), @sizeOf(c_int));
         },
@@ -146,8 +145,8 @@ pub fn setLingerAbort(skt: *Skt) AmpeError!void {
 }
 
 pub fn disableNagle(skt: *Skt) !void {
-    switch (skt.*.address.any.family) {
-        ws2_32.AF.INET, ws2_32.AF.INET6 => {
+    switch (@as(u32, pn.addrFamily(&skt.*.address))) {
+        @as(u32, @intCast(ws2_32.AF.INET)), @as(u32, @intCast(ws2_32.AF.INET6)) => {
             const on: c_int = 1;
             _ = ws2_32.setsockopt(skt.*.socket.?, ws2_32.IPPROTO.TCP, ws2_32.TCP.NODELAY, @ptrCast(&on), @sizeOf(c_int));
         },
@@ -156,8 +155,8 @@ pub fn disableNagle(skt: *Skt) !void {
 }
 
 fn deleteUDSPath(skt: *Skt) void {
-    if (skt.*.address.any.family == ws2_32.AF.UNIX) {
-        const path = std.mem.sliceTo(&skt.address.un.path, 0);
+    if (pn.addrFamily(&skt.*.address) == @as(u16, @intCast(ws2_32.AF.UNIX))) {
+        const path = pn.addrUnixPath(&skt.*.address);
         if (path.len > 0) {
             std.fs.deleteFileAbsolute(path) catch {};
         }
@@ -176,13 +175,13 @@ pub fn findFreeTcpPort() !u16 {
     const on: c_int = 1;
     _ = ws2_32.setsockopt(sockfd, ws2_32.SOL.SOCKET, ws2_32.SO.REUSEADDR, @ptrCast(&on), @sizeOf(c_int));
 
-    var addr: std.net.Address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, 0);
-    _ = ws2_32.bind(sockfd, &addr.any, @intCast(addr.getOsSockLen()));
+    var addr: pn.Addr = pn.initAddrIp4(.{ 0, 0, 0, 0 }, 0);
+    _ = ws2_32.bind(sockfd, @ptrCast(&addr.mem[0]), @intCast(addr.len));
 
-    var slen: i32 = @intCast(addr.getOsSockLen());
-    _ = ws2_32.getsockname(sockfd, &addr.any, &slen);
+    var slen: i32 = @intCast(addr.len);
+    _ = ws2_32.getsockname(sockfd, @ptrCast(&addr.mem[0]), &slen);
 
-    return std.mem.bigToNative(u16, addr.in.sa.port);
+    return pn.addrPort(&addr) orelse 0;
 }
 
 pub fn sendBufFd(socket: ws2_32.SOCKET, buf: []const u8) AmpeError!?usize {
@@ -270,3 +269,5 @@ const log = std.log;
 
 const tofu = @import("../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
+
+const pn = @import("posix_net");

@@ -82,9 +82,12 @@ pub fn build(b: *std.Build) void {
     libMod.addImport("temp", temp.module("temp"));
     libMod.addOptions("build_options", build_options);
 
+    // Link libc for all builds: getaddrinfo/freeaddrinfo are libc functions
+    // used in SocketCreator for address resolution on all backends.
+    libMod.link_libc = true;
+
     // Link libraries for Windows sockets
     if (target.result.os.tag == .windows) {
-        libMod.link_libc = true;
         libMod.linkSystemLibrary("ws2_32", .{});
         libMod.linkSystemLibrary("ntdll", .{});
     }
@@ -175,6 +178,10 @@ pub fn build(b: *std.Build) void {
         .use_llvm = true,
         .use_lld = use_lld,
     });
+
+    // Link libc for all test builds: getaddrinfo/freeaddrinfo are libc functions
+    // used in SocketCreator for address resolution on all backends.
+    lib_unit_tests.linkLibC();
 
     // Link libraries for Windows tests
     if (target.result.os.tag == .windows) {

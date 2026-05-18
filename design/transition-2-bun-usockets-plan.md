@@ -1613,3 +1613,154 @@ errdefer {
 All 4 optimization modes passed on Linux x86_64 (62/62 tests each).
 Mac CI pending.
 
+---
+
+## 21. Remove std.net — Replace with pn.Addr
+
+**Why.**
+Zig 0.16 removes `std.net` (moved into `std.Io`). All `std.net.*` usage must be replaced
+before the upgrade. The replacement uses types and helpers already in `posix_net/`.
+
+**Scope.**
+15 files contain `std.net` references. Two categories:
+- `std.net.Address` as a storage type in Skt.zig (all backends).
+- `std.net.getAddressList`, `std.net.Address.resolveIp`, `std.net.Address.initUnix`,
+  `std.net.Address.initIp4` in SocketCreator.zig (all backends).
+- `toStdAddress` conversion helper in `posix_net/socket.zig`.
+
+**Status: implemented 2026-05-18.**
+
+**Verification.**
+Linux: 8 test runs (4 posix + 4 portable, all optimization modes, 62/62 each).
+Cross-compile: x86_64-macos, aarch64-macos, x86_64-windows-gnu all pass.
+`grep -r "std\.net" src/ posix_net/` returns 0 results.
+
+---
+
+### NON-REMOVABLE — Permanent Design Reference
+
+This section documents the std.net removal design. It must not be deleted in future revisions.
+Future contributors must be able to understand what was replaced and why without reading session history.
+
+#### Complete usage table (before removal)
+
+| File | Line(s) | Usage | Category |
+|---|---|---|---|
+| `posix_net/posix_net.zig` | 38 | `pub const toStdAddress = socket.toStdAddress` | re-export |
+| `posix_net/socket.zig` | 129–136 | `toStdAddress(addr: *const Addr) std.net.Address` | conversion fn |
+| `posix_net/socket.zig` | 139–143 | `addrPort` calls `ffi.bsd_addr_get_port` (C, portable-only) | C-dependent helper |
+| `src/ampe/linux/Skt.zig` | 7, 48 | `address: std.net.Address` field + local var in `accept()` | type storage |
+| `src/ampe/linux/SocketCreator.zig` | 37,54,88,105,117,137 | resolveIp, getAddressList, initUnix, fn signatures | all |
+| `src/ampe/mac/Skt.zig` | 7, 48 | same as linux | type storage |
+| `src/ampe/mac/SocketCreator.zig` | 37,54,88,105,117,137 | same as linux | all |
+| `src/ampe/windows/Skt.zig` | 7, 66, 179 | field + local + initIp4 | type + addr build |
+| `src/ampe/windows/SocketCreator.zig` | 37,54,88,105,117,137 | same as linux | all |
+| `src/ampe/portable/linux/Skt.zig` | 9, 44 | field + `pn.toStdAddress` call in `accept()` | type + call |
+| `src/ampe/portable/mac/Skt.zig` | 9, 44 | same as portable/linux | type + call |
+| `src/ampe/portable/windows/Skt.zig` | 12 | field only (uds path in separate `uds_path` field) | type storage |
+| `src/ampe/portable/linux/SocketCreator.zig` | 43,52,80,89,94,100 | same pattern | all |
+| `src/ampe/portable/mac/SocketCreator.zig` | 43,52,80,89,94,100 | same pattern | all |
+| `src/ampe/portable/windows/SocketCreator.zig` | 48,50,59,108,114 | resolveIp + getAddressList + initIp4 | all |
+
+#### D1 — Address type: std.net.Address → pn.Addr
+
+`std.net.Address` is an `extern union` where `.any` IS `posix.sockaddr`.
+It is replaced with `pn.Addr` from `posix_net/types.zig`:
+
+```zig
+pub const Addr = extern struct {
+    mem: [128]u8,    // sockaddr_storage — holds any address type
+    len: u32,        // actual socklen_t for this address
+    ip: ?[*]u8,      // C library internal — null when built manually
+    ip_length: c_int,
+    port: c_int,     // port in native byte order
+};
+```
+
+`pn.Addr.mem` is 128-byte sockaddr_storage. All `std.net.Address` patterns map:
+
+| Old pattern | Replacement |
+|---|---|
+| `&addr.any` → `*posix.sockaddr` | `@ptrCast(&addr.mem[0])` |
+| `addr.getOsSockLen()` | `addr.len` |
+| `addr.getPort()` | `pn.addrPort(&addr)` |
+| `addr.any.family` | `pn.addrFamily(&addr)` |
+| `addr.un.path` | `pn.addrUnixPath(&addr)` |
+
+`ip` and `ip_length` are null/0 when addresses are built manually (not via getaddrinfo). Safe:
+`addrFamily` and `addrUnixPath` read from `mem` directly and never touch `ip`/`ip_length`.
+
+#### D2 — addrPort made pure-Zig
+
+Old `addrPort` in `posix_net/socket.zig` called `ffi.bsd_addr_get_port` — a C function from
+bun-usockets, only linked in portable builds. Unusable from native backends.
+
+Replaced with pure-Zig implementation that reads bytes [2..4] of `addr.mem` (network byte
+order port field, same position in both `sockaddr_in` and `sockaddr_in6`):
+
+```zig
+pub fn addrPort(addr: *const Addr) ?u16 {
+    const fam = addrFamily(addr);
+    if (fam != types.AF_INET and fam != types.AF_INET6) return null;
+    const raw: *const u16 = @ptrCast(@alignCast(&addr.mem[2]));
+    return std.mem.bigToNative(u16, raw.*);
+}
+```
+
+Works in both native and portable builds. `bsd_addr_get_port` no longer called from Zig.
+
+#### D3 — Windows uds_path field removed
+
+`portable/windows/Skt.zig` had a separate `uds_path: ?[pn.UDS_PATH_SIZE]u8` field because
+`std.net.Address.un` was void on Windows (before RS4 min version was enforced in build.zig).
+
+With `pn.Addr` (128-byte `mem` = sockaddr_storage), UDS path stores in `mem` uniformly
+on all platforms. The separate field was removed. Windows UDS handling is now identical
+to Linux/macOS in the portable backend.
+
+#### D4 — Sockaddr overlay structs added to posix_net/types.zig
+
+`posix_net/types.zig` is the authoritative home for all network address types.
+New extern structs added for manually constructing `pn.Addr` without `std.net`:
+
+- `SockaddrIn` — IPv4 socket address (family, port, addr, zero padding)
+- `SockaddrIn6` — IPv6 socket address (family, port, flowinfo, addr[16], scope_id)
+- `SockaddrUn` — Unix domain socket address (family, path[UDS_PATH_SIZE])
+
+Helper functions:
+- `initAddrUnix(path: []const u8) error{NameTooLong}!Addr` — builds `pn.Addr` for a UDS path
+- `initAddrIp4(ip: [4]u8, port: u16) Addr` — builds `pn.Addr` for an IPv4 address
+
+These replace `std.net.Address.initUnix` and `std.net.Address.initIp4` respectively.
+
+#### D5 — getaddrinfo exported from posix_net for native backends
+
+`std.net.getAddressList` and `std.net.Address.resolveIp` wrap libc `getaddrinfo`.
+`posix_net/ffi.zig` already declares `getaddrinfo`/`freeaddrinfo` as `extern "c"` (libc).
+These are now exported from `posix_net/posix_net.zig` so all backends can use them.
+
+Native backends import `posix_net` (already wired in `build.zig`) and call
+`pn.getaddrinfo`/`pn.freeaddrinfo` to resolve hostnames — no extra C compilation needed.
+Bun-usockets C symbols in `ffi.zig` cause no linker error in native builds because
+Zig only reports undefined symbols that are actually called, not merely declared.
+
+#### D6 — toStdAddress deleted
+
+`posix_net/socket.zig:toStdAddress` converted `pn.Addr` → `std.net.Address` by memcpy.
+Used only in `portable/linux/Skt.zig:44` and `portable/mac/Skt.zig:44` in `accept()`.
+After the address field changed to `pn.Addr`, `accept()` returns `Skt{ .address = addr }`
+directly — no conversion needed. `toStdAddress` deleted from `socket.zig` and `posix_net.zig`.
+
+#### Part 2 — Address field elimination (future task)
+
+Investigation: after connect/listen, the stored `address: pn.Addr` (128 bytes) is read for:
+1. Port — `getPort()` (TCP only)
+2. Family — `setREUSE()`, `disableNagle()`, `deleteUDSPath()`
+3. UDS path — `deleteUDSPath()` (server side only)
+
+Portable backends fetch port from kernel via `pn.localAddr()` — no stored port needed there.
+
+A minimal alternative `{ family: u16, port: u16, uds_path: ?[UDS_PATH_SIZE]u8 }` is possible
+but requires bind/getsockname/accept to use a temporary local `pn.Addr` for the syscall,
+then extract family/port/path. Non-trivial refactor — deferred to a separate task.
+

@@ -125,21 +125,13 @@ pub fn addrFamily(addr: *const Addr) u16 {
     return family_ptr.*;
 }
 
-/// Convert an internal address to a standard library address.
-pub fn toStdAddress(addr: *const Addr) std.net.Address {
-    var std_addr: std.net.Address = undefined;
-    const dest = std.mem.asBytes(&std_addr);
-    // Copy the raw bytes into the union.
-    // sockaddr_storage (Addr.mem) is large enough for all address types.
-    @memcpy(dest, addr.mem[0..dest.len]);
-    return std_addr;
-}
-
-/// Get the port from an address.
+/// Get the port from an address (pure-Zig; works in both native and portable builds).
+/// Port sits at bytes [2..4] in network byte order in both sockaddr_in and sockaddr_in6.
 pub fn addrPort(addr: *const Addr) ?u16 {
-    const port = ffi.bsd_addr_get_port(addr);
-    if (port <= 0) return null;
-    return @intCast(port);
+    const fam: u16 = addrFamily(addr);
+    if (fam != types.AF_INET and fam != @as(u16, @intCast(types.AF_INET6))) return null;
+    const raw: *const u16 = @ptrCast(@alignCast(&addr.mem[2]));
+    return std.mem.bigToNative(u16, raw.*);
 }
 
 /// Get the Unix Domain Socket path from an address.

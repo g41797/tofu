@@ -15,6 +15,16 @@ pub const AF_UNIX = types.AF_UNIX;
 pub const AF_INET = types.AF_INET;
 pub const AF_INET6 = types.AF_INET6;
 pub const SOCK_STREAM = types.SOCK_STREAM;
+pub const SockaddrIn = types.SockaddrIn;
+pub const SockaddrIn6 = types.SockaddrIn6;
+pub const SockaddrUn = types.SockaddrUn;
+pub const initAddrUnix = types.initAddrUnix;
+pub const initAddrIp4 = types.initAddrIp4;
+
+// DNS resolution (libc extern "c" — available on all platforms without extra compilation)
+pub const addrinfo     = ffi.addrinfo;
+pub const getaddrinfo  = ffi.getaddrinfo;
+pub const freeaddrinfo = ffi.freeaddrinfo;
 
 // Socket operations
 pub const sendBuf = socket.sendBuf;
@@ -35,7 +45,6 @@ pub const addrPort = socket.addrPort;
 pub const addrUnixPath = socket.addrUnixPath;
 pub const deleteUnixPath = socket.deleteUnixPath;
 pub const setLingerAbort = socket.setLingerAbort;
-pub const toStdAddress = socket.toStdAddress;
 
 // Socket creation and resolution
 pub const createSocket = creator.createSocket;
@@ -53,3 +62,4 @@ pub const poll = @import("poll.zig");
 const types = @import("types.zig");
 const socket = @import("socket.zig");
 const creator = @import("creator.zig");
+const ffi = @import("ffi.zig");

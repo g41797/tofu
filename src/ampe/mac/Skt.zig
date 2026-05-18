@@ -4,7 +4,7 @@
 pub const Skt = @This();
 
 socket: ?std.posix.socket_t = null,
-address: std.net.Address = undefined,
+address: pn.Addr = std.mem.zeroes(pn.Addr),
 server: bool = false,
 
 pub fn isSet(skt: *const Skt) bool {
@@ -20,10 +20,7 @@ pub fn socketHandle(skt: *const Skt) ?std.posix.socket_t {
 }
 
 pub fn getPort(skt: *const Skt) ?u16 {
-    return switch (skt.address.any.family) {
-        std.posix.AF.INET, std.posix.AF.INET6 => skt.address.getPort(),
-        else => null,
-    };
+    return pn.addrPort(&skt.address);
 }
 
 pub fn listen(skt: *Skt) !void {
@@ -32,12 +29,13 @@ pub fn listen(skt: *Skt) !void {
 
     const kernel_backlog: u31 = 1024;
     try skt.*.setREUSE();
-    try posix.bind(skt.*.socket.?, &skt.*.address.any, skt.*.address.getOsSockLen());
+    try posix.bind(skt.*.socket.?, @ptrCast(&skt.*.address.mem[0]), @intCast(skt.*.address.len));
     try posix.listen(skt.*.socket.?, kernel_backlog);
 
     // set address to the OS-chosen information - check for UDS!!!.
-    var slen: posix.socklen_t = skt.*.address.getOsSockLen();
-    try posix.getsockname(skt.*.socket.?, &skt.*.address.any, &slen);
+    var slen: posix.socklen_t = @intCast(skt.*.address.len);
+    try posix.getsockname(skt.*.socket.?, @ptrCast(&skt.*.address.mem[0]), &slen);
+    skt.*.address.len = @intCast(slen);
 
     return;
 }
@@ -45,14 +43,15 @@ pub fn listen(skt: *Skt) !void {
 pub fn accept(askt: *Skt) AmpeError!?Skt {
     var skt: Skt = .{};
 
-    var addr: std.net.Address = undefined;
-    var addr_len: posix.socklen_t = askt.*.address.getOsSockLen();
+    var addr: pn.Addr = std.mem.zeroes(pn.Addr);
+    addr.len = askt.*.address.len;
+    var addr_len: posix.socklen_t = @intCast(askt.*.address.len);
 
     const flags: u32 = std.posix.SOCK.NONBLOCK | std.posix.SOCK.CLOEXEC;
 
     skt.socket = acceptOs(
         askt.*.socket.?,
-        &addr.any,
+        @ptrCast(&addr.mem[0]),
         &addr_len,
         flags,
     ) catch |e| {
@@ -71,6 +70,7 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
 
     try skt.setLingerAbort();
 
+    addr.len = @intCast(addr_len);
     skt.address = addr;
 
     return skt;
@@ -81,8 +81,8 @@ pub fn connect(skt: *Skt) AmpeError!bool {
 
     connectOs(
         skt.*.socket.?,
-        &skt.*.address.any,
-        skt.*.address.getOsSockLen(),
+        @ptrCast(&skt.*.address.mem[0]),
+        @intCast(skt.*.address.len),
     ) catch |e| switch (e) {
         error.WouldBlock => {
             connected = false;
@@ -106,8 +106,8 @@ pub fn connect(skt: *Skt) AmpeError!bool {
 }
 
 pub fn setREUSE(skt: *Skt) !void {
-    switch (skt.*.address.any.family) {
-        std.posix.AF.INET, std.posix.AF.INET6 => {
+    switch (pn.addrFamily(&skt.*.address)) {
+        @as(u16, @intCast(std.posix.AF.INET)), @as(u16, @intCast(std.posix.AF.INET6)) => {
             if (@hasDecl(std.posix.SO, "REUSEPORT_LB")) {
                 try std.posix.setsockopt(skt.*.socket.?, std.posix.SOL.SOCKET, std.posix.SO.REUSEPORT_LB, &std.mem.toBytes(@as(c_int, 1)));
             } else if (@hasDecl(std.posix.SO, "REUSEPORT")) {
@@ -149,8 +149,8 @@ pub fn setLingerAbort(skt: *Skt) AmpeError!void {
 }
 
 pub fn disableNagle(skt: *Skt) !void {
-    switch (skt.*.address.any.family) {
-        std.posix.AF.INET, std.posix.AF.INET6 => {
+    switch (pn.addrFamily(&skt.*.address)) {
+        @as(u16, @intCast(std.posix.AF.INET)), @as(u16, @intCast(std.posix.AF.INET6)) => {
             try disable_nagle(skt.*.socket.?);
         },
         else => return,
@@ -159,15 +159,11 @@ pub fn disableNagle(skt: *Skt) !void {
 
 fn deleteUDSPath(skt: *Skt) void {
     if (skt.*.server) {
-        switch (skt.*.address.any.family) {
-            std.posix.AF.UNIX => {
-                const udsPath = &skt.*.address.un.path;
-                const path_len: usize = std.mem.indexOf(u8, udsPath, &[_]u8{0}) orelse udsPath.len;
-                if (path_len > 0) {
-                    std.fs.deleteFileAbsolute(udsPath[0..path_len]) catch {};
-                }
-            },
-            else => {},
+        if (pn.addrFamily(&skt.*.address) == @as(u16, @intCast(std.posix.AF.UNIX))) {
+            const udsPath: []const u8 = pn.addrUnixPath(&skt.*.address);
+            if (udsPath.len > 0) {
+                std.fs.deleteFileAbsolute(udsPath) catch {};
+            }
         }
     }
     return;
@@ -369,3 +365,5 @@ const AmpeError = tofu.status.AmpeError;
 
 const internal = @import("../internal.zig");
 const MsgSender = internal.MsgSender;
+
+const pn = @import("posix_net");

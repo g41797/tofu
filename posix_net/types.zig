@@ -30,6 +30,53 @@ pub const Addr = extern struct {
     port: c_int,
 };
 
+/// IPv4 socket address overlay for writing into Addr.mem directly.
+pub const SockaddrIn = extern struct {
+    family: u16,
+    port:   u16, // network byte order
+    addr:   u32, // network byte order
+    zero:   [8]u8 = .{0} ** 8,
+};
+
+/// IPv6 socket address overlay for writing into Addr.mem directly.
+pub const SockaddrIn6 = extern struct {
+    family:   u16,
+    port:     u16, // network byte order
+    flowinfo: u32,
+    addr:     [16]u8,
+    scope_id: u32,
+};
+
+/// Unix domain socket address overlay for writing into Addr.mem directly.
+pub const SockaddrUn = extern struct {
+    family: u16,
+    path:   [UDS_PATH_SIZE]u8,
+};
+
+/// Build an Addr for a Unix domain socket path.
+pub fn initAddrUnix(path: []const u8) error{NameTooLong}!Addr {
+    if (path.len >= UDS_PATH_SIZE) return error.NameTooLong;
+    var a: Addr = std.mem.zeroes(Addr);
+    var sun: SockaddrUn = .{ .family = @intCast(AF_UNIX), .path = .{0} ** UDS_PATH_SIZE };
+    @memcpy(sun.path[0..path.len], path);
+    @memcpy(a.mem[0..@sizeOf(SockaddrUn)], std.mem.asBytes(&sun));
+    a.len = @sizeOf(SockaddrUn);
+    return a;
+}
+
+/// Build an Addr for an IPv4 address and port.
+pub fn initAddrIp4(ip: [4]u8, port: u16) Addr {
+    var a: Addr = std.mem.zeroes(Addr);
+    const sin: SockaddrIn = .{
+        .family = @intCast(AF_INET),
+        .port   = std.mem.nativeToBig(u16, port),
+        .addr   = @bitCast(ip),
+    };
+    @memcpy(a.mem[0..@sizeOf(SockaddrIn)], std.mem.asBytes(&sin));
+    a.len = @sizeOf(SockaddrIn);
+    return a;
+}
+
 /// Module-specific error union.
 pub const PnError = error{
     AllocationFailed,
@@ -49,4 +96,4 @@ pub const POLL_TYPE_SOCKET_SHUT_DOWN: c_int = 1;
 pub const LIBUS_SOCKET_READABLE: c_int = 1;
 pub const LIBUS_SOCKET_WRITABLE: c_int = if (builtin.os.tag.isDarwin() or builtin.os.tag.isBSD()) 2 else 4;
 
-
+const std = @import("std");

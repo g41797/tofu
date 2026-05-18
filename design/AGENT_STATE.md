@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-05-18
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 6 — GPA leaks resolved; `trySend` pool lifecycle moved inside.
+**Active Phase:** Stage 6 — std.net removal (Part 1 COMPLETE; Part 2 deferred).
 
 ---
 
@@ -36,6 +36,8 @@
   - **FIXED:** GPA memory leak in `_destroy`: when `shtdwnStrt` is true, `grp.destroy()` is now called before returning `ShutdownStarted`, draining mailboxes and freeing the group allocation.
   - **FIXED:** GPA memory leak in `IoSkt.tryRecv` (Mac/portable only): completed pool messages enqueued in `ret` were dropped when a subsequent `recv()` returned `PeerDisconnected`. Fixed by returning `ret` to the caller when non-empty instead of propagating the error immediately.
   - **REFACTORED:** `IoSkt.trySend` pool lifecycle: sent messages are now returned to pool inside `trySend` at the point of send completion. Return type changed from `AmpeError!MessageQueue` to `AmpeError!void`. Caller no longer needs a dequeue loop. Eliminates the latent leak where error exit dropped already-sent messages.
+  - **DONE (Part 1):** Removed all `std.net.*` from the codebase. Replaced `std.net.Address` with `pn.Addr` everywhere. Added pure-Zig helpers to `posix_net/types.zig` and `posix_net/socket.zig`. Exported `getaddrinfo`/`freeaddrinfo` from `posix_net`. Removed `toStdAddress`. Replaced `parseIp4`/`parseIp6` workarounds with `getaddrinfo`-based `resolveAddr` (all backends). Added `libMod.link_libc = true` and `lib_unit_tests.linkLibC()` to `build.zig`. Verified: 8/8 test modes pass (62 posix + 98 portable), 3/3 cross-compile targets pass. See `design/transition-2-bun-usockets-plan.md §21` for full design reference.
+  - **DEFERRED (Part 2):** Investigate removing stored `address: pn.Addr` field from Skt structs — replace with minimal `{ family, port, uds_path? }`. Non-trivial; depends on Part 1 completion.
 
 ---
 
@@ -119,6 +121,55 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: std.net removal (Part 1)
+
+#### Summary
+Removing all `std.net.*` from the tofu codebase in preparation for Zig 0.16 which removes
+`std.net`. Replacing `std.net.Address` with `pn.Addr` (from `posix_net/types.zig`) across
+all backends (linux, mac, windows, portable). Making `addrPort` pure-Zig (removes
+`ffi.bsd_addr_get_port` C dependency). Adding sockaddr overlay structs and address-building
+helpers to `posix_net/types.zig`. Exporting `getaddrinfo`/`freeaddrinfo` from `posix_net`
+for use by native backends. Removing `toStdAddress`. Removing Windows-specific `uds_path`
+field in portable backend (now unified with Linux/macOS via `pn.Addr.mem`).
+See `design/transition-2-bun-usockets-plan.md §21 NON-REMOVABLE` for full design reference.
+
+#### Changes
+- `posix_net/types.zig` — Added `SockaddrIn`, `SockaddrIn6`, `SockaddrUn` extern structs; `initAddrUnix`, `initAddrIp4` helpers.
+- `posix_net/socket.zig` — Replaced `addrPort` with pure-Zig (reads `mem[2..4]`); removed `toStdAddress`.
+- `posix_net/posix_net.zig` — Added exports: `SockaddrIn`, `SockaddrIn6`, `SockaddrUn`, `initAddrUnix`, `initAddrIp4`, `addrinfo`, `getaddrinfo`, `freeaddrinfo`; removed `toStdAddress` re-export.
+- `build.zig` — Added `libMod.link_libc = true` (unconditional) and `lib_unit_tests.linkLibC()` (unconditional).
+- `src/ampe/linux/Skt.zig` — `address: pn.Addr`; updated `listen`, `accept`, `connect`, `setREUSE`, `disableNagle`, `deleteUDSPath`, `getPort` to use `pn.*` helpers.
+- `src/ampe/linux/SocketCreator.zig` — `createListenerSocket`/`createConnectSocket` take `*const pn.Addr`; `resolveAddr` uses `pn.getaddrinfo` (replaced `parseIp4`/`parseIp6` workarounds); UDS via `pn.initAddrUnix`.
+- `src/ampe/mac/Skt.zig` — Same changes as `linux/Skt.zig`.
+- `src/ampe/mac/SocketCreator.zig` — Same changes as `linux/SocketCreator.zig`.
+- `src/ampe/windows/Skt.zig` — `address: pn.Addr`; `findFreeTcpPort` uses `pn.initAddrIp4`; all `addr.any.*`/`getOsSockLen()` replaced.
+- `src/ampe/windows/SocketCreator.zig` — Same pattern as `linux/SocketCreator.zig`.
+- `src/ampe/portable/linux/Skt.zig` — `address: pn.Addr`; removed `toStdAddress` call in `accept`; `connect`/`disableNagle`/`deleteUDSPath` use `pn.addrFamily`/`pn.addrUnixPath`.
+- `src/ampe/portable/mac/Skt.zig` — Same as portable/linux/Skt.zig.
+- `src/ampe/portable/windows/Skt.zig` — `address: pn.Addr`; removed `uds_path` field; unified UDS via `pn.Addr.mem`.
+- `src/ampe/portable/linux/SocketCreator.zig` — `createListenerSocket`/`createConnectSocket` take `*const pn.Addr`; `resolveAddr` uses `pn.getaddrinfo`; UDS via `pn.initAddrUnix`.
+- `src/ampe/portable/mac/SocketCreator.zig` — Same as portable/linux/SocketCreator.zig.
+- `src/ampe/portable/windows/SocketCreator.zig` — Same; UDS no longer needs separate `uds_path` path.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| `zig build test` (Linux, Debug) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSafe` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseFast` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Doptimize=ReleaseSmall` (Linux) | ✅ PASS (62/62) |
+| `zig build test -Dnetwork=portable` (Linux, Debug) | ✅ PASS (98/98) |
+| `zig build test -Doptimize=ReleaseSafe -Dnetwork=portable` (Linux) | ✅ PASS (98/98) |
+| `zig build test -Doptimize=ReleaseFast -Dnetwork=portable` (Linux) | ✅ PASS (98/98) |
+| `zig build test -Doptimize=ReleaseSmall -Dnetwork=portable` (Linux) | ✅ PASS (98/98) |
+| `zig build -Dtarget=x86_64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=aarch64-macos -Dnetwork=portable` | ✅ PASS |
+| `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` | ✅ PASS |
+| `grep -r "std\.net" src/ posix_net/` | ✅ 0 results (Zig files) |
+
+---
 
 ### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 6: Refactor `IoSkt.trySend` pool lifecycle
 

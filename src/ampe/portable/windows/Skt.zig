@@ -1,6 +1,3 @@
-// Windows portable Skt: std.net.Address.un = void on Windows, so UDS path
-// is stored in a separate uds_path field rather than the address union.
-
 const std = @import("std");
 const tofu = @import("../../../tofu.zig");
 const AmpeError = tofu.status.AmpeError;
@@ -9,8 +6,7 @@ const pn = @import("posix_net");
 pub const Skt = @This();
 
 fd: pn.Fd = pn.INVALID_FD,
-address: std.net.Address = undefined,
-uds_path: ?[pn.UDS_PATH_SIZE]u8 = null,
+address: pn.Addr = std.mem.zeroes(pn.Addr),
 server: bool = false,
 
 pub fn isSet(skt: *const Skt) bool {
@@ -42,23 +38,21 @@ pub fn accept(askt: *Skt) AmpeError!?Skt {
         return toAmpe(e);
     };
     pn.setLingerAbort(client_fd);
-    return Skt{ .fd = client_fd, .address = pn.toStdAddress(&addr) };
+    return Skt{ .fd = client_fd, .address = addr };
 }
 
 /// Connect the socket to the stored address.
 /// Returns false when connect is in progress; caller waits for WRITABLE.
 pub fn connect(skt: *Skt) AmpeError!bool {
-    if (skt.uds_path) |path| {
-        if (!skt.server) {
-            const len = std.mem.indexOfScalar(u8, &path, 0) orelse pn.UDS_PATH_SIZE;
-            pn.connectSocketUnix(skt.fd, path[0..len]) catch |e| {
-                if (e == pn.PnError.WouldBlock) return false;
-                return toAmpe(e);
-            };
-            return true;
-        }
+    if (pn.addrFamily(&skt.address) == @as(u16, @intCast(pn.AF_UNIX))) {
+        const path = pn.addrUnixPath(&skt.address);
+        pn.connectSocketUnix(skt.fd, path) catch |e| {
+            if (e == pn.PnError.WouldBlock) return false;
+            return toAmpe(e);
+        };
+        return true;
     }
-    pn.connectSocket(skt.fd, &skt.address.any, @intCast(skt.address.getOsSockLen())) catch |e| {
+    pn.connectSocket(skt.fd, @ptrCast(&skt.address.mem[0]), @intCast(skt.address.len)) catch |e| {
         if (e == pn.PnError.WouldBlock) return false;
         return toAmpe(e);
     };
@@ -73,9 +67,8 @@ pub fn setLingerAbort(skt: *Skt) AmpeError!void {
 }
 
 pub fn disableNagle(skt: *Skt) !void {
-    if (skt.uds_path != null) return;
-    const family = skt.address.any.family;
-    if (family == pn.AF_INET or family == pn.AF_INET6) {
+    const family = pn.addrFamily(&skt.address);
+    if (family == @as(u16, @intCast(pn.AF_INET)) or family == @as(u16, @intCast(pn.AF_INET6))) {
         pn.nodelay(skt.fd, true);
     }
 }
@@ -114,12 +107,11 @@ pub fn close(skt: *Skt) void {
 
 fn deleteUDSPath(skt: *Skt) void {
     if (!skt.server) return;
-    if (skt.uds_path == null) return;
-    const path = skt.uds_path.?;
-    const len = std.mem.indexOfScalar(u8, &path, 0) orelse pn.UDS_PATH_SIZE;
-    if (len == 0 or path[0] == 0) return;
+    if (pn.addrFamily(&skt.address) != @as(u16, @intCast(pn.AF_UNIX))) return;
+    const path = pn.addrUnixPath(&skt.address);
+    if (path.len == 0 or path[0] == 0) return;
     var path_buf: [pn.UDS_PATH_SIZE + 1:0]u8 = .{0} ** (pn.UDS_PATH_SIZE + 1);
-    const copy_len = @min(len, pn.UDS_PATH_SIZE);
+    const copy_len = @min(path.len, pn.UDS_PATH_SIZE);
     @memcpy(path_buf[0..copy_len], path[0..copy_len]);
     pn.deleteUnixPath(@ptrCast(&path_buf));
 }

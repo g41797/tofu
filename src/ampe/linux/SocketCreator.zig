@@ -34,8 +34,8 @@ pub fn fromAddress(sc: *SocketCreator, addrs: Address) AmpeError!Skt {
 pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
     const cnf: *TCPServerAddress = &sc.addrs.tcp_server_addr;
 
-    const addr = std.net.Address.resolveIp(cnf.addrToSlice(), cnf.port.?) catch |er| {
-        log.info("createTcpServer resolveIp failed with error {s}", .{@errorName(er)});
+    const addr = resolveAddr(cnf.addrToSlice(), cnf.port.?) catch |er| {
+        log.info("createTcpServer resolveAddr failed with error {s}", .{@errorName(er)});
         return AmpeError.InvalidAddress;
     };
 
@@ -51,23 +51,11 @@ pub fn createTcpServer(sc: *SocketCreator) AmpeError!Skt {
 pub fn createTcpClient(sc: *SocketCreator) AmpeError!Skt {
     const cnf: *TCPClientAddress = &sc.addrs.tcp_client_addr;
 
-    var list = std.net.getAddressList(sc.allocator, cnf.addrToSlice(), cnf.port.?) catch {
+    const addr = resolveAddr(cnf.addrToSlice(), cnf.port.?) catch {
         return AmpeError.InvalidAddress;
     };
-    defer list.deinit();
 
-    if (list.addrs.len == 0) {
-        return AmpeError.InvalidAddress;
-    }
-
-    for (list.addrs) |addr| {
-        const ret = createConnectSocket(&addr) catch {
-            continue;
-        };
-
-        return ret;
-    }
-    return AmpeError.InvalidAddress;
+    return createConnectSocket(&addr) catch AmpeError.InvalidAddress;
 }
 
 pub fn createUdsServer(sc: *SocketCreator) AmpeError!Skt {
@@ -85,7 +73,7 @@ pub fn createUdsListener(allocator: Allocator, path: []const u8) AmpeError!Skt {
         };
     }
 
-    var addr = std.net.Address.initUnix(udsPath) catch {
+    const addr = pn.initAddrUnix(udsPath) catch {
         return AmpeError.InvalidAddress;
     };
 
@@ -102,7 +90,7 @@ pub fn createUdsClient(sc: *SocketCreator) AmpeError!Skt {
 }
 
 pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
-    var addr = std.net.Address.initUnix(path) catch {
+    const addr = pn.initAddrUnix(path) catch {
         return AmpeError.InvalidAddress;
     };
 
@@ -113,14 +101,13 @@ pub fn createUdsSocket(path: []const u8) AmpeError!Skt {
     return skt;
 }
 
-// from IoUring.zig#L3473 (0.14.1), slightly changed
-pub fn createListenerSocket(addr: *const std.net.Address) !Skt {
+pub fn createListenerSocket(addr: *const pn.Addr) !Skt {
     var ret: Skt = .{
         .address = addr.*,
         .socket = null,
     };
 
-    ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+    ret.socket = try posix.socket(@intCast(pn.addrFamily(&ret.address)), posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer ret.close();
 
     if (builtin.os.tag == .windows) {
@@ -134,13 +121,13 @@ pub fn createListenerSocket(addr: *const std.net.Address) !Skt {
     return ret;
 }
 
-pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
+pub fn createConnectSocket(addr: *const pn.Addr) !Skt {
     var ret: Skt = .{
         .address = addr.*,
         .socket = null,
     };
 
-    ret.socket = try posix.socket(ret.address.any.family, posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
+    ret.socket = try posix.socket(@intCast(pn.addrFamily(&ret.address)), posix.SOCK.STREAM | posix.SOCK.CLOEXEC | posix.SOCK.NONBLOCK, 0);
     errdefer ret.close();
 
     if (builtin.os.tag == .windows) {
@@ -149,6 +136,33 @@ pub fn createConnectSocket(addr: *const std.net.Address) !Skt {
     }
     try ret.setLingerAbort();
     return ret;
+}
+
+/// Resolve a host string and port to a pn.Addr using getaddrinfo (libc).
+/// Supports IPv4/IPv6 literals, DNS hostnames, and empty string (wildcard).
+fn resolveAddr(host: []const u8, port: u16) error{InvalidAddress}!pn.Addr {
+    if (host.len == 0) {
+        return pn.initAddrIp4(.{ 0, 0, 0, 0 }, port);
+    }
+    var host_buf: [256]u8 = undefined;
+    if (host.len >= host_buf.len) return error.InvalidAddress;
+    @memcpy(host_buf[0..host.len], host);
+    host_buf[host.len] = 0;
+    var port_buf: [8]u8 = undefined;
+    const port_str = std.fmt.bufPrintZ(&port_buf, "{d}", .{port}) catch return error.InvalidAddress;
+    var hints: pn.addrinfo = std.mem.zeroes(pn.addrinfo);
+    hints.ai_socktype = pn.SOCK_STREAM;
+    var res: ?*pn.addrinfo = null;
+    if (pn.getaddrinfo(@ptrCast(&host_buf), port_str.ptr, &hints, &res) != 0) return error.InvalidAddress;
+    defer if (res) |r| pn.freeaddrinfo(r);
+    const ai = res orelse return error.InvalidAddress;
+    const raw_addr = ai.ai_addr orelse return error.InvalidAddress;
+    const addrlen: usize = @intCast(ai.ai_addrlen);
+    if (addrlen == 0 or addrlen > 128) return error.InvalidAddress;
+    var addr: pn.Addr = std.mem.zeroes(pn.Addr);
+    @memcpy(addr.mem[0..addrlen], @as([*]const u8, @ptrCast(raw_addr))[0..addrlen]);
+    addr.len = @intCast(addrlen);
+    return addr;
 }
 
 const tofu = @import("../../tofu.zig");
@@ -181,3 +195,5 @@ const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;
 const builtin = @import("builtin");
+
+const pn = @import("posix_net");
