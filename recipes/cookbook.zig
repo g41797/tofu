@@ -29,7 +29,6 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const testing = std.testing;
-const alctr = std.testing.allocator;
 
 pub const tofu = @import("tofu");
 pub const Reactor = tofu.Reactor;

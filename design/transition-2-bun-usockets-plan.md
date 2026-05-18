@@ -1508,3 +1508,97 @@ No concurrent access to `grp` exists.
 All 4 optimization modes passed on Linux x86_64.
 Cross-compile targets (x86_64-macos, aarch64-macos, x86_64-windows-gnu) built clean.
 
+---
+
+## 20. Stage 6 Stability — IoSkt.tryRecv Completed-Message Drop Fix (2026-05-18)
+
+**Problem.**
+On Mac (kqueue/portable backend), `EV_EOF` on the READ filter maps to `act.recv = .on`
+rather than `act.err = .on`. Linux epoll maps peer disconnect to `act.err`, so `tryRecv`
+is never called on disconnect there. On Mac, `tryRecv` is called.
+
+Inside `IoSkt.tryRecv`, each call to `recv()` that completes a message enqueues it in
+the local `ret` queue. On the next `recv()` call, `getFromPool()` obtains a new buffer
+and `recvToBuf()` returns 0 bytes (EOF) → `PeerDisconnected` error. The `else => return e`
+branch propagated the error, silently dropping `ret`. The completed pool message inside
+was never freed or returned to the pool. GPA reported `Pool.init:48` allocation leaked.
+
+`_freeAll()` assertion still passed: `currMsgs` was decremented when the message left
+the pool; the assertion only counts messages currently in the linked list.
+
+**Fix.**
+In `IoSkt.tryRecv()`, changed `else => return e` to:
+```
+else => { if (!ret.empty()) return ret; return e; }
+```
+Completed received messages are application data — they belong to the caller.
+Returning them lets `processTriggeredChannels` deliver via `sendToCtx` normally.
+When `ret` is empty, the error propagates as before.
+
+**Why safe.**
+After returning a non-empty `ret`, the channel is not immediately marked for delete.
+On the next reactor loop, `triggers()` sees `mr.msg != null` → `recv = .on` → `tryRecv`
+called again → `PeerDisconnected` with empty `ret` → error propagates → channel deleted.
+No message data is lost. Cleanup is delayed by at most one reactor loop iteration.
+
+File: `src/ampe/triggeredSkts.zig`, function `IoSkt.tryRecv`.
+
+**Verification.**
+Pending Mac CI run (all 4 optimization modes).
+
+---
+
+## Mac kqueue Behavior Analysis — Low-Level Operation Paths
+
+### Key difference between backends
+
+| Backend | Peer disconnect event | Mapped to |
+|---|---|---|
+| Linux epoll | `EPOLLHUP` / `EPOLLERR` | `act.err = .on` |
+| Mac kqueue (portable) | `EV_EOF` on READ filter | `act.recv = .on` |
+| Mac kqueue (portable) | `EV_EOF` on WRITE filter | `act.err = .on` |
+
+Source: `src/ampe/portable/triggers.zig`.
+
+### Operation path analysis
+
+| Operation | Mac kqueue EV_EOF effect | Safe? | Notes |
+|---|---|---|---|
+| `tryRecv` | EV_EOF on READ → `act.recv = .on` → `tryRecv` called | ✅ Fixed (§20) | Was leaking completed messages in `ret` |
+| `trySend` | EV_EOF on WRITE → `act.err = .on` → channel marked for delete | ✅ Safe | `trySend` not called on write-side EOF |
+| `tryConnect` | Connect failure → `act.err = .on` via connect filter | ✅ Safe | EV_EOF not relevant here |
+| `tryAccept` | EV_EOF on listener not expected in normal operation | ✅ Safe | Listener failure goes via `act.err` |
+| Pool trigger | `act.pool` set internally, not by kqueue | ✅ Safe | Independent of EV_EOF |
+| Notify trigger | `act.notify` set by notifier socket | ✅ Safe | Independent of EV_EOF |
+| Error trigger | EV_EOF on WRITE → `act.err = .on` | ✅ Safe | Correct path for write-side failures |
+
+---
+
+## Proposed Fix: IoSkt.trySend drops already-sent messages on send error
+
+**Problem.**
+In `trySend()`, messages fully sent to the OS are enqueued in `ret`. If a subsequent
+`send()` returns an error (broken pipe, network failure), `try` propagates it. The caller
+catches the error and marks the channel for delete — but `ret` is dropped. Already-sent
+pool messages are never returned to the pool. Potential GPA leak on any platform.
+
+Not triggered by Mac kqueue EV_EOF (write-side EOF → `act.err`, `trySend` not called).
+
+**Proposed fix.**
+Add before the `while` loop in `IoSkt.trySend()`:
+```zig
+errdefer {
+    var leak = ret.dequeue();
+    while (leak != null) {
+        ioskt.pool.put(leak.?);
+        leak = ret.dequeue();
+    }
+}
+```
+
+**Why different from §20 recv fix.**
+- Recv fix: completed messages are received application data → return to CALLER for delivery.
+- Send fix: already-sent messages have data on the wire → return buffer to POOL.
+
+**Status: proposed. Not yet implemented. Awaiting separate approval.**
+

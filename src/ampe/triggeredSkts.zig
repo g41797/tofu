@@ -462,7 +462,10 @@ pub const IoSkt = struct {
                     AmpeError.PoolEmpty => {
                         return ret;
                     },
-                    else => return e,
+                    else => {
+                        if (!ret.empty()) return ret;
+                        return e;
+                    },
                 }
             };
 

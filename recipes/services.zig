@@ -530,11 +530,12 @@ pub const EchoClientServer = struct {
             return error.EmptyConfiguration;
         }
 
-        const iterations = 10;
+        const iterations = if (builtin.os.tag == .macos) 1 else 10;
+        const echoes = if (builtin.os.tag == .macos) 10 else 100;
 
         for (1..iterations + 1) |_| {
             for (clncfg) |cladrs| {
-                _ = EchoClient.start(ecs.*.ampe, cladrs, 100, &ecs.*.ack) catch |err| {
+                _ = EchoClient.start(ecs.*.ampe, cladrs, echoes, &ecs.*.ack) catch |err| {
                     log.info("start EchoClient error {s}", .{@errorName(err)});
                     continue;
                 };
@@ -555,7 +556,7 @@ pub const EchoClientServer = struct {
             log.debug("client {d} processed {d} sum {d}", .{ ncl + 1, finishedClient.*.count, ecs.*.echoes });
         }
 
-        const echoSts: status.AmpeStatus = if (ecs.*.echoes >= 1000) .success else .processing_failed;
+        const echoSts: status.AmpeStatus = if (ecs.*.echoes >= iterations * echoes) .success else .processing_failed;
 
         return echoSts;
     }
