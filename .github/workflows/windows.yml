@@ -7,13 +7,14 @@ on:
 
 jobs:
   build:
-    name: Build and test (${{ matrix.network }})
+    name: Build and test (${{ matrix.network }}, ${{ matrix.optimize }})
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         os: [windows]
         network: [posix, portable]
+        optimize: [Debug, ReleaseSafe, ReleaseFast, ReleaseSmall]
 
     steps:
       - run: git config --global core.autocrlf false
@@ -26,10 +27,4 @@ jobs:
         with:
           version: 0.15.2
 
-      - run: rm -rf ./.zig-cache/
-        shell: bash
-
-      - run: zig build test -freference-trace --summary all -Doptimize=Debug        -Dnetwork=${{ matrix.network }}
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSafe  -Dnetwork=${{ matrix.network }}
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseFast  -Dnetwork=${{ matrix.network }}
-      - run: zig build test -freference-trace --summary all -Doptimize=ReleaseSmall -Dnetwork=${{ matrix.network }}
+      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }} -Dnetwork=${{ matrix.network }}
