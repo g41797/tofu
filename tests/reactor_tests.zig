@@ -334,7 +334,7 @@ const getCurrentTid = Thread.getCurrentId;
 const testing = std.testing;
 
 const gpa = if (isMac)
-    std.heap.c_allocator
+    std.heap.raw_c_allocator
 else
     std.testing.allocator;
 
