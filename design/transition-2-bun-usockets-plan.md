@@ -1764,3 +1764,84 @@ A minimal alternative `{ family: u16, port: u16, uds_path: ?[UDS_PATH_SIZE]u8 }`
 but requires bind/getsockname/accept to use a temporary local `pn.Addr` for the syscall,
 then extract family/port/path. Non-trivial refactor — deferred to a separate task.
 
+---
+
+## Proposal — Simm Test Isolation
+
+### Problem
+
+`reactor_tests.zig::simm test` runs 8 task functions concurrently via `RunTasks`:
+
+```zig
+const tests = &[_]*const fn () void{
+    &try_ampe_just_create_destroy,
+    &try_connect_disconnect,       // ← includes TCP + UDS scenarios
+    &try_handle_reconnect_single_threaded,
+    &try_handle_reconnect_multithreaded,
+    // repeated once more
+};
+tofu.RunTasks(gpa, tests) catch unreachable;
+```
+
+Each `try_connect_disconnect` runs `handleStartOfUdsListeners`, `handleConnnectOfTcpClientServer`,
+and `handleConnnectOfUdsClientServer` in sequence. With 8 concurrent tasks this creates heavy
+overlapping I/O. Under CI scheduler conditions a `waitReceive` in the TCP path occasionally
+dequeues a stray engine message (e.g. `uds_path_not_found` from a concurrent UDS scenario)
+instead of the expected `channel_closed`, triggering the `assert` at `cookbook.zig:618`.
+
+Observed: passes consistently locally (4/4 runs); failed once on Linux debug portable CI.
+
+### Root Cause
+
+`handleConnect` (`cookbook.zig`) uses `waitReceive(INFINITE_TIMEOUT)` to collect close
+responses. It asserts exact status without logging the actual value. Any message delivered
+out of expected order (or belonging to a different context) causes an unrecoverable panic
+instead of a diagnosable test failure.
+
+Two contributing factors:
+1. `assert` (hard panic) instead of `try testing.expectEqual` (soft, diagnosable).
+2. No per-scenario timeout — an unexpected message can silently consume an expected slot.
+
+### Proposed Fix
+
+**File:** `recipes/cookbook.zig`, function `handleConnect`, lines 597–619.
+
+Replace bare `assert` calls on `closeListenerResp` and `closeClientResp` with
+`testing.expectEqual` (or equivalent error-returning checks):
+
+```zig
+// Before
+assert(closeListenerResp.?.*.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
+// ...
+assert(closeClientResp.?.*.bhdr.status == status.status_to_raw(AmpeStatus.channel_closed));
+
+// After
+const expected: u8 = status.status_to_raw(AmpeStatus.channel_closed);
+if (closeListenerResp.?.*.bhdr.status != expected) {
+    log.err("closeListenerResp: expected channel_closed, got {d}", .{closeListenerResp.?.*.bhdr.status});
+    return error.UnexpectedStatus;
+}
+---
+
+## 22. Wepoll — Transition to Managed Dependency
+
+### Why
+To simplify dependency management and follow the same pattern as `usockets`, the `wepoll` submodule is replaced by a `build.zig.zon` dependency. This eliminates manual submodule management and ensures consistent fetching via the Zig package manager.
+
+### Key Changes
+- **`build.zig.zon`**: Added `wepoll` to the `.dependencies` section.
+- **`build.zig`**:
+    - Retrieve the `wepoll` dependency when targeting Windows.
+    - Update all C source and include paths to use `wepoll.path("")`.
+    - Ensure both `libMod` and `lib_unit_tests` are updated.
+- **Submodule Removal**: The physical directory `src/ampe/windows/wepoll/` is removed from the repository.
+
+### Verification
+- **Linux host**: Run 4-mode verification (`zbta_linux.sh`) to ensure no regressions.
+- **Windows cross-compile**:
+    - `zig build -Dtarget=x86_64-windows-gnu` (posix backend).
+    - `zig build -Dtarget=x86_64-windows-gnu -Dnetwork=portable` (portable backend).
+
+### Non-Removable Design Reference
+This transition centralizes all C-layer dependencies in `build.zig.zon`. Future updates to `wepoll` only require updating the commit hash in `build.zig.zon`.
+

@@ -44,6 +44,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const wepoll = if (target.result.os.tag == .windows) b.dependency("wepoll", .{}) else null;
+
 
     // Add the posix_net module
     const posixNetMod = b.addModule("posix_net", .{
@@ -114,7 +116,7 @@ pub fn build(b: *std.Build) void {
         libMod.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
             libMod.addIncludePath(b.path("posix_net/adapters"));
-            libMod.addIncludePath(b.path("src/ampe/windows/wepoll"));
+            libMod.addIncludePath(wepoll.?.path(""));
         }
     }
 
@@ -133,8 +135,8 @@ pub fn build(b: *std.Build) void {
     });
 
     if (target.result.os.tag == .windows) {
-        lib.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib.addIncludePath(b.path("src/ampe/windows/wepoll"));
+        lib.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib.addIncludePath(wepoll.?.path(""));
     }
 
     b.installArtifact(lib);
@@ -184,8 +186,8 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.linkSystemLibrary("ntdll");
         lib_unit_tests.linkSystemLibrary("kernel32");
 
-        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/ampe/windows/wepoll/wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
+        lib_unit_tests.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        lib_unit_tests.addIncludePath(wepoll.?.path(""));
     }
 
     if (network == .portable) {
@@ -215,7 +217,7 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
             lib_unit_tests.addIncludePath(b.path("posix_net/adapters"));
-            lib_unit_tests.addIncludePath(b.path("src/ampe/windows/wepoll"));
+            lib_unit_tests.addIncludePath(wepoll.?.path(""));
         }
     }
 

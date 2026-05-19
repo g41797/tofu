@@ -1,8 +1,8 @@
 # Agent State & Handover
 
-**Last Updated:** 2026-05-18
-**Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 7 — `temp` module removed; `buildPath()` and `createUdsListener()` allocator-free.
+**Last Updated:** 2026-05-19
+**Last Agent:** Gemini CLI
+**Active Phase:** Stage 8 — Wepoll transition from submodule to managed dependency.
 
 ---
 
@@ -22,9 +22,11 @@
 **Update this section at the start and end of every session.**
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
-- Stage 0.5 through Stage 6 (portable) are largely complete; cross-platform CI is passing for portable.
-- **Current Status:** All reported issues resolved; test suite verified leak-free and stable across all primary platforms.
+- Stage 0.5 through Stage 7 (Documentation) are complete; cross-platform CI is passing for portable.
+- **Active Task:** Transitioning `wepoll` submodule to a `build.zig.zon` managed dependency.
+- **Current Status:** Analysis complete. Plan updated and rule-compliant. Implementation pending.
 - **Summary of Findings:**
+  - **REFACTORED (Stage 8):** Defined the transition strategy for `wepoll`. Added Section 22 to the authoritative plan. Updated the implementation sequence to include Stage 8.
   - **FIXED:** Panic in `acceptOs` on macOS (`integer does not fit in destination type`).
   - **FIXED:** Mismapped `EALREADY` in `connect()`.
   - **FIXED:** Memory leaks in test suite by ensuring explicit heap-allocated object deinitialization.
