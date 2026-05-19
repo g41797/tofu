@@ -50,8 +50,8 @@ pub extern fn us_loop_run_tick(loop: *anyopaque, timeout_ms: c_int) void;
 pub extern fn us_internal_poll_type(p: *anyopaque) c_int;
 
 // Platform APIs
-pub extern fn unlink(path: [*:0]const u8) c_int;   // POSIX (Linux, macOS)
-pub extern fn _unlink(path: [*:0]const u8) c_int;  // Windows (gnu + msvc)
+pub extern fn unlink(path: [*:0]const u8) c_int; // POSIX (Linux, macOS)
+pub extern fn _unlink(path: [*:0]const u8) c_int; // Windows (gnu + msvc)
 
 // DNS resolution via libc
 // Windows ADDRINFOA: ai_addrlen is SIZE_T (8 bytes on x64); ai_canonname before ai_addr.

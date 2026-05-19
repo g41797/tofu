@@ -7,12 +7,12 @@ const build_options = @import("build_options");
 
 /// Platform-specific Poller implementation.
 /// Selected at compile time based on network backend and OS.
-pub const Poller = if (build_options.network == .portable)
-    @import("portable/posix_net_backend.zig").Poller
+pub const Poller = if (build_options.network == .posixnet)
+    @import("../platform/posixnet/posixnet_backend.zig").Poller
 else switch (builtin.os.tag) {
-    .windows => @import("windows/wepoll_backend.zig").Poller,
-    .linux => @import("linux/epoll_backend.zig").Poller,
-    .macos, .freebsd, .openbsd, .netbsd => @import("mac/kqueue_backend.zig").Poller,
+    .windows => @import("../platform/stdposix/windows/wepoll_backend.zig").Poller,
+    .linux => @import("../platform/stdposix/linux/epoll_backend.zig").Poller,
+    .macos, .freebsd, .openbsd, .netbsd => @import("../platform/stdposix/mac/kqueue_backend.zig").Poller,
     else => @compileError("unsupported platform"),
 };
 
@@ -28,10 +28,10 @@ pub const poll_SEC_TIMEOUT = common.poll_SEC_TIMEOUT;
 pub const TcIterator = common.TcIterator;
 
 pub const core = @import("core.zig");
-pub const triggers = if (build_options.network == .portable)
-    @import("portable/triggers.zig")
+pub const triggers = if (build_options.network == .posixnet)
+    @import("../platform/posixnet/triggers.zig")
 else switch (builtin.os.tag) {
-    .windows => @import("windows/triggers.zig"),
-    .macos, .freebsd, .openbsd, .netbsd => @import("mac/triggers.zig"),
-    else => @import("linux/triggers.zig"),
+    .windows => @import("../platform/stdposix/windows/triggers.zig"),
+    .macos, .freebsd, .openbsd, .netbsd => @import("../platform/stdposix/mac/triggers.zig"),
+    else => @import("../platform/stdposix/linux/triggers.zig"),
 };

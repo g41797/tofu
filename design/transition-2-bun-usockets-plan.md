@@ -881,6 +881,8 @@ if (target.result.os.tag == .windows) {
 | **5** | macOS verify | Cross-compile `x86_64-macos -Dnetwork=portable` and `aarch64-macos -Dnetwork=portable` succeed — **DONE** |
 | **6** | Native hardware testing + CI network matrix live | Full sandwich passes on Linux; `AGENT_STATE.md` bumped |
 | **7** | Documentation — fix and complete all docs affected by migration | All changed modules have accurate doc comments per §5; no stale references remain |
+| **8** | Transition `wepoll` from git submodule to `build.zig.zon` managed dependency | `wepoll` listed in `.zon`; `src/ampe/windows/wepoll/` removed; all `build.zig` references use `b.dependency("wepoll", .{})`; Windows CI passes — **DONE** |
+| **9** | Source Partitioning — introduce `src/platform/stdposix/` and `src/platform/posixnet/`; move `posix_net/` root into `src/platform/posixnet/wrapper/` | All tests pass 4-mode sandwich on Linux; cross-compiles clean — see §23 — **DONE** |
 | **Polish** | Refactor `build.zig` portable C setup into a helper (eliminate duplication between `libMod` and `lib_unit_tests`). Create `posix_net/adapters/us_epoll_linux.c` and `posix_net/adapters/us_kqueue_mac.c` as per-platform replacements for `epoll_kqueue.c`. Revert `epoll_kqueue.c` to upstream (remove 4→3 arg patch, `us_loop_run_tick`, `#ifndef _WIN32` guard). Eliminates all dual-path patching of `epoll_kqueue.c`. | `zig build test` passes; cross-compiles pass; `epoll_kqueue.c` matches upstream |
 
 **Stage 3 — Linux 4-mode sandwich (DONE — 99/99):**
@@ -1844,4 +1846,382 @@ To simplify dependency management and follow the same pattern as `usockets`, the
 
 ### Non-Removable Design Reference
 This transition centralizes all C-layer dependencies in `build.zig.zon`. Future updates to `wepoll` only require updating the commit hash in `build.zig.zon`.
+
+---
+
+## 23. Source Partitioning — Stage 9
+
+### Why
+
+The current source tree mixes two distinct network backends with the reactor infrastructure,
+and leaves the `posix_net/` module floating at the repo root. Problems a first-time visitor sees:
+
+- `posix_net/` at repo root with no indication it belongs to the portable backend.
+- `src/ampe/linux/`, `mac/`, `windows/` and `portable/` sit beside reactor files with no grouping.
+- The two backends are not identifiable as such from the directory listing.
+
+Stage 9 introduces `src/platform/` to group both backends clearly. No functional change.
+Only file moves and the path updates that follow.
+
+### Commit
+
+`Partition src: introduce platform/ backends`
+
+### Target Layout
+
+```
+src/
+├── tofu.zig
+├── ampe.zig
+├── address.zig
+├── message.zig
+├── status.zig
+│
+├── platform/
+│   ├── stdposix/              ← was src/ampe/linux|mac|windows/
+│   │   ├── linux/
+│   │   │   ├── epoll_backend.zig
+│   │   │   ├── Skt.zig
+│   │   │   ├── SocketCreator.zig
+│   │   │   └── triggers.zig
+│   │   ├── mac/
+│   │   │   ├── kqueue_backend.zig
+│   │   │   ├── Skt.zig
+│   │   │   ├── SocketCreator.zig
+│   │   │   └── triggers.zig
+│   │   └── windows/
+│   │       ├── wepoll_backend.zig
+│   │       ├── Skt.zig
+│   │       ├── SocketCreator.zig
+│   │       └── triggers.zig
+│   │
+│   └── posixnet/              ← was src/ampe/portable/ + posix_net/ (repo root)
+│       ├── posixnet_backend.zig   ← was portable/posix_net_backend.zig (renamed)
+│       ├── triggers.zig
+│       ├── linux/
+│       │   ├── Skt.zig
+│       │   └── SocketCreator.zig
+│       ├── mac/
+│       │   ├── Skt.zig
+│       │   └── SocketCreator.zig
+│       ├── windows/
+│       │   ├── Skt.zig
+│       │   └── SocketCreator.zig
+│       └── wrapper/           ← was posix_net/ at repo root
+│           ├── posix_net.zig  ← module root; import alias "posix_net" unchanged
+│           ├── ffi.zig
+│           ├── poll.zig
+│           ├── socket.zig
+│           ├── creator.zig
+│           ├── types.zig
+│           └── adapters/
+│               ├── pn_utils.c
+│               ├── us_epoll_win.c
+│               ├── win_compat.h
+│               └── sys/
+│                   ├── epoll.h
+│                   ├── eventfd.h
+│                   └── timerfd.h
+│
+└── ampe/                      (unchanged — reactor infrastructure)
+    ├── core.zig
+    ├── common.zig
+    ├── internal.zig
+    ├── poller.zig
+    ├── Notifier.zig
+    ├── Reactor.zig
+    ├── triggeredSkts.zig
+    ├── channels.zig
+    ├── Pool.zig
+    ├── MchnGroup.zig
+    ├── Appendable.zig
+    ├── IntrusiveQueue.zig
+    ├── vtables.zig
+    └── testHelpers.zig
+```
+
+### Naming conflict resolution
+
+`src/ampe/core.zig` (PollerCore generic) and `posixnet/core/` (C wrapper module folder)
+would both carry the name "core". Decision: name the C wrapper folder `wrapper/` instead.
+
+- `ampe/core.zig` is established throughout session history and docs as "PollerCore".
+  Renaming it ripples into all `@import("core")` call sites in `src/ampe/`.
+- Renaming the folder only affects path strings in `build.zig`.
+- `wrapper/` describes the role: wraps bun-usockets C for Zig consumers.
+
+### File moves
+
+#### stdposix backend
+
+| From | To |
+| :--- | :- |
+| `src/ampe/linux/` | `src/platform/stdposix/linux/` |
+| `src/ampe/mac/` | `src/platform/stdposix/mac/` |
+| `src/ampe/windows/` | `src/platform/stdposix/windows/` |
+
+All 4 files per OS move unchanged.
+
+#### posixnet backend
+
+| From | To |
+| :--- | :- |
+| `src/ampe/portable/posix_net_backend.zig` | `src/platform/posixnet/posixnet_backend.zig` |
+| `src/ampe/portable/triggers.zig` | `src/platform/posixnet/triggers.zig` |
+| `src/ampe/portable/linux/` | `src/platform/posixnet/linux/` |
+| `src/ampe/portable/mac/` | `src/platform/posixnet/mac/` |
+| `src/ampe/portable/windows/` | `src/platform/posixnet/windows/` |
+
+`posix_net_backend.zig` is renamed to `posixnet_backend.zig` (matches folder name convention).
+
+#### posixnet C wrapper module
+
+| From | To |
+| :--- | :- |
+| `posix_net/` (repo root) | `src/platform/posixnet/wrapper/` |
+
+All 6 Zig files and the entire `adapters/` subtree move unchanged.
+
+### Network option rename
+
+The `-Dnetwork` enum values are renamed to match the new folder names:
+
+| Old flag | New flag | Folder |
+| :------- | :------- | :----- |
+| `-Dnetwork=posix` | `-Dnetwork=stdposix` | `src/platform/stdposix/` |
+| `-Dnetwork=portable` | `-Dnetwork=posixnet` | `src/platform/posixnet/` |
+
+### Source changes (import path updates)
+
+#### `src/ampe/internal.zig`
+
+All `@import` calls to OS backend files change relative paths:
+
+- `@import("linux/Skt.zig")` → `@import("../platform/stdposix/linux/Skt.zig")`
+- `@import("mac/Skt.zig")` → `@import("../platform/stdposix/mac/Skt.zig")`
+- `@import("windows/Skt.zig")` → `@import("../platform/stdposix/windows/Skt.zig")`
+- `@import("portable/posix_net_backend.zig")` → `@import("../platform/posixnet/posixnet_backend.zig")`
+- Same pattern for `SocketCreator.zig` imports.
+- All `build_options.network == .portable` comparisons → `.posixnet`.
+
+#### `src/ampe/poller.zig`
+
+- `linux/epoll_backend.zig` → `../platform/stdposix/linux/epoll_backend.zig`
+- `mac/kqueue_backend.zig` → `../platform/stdposix/mac/kqueue_backend.zig`
+- `windows/wepoll_backend.zig` → `../platform/stdposix/windows/wepoll_backend.zig`
+- `portable/posix_net_backend.zig` → `../platform/posixnet/posixnet_backend.zig`
+- All `build_options.network == .portable` comparisons → `.posixnet`.
+
+#### `src/ampe/common.zig` and `src/ampe/testHelpers.zig`
+
+Both contain `build_options.network == .portable` comparisons → rename to `.posixnet`.
+
+#### `src/platform/posixnet/posixnet_backend.zig` (moved file — internal imports)
+
+This file uses relative paths into `src/ampe/` that change depth after the move:
+
+| Import | Old resolution | New import |
+| :----- | :------------- | :--------- |
+| `@import("../core.zig")` | `src/ampe/core.zig` | `@import("../../ampe/core.zig")` |
+| `@import("../internal.zig")` | `src/ampe/internal.zig` | `@import("../../ampe/internal.zig")` |
+| `@import("../common.zig")` | `src/ampe/common.zig` | `@import("../../ampe/common.zig")` |
+| `@import("../../tofu.zig")` | `src/tofu.zig` | unchanged (same depth) |
+
+#### `src/platform/posixnet/triggers.zig` (moved file — internal imports)
+
+| Import | Old resolution | New import |
+| :----- | :------------- | :--------- |
+| `@import("../internal.zig")` | `src/ampe/internal.zig` | `@import("../../ampe/internal.zig")` |
+
+#### OS subfolder files (`posixnet/linux|mac|windows/Skt.zig`, `SocketCreator.zig`)
+
+No changes. Old location `src/ampe/portable/linux/` and new location `src/platform/posixnet/linux/`
+are both 4 levels deep — `@import("../../../tofu.zig")` resolves to `src/tofu.zig` in both cases.
+All other imports use the named module `"posix_net"` or sibling `"Skt.zig"` — both unchanged.
+
+#### Native backend files (`src/ampe/linux|mac|windows/` — 12 files)
+
+These files move from depth 3 (`src/ampe/linux/`) to depth 4 (`src/platform/stdposix/linux/`).
+Four categories of relative imports break.
+
+**`@import("../../tofu.zig")` → `@import("../../../tofu.zig")`**
+
+| File |
+| :--- |
+| `linux/Skt.zig` |
+| `linux/SocketCreator.zig` |
+| `linux/epoll_backend.zig` |
+| `mac/Skt.zig` |
+| `mac/SocketCreator.zig` |
+| `mac/kqueue_backend.zig` |
+| `windows/Skt.zig` |
+| `windows/SocketCreator.zig` |
+| `windows/wepoll_backend.zig` |
+
+**`@import("../internal.zig")` → `@import("../../ampe/internal.zig")`**
+
+| File |
+| :--- |
+| `linux/Skt.zig` |
+| `linux/SocketCreator.zig` |
+| `linux/epoll_backend.zig` |
+| `linux/triggers.zig` |
+| `mac/Skt.zig` |
+| `mac/SocketCreator.zig` |
+| `mac/kqueue_backend.zig` |
+| `mac/triggers.zig` |
+| `windows/SocketCreator.zig` |
+| `windows/triggers.zig` |
+| `windows/wepoll_backend.zig` |
+
+**`@import("../common.zig")` → `@import("../../ampe/common.zig")`**
+
+| File |
+| :--- |
+| `linux/epoll_backend.zig` |
+| `linux/triggers.zig` |
+| `mac/kqueue_backend.zig` |
+| `mac/triggers.zig` |
+| `windows/triggers.zig` |
+| `windows/wepoll_backend.zig` |
+
+**`@import("../core.zig")` → `@import("../../ampe/core.zig")`**
+
+| File |
+| :--- |
+| `linux/epoll_backend.zig` |
+| `mac/kqueue_backend.zig` |
+| `windows/wepoll_backend.zig` |
+
+Note: `windows/Skt.zig` does not import `internal.zig` — not in the second table.
+
+#### `build.zig`
+
+Network enum rename (line 33):
+```zig
+// Before
+const NetworkBackend = enum { posix, portable };
+// After
+const NetworkBackend = enum { stdposix, posixnet };
+```
+
+`test_gate_options` flag (line 168) — rename for consistency:
+```zig
+// Before
+test_gate_options.addOption(bool, "portable", network == .portable);
+// After
+test_gate_options.addOption(bool, "posixnet", network == .posixnet);
+```
+
+Path strings (7 occurrences — 4 unique, each adapters string appears twice):
+
+| Line(s) | Before | After |
+| :------ | :----- | :---- |
+| 52 | `"posix_net/posix_net.zig"` | `"src/platform/posixnet/wrapper/posix_net.zig"` |
+| 109, 210 | `"posix_net/adapters/us_epoll_win.c"` | `"src/platform/posixnet/wrapper/adapters/us_epoll_win.c"` |
+| 116, 217 | `"posix_net/adapters/pn_utils.c"` | `"src/platform/posixnet/wrapper/adapters/pn_utils.c"` |
+| 118, 219 | `"posix_net/adapters"` | `"src/platform/posixnet/wrapper/adapters"` |
+
+The named module alias `"posix_net"` in `b.addModule("posix_net", ...)` stays unchanged.
+All `@import("posix_net")` call sites require no changes.
+
+#### CI workflow files
+
+| File | Line | Before | After |
+| :--- | :--- | :----- | :---- |
+| `linux.yml` | 13 | `network: [posix, portable]` | `network: [stdposix, posixnet]` |
+| `windows.yml` | 16 | `network: [posix, portable]` | `network: [stdposix, posixnet]` |
+| `mac.yml` | 27 | `-Dnetwork=posix` | `-Dnetwork=stdposix` |
+| `mac.yml` | 28 | `-Dnetwork=portable` | `-Dnetwork=posixnet` |
+
+#### `.vscode/tasks.json`
+
+| Line | Before | After |
+| :--- | :----- | :---- |
+| 61 | `-Dnetwork=portable` | `-Dnetwork=posixnet` |
+| 103 | `-Dnetwork=portable` | `-Dnetwork=posixnet` |
+
+#### `tests/tofu_tests.zig`
+
+`test_gate_options.portable` → `test_gate_options.posixnet` (matches the renamed flag).
+
+### What does not change
+
+- All files in `src/ampe/` except the enum comparisons noted above.
+- All `@import("posix_net")` call sites everywhere — the module alias is unchanged.
+- `recipes/`, `build.zig.zon` — unchanged.
+
+### Implementation sequence
+
+1. Create `src/platform/stdposix/` and move the 3 OS backend folders.
+2. Create `src/platform/posixnet/` and move the 5 portable backend items. Rename `posix_net_backend.zig` → `posixnet_backend.zig`.
+3. Move `posix_net/` (root) → `src/platform/posixnet/wrapper/`.
+4. Update `build.zig`: enum rename, path strings, `test_gate_options` flag name.
+5. Update `src/ampe/internal.zig`: backend import paths + `.portable` → `.posixnet`.
+6. Update `src/ampe/poller.zig`: backend import paths + `.portable` → `.posixnet`.
+7. Update `src/ampe/common.zig` and `src/ampe/testHelpers.zig`: `.portable` → `.posixnet`.
+8. Update `src/platform/posixnet/posixnet_backend.zig`: 3 relative imports into `src/ampe/`.
+9. Update `src/platform/posixnet/triggers.zig`: 1 relative import into `src/ampe/`.
+10. Update all 12 native backend files in `src/platform/stdposix/linux|mac|windows/`: apply all 4 import categories from the table above.
+11. Update CI files: `linux.yml`, `windows.yml`, `mac.yml`.
+12. Update `.vscode/tasks.json`.
+13. Update `tests/tofu_tests.zig`: `test_gate_options.portable` → `.posixnet`.
+14. `zig build -Dnetwork=stdposix` and `zig build -Dnetwork=posixnet` — compile check, catches any missed rename or broken import.
+15. Full 4-mode sandwich on Linux (both backends).
+16. Cross-compile: `x86_64-windows-gnu`, `x86_64-macos`, `aarch64-macos`.
+17. Update `design/AGENT_STATE.md`.
+
+### Design decisions (Q&A)
+
+**Q: Why does `posix_net.zig` keep the underscore when the folder is `wrapper/` (no underscore)?**
+
+Folder-level naming follows a no-underscore convention (`posixnet`, `stdposix`, `wrapper`).
+File-level naming follows its own convention. `posix_net.zig` keeps the underscore because
+changing it would also require changing the `b.addModule("posix_net", ...)` alias — and every
+`@import("posix_net")` call site throughout the codebase. The rename gain is zero; the churn
+is large. Folder and file naming levels are independent.
+
+**Q: Why is `wrapper/` nested inside `src/platform/posixnet/` rather than at `src/wrapper/`?**
+
+The C wrapper (`posix_net.zig` + adapters) is the implementation of the posixnet backend only.
+It is not shared between backends. Placing it at `src/wrapper/` would imply it is shared
+infrastructure — architecturally misleading. Keeping it inside `src/platform/posixnet/wrapper/`
+correctly communicates ownership.
+
+**Q: Are backward-compatibility aliases needed for the `-Dnetwork=` flag rename?**
+
+No. This is an internal repo. No external consumers depend on the build flag. CI files are
+updated as part of Stage 9. There is no deprecation period.
+
+**Q: Does `recipes/` need any changes?**
+
+No. `grep` over `recipes/` finds no `.portable` or `.posix` comparisons. The recipes module
+uses only the public `tofu` named module import — unaffected by the reorganization.
+
+**Q: Which file uses `test_gate_options`?**
+
+Only `tests/tofu_tests.zig` — verified by `grep`. Two references:
+- Line 40: `test_gate_options.portable` → `test_gate_options.posixnet`
+- Line 67: `const test_gate_options = @import("test_gate_options");` — unchanged (import alias)
+
+### Verification
+
+```sh
+zig build test -Doptimize=Debug
+zig build test -Doptimize=ReleaseSafe
+zig build test -Doptimize=ReleaseFast
+zig build test -Doptimize=ReleaseSmall
+
+zig build test -Dnetwork=posixnet -Doptimize=Debug
+zig build test -Dnetwork=posixnet -Doptimize=ReleaseSafe
+zig build test -Dnetwork=posixnet -Doptimize=ReleaseFast
+zig build test -Dnetwork=posixnet -Doptimize=ReleaseSmall
+
+zig build -Dtarget=x86_64-windows-gnu
+zig build -Dtarget=x86_64-windows-gnu -Dnetwork=posixnet
+zig build -Dtarget=x86_64-macos       -Dnetwork=posixnet
+zig build -Dtarget=aarch64-macos      -Dnetwork=posixnet
+```
+
+Zero functional change. All test counts must match pre-refactor numbers.
 

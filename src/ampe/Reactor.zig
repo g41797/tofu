@@ -383,7 +383,7 @@ fn runEngineOnThread(rtr: *Reactor) !void {
 
     _ = try rtr.*.recv_ack();
 
-    if(rtr.*.ptcs == null) {
+    if (rtr.*.ptcs == null) {
         return AmpeError.UnknownError;
     }
 
@@ -1037,8 +1037,10 @@ fn cleanMboxes(rtr: *Reactor) void {
 
 pub fn initPollEnv(rtr: *Reactor) AmpeError!void {
     rtr.*.ptcs = try PollerType.init(rtr.*.allocator);
-    errdefer {rtr.*.ptcs.?.deleteAll();
-        rtr.*.ptcs = null;}
+    errdefer {
+        rtr.*.ptcs.?.deleteAll();
+        rtr.*.ptcs = null;
+    }
     try rtr.createNotificationChannel();
     return;
 }
@@ -1060,7 +1062,7 @@ pub inline fn iterator(rtr: *Reactor) poller.TcIterator {
 }
 
 pub inline fn deleteAll(rtr: *Reactor) void {
-    if(rtr.ptcs != null)  {
+    if (rtr.ptcs != null) {
         rtr.ptcs.?.deleteAll();
     }
     return;
@@ -1212,7 +1214,6 @@ pub const TriggeredChannel = struct {
         return tchn.tskt.detach();
     }
 };
-
 
 const tofu = @import("../tofu.zig");
 const message = tofu.message;

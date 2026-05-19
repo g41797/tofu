@@ -165,8 +165,7 @@ fn resolveAddr(host: []const u8, port: u16) error{InvalidAddress}!pn.Addr {
     return addr;
 }
 
-const tofu = @import("../../tofu.zig");
-
+const tofu = @import("../../../tofu.zig");
 const address = tofu.address;
 const Address = address.Address;
 const TCPServerAddress = address.TCPServerAddress;
@@ -183,7 +182,8 @@ const AmpeError = tofu.status.AmpeError;
 
 const TempUdsPath = tofu.TempUdsPath;
 
-const internal = @import("../internal.zig");
+const internal = @import("../../../ampe/internal.zig");
+
 const Notifier = internal.Notifier;
 const Skt = internal.Skt;
 

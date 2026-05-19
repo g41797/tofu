@@ -30,12 +30,12 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const optimize = b.standardOptimizeOption(.{});
 
-    const NetworkBackend = enum { posix, portable };
+    const NetworkBackend = enum { stdposix, posixnet };
     const network = b.option(
         NetworkBackend,
         "network",
-        "Network backend: posix (default) or portable",
-    ) orelse .posix;
+        "Network backend: stdposix (default) or posixnet",
+    ) orelse .stdposix;
     const build_options = b.addOptions();
     build_options.addOption(NetworkBackend, "network", network);
 
@@ -49,7 +49,7 @@ pub fn build(b: *std.Build) void {
 
     // Add the posix_net module
     const posixNetMod = b.addModule("posix_net", .{
-        .root_source_file = b.path("posix_net/posix_net.zig"),
+        .root_source_file = b.path("src/platform/posixnet/wrapper/posix_net.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -89,7 +89,7 @@ pub fn build(b: *std.Build) void {
         libMod.linkSystemLibrary("ntdll", .{});
     }
 
-    if (network == .portable) {
+    if (network == .posixnet) {
         const is_kqueue = target.result.os.tag == .macos or
             target.result.os.tag == .freebsd or
             target.result.os.tag == .netbsd or
@@ -106,16 +106,16 @@ pub fn build(b: *std.Build) void {
         if (!is_windows) {
             libMod.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
         } else {
-            libMod.addCSourceFile(.{ .file = b.path("posix_net/adapters/us_epoll_win.c"), .flags = flags });
+            libMod.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/us_epoll_win.c"), .flags = flags });
         }
         libMod.addIncludePath(usockets_dep.path("src/"));
         libMod.addIncludePath(usockets_dep.path("src/internal"));
         libMod.addIncludePath(usockets_dep.path("src/internal/networking"));
         libMod.link_libc = true;
 
-        libMod.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
+        libMod.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
-            libMod.addIncludePath(b.path("posix_net/adapters"));
+            libMod.addIncludePath(b.path("src/platform/posixnet/wrapper/adapters"));
             libMod.addIncludePath(wepoll.?.path(""));
         }
     }
@@ -165,7 +165,7 @@ pub fn build(b: *std.Build) void {
     testMod.addOptions("build_options", build_options);
     // Separate options object so the same file is not the root of two modules.
     const test_gate_options = b.addOptions();
-    test_gate_options.addOption(bool, "portable", network == .portable);
+    test_gate_options.addOption(bool, "posixnet", network == .posixnet);
     testMod.addOptions("test_gate_options", test_gate_options);
 
     // Creates unit testing artifact
@@ -190,7 +190,7 @@ pub fn build(b: *std.Build) void {
         lib_unit_tests.addIncludePath(wepoll.?.path(""));
     }
 
-    if (network == .portable) {
+    if (network == .posixnet) {
         const is_kqueue = target.result.os.tag == .macos or
             target.result.os.tag == .freebsd or
             target.result.os.tag == .netbsd or
@@ -207,16 +207,16 @@ pub fn build(b: *std.Build) void {
         if (!is_windows) {
             lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
         } else {
-            lib_unit_tests.addCSourceFile(.{ .file = b.path("posix_net/adapters/us_epoll_win.c"), .flags = flags });
+            lib_unit_tests.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/us_epoll_win.c"), .flags = flags });
         }
         lib_unit_tests.addIncludePath(usockets_dep.path("src/"));
         lib_unit_tests.addIncludePath(usockets_dep.path("src/internal"));
         lib_unit_tests.addIncludePath(usockets_dep.path("src/internal/networking"));
         lib_unit_tests.linkLibC();
 
-        lib_unit_tests.addCSourceFile(.{ .file = b.path("posix_net/adapters/pn_utils.c"), .flags = flags });
+        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
-            lib_unit_tests.addIncludePath(b.path("posix_net/adapters"));
+            lib_unit_tests.addIncludePath(b.path("src/platform/posixnet/wrapper/adapters"));
             lib_unit_tests.addIncludePath(wepoll.?.path(""));
         }
     }

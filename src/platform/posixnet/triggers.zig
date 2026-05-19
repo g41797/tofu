@@ -42,5 +42,5 @@ pub const usockets = struct {
 
 const pn = @import("posix_net");
 
-const internal = @import("../internal.zig");
+const internal = @import("../../ampe/internal.zig");
 const Triggers = internal.triggeredSkts.Triggers;

@@ -359,11 +359,11 @@ const Thread = std.Thread;
 const getCurrentTid = Thread.getCurrentId;
 const log = std.log;
 
-const tofu = @import("../../tofu.zig");
+const tofu = @import("../../../tofu.zig");
 const message = tofu.message;
 const AmpeError = tofu.status.AmpeError;
 
-const internal = @import("../internal.zig");
+const internal = @import("../../../ampe/internal.zig");
 const MsgSender = internal.MsgSender;
 
 const pn = @import("posix_net");

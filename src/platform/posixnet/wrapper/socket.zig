@@ -72,10 +72,10 @@ pub fn connectSocketUnix(fd: Fd, path: []const u8) PnError!void {
     if (rc == 0) return;
     const builtin = @import("builtin");
     const os = builtin.os.tag;
-    const ENOENT: c_int   = if (os == .windows) 3    else 2;
+    const ENOENT: c_int = if (os == .windows) 3 else 2;
     const EINPROGRESS: c_int = if (os == .windows) 10036 else if (os == .macos) 36 else 115;
-    const EALREADY: c_int    = if (os == .windows) 10037 else if (os == .macos) 37 else 114;
-    const EISCONN: c_int     = if (os == .windows) 10056 else if (os == .macos) 56 else 106;
+    const EALREADY: c_int = if (os == .windows) 10037 else if (os == .macos) 37 else 114;
+    const EISCONN: c_int = if (os == .windows) 10056 else if (os == .macos) 56 else 106;
     if (rc == ENOENT) return PnError.UDSPathNotFound;
     if (rc == EINPROGRESS or rc == EALREADY) return PnError.WouldBlock;
     // EISCONN: non-blocking connect completed in the background; already connected.

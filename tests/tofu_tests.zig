@@ -37,7 +37,7 @@ test {
     std.log.debug("\r\n\r\n   ****  finish Notifier tests ****\r\n\r\n", .{});
 
     // posix_net :
-    if (test_gate_options.portable) {
+    if (test_gate_options.posixnet) {
         _ = @import("posix_net/posix_net_tests.zig");
         _ = @import("ampe/portable_poller_tests.zig");
     }

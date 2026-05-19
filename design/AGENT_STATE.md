@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-05-19
 **Last Agent:** Gemini CLI
-**Active Phase:** Stage 8 — Wepoll transition from submodule to managed dependency.
+**Active Phase:** Polish / next stage TBD.
 
 ---
 
@@ -22,10 +22,12 @@
 **Update this section at the start and end of every session.**
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
-- Stage 0.5 through Stage 7 (Documentation) are complete; cross-platform CI is passing for portable.
-- **Active Task:** Transitioning `wepoll` submodule to a `build.zig.zon` managed dependency.
-- **Current Status:** Analysis complete. Plan updated and rule-compliant. Implementation pending.
+- Stages 0.5 through 9 complete; cross-platform CI passing for both backends.
+- **Active Task:** None. Awaiting next stage from author.
+- **Current Status:** Stage 9 done. Source tree partitioned. Both backends verified 4-mode on Linux (103/103). Cross-compile clean for Windows gnu, x86_64-macos, aarch64-macos.
 - **Summary of Findings:**
+  - **DONE (Stage 9):** Platform Re-partitioning. Moved stdposix backends to `src/platform/stdposix/`, posixnet backend to `src/platform/posixnet/`, C wrapper to `src/platform/posixnet/wrapper/`. Fixed all relative imports across 12 native backend files and 2 portable backend files. Renamed network build options (`posix` → `stdposix`, `portable` → `posixnet`). Updated `build.zig`, CI workflows, `.vscode/tasks.json`, `tests/tofu_tests.zig`. 103/103 tests, all 4 modes, both backends.
+  - **DONE (Stage 8):** Transitioned `wepoll` from git submodule to `build.zig.zon` managed dependency. Removed `src/ampe/windows/wepoll/` vendor directory. All `build.zig` references use `b.dependency("wepoll", .{})`. Windows CI passed.
   - **REFACTORED (Stage 8):** Defined the transition strategy for `wepoll`. Added Section 22 to the authoritative plan. Updated the implementation sequence to include Stage 8.
   - **FIXED:** Panic in `acceptOs` on macOS (`integer does not fit in destination type`).
   - **FIXED:** Mismapped `EALREADY` in `connect()`.
@@ -124,6 +126,74 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-19: Gemini CLI — Stage 9: Platform Re-partitioning — DONE
+
+#### Summary
+Executed the Stage 9 plan from §23. Moved all backend source to `src/platform/stdposix/`
+and `src/platform/posixnet/`. Relocated the C wrapper module to `src/platform/posixnet/wrapper/`.
+Audited and corrected relative `@import` paths across 12 native backend files and 2+ portable
+backend files. Updated `build.zig` (enum rename, path strings, `test_gate_options` flag).
+Reflected changes in `.vscode/tasks.json` and CI workflows (`linux.yml`, `mac.yml`, `windows.yml`).
+
+#### Changes
+- `src/platform/stdposix/linux|mac|windows/` — native backend files (moved from `src/ampe/`)
+- `src/platform/posixnet/` — posixnet backend files (moved from `src/ampe/portable/`)
+- `src/platform/posixnet/wrapper/` — C wrapper module (moved from `posix_net/` at repo root)
+- `build.zig` — enum rename, path strings, `test_gate_options` flag
+- `src/ampe/internal.zig`, `src/ampe/poller.zig` — backend import paths updated
+- `src/ampe/common.zig`, `src/ampe/testHelpers.zig` — `.portable` → `.posixnet`
+- CI workflows and `.vscode/tasks.json` — network flag rename
+- `tests/tofu_tests.zig` — `test_gate_options.portable` → `.posixnet`
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Linux 4-mode (stdposix) | ✅ 103/103 |
+| Linux 4-mode (posixnet) | ✅ 103/103 |
+| Cross-compile x86_64-windows-gnu | ✅ clean |
+| Cross-compile x86_64-macos | ✅ clean |
+| Cross-compile aarch64-macos | ✅ clean |
+
+---
+
+### 2026-05-19: Claude Code (Sonnet 4.6) — Stage 9: Source Partitioning plan
+
+#### Summary
+Stage 8 (wepoll → managed dependency) confirmed complete: Windows CI passed, vendored
+`src/ampe/windows/wepoll/` directory removed, all `build.zig` references updated to use
+`b.dependency("wepoll", .{})`. Designed Stage 9 (Source Partitioning). The current source
+tree has no clear separation between the two network backends and the reactor infrastructure.
+The plan introduces `src/platform/` with two subfolders — `stdposix/` (Zig stdlib + POSIX
+syscall backend) and `posixnet/` (bun-usockets C wrapper backend). The floating `posix_net/`
+directory at the repo root moves into `src/platform/posixnet/wrapper/`. No functional change.
+
+Two rounds of Gemini Q&A were incorporated into §23. The critical finding from Round 2:
+all 12 files in `src/ampe/linux|mac|windows/` have relative imports (`../../tofu.zig`,
+`../internal.zig`, `../common.zig`, `../core.zig`) that break when the files move from
+depth 3 to depth 4. Four import categories, documented as tables in §23. CI workflow files
+(`linux.yml`, `windows.yml`, `mac.yml`) and `.vscode/tasks.json` also require network
+flag updates (`posix` → `stdposix`, `portable` → `posixnet`).
+
+#### Changes
+- `design/transition-2-bun-usockets-plan.md` — §23 complete with two Q&A rounds:
+  - Target layout, file move tables, naming conflict resolution (`wrapper/` over `core/`).
+  - Import path updates: `internal.zig`, `poller.zig`, `posixnet_backend.zig`, `triggers.zig`.
+  - Native backend import tables: 12 files across 4 broken-import categories.
+  - CI and `.vscode/tasks.json` flag rename table.
+  - Design decisions Q&A section (5 questions answered inline).
+  - Implementation sequence updated to 17 steps (added step 10 for native backends).
+- `design/AGENT_STATE.md` — Updated header (phase, agent), Current Status, added this entry.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Stage 8 Windows CI | ✅ PASS (reported by author) |
+| Stage 9 implementation | pending |
+
+---
 
 ### 2026-05-18: Claude Code (Sonnet 4.6) — Stage 7: Remove `temp` module + allocator-free `buildPath`
 

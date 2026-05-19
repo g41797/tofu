@@ -22,8 +22,8 @@ pub const initAddrUnix = types.initAddrUnix;
 pub const initAddrIp4 = types.initAddrIp4;
 
 // DNS resolution (libc extern "c" — available on all platforms without extra compilation)
-pub const addrinfo     = ffi.addrinfo;
-pub const getaddrinfo  = ffi.getaddrinfo;
+pub const addrinfo = ffi.addrinfo;
+pub const getaddrinfo = ffi.getaddrinfo;
 pub const freeaddrinfo = ffi.freeaddrinfo;
 
 // Socket operations

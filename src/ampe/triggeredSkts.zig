@@ -736,7 +736,6 @@ pub const MsgSender = struct {
 
         return ret;
     }
-
 };
 
 pub const MsgReceiver = struct {
@@ -936,7 +935,6 @@ pub const MsgReceiver = struct {
         mr.rcvlen = 0;
         return;
     }
-
 };
 
 pub const DumbSkt = struct {

@@ -86,12 +86,12 @@ const status = @import("../status.zig");
 const AmpeError = status.AmpeError;
 
 const build_options = @import("build_options");
-const skt_backend = if (build_options.network == .portable)
+const skt_backend = if (build_options.network == .posixnet)
     @import("internal.zig").Skt
 else switch (builtin.os.tag) {
-    .windows => @import("windows/Skt.zig"),
-    .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
-    else => @import("linux/Skt.zig"),
+    .windows => @import("../platform/stdposix/windows/Skt.zig"),
+    .macos, .freebsd, .openbsd, .netbsd => @import("../platform/stdposix/mac/Skt.zig"),
+    else => @import("../platform/stdposix/linux/Skt.zig"),
 };
 const Skt = skt_backend.Skt;
 

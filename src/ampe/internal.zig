@@ -12,39 +12,41 @@ pub const Poller = poller.Poller;
 pub const Pool = @import("Pool.zig");
 pub const Appendable = @import("Appendable.zig");
 
-const skt_backend = if (build_options.network == .portable)
+const skt_backend = if (build_options.network == .posixnet)
     switch (builtin.os.tag) {
-        .linux => @import("portable/linux/Skt.zig").Skt,
-        .macos => @import("portable/mac/Skt.zig").Skt,
-        .windows => @import("portable/windows/Skt.zig").Skt,
-        else => @compileError("portable backend: unsupported OS"),    }
+        .linux => @import("../platform/posixnet/linux/Skt.zig").Skt,
+        .macos => @import("../platform/posixnet/mac/Skt.zig").Skt,
+        .windows => @import("../platform/posixnet/windows/Skt.zig").Skt,
+        else => @compileError("posixnet backend: unsupported OS"),
+    }
 else switch (builtin.os.tag) {
-    .windows => @import("windows/Skt.zig"),
-    .macos, .freebsd, .openbsd, .netbsd => @import("mac/Skt.zig"),
-    else => @import("linux/Skt.zig"),
+    .windows => @import("../platform/stdposix/windows/Skt.zig"),
+    .macos, .freebsd, .openbsd, .netbsd => @import("../platform/stdposix/mac/Skt.zig"),
+    else => @import("../platform/stdposix/linux/Skt.zig"),
 };
 
 pub const Skt = skt_backend.Skt;
 
-// For portable: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
+// For posixnet: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
 // Inlined to avoid circular import with common.zig (which imports internal.zig for Socket).
-pub const Socket = if (build_options.network == .portable)
+pub const Socket = if (build_options.network == .posixnet)
     if (builtin.os.tag == .windows) usize else std.posix.fd_t
 else switch (builtin.os.tag) {
     .windows => @import("std").os.windows.ws2_32.SOCKET,
     else => @import("std").posix.socket_t,
 };
 
-const sc_backend = if (build_options.network == .portable)
+const sc_backend = if (build_options.network == .posixnet)
     switch (builtin.os.tag) {
-        .linux => @import("portable/linux/SocketCreator.zig").SocketCreator,
-        .macos => @import("portable/mac/SocketCreator.zig").SocketCreator,
-        .windows => @import("portable/windows/SocketCreator.zig").SocketCreator,
-        else => @compileError("portable backend: unsupported OS"), }
+        .linux => @import("../platform/posixnet/linux/SocketCreator.zig").SocketCreator,
+        .macos => @import("../platform/posixnet/mac/SocketCreator.zig").SocketCreator,
+        .windows => @import("../platform/posixnet/windows/SocketCreator.zig").SocketCreator,
+        else => @compileError("posixnet backend: unsupported OS"),
+    }
 else switch (builtin.os.tag) {
-    .windows => @import("windows/SocketCreator.zig"),
-    .macos, .freebsd, .openbsd, .netbsd => @import("mac/SocketCreator.zig"),
-    else => @import("linux/SocketCreator.zig"),
+    .windows => @import("../platform/stdposix/windows/SocketCreator.zig"),
+    .macos, .freebsd, .openbsd, .netbsd => @import("../platform/stdposix/mac/SocketCreator.zig"),
+    else => @import("../platform/stdposix/linux/SocketCreator.zig"),
 };
 pub const SocketCreator = sc_backend.SocketCreator;
 pub const triggeredSkts = @import("triggeredSkts.zig");

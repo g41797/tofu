@@ -24,7 +24,7 @@ pub const SOCK_STREAM: c_int = 1;
 /// Opaque address structure from bun-usockets.
 pub const Addr = extern struct {
     mem: [128]u8, // sockaddr_storage size
-    len: u32,     // socklen_t size
+    len: u32, // socklen_t size
     ip: ?[*]u8,
     ip_length: c_int,
     port: c_int,
@@ -33,24 +33,24 @@ pub const Addr = extern struct {
 /// IPv4 socket address overlay for writing into Addr.mem directly.
 pub const SockaddrIn = extern struct {
     family: u16,
-    port:   u16, // network byte order
-    addr:   u32, // network byte order
-    zero:   [8]u8 = .{0} ** 8,
+    port: u16, // network byte order
+    addr: u32, // network byte order
+    zero: [8]u8 = .{0} ** 8,
 };
 
 /// IPv6 socket address overlay for writing into Addr.mem directly.
 pub const SockaddrIn6 = extern struct {
-    family:   u16,
-    port:     u16, // network byte order
+    family: u16,
+    port: u16, // network byte order
     flowinfo: u32,
-    addr:     [16]u8,
+    addr: [16]u8,
     scope_id: u32,
 };
 
 /// Unix domain socket address overlay for writing into Addr.mem directly.
 pub const SockaddrUn = extern struct {
     family: u16,
-    path:   [UDS_PATH_SIZE]u8,
+    path: [UDS_PATH_SIZE]u8,
 };
 
 /// Build an Addr for a Unix domain socket path.
@@ -67,7 +67,7 @@ pub fn initAddrUnix(path: []const u8) error{NameTooLong}!Addr {
         const family_ptr: *u16 = @ptrCast(@alignCast(&a.mem[0]));
         family_ptr.* = @intCast(AF_UNIX);
     }
-    @memcpy(a.mem[2..2 + path.len], path);
+    @memcpy(a.mem[2 .. 2 + path.len], path);
     a.len = struct_size;
     return a;
 }
@@ -77,8 +77,8 @@ pub fn initAddrIp4(ip: [4]u8, port: u16) Addr {
     var a: Addr = std.mem.zeroes(Addr);
     const sin: SockaddrIn = .{
         .family = @intCast(AF_INET),
-        .port   = std.mem.nativeToBig(u16, port),
-        .addr   = @bitCast(ip),
+        .port = std.mem.nativeToBig(u16, port),
+        .addr = @bitCast(ip),
     };
     @memcpy(a.mem[0..@sizeOf(SockaddrIn)], std.mem.asBytes(&sin));
     a.len = @sizeOf(SockaddrIn);
