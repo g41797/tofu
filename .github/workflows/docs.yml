@@ -37,7 +37,7 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add docs/
+          git add docs/ docs_site/docs/apidocs/ docs_site/docs/recipes/
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
