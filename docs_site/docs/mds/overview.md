@@ -5,18 +5,6 @@
 - Create **non-blocking** systems.
 - Enable **peer-to-peer** messaging between applications.
 
-**Tofu** is a completely new project, not a port.
-
-Built in **native Zig**:
-
-- protocol engine
-- message handling
-- Linux and macOS backends
-
-and use only the _standard library_.
-
-Windows backend is based on [wepoll](https://github.com/piscisaureus/wepoll).
-
 
 ---
 

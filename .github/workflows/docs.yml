@@ -1,0 +1,40 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs_site/**'
+      - 'src/**'
+      - 'recipes/**'
+      - 'build.zig'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Regenerate Autodoc Artifacts
+        run: |
+          ./docs_zig.sh
+
+      - name: Build MkDocs Site
+        run: |
+          pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin mkdocs-open-in-new-tab
+          cd docs_site && mkdocs build
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/
+          git commit -m "docs: auto-deploy documentation [skip ci]" || echo "No changes to commit"
+          git push

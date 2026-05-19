@@ -2225,3 +2225,225 @@ zig build -Dtarget=aarch64-macos      -Dnetwork=posixnet
 
 Zero functional change. All test counts must match pre-refactor numbers.
 
+---
+
+## 24. Doc Site — Stage 10a: Structural Alignment
+
+### Goal
+
+Make the existing docs accurate after Stage 9. No new content. Stale references only.
+
+### What is stale
+
+#### `docs_site/docs/mds/platform-support.md`
+
+The "Comptime Backend Selection" code snippet shows illustrative paths
+(`poller/wepoll_backend.zig`, `poller/epoll_backend.zig`, etc.) that predate Stage 9.
+Update the snippet to reflect the real post-Stage-9 paths under `src/platform/stdposix/`
+and `src/platform/posixnet/`.
+
+The page describes only the three OS-native backends (epoll, kqueue, wepoll). It has
+no mention of the posixnet/bun-usockets backend option. Add a short callout — one paragraph
+or admonition — noting that a second backend exists and is selected with `-Dnetwork=posixnet`.
+Full explanation deferred to Stage 10b.
+
+#### `docs_site/docs/mds/overview.md`
+
+States: "use only the _standard library_". This was true before posixnet. Add a qualifier:
+the posixnet backend uses the bun-usockets C library; the default stdposix backend uses
+only the standard library.
+
+#### `docs_site/docs/mds/poller-design.md`
+
+Lines ~151–153: "Linux (epoll): `std.posix.fd_t`" and "BSD/macOS (kqueue): `std.posix.fd_t`".
+These are accurate for stdposix but do not apply to posixnet. Add a note that these types
+are stdposix-specific; posixnet uses the bun-usockets handle abstraction.
+
+#### Autodoc regeneration
+
+`docs_site/docs/apidocs/` and `docs_site/docs/recipes/` contain pre-generated Zig autodoc
+output from before Stage 9. The source paths embedded in those artifacts are stale.
+Regenerate by running `zig build docs` after Stage 9. This is a build artifact update,
+not a hand-edit.
+
+### Local helper scripts
+
+No scripts for doc generation currently exist. Add two at the repo root, following the
+`zbta_linux.sh` / `zbta_win.cmd` naming convention.
+
+**`docs_zig.sh`** (Linux/macOS) — regenerates Zig autodoc only:
+```sh
+#!/bin/bash
+# Regenerate Zig autodoc into docs_site/docs/apidocs/ and docs_site/docs/recipes/
+# Usage: ./docs_zig.sh
+date
+zig build docs
+date
+```
+
+**`docs_zig.cmd`** (Windows) — same, Windows cmd syntax:
+```bat
+@echo off
+REM Regenerate Zig autodoc into docs_site/docs/apidocs/ and docs_site/docs/recipes/
+REM Usage: docs_zig.cmd
+echo %date% %time%
+zig build docs
+echo %date% %time%
+```
+
+**`docs_site.sh`** (Linux/macOS) — full pipeline: Zig autodoc + MkDocs site build:
+```sh
+#!/bin/bash
+# Full doc site build: Zig autodoc + MkDocs
+# Usage: ./docs_site.sh
+# Requires: mkdocs-material and plugins installed (pip install mkdocs-material
+#           mkdocs-awesome-pages-plugin mkdocs-minify-plugin mkdocs-open-in-new-tab)
+date
+zig build docs
+cd docs_site && mkdocs build
+date
+```
+
+Windows equivalent for the full pipeline is not provided — mkdocs is a Python tool and
+runs identically on Windows; use `docs_zig.cmd` then run `mkdocs build` from `docs_site\`
+manually, or add `docs_site.cmd` if needed.
+
+### Files to change
+
+| File | Change |
+| :--- | :----- |
+| `docs_site/docs/mds/platform-support.md` | Update backend snippet paths; add posixnet callout |
+| `docs_site/docs/mds/overview.md` | Qualify "standard library only" claim |
+| `docs_site/docs/mds/poller-design.md` | Note stdposix-specific handle types |
+| `docs_site/docs/apidocs/` | Regenerate via `zig build docs` |
+| `docs_site/docs/recipes/` | Regenerate via `zig build docs` |
+| `docs_zig.sh` | New script — Zig autodoc only (Linux/macOS) |
+| `docs_zig.cmd` | New script — Zig autodoc only (Windows) |
+| `docs_site.sh` | New script — full pipeline (Linux/macOS) |
+
+### Verification
+
+```sh
+# Step 1: regenerate Zig autodoc
+./docs_zig.sh
+
+# Step 2: build full site
+./docs_site.sh
+
+# Step 3: check locally
+cd docs && python3 -m http.server 8011
+# open http://127.0.0.1:8011 — check platform-support, overview, poller-design pages
+```
+
+---
+
+## 25. Doc Site — Stage 10b: Backend Content
+
+### Goal
+
+Add content explaining the two network backends and the Zig 0.16 roadmap.
+Depends on Stage 10a being complete (terminology already updated).
+
+### New content
+
+#### New section in `platform-support.md` — "Two Network Backends"
+
+Explain both options:
+
+- **`stdposix`** (default) — uses Zig stdlib + POSIX syscalls. Per-OS implementation:
+  Linux/epoll, macOS/kqueue, Windows/wepoll. Select with `-Dnetwork=stdposix` or omit the flag.
+
+- **`posixnet`** — uses the bun-usockets C wrapper. One cross-platform implementation.
+  Select with `-Dnetwork=posixnet`.
+
+When to prefer posixnet:
+- Environments where Zig stdlib socket API is evolving (Zig 0.16 transition — see below).
+- When targeting Windows with a single backend that matches Linux behavior closely.
+- When a C FFI layer is acceptable in exchange for stdlib stability.
+
+#### Zig 0.16 roadmap note (same section)
+
+- In Zig 0.16, `std.net.Address` moves into `std.Io`. The stdposix backend depends on
+  Zig stdlib socket and address types.
+- When Zig 0.16 lands, the stdposix backend will require updates or will be gated/removed.
+- The posixnet backend uses bun-usockets types, not `std.net`. It is the forward-compatible choice.
+- Users on Zig 0.16+ should use `-Dnetwork=posixnet`.
+
+#### Update `installation.md`
+
+Add the two `-Dnetwork=` options after the existing install snippet:
+
+```sh
+zig build                        # stdposix backend (default)
+zig build -Dnetwork=posixnet     # posixnet backend (bun-usockets)
+```
+
+Short explanation of when each is appropriate.
+
+### Files to change
+
+| File | Change |
+| :--- | :----- |
+| `docs_site/docs/mds/platform-support.md` | New "Two Network Backends" section with Zig 0.16 note |
+| `docs_site/docs/mds/installation.md` | Add `-Dnetwork=` option description |
+| `docs_site/mkdocs.yml` | Only if a new page is added; not expected for this stage |
+
+### Verification
+
+```sh
+cd docs_site
+mkdocs build
+cd ../docs
+python3 -m http.server 8011
+# check platform-support (new section) and installation pages
+```
+
+---
+
+## 26. Doc Site — Stage 10c: CI Deployment
+
+### Goal
+
+Automate doc deployment via GitHub Actions. Remove the manual build-and-push step.
+
+### Current manual process
+
+1. `zig build docs` — writes autodoc to `docs_site/docs/apidocs/` and `docs_site/docs/recipes/`.
+2. `mkdocs build` from `docs_site/` — writes rendered site to `docs/` (via `site_dir: ../docs` in `mkdocs.yml`).
+3. Commit and push `docs/`. GitHub Pages serves from `docs/` on `main`.
+
+### Proposed workflow
+
+New file: `.github/workflows/docs.yml`
+
+Trigger: push to `main` with changes in `docs_site/`, `src/`, `recipes/`, or `build.zig`.
+Routine CI pushes (test runs) that touch only test or non-doc files do not trigger doc builds.
+
+Steps:
+1. Checkout repo.
+2. Install Zig (same version as build CI).
+3. Run `zig build docs` — regenerates autodoc artifacts.
+4. Install Python + mkdocs-material + required plugins.
+5. Run `mkdocs build` from `docs_site/`.
+6. Commit changed `docs/` and push to `main`.
+
+The commit-back approach matches the current manual flow and requires no change to the
+GitHub Pages source setting (already configured to serve `docs/` on `main`).
+
+### Deployment decision
+
+GitHub Pages is configured to serve from `/docs` on `main`. This matches the current
+manual flow. CI will commit the generated `docs/` back to `main` — no settings change,
+no `.gitignore` change. `docs/` stays in git as it is now.
+
+### Files to change
+
+| File | Change |
+| :--- | :----- |
+| `.github/workflows/docs.yml` | New workflow |
+
+### Verification
+
+Push a trivial change to `docs_site/docs/mds/overview.md`.
+Confirm the Actions run completes and the live site at `https://g41797.github.io/tofu/` reflects the change.
+

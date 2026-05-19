@@ -142,6 +142,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#network-backend-selection" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -567,6 +572,24 @@
       
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -583,6 +606,34 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#network-backend-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Backend Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1392,6 +1443,25 @@
   
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#network-backend-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Backend Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1461,7 +1531,7 @@
   <h1>Installation</h1>
 
 <p>Add <em>tofu</em> to build.zig.zon:
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>zig fetch --save git+https://github.com/g41797/tofu
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>zig<span class="w"> </span>fetch<span class="w"> </span>--save<span class="w"> </span>git+https://github.com/g41797/tofu
 </span></code></pre></div></p>
 <p>Add <em>tofu</em> to build.zig:</p>
 <div class="language-zig highlight"><span class="filename">Add dependency</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">tofu</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">build</span><span class="p">.</span><span class="n">Dependency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">dependency</span><span class="p">(</span><span class="s">&quot;tofu&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">.{</span>
@@ -1473,6 +1543,16 @@
 </span></code></pre></div>
 <div class="language-zig highlight"><span class="filename">Import tofu</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kr">pub</span><span class="w"> </span><span class="kr">const</span><span class="w"> </span><span class="n">tofu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">@import</span><span class="p">(</span><span class="s">&quot;tofu&quot;</span><span class="p">);</span>
 </span></code></pre></div></p>
+<hr />
+<h2 id="network-backend-selection">Network Backend Selection</h2>
+<p>Tofu supports two network backends, selected at compile time:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>zig<span class="w"> </span>build<span class="w">                        </span><span class="c1"># stdposix backend (default)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>zig<span class="w"> </span>build<span class="w"> </span>-Dnetwork<span class="o">=</span>posixnet<span class="w">     </span><span class="c1"># posixnet backend (vendored usockets)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>stdposix</code></strong>: Uses Zig's standard library and native POSIX/Windows syscalls.</li>
+<li><strong><code>posixnet</code></strong>: Uses the high-performance vendored usockets C wrapper. Recommended for targets where native Zig socket support is evolving.</li>
+</ul>
 
 
 

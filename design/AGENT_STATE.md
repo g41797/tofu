@@ -1,8 +1,8 @@
 # Agent State & Handover
 
 **Last Updated:** 2026-05-19
-**Last Agent:** Gemini CLI
-**Active Phase:** Polish / next stage TBD.
+**Last Agent:** Claude Code (Sonnet 4.6)
+**Active Phase:** Stage 10 — Doc Site (three sub-stages).
 
 ---
 
@@ -23,9 +23,12 @@
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
 - Stages 0.5 through 9 complete; cross-platform CI passing for both backends.
-- **Active Task:** None. Awaiting next stage from author.
-- **Current Status:** Stage 9 done. Source tree partitioned. Both backends verified 4-mode on Linux (103/103). Cross-compile clean for Windows gnu, x86_64-macos, aarch64-macos.
+- **Active Task:** Doc Site — three sequential sub-stages (10a, 10b, 10c). See §24, §25, §26.
+- **Current Status:** Plan written. Implementation pending.
 - **Summary of Findings:**
+  - **DONE (Stage 10a):** Structural Alignment — fixed stale references in docs after Stage 9. Regenerated autodoc artifacts (`zig build docs`). Added local helper scripts. Verified locally. See §24.
+  - **DONE (Stage 10b):** Backend Content — added "Two Network Backends" section and Zig 0.16 roadmap note to `platform-support.md`; added `-Dnetwork=` options to `installation.md`. Verified locally. See §25.
+  - **DONE (Stage 10c):** CI Deployment — created `.github/workflows/docs.yml` automating `zig build docs` + `mkdocs build` + commit-back to `main`. See §26.
   - **DONE (Stage 9):** Platform Re-partitioning. Moved stdposix backends to `src/platform/stdposix/`, posixnet backend to `src/platform/posixnet/`, C wrapper to `src/platform/posixnet/wrapper/`. Fixed all relative imports across 12 native backend files and 2 portable backend files. Renamed network build options (`posix` → `stdposix`, `portable` → `posixnet`). Updated `build.zig`, CI workflows, `.vscode/tasks.json`, `tests/tofu_tests.zig`. 103/103 tests, all 4 modes, both backends.
   - **DONE (Stage 8):** Transitioned `wepoll` from git submodule to `build.zig.zon` managed dependency. Removed `src/ampe/windows/wepoll/` vendor directory. All `build.zig` references use `b.dependency("wepoll", .{})`. Windows CI passed.
   - **REFACTORED (Stage 8):** Defined the transition strategy for `wepoll`. Added Section 22 to the authoritative plan. Updated the implementation sequence to include Stage 8.
@@ -126,6 +129,37 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-05-19: Claude Code (Sonnet 4.6) — Stage 10: Doc Site plan
+
+#### Summary
+Planned three sequential doc stages following Stage 9 completion. The doc site predates
+the backend rename (`posix`→`stdposix`, `portable`→`posixnet`) and has no content on the
+posixnet backend or the Zig 0.16 migration path. Deployment is currently manual.
+
+- **Stage 10a** — Structural Alignment: fix stale references (backend paths, stdlib claim,
+  handle types), regenerate autodoc artifacts.
+- **Stage 10b** — Backend Content: add "Two Network Backends" section with Zig 0.16 roadmap
+  note; update installation page with `-Dnetwork=` options.
+- **Stage 10c** — CI Deployment: new `docs.yml` workflow automating build + deploy.
+
+Ordering rationale: fix stale content first (10a), add new content second (10b), automate
+last (10c) so the first automated deploy produces a clean, complete site.
+
+#### Changes
+- `design/transition-2-bun-usockets-plan.md` — Added §24 (Stage 10a), §25 (Stage 10b),
+  §26 (Stage 10c) with goals, file tables, and verification commands.
+- `design/AGENT_STATE.md` — Updated header, Current Status, added this entry.
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Stage 10a implementation | pending |
+| Stage 10b implementation | pending |
+| Stage 10c implementation | pending |
+
+---
 
 ### 2026-05-19: Gemini CLI — Stage 9: Platform Re-partitioning — DONE
 
