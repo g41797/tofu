@@ -7,7 +7,6 @@
 
 ---
 
-
 ## Why tofu?
 
 As a food, **tofu** is simple and doesn’t have much flavor on its own.  
