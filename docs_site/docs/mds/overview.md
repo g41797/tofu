@@ -5,7 +5,6 @@
 - Create **non-blocking** systems.
 - Enable **peer-to-peer** messaging between applications.
 
-
 ---
 
 ## Why tofu?
