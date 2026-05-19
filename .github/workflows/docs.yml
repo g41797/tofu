@@ -15,33 +15,39 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
+
     steps:
       - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
 
       - name: Regenerate Autodoc Artifacts
-        run: |
-          ./docs_zig.sh
+        run: ./docs_zig.sh
 
       - name: Build MkDocs Site
         run: |
           pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin mkdocs-open-in-new-tab
           cd docs_site && mkdocs build
 
-      - name: Commit and Push Changes
+      - name: Commit Autodoc Artifacts
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add docs/ docs_site/docs/apidocs/ docs_site/docs/recipes/
+          git add docs_site/docs/apidocs/ docs_site/docs/recipes/
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No autodoc changes to commit"
           else
-            git commit -m "docs: auto-deploy documentation [skip ci]"
+            git commit -m "docs: update autodoc artifacts [skip ci]"
             git pull --rebase origin main
             git push
           fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - uses: actions/deploy-pages@v4
