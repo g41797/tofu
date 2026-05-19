@@ -1,6 +1,7 @@
 #!/bin/bash
-# docs_site.sh: Build the full documentation site
+# Full doc site build: Zig autodoc + MkDocs
+# Requires: pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin
+#           mkdocs-open-in-new-tab mkdocs-git-revision-date-localized-plugin
 set -e
-echo "Building full documentation site..."
+./docs_zig.sh
 cd docs_site && mkdocs build
-echo "Site build complete."

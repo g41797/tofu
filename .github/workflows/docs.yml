@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: mlugg/setup-zig@v2
         with:
@@ -29,7 +31,7 @@ jobs:
 
       - name: Build MkDocs Site
         run: |
-          pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin mkdocs-open-in-new-tab
+          pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-minify-plugin mkdocs-open-in-new-tab mkdocs-git-revision-date-localized-plugin
           cd docs_site && mkdocs build
 
       - uses: actions/upload-pages-artifact@v3
