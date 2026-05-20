@@ -7,13 +7,12 @@ on:
 
 jobs:
   build:
-    name: Build and test (${{ matrix.network }}, ${{ matrix.optimize }})
+    name: Build and test (${{ matrix.optimize }})
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         os: [windows]
-        network: [posixnet]
         optimize: [Debug, ReleaseSafe, ReleaseFast, ReleaseSmall]
 
     steps:
