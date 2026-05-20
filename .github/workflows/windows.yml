@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows]
-        network: [stdposix, posixnet]
+        network: [posixnet]
         optimize: [Debug, ReleaseSafe, ReleaseFast, ReleaseSmall]
 
     steps:

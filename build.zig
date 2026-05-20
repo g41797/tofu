@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const NetworkBackend = enum { stdposix, posixnet };
+
 pub fn build(b: *std.Build) void {
     const host_os = @import("builtin").os.tag;
 
@@ -30,12 +32,15 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const optimize = b.standardOptimizeOption(.{});
 
-    const NetworkBackend = enum { stdposix, posixnet };
-    const network = b.option(
-        NetworkBackend,
-        "network",
-        "Network backend: stdposix (default) or posixnet",
-    ) orelse .stdposix;
+    // For Zig 0.20.*
+    // const network = b.option(
+    //     NetworkBackend,
+    //     "network",
+    //     "Network backend: stdposix or posixnet",
+    // ) orelse .stdposix;
+
+    const network = .posixnet; //
+
     const build_options = b.addOptions();
     build_options.addOption(NetworkBackend, "network", network);
 

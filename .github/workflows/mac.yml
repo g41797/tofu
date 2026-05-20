@@ -12,7 +12,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-#        network: [posix, portable]
         optimize: [Debug, ReleaseSafe, ReleaseFast, ReleaseSmall]
 
     steps:
@@ -24,5 +23,4 @@ jobs:
         with:
           version: 0.15.2
 
-      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }} -Dnetwork=stdposix
-      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }} -Dnetwork=posixnet
+      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }}
