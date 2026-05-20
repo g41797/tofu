@@ -26,4 +26,4 @@ jobs:
         with:
           version: 0.15.2
 
-      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }} -Dnetwork=${{ matrix.network }}
+      - run: zig build test -freference-trace --summary all -Doptimize=${{ matrix.optimize }}
