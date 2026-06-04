@@ -6,7 +6,8 @@ const std = @import("std");
 pub const LIBUS_SOCKET_DESCRIPTOR = if (@import("builtin").os.tag == .windows) usize else c_int;
 pub const INVALID_FD: LIBUS_SOCKET_DESCRIPTOR = if (@import("builtin").os.tag == .windows) std.math.maxInt(usize) else -1;
 
-// pn_utils.c — our wrappers over bsd_create_listen_socket with explicit backlog and SO_LINGER helpers
+// pn_utils.c
+//  - wrappers over bsd_create_listen_socket with explicit backlog and SO_LINGER helpers
 pub extern fn bsd_set_linger_abort(fd: LIBUS_SOCKET_DESCRIPTOR) void;
 pub extern fn pn_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
 pub extern fn pn_create_listen_socket_unix(path: [*]const u8, pathlen: usize, options: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
@@ -14,6 +15,11 @@ pub extern fn pn_create_connect_socket_unix(path: [*]const u8, pathlen: usize, o
 pub extern fn pn_wait_writable(fd: LIBUS_SOCKET_DESCRIPTOR, timeout_ms: c_int) c_int;
 pub extern fn pn_connect_socket(fd: LIBUS_SOCKET_DESCRIPTOR, addr: *const anyopaque, addrlen: c_int) c_int;
 pub extern fn pn_create_listen_socket_from_sockaddr(addr: *const anyopaque, addrlen: c_int, backlog: c_int) LIBUS_SOCKET_DESCRIPTOR;
+
+//  - additional helpers
+pub extern fn thread_sleep_ms(milliseconds: u64) void;
+pub extern fn startup_sockets() c_int;
+pub extern fn cleanup_sockets() void;
 
 // BSD networking wrappers from bun-usockets
 pub extern fn bsd_create_listen_socket(host: [*:0]const u8, port: c_int, options: c_int) LIBUS_SOCKET_DESCRIPTOR;

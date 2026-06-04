@@ -51,7 +51,6 @@ pub fn build(b: *std.Build) void {
 
     const wepoll = if (target.result.os.tag == .windows) b.dependency("wepoll", .{}) else null;
 
-
     // Add the posix_net module
     const posixNetMod = b.addModule("posix_net", .{
         .root_source_file = b.path("src/platform/posixnet/wrapper/posix_net.zig"),
@@ -139,10 +138,10 @@ pub fn build(b: *std.Build) void {
         .use_lld = use_lld,
     });
 
-    if (target.result.os.tag == .windows) {
-        lib.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib.addIncludePath(wepoll.?.path(""));
-    }
+    // if (target.result.os.tag == .windows) {
+    //     lib.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+    //     lib.addIncludePath(wepoll.?.path(""));
+    // }
 
     b.installArtifact(lib);
 
@@ -162,6 +161,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .single_threaded = false,
+        .link_libc = true,
     });
     testMod.addImport("tofu", tofuMod);
     testMod.addImport("posix_net", posixNetMod);
@@ -182,17 +182,17 @@ pub fn build(b: *std.Build) void {
 
     // Link libc for all test builds: getaddrinfo/freeaddrinfo are libc functions
     // used in SocketCreator for address resolution on all backends.
-    lib_unit_tests.linkLibC();
+    // lib_unit_tests.linkLibC();
 
     // Link libraries for Windows tests
     if (target.result.os.tag == .windows) {
-        lib_unit_tests.linkLibC();
-        lib_unit_tests.linkSystemLibrary("ws2_32");
-        lib_unit_tests.linkSystemLibrary("ntdll");
-        lib_unit_tests.linkSystemLibrary("kernel32");
+        // lib_unit_tests.linkLibC();
+        testMod.linkSystemLibrary("ws2_32", .{});
+        testMod.linkSystemLibrary("ntdll", .{});
+        testMod.linkSystemLibrary("kernel32", .{});
 
-        lib_unit_tests.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
-        lib_unit_tests.addIncludePath(wepoll.?.path(""));
+        testMod.addCSourceFile(.{ .file = wepoll.?.path("wepoll.c"), .flags = &.{"-fno-sanitize=undefined"} });
+        testMod.addIncludePath(wepoll.?.path(""));
     }
 
     if (network == .posixnet) {
@@ -207,22 +207,21 @@ pub fn build(b: *std.Build) void {
 
         const usockets_dep = b.dependency("usockets", .{});
         inline for ([_][]const u8{ "bsd.c", "context.c", "loop.c", "socket.c", "udp.c" }) |f| {
-            lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
+            testMod.addCSourceFile(.{ .file = usockets_dep.path("src/" ++ f), .flags = flags });
         }
         if (!is_windows) {
-            lib_unit_tests.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
+            testMod.addCSourceFile(.{ .file = usockets_dep.path("src/eventing/epoll_kqueue.c"), .flags = flags });
         } else {
-            lib_unit_tests.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/us_epoll_win.c"), .flags = flags });
+            testMod.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/us_epoll_win.c"), .flags = flags });
         }
-        lib_unit_tests.addIncludePath(usockets_dep.path("src/"));
-        lib_unit_tests.addIncludePath(usockets_dep.path("src/internal"));
-        lib_unit_tests.addIncludePath(usockets_dep.path("src/internal/networking"));
-        lib_unit_tests.linkLibC();
+        testMod.addIncludePath(usockets_dep.path("src/"));
+        testMod.addIncludePath(usockets_dep.path("src/internal"));
+        testMod.addIncludePath(usockets_dep.path("src/internal/networking"));
 
-        lib_unit_tests.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/pn_utils.c"), .flags = flags });
+        testMod.addCSourceFile(.{ .file = b.path("src/platform/posixnet/wrapper/adapters/pn_utils.c"), .flags = flags });
         if (is_windows) {
-            lib_unit_tests.addIncludePath(b.path("src/platform/posixnet/wrapper/adapters"));
-            lib_unit_tests.addIncludePath(wepoll.?.path(""));
+            testMod.addIncludePath(b.path("src/platform/posixnet/wrapper/adapters"));
+            testMod.addIncludePath(wepoll.?.path(""));
         }
     }
 

@@ -8,6 +8,7 @@ pub const GroupId = ?u32;
 engine: *Reactor = undefined,
 id: GroupId = null,
 allocator: Allocator = undefined,
+io: std.Io = undefined,
 msgs: [2]MSGMailBox = undefined,
 cmpl: Semaphore = undefined,
 
@@ -39,12 +40,14 @@ pub fn destroy(grp: *MchnGroup) void {
 }
 
 fn init(engine: *Reactor, id: ?u32) MchnGroup {
+    const io = std.Io.Threaded.global_single_threaded.*.io();
     const grp: MchnGroup = .{
         .engine = engine,
         .id = id,
         .allocator = engine.allocator,
-        .msgs = .{ .{}, .{} },
-        .cmpl = Semaphore{},
+        .io = io,
+        .msgs = .{ .init(io), .init(io) },
+        .cmpl = .{},
     };
 
     return grp;
@@ -156,12 +159,25 @@ pub fn updateReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void 
 }
 
 pub inline fn setCmdCompleted(grp: *MchnGroup) void {
-    grp.cmpl.post();
+    grp.cmpl.post(grp.*.io);
     return;
 }
 
-pub inline fn waitCmdCompleted(grp: *MchnGroup) void {
-    grp.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT) catch {
+pub fn waitCmdCompleted(grp: *MchnGroup) void {
+
+    const timeout = std.Io.Timeout{
+        .duration = .{
+            .raw = .{
+                .nanoseconds = @as(i96, @intCast(tofu.waitReceive_INFINITE_TIMEOUT)),
+            },
+            .clock = .real,
+        },
+    };
+
+    const deadline = timeout.toDeadline(grp.*.io);
+
+    helpers.semaphore_waitTimeout(&grp.cmpl, grp.*.io, deadline) catch {
+        // grp.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT) catch {
         // log.warn("waitCmdCompleted timeout group {*} gid {d}", .{ grp, grp.*.id.? });
         return;
     };
@@ -187,6 +203,7 @@ pub fn sendToReceiver(ptr: ?*anyopaque, msg: *?*message.Message) AmpeError!void 
 }
 
 const tofu = @import("../tofu.zig");
+const helpers = @import("helpers.zig");
 
 pub const message = tofu.message;
 pub const MessageType = message.MessageType;
@@ -220,6 +237,6 @@ const MSGMailBox = @import("mailbox").MailBoxIntrusive(Message);
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
-const Semaphore = std.Thread.Semaphore;
+const Semaphore = std.Io.Semaphore;
 const ResetEvent = std.Thread.ResetEvent;
 const log = std.log;

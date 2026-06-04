@@ -1,9 +1,11 @@
 // Functions for creating and resolving sockets.
 
 const std = @import("std");
+const log = std.log;
+
 const ffi = @import("ffi.zig");
-const types = @import("types.zig");
 const socket = @import("socket.zig");
+const types = @import("types.zig");
 const Fd = types.Fd;
 const PnError = types.PnError;
 
@@ -47,7 +49,14 @@ pub fn createConnectSocketUnix(path: [*]const u8, pathlen: usize, options: i32) 
 /// to avoid reformatting std.net.Address back to a host string.
 pub fn createListenSocketFromSockaddr(addr: *const anyopaque, addrlen: usize) PnError!Fd {
     const fd = ffi.pn_create_listen_socket_from_sockaddr(addr, @intCast(addrlen), 1024);
-    if (fd == ffi.INVALID_FD) return PnError.CommunicationFailed;
+
+    // const temp : ffi.LIBUS_SOCKET_DESCRIPTOR = fd;
+    // _ = temp;
+
+    if (fd == ffi.INVALID_FD) {
+        return PnError.CommunicationFailed;
+    }
+
     return fd;
 }
 

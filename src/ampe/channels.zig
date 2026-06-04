@@ -99,10 +99,11 @@ pub const ActiveChannel = struct {
 
 pub const ActiveChannels = struct {
     allocator: Allocator = undefined,
+    io: std.Io = undefined,
     nodes: []ChannelNode = undefined,
     removed: ChannelNodeQueue = .{},
     free: ChannelNodeQueue = .{},
-    active: std.AutoArrayHashMap(ChannelNumber, ActiveChannel) = undefined,
+    active: helpers.AutoArrayHashMap(ChannelNumber, ActiveChannel) = undefined,
     mutex: Mutex = undefined,
 
     pub fn init(gpa: Allocator, rrchn: u11) !ActiveChannels {
@@ -113,6 +114,7 @@ pub const ActiveChannels = struct {
 
         var channels: ActiveChannels = .{
             .allocator = gpa,
+            .io = std.Io.Threaded.global_single_threaded.*.io(),
             .nodes = nodes,
             .removed = .{},
             .free = .{},
@@ -126,14 +128,14 @@ pub const ActiveChannels = struct {
             channels.free.enqueue(node);
         }
 
-        channels.mutex = .{};
+        channels.mutex = .init;
 
         return channels;
     }
 
     pub fn deinit(cns: *ActiveChannels) void {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         cns.allocator.free(cns.nodes);
         cns.active.deinit();
@@ -141,11 +143,12 @@ pub const ActiveChannels = struct {
 
     // Called on both caller and Reactor threads
     pub fn createChannel(cns: *ActiveChannels, mid: MessageID, intr: ?message.ProtoFields, ptr: ?*anyopaque) ActiveChannel {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         while (true) {
-            const rv = rand.int(ChannelNumber);
+            var rv : ChannelNumber = 0;
+            cns.*.io.random(std.mem.asBytes(&rv));
 
             if ((rv == message.SpecialMinChannelNumber) or (rv == message.SpecialMaxChannelNumber)) {
                 continue;
@@ -172,8 +175,8 @@ pub const ActiveChannels = struct {
     }
 
     pub fn check(cns: *ActiveChannels, cn: ChannelNumber, mchng: ?*anyopaque) AmpeError!void {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         const achn = cns.active.get(cn);
         if (achn == null) {
@@ -188,15 +191,15 @@ pub const ActiveChannels = struct {
     }
 
     pub fn exists(cns: *ActiveChannels, cn: ChannelNumber) bool {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         return cns.active.contains(cn);
     }
 
     pub fn ctx(cns: *ActiveChannels, cn: ChannelNumber) ?*anyopaque {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         const achn = cns.active.get(cn);
         if (achn == null) {
@@ -207,8 +210,8 @@ pub const ActiveChannels = struct {
     }
 
     pub fn activeChannel(cns: *ActiveChannels, cn: ChannelNumber) !ActiveChannel {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         const achn = cns.active.get(cn);
 
@@ -220,8 +223,8 @@ pub const ActiveChannels = struct {
     }
 
     pub fn removeChannel(cns: *ActiveChannels, cn: ChannelNumber) void {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         _ = cns._removeChannel(cn);
 
@@ -230,8 +233,8 @@ pub const ActiveChannels = struct {
 
     // Called only on Reactor thread
     pub fn removeChannels(cns: *ActiveChannels, ptr: ?*anyopaque) !usize {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         var removedChns: usize = 0;
 
@@ -291,8 +294,8 @@ pub const ActiveChannels = struct {
     }
 
     pub fn channelGroup(cns: *ActiveChannels, ptr: ?*anyopaque) !std.ArrayList(ChannelNumber) {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
 
         var chns: std.ArrayList(ChannelNumber) = .empty;
         errdefer chns.deinit(cns.allocator);
@@ -311,8 +314,8 @@ pub const ActiveChannels = struct {
     }
 
     pub fn allChannels(cns: *ActiveChannels, chns: *std.ArrayList(ChannelNumber)) !void {
-        cns.mutex.lock();
-        defer cns.mutex.unlock();
+        cns.mutex.lock(cns.*.io) catch unreachable;
+        defer cns.mutex.unlock(cns.*.io);
         chns.resize(0) catch unreachable;
 
         var it = cns.active.iterator();
@@ -332,9 +335,8 @@ const AmpeError = status.AmpeError;
 const message = tofu.message;
 pub const ChannelNumber = message.ChannelNumber;
 const MessageID = message.MessageID;
-
+const helpers = @import("./helpers.zig");
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
-const rand = std.crypto.random;
+const Mutex = std.Io.Mutex;
 const log = std.log;

@@ -39,7 +39,7 @@ pub fn listen(skt: *Skt) !void {
         if (bind_res != ws2_32.SOCKET_ERROR) break;
 
         if (retry == max_retries - 1) return error.BindFailed;
-        std.Thread.sleep(10 * std.time.ns_per_ms);
+        tofu.SleepMlsec(10);
     }
 
     const listen_res: i32 = ws2_32.listen(skt.*.socket.?, kernel_backlog);
@@ -104,7 +104,7 @@ pub fn connect(skt: *Skt) AmpeError!bool {
             .WSAEWOULDBLOCK => return false,
             .WSAECONNREFUSED, .WSAECONNRESET, .WSAETIMEDOUT => {
                 if (retry == max_retries - 1) return AmpeError.ConnectFailed;
-                std.Thread.sleep(10 * std.time.ns_per_ms);
+                tofu.SleepMlsec(10);
                 continue;
             },
             else => {
@@ -169,7 +169,7 @@ pub fn findFreeTcpPort() !u16 {
         const linger_cfg = Linger{ .l_onoff = 1, .l_linger = 0 };
         _ = ws2_32.setsockopt(sockfd, 0xffff, 0x0080, @ptrCast(&linger_cfg), @sizeOf(Linger));
         _ = ws2_32.closesocket(sockfd);
-        std.Thread.sleep(20 * std.time.ns_per_ms);
+        tofu.SleepMlsec(20);
     }
 
     const on: c_int = 1;

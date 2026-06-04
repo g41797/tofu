@@ -17,13 +17,13 @@ test {
 // ---------------------------------------------------------------------------
 
 const TIMEOUT_MS: i32 = 100;
-const SLEEP_NS: u64 = 1 * std.time.ns_per_ms;
+const SLEEP_1MS: u64 = 1;
 const MAX_RETRIES = 10_000;
 
 fn acceptWithRetry(server: *Skt) !Skt {
     for (0..MAX_RETRIES) |_| {
         if (try server.accept()) |accepted| return accepted;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return error.TimeoutAccept;
 }
@@ -31,7 +31,7 @@ fn acceptWithRetry(server: *Skt) !Skt {
 fn connectWithRetry(client: *Skt) !void {
     for (0..MAX_RETRIES) |_| {
         if (try client.connect()) return;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return error.TimeoutConnect;
 }
@@ -64,8 +64,8 @@ fn makeTC(exp: Triggers) *TriggeredChannel {
 // ---------------------------------------------------------------------------
 
 test "backend init and deinit" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     p.deleteAll();
 }
@@ -75,8 +75,8 @@ test "backend init and deinit" {
 // ---------------------------------------------------------------------------
 
 test "timeout when no data" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -110,8 +110,8 @@ test "timeout when no data" {
 // ---------------------------------------------------------------------------
 
 test "readable after write" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -136,7 +136,7 @@ test "readable after write" {
 
     // Write before wait — kernel buffers it
     _ = try client.sendBuf(&[_]u8{'x'});
-    std.Thread.sleep(SLEEP_NS);
+    tofu.SleepMlsec(SLEEP_1MS);
 
     const result = try p.backend.wait(TIMEOUT_MS, &map);
     try testing.expect(result.recv == .on);
@@ -148,8 +148,8 @@ test "readable after write" {
 // ---------------------------------------------------------------------------
 
 test "writable immediately" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -183,8 +183,8 @@ test "writable immediately" {
 // ---------------------------------------------------------------------------
 
 test "unregister prevents event" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -210,7 +210,7 @@ test "unregister prevents event" {
     p.backend.unregister(toFd(accepted.socketHandle().?));
 
     _ = try client.sendBuf(&[_]u8{'x'});
-    std.Thread.sleep(SLEEP_NS);
+    tofu.SleepMlsec(SLEEP_1MS);
 
     const result = try p.backend.wait(50, &map);
     try testing.expect(result.timeout == .on);
@@ -222,8 +222,8 @@ test "unregister prevents event" {
 // ---------------------------------------------------------------------------
 
 test "modify recv to send" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -261,8 +261,8 @@ test "modify recv to send" {
 // ---------------------------------------------------------------------------
 
 test "two fds both readable" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -302,7 +302,7 @@ test "two fds both readable" {
 
     _ = try client1.sendBuf(&[_]u8{'a'});
     _ = try client2.sendBuf(&[_]u8{'b'});
-    std.Thread.sleep(SLEEP_NS);
+    tofu.SleepMlsec(SLEEP_1MS);
 
     const result = try p.backend.wait(TIMEOUT_MS, &map);
     try testing.expect(result.recv == .on);
@@ -315,8 +315,8 @@ test "two fds both readable" {
 // ---------------------------------------------------------------------------
 
 test "seqN isolation" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+    try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
 
@@ -341,7 +341,7 @@ test "seqN isolation" {
     try map.put(2, tc2);
 
     _ = try pair.client.sendBuf(&[_]u8{'x'});
-    std.Thread.sleep(SLEEP_NS);
+    tofu.SleepMlsec(SLEEP_1MS);
 
     _ = try p.backend.wait(TIMEOUT_MS, &map);
 
@@ -364,8 +364,8 @@ const SeqN = common.SeqN;
 const toFd = common.toFd;
 const Triggers = internal_mod.triggeredSkts.Triggers;
 const TriggeredChannel = tofu.Reactor.TriggeredChannel;
-const Skt = tofu.Skt;
-const SocketCreator = tofu.SocketCreator;
+const Skt = tofu.@"internal usage".Skt ;
+const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;
 

@@ -12,12 +12,12 @@
 // ---------------------------------------------------------------------------
 
 const MAX_RETRIES: usize = 10_000;
-const SLEEP_NS: u64 = 1 * std.time.ns_per_ms;
+const SLEEP_1MS: u64 = 1;
 
 fn connectWithRetry(client: *Skt) !void {
     for (0..MAX_RETRIES) |_| {
         if (try client.connect()) return;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return error.TimeoutConnect;
 }
@@ -27,8 +27,8 @@ fn connectWithRetry(client: *Skt) !void {
 // ---------------------------------------------------------------------------
 
 test "Notifier wakeup" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
@@ -50,7 +50,7 @@ test "Notifier wakeup" {
     // Initial poll — must timeout
     const trgs1: Triggers = try pl.waitTriggers(100);
     if (trgs1.timeout == .off) {
-        std.debug.print("\nUnexpected triggers in trgs1: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs1)});
+        std.log.info("\nUnexpected triggers in trgs1: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs1)});
     }
     try testing.expect(trgs1.timeout == .on);
 
@@ -61,7 +61,7 @@ test "Notifier wakeup" {
     // Poll — must trigger notify
     const trgs2: Triggers = try pl.waitTriggers(1000);
     if (trgs2.notify == .off) {
-        std.debug.print("\nUnexpected triggers in trgs2: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+        std.log.info("\nUnexpected triggers in trgs2: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
     }
     try testing.expect(trgs2.notify == .on);
 
@@ -75,14 +75,13 @@ test "Notifier wakeup" {
     try testing.expect(trgs3.timeout == .on);
 }
 
-
 // ---------------------------------------------------------------------------
 // Test 2 — Raw TCP connectivity (diagnostics)
 // ---------------------------------------------------------------------------
 
 test "Raw TCP connectivity" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
 
@@ -90,7 +89,6 @@ test "Raw TCP connectivity" {
     var list_skt: Skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("0.0.0.0", 0) });
     defer list_skt.deinit();
     const port: u16 = list_skt.getPort().?;
-
 
     // 2. Connect client
     var client_skt: Skt = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port) });
@@ -109,7 +107,7 @@ test "Raw TCP connectivity" {
             server_skt = s;
             break;
         }
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     defer server_skt.deinit();
 
@@ -124,25 +122,23 @@ test "Raw TCP connectivity" {
             if (n == 0) return error.UnexpectedEOF;
             rcvd_len += n;
         } else {
-            std.Thread.sleep(SLEEP_NS);
+            tofu.SleepMlsec(SLEEP_1MS);
         }
     }
 
     try testing.expectEqualStrings(test_data, buf[0..rcvd_len]);
 }
 
-
 // ---------------------------------------------------------------------------
 // Test 3 — TCP accept / recv / send readiness
 // ---------------------------------------------------------------------------
 
 test "TCP accept recv send via PollerCore" {
-
     var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
     defer pool.close();
 
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var pl = try Poller.init(testing.allocator);
     defer pl.deleteAll();
@@ -222,7 +218,7 @@ test "TCP accept recv send via PollerCore" {
     // 7. Poll for RECV
     const trgs2: Triggers = try pl.waitTriggers(5000);
     if (trgs2.recv == .off) {
-        std.debug.print("\nUnexpected triggers in TCP recv poll: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+        std.log.info("\nUnexpected triggers in TCP recv poll: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
     }
     try testing.expect(trgs2.recv == .on);
 
@@ -231,7 +227,7 @@ test "TCP accept recv send via PollerCore" {
     var mq: tofu.message.MessageQueue = try tc_srv_ptr.*.tskt.tryRecv();
     defer tofu.message.clearQueue(&mq);
     if (mq.count() == 0) {
-        std.debug.print("\nMessage queue is empty after RECV trigger. Triggers: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
+        std.log.info("\nMessage queue is empty after RECV trigger. Triggers: {any}\n", .{triggered.UnpackedTriggers.fromTriggers(trgs2)});
     }
     try testing.expect(mq.count() > 0);
     try testing.expectEqualStrings("Hello", mq.first.?.*.body.body().?);

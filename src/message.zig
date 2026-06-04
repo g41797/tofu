@@ -83,9 +83,7 @@ pub const OpCode = enum(u4) {
         };
     }
 
-    pub fn echo(oc: OpCode) error{
-        InvalidOpCode,
-    }!OpCode {
+    pub fn echo(oc: OpCode) AmpeError!OpCode {
         return switch (oc) {
             .Request => .Response,
             .Signal => .Signal,
@@ -664,7 +662,7 @@ pub const Message = struct {
         return ret;
     }
 
-    pub fn getOpCode(msg: *Message) error{InvalidOpCode}!OpCode {
+    pub fn getOpCode(msg: *Message) AmpeError!OpCode {
         const oc: OpCode = msg.*.bhdr.proto.opCode;
         if (!oc.isValid()) {
             return AmpeError.InvalidOpCode;

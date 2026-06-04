@@ -144,10 +144,10 @@ pub fn addrUnixPath(addr: *const Addr) []const u8 {
 }
 
 /// Delete a file at the given path.
-pub fn deleteUnixPath(path: [*:0]const u8) void {
+pub fn deleteUnixPath(path: [*:0]const u8) c_int {
     if (comptime @import("builtin").os.tag == .windows) {
-        _ = ffi._unlink(path);
+        return ffi._unlink(path);
     } else {
-        _ = ffi.unlink(path);
+        return ffi.unlink(path);
     }
 }

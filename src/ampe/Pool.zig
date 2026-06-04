@@ -5,6 +5,7 @@ pub const Pool = @This();
 
 first: ?*Message = undefined,
 allocator: Allocator = undefined,
+io: std.Io = undefined,
 mutex: Mutex = undefined,
 closed: bool = undefined,
 alerter: ?Notifier.Alerter = undefined,
@@ -16,8 +17,9 @@ currMsgs: u16 = undefined,
 pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.Alerter) AmpeError!Pool {
     var ret: Pool = .{
         .allocator = gpa,
+        .io = std.Io.Threaded.global_single_threaded.*.io(),
         .first = null,
-        .mutex = .{},
+        .mutex = .init,
         .closed = false,
         .alerter = alrtr,
         .emptyWasReturned = false,
@@ -58,9 +60,9 @@ pub fn init(gpa: Allocator, initialMsgs: ?u16, maxMsgs: ?u16, alrtr: ?Notifier.A
 }
 
 pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
-    pool.mutex.lock();
+    pool.mutex.lock(pool.*.io) catch unreachable;
     defer pool.*.inform();
-    defer pool.mutex.unlock();
+    defer pool.mutex.unlock(pool.*.io);
     if (pool.closed) {
         return AmpeError.NotAllowed;
     }
@@ -90,9 +92,9 @@ pub fn get(pool: *Pool, ac: AllocationStrategy) AmpeError!*Message {
 }
 
 pub fn put(pool: *Pool, msg: *Message) void {
-    pool.mutex.lock();
+    pool.mutex.lock(pool.*.io) catch unreachable;
     defer pool.*.inform();
-    defer pool.mutex.unlock();
+    defer pool.mutex.unlock(pool.*.io);
 
     if ((pool.closed) or (pool.currMsgs == pool.maxMsgs)) {
         pool.free(msg);
@@ -129,9 +131,9 @@ pub fn free(pool: *Pool, msg: *Message) void {
 }
 
 pub fn freeAll(pool: *Pool) void {
-    pool.mutex.lock();
+    pool.mutex.lock(pool.*.io) catch unreachable;
     defer pool.*.inform();
-    defer pool.mutex.unlock();
+    defer pool.mutex.unlock(pool.*.io);
     if (pool.closed) {
         return;
     }
@@ -140,9 +142,9 @@ pub fn freeAll(pool: *Pool) void {
 }
 
 pub fn close(pool: *Pool) void {
-    pool.mutex.lock();
+    pool.mutex.lock(pool.*.io) catch unreachable;
     defer pool.*.inform();
-    defer pool.mutex.unlock();
+    defer pool.mutex.unlock(pool.*.io);
     if (pool.closed) {
         return;
     }
@@ -188,7 +190,7 @@ const Alert = Notifier.Alert;
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
+const Mutex = std.Io.Mutex;
 
 const assert = std.debug.assert;
 const log = std.log;

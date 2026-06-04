@@ -189,3 +189,42 @@ LIBUS_SOCKET_DESCRIPTOR pn_create_connect_socket_unix(const char *path, size_t p
     return bsd_create_connect_socket_unix(path, pathlen, options);
 #endif
 }
+
+#include <stdint.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <time.h>
+#endif
+
+void thread_sleep_ms(uint64_t milliseconds) {
+#if defined(_WIN32) || defined(_WIN64)
+    Sleep((DWORD)milliseconds);
+#else
+    struct timespec ts;
+    ts.tv_sec = milliseconds / 1000;
+    ts.tv_nsec = (milliseconds % 1000) * 1000000;
+    nanosleep(&ts, NULL);
+#endif
+}
+
+int startup_sockets()
+{
+#ifdef _WIN32
+    WSADATA wsd;
+    return(WSAStartup(MAKEWORD(2, 2), &wsd));
+#else
+    return 0;
+#endif
+}
+
+void cleanup_sockets()
+{
+#ifdef _WIN32
+    WSACleanup();
+    return;
+#else
+    return;
+#endif
+}

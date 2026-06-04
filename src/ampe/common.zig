@@ -10,9 +10,9 @@ pub const SeqN = u64;
 
 /// Iterator over TriggeredChannel pointers in the sequence-to-channel map.
 pub const TcIterator = struct {
-    itrtr: std.AutoArrayHashMap(SeqN, *TriggeredChannel).Iterator,
+    itrtr: tofu.AutoArrayHashMap(SeqN, *TriggeredChannel).Iterator,
 
-    pub fn init(tcm: *std.AutoArrayHashMap(SeqN, *TriggeredChannel)) TcIterator {
+    pub fn init(tcm: *tofu.AutoArrayHashMap(SeqN, *TriggeredChannel)) TcIterator {
         return .{ .itrtr = tcm.iterator() };
     }
 

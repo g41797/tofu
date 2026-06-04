@@ -32,6 +32,7 @@ sndMtx: Mutex = undefined,
 crtMtx: Mutex = undefined,
 shtdwnStrt: bool = undefined,
 allocator: Allocator = undefined,
+io:std.Io = undefined,
 options: tofu.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
@@ -72,13 +73,16 @@ pub fn create(gpa: Allocator, options: Options) AmpeError!*Reactor {
         gpa.destroy(rtr);
     }
 
+    const io = std.Io.Threaded.global_single_threaded.*.io();
+
     rtr.* = .{
-        .sndMtx = .{},
-        .crtMtx = .{},
+        .sndMtx = .init,
+        .crtMtx = .init,
         .shtdwnStrt = false,
         .allocator = gpa,
+        .io = std.Io.Threaded.global_single_threaded.*.io(),
         .options = options,
-        .msgs = .{ .{}, .{} },
+        .msgs = .{ .init(io), .init(io) },
         .maxid = 0,
         .unpnt = .{},
         .loopTrgrs = .{},
@@ -127,8 +131,8 @@ pub fn destroy(rtr: *Reactor) void {
     const gpa = rtr.allocator;
     defer gpa.destroy(rtr);
     {
-        rtr.crtMtx.lock();
-        defer rtr.crtMtx.unlock();
+        rtr.crtMtx.lock(rtr.*.io) catch unreachable;
+        defer rtr.crtMtx.unlock(rtr.*.io);
 
         log.warn("!!! engine will be destroyed !!!", .{});
 
@@ -210,8 +214,8 @@ fn destroyCG(ptr: ?*anyopaque, chnlsimpl: ?*anyopaque) AmpeError!void {
 }
 
 inline fn _create(rtr: *Reactor) AmpeError!ChannelGroup {
-    rtr.crtMtx.lock();
-    defer rtr.crtMtx.unlock();
+    rtr.crtMtx.lock(rtr.*.io) catch unreachable;
+    defer rtr.crtMtx.unlock(rtr.*.io);
 
     if (rtr.shtdwnStrt) {
         return AmpeError.ShutdownStarted;
@@ -236,8 +240,8 @@ inline fn send_create(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
 }
 
 inline fn _destroy(rtr: *Reactor, chnlsimpl: ?*anyopaque) AmpeError!void {
-    rtr.crtMtx.lock();
-    defer rtr.crtMtx.unlock();
+    rtr.crtMtx.lock(rtr.*.io) catch unreachable;
+    defer rtr.crtMtx.unlock(rtr.*.io);
 
     if (chnlsimpl == null) {
         return AmpeError.InvalidAddress;
@@ -295,8 +299,8 @@ fn getAllocator(ptr: ?*anyopaque) Allocator {
 }
 
 pub fn submitMsg(rtr: *Reactor, msg: *Message) AmpeError!void {
-    rtr.sndMtx.lock();
-    defer rtr.sndMtx.unlock();
+    rtr.sndMtx.lock(rtr.*.io) catch unreachable;
+    defer rtr.sndMtx.unlock(rtr.*.io);
 
     if (!rtr.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
@@ -329,8 +333,8 @@ fn sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
 }
 
 fn _sendAlert(rtr: *Reactor, alrt: Notifier.Alert) AmpeError!void {
-    rtr.sndMtx.lock();
-    defer rtr.sndMtx.unlock();
+    rtr.sndMtx.lock(rtr.*.io) catch unreachable;
+    defer rtr.sndMtx.unlock(rtr.*.io);
 
     if (!rtr.ntfcsEnabled) {
         return AmpeError.NotificationDisabled;
@@ -372,8 +376,8 @@ inline fn next_gid() u32 {
 var gid: Atomic(u32) = .init(1);
 
 fn runEngineOnThread(rtr: *Reactor) !void {
-    rtr.crtMtx.lock();
-    defer rtr.crtMtx.unlock();
+    rtr.crtMtx.lock(rtr.*.io) catch unreachable;
+    defer rtr.crtMtx.unlock(rtr.*.io);
 
     if (rtr.thread != null) {
         return;
@@ -390,13 +394,25 @@ fn runEngineOnThread(rtr: *Reactor) !void {
     return;
 }
 
-inline fn waitFinish(rtr: *Reactor) void {
+fn waitFinish(rtr: *Reactor) void {
     if (rtr.thread) |t| {
-        rtr.cmpl.timedWait(10 * std.time.ns_per_s) catch {
-            log.err("reactor thread did not exit in 10s, detaching", .{});
-            // t.detach();
-            // return;
+
+        const timeout = std.Io.Timeout{
+            .duration = .{
+                .raw = .{
+                    .nanoseconds = @as(i96, @intCast(10 * std.time.ns_per_s)),
+                },
+                .clock = .real,
+            },
         };
+
+        const deadline = timeout.toDeadline(rtr.*.io);
+
+        helpers.semaphore_waitTimeout(&rtr.cmpl, rtr.*.io, deadline) catch {
+            log.err("reactor thread did not exit in 10s, detaching", .{});
+            return;
+        };
+
         t.join();
     }
 }
@@ -423,7 +439,7 @@ inline fn addChannel(rtr: *Reactor, tchn: *TriggeredChannel) AmpeError!void {
     return;
 }
 
-const ChannelsGroupMap = std.AutoArrayHashMap(u32, *MchnGroup);
+const ChannelsGroupMap = tofu.AutoArrayHashMap(u32, *MchnGroup);
 
 //=================================================
 //                 ON THREAD
@@ -435,22 +451,35 @@ fn runOnThread(rtr: *Reactor) void {
 }
 
 inline fn ack(rtr: *Reactor) void {
-    rtr.*.cmpl.post();
+    rtr.*.cmpl.post(rtr.*.io);
 }
 
 inline fn recv_ack(rtr: *Reactor) !void {
-    _ = try rtr.*.cmpl.timedWait(tofu.waitReceive_INFINITE_TIMEOUT);
+
+    const timeout = std.Io.Timeout{
+        .duration = .{
+            .raw = .{
+                .nanoseconds = @as(i96, @intCast(tofu.waitReceive_INFINITE_TIMEOUT)),
+            },
+            .clock = .real,
+        },
+    };
+
+    const deadline = timeout.toDeadline(rtr.*.io);
+
+    _ = try helpers.semaphore_waitTimeout(&rtr.cmpl, rtr.*.io, deadline);
+
     return;
 }
 
 fn loop(rtr: *Reactor) void {
-    defer rtr.cmpl.post(); //  the shutdown-complete signal
+    defer rtr.cmpl.post(rtr.*.io); //  the shutdown-complete signal
     defer rtr.*.cleanMboxes();
     defer rtr.*.deleteAll();
     defer rtr.*.chnlsGroup_map.deinit();
 
     var sendAckDone: bool = false;
-    var timeOut: i32 = 0;
+    var timeOutMs: i32 = 0;
 
     _ = rtr.*.initPollEnv() catch {
         log.err("reactor initPollEnv failed!!!", .{});
@@ -464,16 +493,17 @@ fn loop(rtr: *Reactor) void {
         // The loop wakes from waitTriggers within poll_SEC_TIMEOUT*3 (3s)
         // and then returns here.
         if (rtr.shutdownFlag.load(.acquire)) {
+            log.info("reactor shutdown was initiated", .{});
             return;
         }
         { // Section for delay during debug session
             // 1_000_000_000    1 sec
             // 1_000_000        1 mlsec
-            // std.time.sleep(50_000_000);
+            // std.time.sleep(50_000_000); 2BD replace with io usage
         }
 
         if (sendAckDone) {
-            timeOut = poll_SEC_TIMEOUT * 3; // was poll_INFINITE_TIMEOUT;
+            timeOutMs = poll_SEC_TIMEOUT * 3; // was poll_INFINITE_TIMEOUT;
         } else {
             sendAckDone = true;
             defer rtr.ack(); // ???
@@ -481,7 +511,7 @@ fn loop(rtr: *Reactor) void {
 
         rtr.loopTrgrs = .{};
 
-        rtr.loopTrgrs = rtr.*.waitTriggers(timeOut) catch |err| {
+        rtr.loopTrgrs = rtr.*.waitTriggers(timeOutMs) catch |err| {
             log.err("waitTriggers error {any}", .{
                 err,
             });
@@ -1216,6 +1246,8 @@ pub const TriggeredChannel = struct {
 };
 
 const tofu = @import("../tofu.zig");
+const helpers = @import("helpers.zig");
+
 const message = tofu.message;
 const MessageType = message.MessageType;
 const MessageRole = message.MessageRole;
@@ -1268,13 +1300,14 @@ const Appendable = internal.Appendable;
 
 const mailbox = @import("mailbox");
 const MSGMailBox = mailbox.MailBoxIntrusive(Message);
+const condition_waitTimeout = mailbox.condition_waitTimeout;
 
 const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
-const Mutex = std.Thread.Mutex;
+const Mutex = std.Io.Mutex;
 const Thread = std.Thread;
-const Semaphore = std.Thread.Semaphore;
+const Semaphore = std.Io.Semaphore;
 const getCurrentTid = Thread.getCurrentId;
 const Atomic = std.atomic.Value;
 const AtomicOrder = std.builtin.AtomicOrder;

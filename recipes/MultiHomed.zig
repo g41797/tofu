@@ -35,10 +35,10 @@ ampe: ?Ampe = null,
 allocator: ?Allocator = null,
 chnls: ?ChannelGroup = null,
 srvcs: Services = undefined,
-lstnChnls: ?std.AutoArrayHashMap(message.ChannelNumber, Address) = null,
+lstnChnls: ?tofu.AutoArrayHashMap(message.ChannelNumber, Address) = null,
 thread: ?std.Thread = null,
 msgq: message.MessageQueue = .{},
-ackMbox: MSGMailBox = .{},
+ackMbox: MSGMailBox = .init(std.Io.Threaded.global_single_threaded.*.io()),
 
 /// Call stop() to cleanup.
 pub fn run(ampe: Ampe, adrs: []Address, srvcs: Services) !*MultiHomed {

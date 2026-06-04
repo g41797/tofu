@@ -10,7 +10,6 @@ pub const Options = @import("ampe.zig").Options;
 pub const DefaultOptions = @import("ampe.zig").DefaultOptions;
 pub const waitReceive_INFINITE_TIMEOUT = @import("ampe.zig").waitReceive_INFINITE_TIMEOUT;
 pub const waitReceive_SEC_TIMEOUT = @import("ampe.zig").waitReceive_SEC_TIMEOUT;
-pub const DBG = @import("ampe.zig").DBG;
 pub const address = @import("address.zig");
 pub const message = @import("message.zig");
 pub const Message = message.Message;
@@ -19,13 +18,20 @@ pub const OpCode = message.OpCode;
 pub const status = @import("status.zig");
 pub const AmpeStatus = status.AmpeStatus;
 pub const AmpeError = status.AmpeError;
+
+// Ampe factory/implementation
 pub const Reactor = @import("ampe/Reactor.zig");
-pub const TempUdsPath = @import("ampe/testHelpers.zig").TempUdsPath;
-pub const FindFreeTcpPort = @import("ampe/testHelpers.zig").FindFreeTcpPort;
-pub const DestroyChannels = @import("ampe/testHelpers.zig").DestroyChannels;
-pub const RunTasks = @import("ampe/testHelpers.zig").RunTasks;
-pub const Skt = @import("ampe/internal.zig").Skt; // Made public
-pub const SocketCreator = @import("ampe/internal.zig").SocketCreator; // Made public
-pub const initPlatform = @import("ampe/internal.zig").initPlatform;
-pub const deinitPlatform = @import("ampe/internal.zig").deinitPlatform;
+
+
+// Mostly for tests
+pub const TempUdsPath = @import("ampe/helpers.zig").TempUdsPath;
+pub const FindFreeTcpPort = @import("ampe/helpers.zig").FindFreeTcpPort;
+pub const DestroyChannels = @import("ampe/helpers.zig").DestroyChannels;
+pub const RunTasks = @import("ampe/helpers.zig").RunTasks;
+pub const SleepMlsec = @import("ampe/helpers.zig").SleepMlsec;
+pub const AutoArrayHashMap = @import("ampe/helpers.zig").AutoArrayHashMap;
+
+// Allow access to internals
 pub const @"internal usage" = @import("ampe/internal.zig");
+
+pub const DBG = @import("ampe.zig").DBG;

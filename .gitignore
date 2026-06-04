@@ -10,3 +10,5 @@ site/
 *.a.o
 #docs_site/docs/api/*
 #!docs_site/docs/api/.gitkeep
+/zig-pkg/
+.antigravitycli/

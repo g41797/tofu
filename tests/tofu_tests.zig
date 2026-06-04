@@ -4,14 +4,14 @@
 test "find free TCP/IP port" {
     std.testing.log_level = .debug;
 
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+    try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     std.log.info("start find free TCP/IP port ", .{});
 
     const port = try tofu.FindFreeTcpPort();
 
-    std.debug.print("free TCP/IP port {d}", .{port});
+    std.log.info("free TCP/IP port {d}", .{port});
 
     try std.testing.expect(port > 0); // Ensure a valid port is returned
 }
@@ -66,3 +66,22 @@ const isMac = builtin.os.tag == .macos;
 const recipes = @import("recipes");
 const test_gate_options = @import("test_gate_options");
 const tofu = @import("tofu");
+
+pub const std_options = .{
+    .logFn = tofuLogFn,
+};
+
+fn tofuLogFn(
+    comptime level: std.log.Level,
+    comptime scope: @EnumLiteral(),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const stderr = std.fs.File.stderr().writer();
+    stderr.print("[{s}] ({s}): ", .{
+        @tagName(scope),
+        @tagName(level),
+    }) catch return;
+    stderr.print(format, args) catch return;
+    stderr.writeAll("\n") catch return;
+}

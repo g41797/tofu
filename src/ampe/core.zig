@@ -235,8 +235,8 @@ pub fn PollerCore(comptime Backend: type) type {
     };
 }
 
-pub const ChnSeqnMap = std.AutoArrayHashMap(message.ChannelNumber, SeqN);
-pub const SeqnTrcMap = std.AutoArrayHashMap(SeqN, *TriggeredChannel);
+pub const ChnSeqnMap = tofu.AutoArrayHashMap(message.ChannelNumber, SeqN);
+pub const SeqnTrcMap = tofu.AutoArrayHashMap(SeqN, *TriggeredChannel);
 
 const common = @import("common.zig");
 const SeqN = common.SeqN;

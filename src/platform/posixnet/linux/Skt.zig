@@ -117,7 +117,7 @@ fn deleteUDSPath(skt: *Skt) void {
     var path_buf: [pn.UDS_PATH_SIZE + 1:0]u8 = .{0} ** (pn.UDS_PATH_SIZE + 1);
     const copy_len = @min(path.len, pn.UDS_PATH_SIZE);
     @memcpy(path_buf[0..copy_len], path[0..copy_len]);
-    pn.deleteUnixPath(@ptrCast(&path_buf));
+    _ = pn.deleteUnixPath(@ptrCast(&path_buf));
 }
 
 fn toAmpe(e: pn.PnError) AmpeError {

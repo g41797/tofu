@@ -22,7 +22,7 @@ pub const Alerter = struct {
     }
 };
 
-/// High priority. Goes to head of queue.
+/// High priority. Goes to head of queue, or dedicated queue
 pub const Oob = message.Trigger;
 
 pub const Notification = packed struct(u8) {
@@ -98,7 +98,7 @@ fn initPair(listener: *Skt, sender: *Skt) !Notifier {
         if (!connected) connected = try sender.connect();
         if (receiver == null) receiver = try listener.accept();
         if (connected and receiver != null) break;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     } else return AmpeError.CommunicationFailed;
     log.info(" notifier sender {d} receiver {d}", .{ sender.rawFd(), receiver.?.rawFd() });
     return .{ .sender = sender.*, .receiver = receiver.? };
@@ -108,7 +108,7 @@ pub fn sendNotification(ntfr: *Notifier, notif: Notification) AmpeError!void {
     const byte: u8 = @bitCast(notif);
     for (0..100) |_| {
         if (try ntfr.sender.sendBuf(&[1]u8{byte})) |_| return;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return AmpeError.NotificationFailed;
 }
@@ -146,4 +146,4 @@ const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const log = std.log;
 const MAX_RETRIES: usize = 10_000;
-const SLEEP_NS: u64 = 1 * std.time.ns_per_ms;
+const SLEEP_1MS: u64 = 1;

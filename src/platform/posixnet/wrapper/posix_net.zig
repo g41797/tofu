@@ -26,6 +26,11 @@ pub const addrinfo = ffi.addrinfo;
 pub const getaddrinfo = ffi.getaddrinfo;
 pub const freeaddrinfo = ffi.freeaddrinfo;
 
+// Misc. helpers
+pub const thread_sleep_ms = ffi.thread_sleep_ms;
+pub const startup_sockets = ffi.startup_sockets;
+pub const cleanup_sockets = ffi.cleanup_sockets;
+
 // Socket operations
 pub const sendBuf = socket.sendBuf;
 pub const recvToBuf = socket.recvToBuf;

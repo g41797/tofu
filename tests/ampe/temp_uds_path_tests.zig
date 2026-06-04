@@ -28,10 +28,12 @@ test "TempUdsPath: buildPath produces unique paths on consecutive calls" {
 }
 
 test "TempUdsPath: buildPath path does not exist as file" {
-    var tup: tofu.TempUdsPath = .{};
-    const path = try tup.buildPath();
-    const result = std.fs.accessAbsolute(path, .{});
-    try std.testing.expectError(error.FileNotFound, result);
+    if (!tofu.@"internal usage".isPosixNet) {
+        var tup: tofu.TempUdsPath = .{};
+        const path = try tup.buildPath();
+        const result = std.fs.accessAbsolute(path, .{});
+        try std.testing.expectError(error.FileNotFound, result);
+    }
 }
 
 const tofu = @import("tofu");

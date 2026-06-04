@@ -1,18 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 g41797
 // SPDX-License-Identifier: MIT
 
-const std = @import("std");
-const builtin = @import("builtin");
-const build_options = @import("build_options");
+pub const isPosixNet: bool = (build_options.network == .posixnet);
 
-pub const channels = @import("channels.zig");
-pub const Notifier = @import("Notifier.zig");
-pub const poller = @import("poller.zig");
-pub const Poller = poller.Poller;
-pub const Pool = @import("Pool.zig");
-pub const Appendable = @import("Appendable.zig");
-
-const skt_backend = if (build_options.network == .posixnet)
+const skt_backend = if (isPosixNet)
     switch (builtin.os.tag) {
         .linux => @import("../platform/posixnet/linux/Skt.zig").Skt,
         .macos => @import("../platform/posixnet/mac/Skt.zig").Skt,
@@ -29,14 +20,14 @@ pub const Skt = skt_backend.Skt;
 
 // For posixnet: Socket = LIBUS_SOCKET_DESCRIPTOR equivalent (i32 on POSIX, usize on Windows).
 // Inlined to avoid circular import with common.zig (which imports internal.zig for Socket).
-pub const Socket = if (build_options.network == .posixnet)
+pub const Socket = if (isPosixNet)
     if (builtin.os.tag == .windows) usize else std.posix.fd_t
 else switch (builtin.os.tag) {
     .windows => @import("std").os.windows.ws2_32.SOCKET,
     else => @import("std").posix.socket_t,
 };
 
-const sc_backend = if (build_options.network == .posixnet)
+const sc_backend = if (isPosixNet)
     switch (builtin.os.tag) {
         .linux => @import("../platform/posixnet/linux/SocketCreator.zig").SocketCreator,
         .macos => @import("../platform/posixnet/mac/SocketCreator.zig").SocketCreator,
@@ -51,21 +42,49 @@ else switch (builtin.os.tag) {
 pub const SocketCreator = sc_backend.SocketCreator;
 pub const triggeredSkts = @import("triggeredSkts.zig");
 
-// // Thread-local loop slot: used only by portable backend; other backends leave it null.
-// threadlocal var g_loop: ?*anyopaque = null;
 
 pub fn initPlatform() AmpeError!void {
-    if (builtin.os.tag == .windows) {
-        const ws2_32 = std.os.windows.ws2_32;
-        var wsa_data: ws2_32.WSADATA = undefined;
-        if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
+    if (!isPosixNet) {
+        if (builtin.os.tag == .windows) {
+            const ws2_32 = std.os.windows.ws2_32;
+            var wsa_data: ws2_32.WSADATA = undefined;
+            if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
+        }
+    }
+    else {
+        if (pn.startup_sockets() != 0){
+            return AmpeError.CommunicationFailed;
+        }
     }
 }
 
 pub fn deinitPlatform() void {
-    if (builtin.os.tag == .windows) {
-        _ = std.os.windows.ws2_32.WSACleanup();
+    if (!isPosixNet) {
+        if (builtin.os.tag == .windows) {
+            _ = std.os.windows.ws2_32.WSACleanup();
+        }
+    }
+    else {
+       pn.cleanup_sockets();
     }
 }
 
+pub const RunCtx = struct {
+    gpa: std.mem.Allocator,
+    io: std.Io,
+};
+
 const AmpeError = @import("../status.zig").AmpeError;
+
+const std = @import("std");
+const builtin = @import("builtin");
+const build_options = @import("build_options");
+
+const pn = @import("posix_net");
+
+pub const channels = @import("channels.zig");
+pub const Notifier = @import("Notifier.zig");
+pub const poller = @import("poller.zig");
+pub const Poller = poller.Poller;
+pub const Pool = @import("Pool.zig");
+pub const Appendable = @import("Appendable.zig");

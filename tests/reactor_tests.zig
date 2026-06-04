@@ -3,109 +3,104 @@
 
 test {
     std.testing.log_level = .debug;
-    std.debug.print("engine_tests\r\n", .{});
+    std.log.info("engine_tests\r\n", .{});
 }
 
+test "ampe just create/destroy" {
+    std.testing.log_level = .debug;
+    try test_ampe_just_create_destroy();
+}
+
+
 test "send illegal messages" {
-    // if (!isMac) {
-        try send_illegal_messages();
-    // }
+    try send_illegal_messages();
 }
 
 test "update receiver" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
+    std.testing.log_level = .debug;
 
-        log.info("start handleUpdateReceiver ", .{});
+    log.info("start handleUpdateReceiver ", .{});
 
-        const updateStatus = recipes.handleUpdateReceiver(gpa) catch |err| {
-            log.info("handleUpdateReceiver {any}", .{
-                err,
-            });
-            return err;
-        };
-        try testing.expect(updateStatus == .receiver_update);
+    const updateStatus = recipes.handleUpdateReceiver(gpa) catch |err| {
+        log.info("handleUpdateReceiver {any}", .{
+            err,
+        });
+        return err;
+    };
+    try testing.expect(updateStatus == .receiver_update);
     // }
 }
 
-test "ampe just create/destroy" {
-    // if (!isMac) {
-        std.testing.log_level = .debug;
-        try test_ampe_just_create_destroy();
-    // }
-}
 
 test "connect_disconnect" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
-        try test_connect_disconnect();
+    std.testing.log_level = .debug;
+    try test_connect_disconnect();
     // }
 }
 
 test "handle reconnect single threaded" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
-        try test_handle_reconnect_single_threaded();
+    std.testing.log_level = .debug;
+    try test_handle_reconnect_single_threaded();
     // }
 }
 
 test "handle reconnect multithreaded" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
-        try test_handle_reconnect_multithreaded();
+    std.testing.log_level = .debug;
+    try test_handle_reconnect_multithreaded();
     // }
 }
 
 test "loop tests" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
+    std.testing.log_level = .debug;
 
-        for (0..5) |i| {
-            {
-                std.debug.print("test_ampe_just_create_destroy {d}", .{i});
-                try test_ampe_just_create_destroy();
-            }
-            {
-                std.debug.print("test_connect_disconnect {d}", .{i});
-                try test_connect_disconnect();
-            }
-            {
-                std.debug.print("test_handle_reconnect_single_threaded {d}", .{i});
-                try test_handle_reconnect_single_threaded();
-            }
-            {
-                std.debug.print("test_handle_reconnect_multithreaded {d}", .{i});
-                try test_handle_reconnect_multithreaded();
-            }
+    for (0..5) |i| {
+        {
+            std.log.info("test_ampe_just_create_destroy {d}", .{i});
+            try test_ampe_just_create_destroy();
         }
-    // }
+        {
+            std.log.info("test_connect_disconnect {d}", .{i});
+            try test_connect_disconnect();
+        }
+        {
+            std.log.info("test_handle_reconnect_single_threaded {d}", .{i});
+            try test_handle_reconnect_single_threaded();
+        }
+        {
+            std.log.info("test_handle_reconnect_multithreaded {d}", .{i});
+            try test_handle_reconnect_multithreaded();
+        }
+    }
 }
 
 test "simm test" {
     // if (!isMac) {
-        std.testing.log_level = .debug;
+    std.testing.log_level = .debug;
 
-        const tests = &[_]*const fn () void{
-            &simm_tests,
-            &simm_tests,
-            &simm_tests,
-            &simm_tests,
-        };
+    const tests = &[_]*const fn () void{
+        &simm_tests,
+        &simm_tests,
+        &simm_tests,
+        &simm_tests,
+    };
 
-        tofu.RunTasks(gpa, tests) catch unreachable;
+    tofu.RunTasks(gpa, tests) catch unreachable;
 
-        std.debug.print("All tests completed\n", .{});
+    std.log.info("All tests completed\n", .{});
     // }
 }
 
 test "echo client/server test" {
-    // if (!isMac) {
-        std.testing.log_level = .debug;
+    std.testing.log_level = .debug;
 
-        const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
+    const est: status.AmpeStatus = try recipes.handleEchoClientServer(std.testing.allocator);
 
-        try testing.expect(est == .success);
-    // }
+    try testing.expect(est == .success);
 }
 
 fn test_handle_reconnect_single_threaded() !void {

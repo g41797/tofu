@@ -16,8 +16,8 @@ const AmpeError = status.AmpeError;
 const AmpeStatus = status.AmpeStatus;
 const Reactor = tofu.Reactor;
 const TriggeredChannel = Reactor.TriggeredChannel;
-const Skt = tofu.Skt;
-const SocketCreator = tofu.SocketCreator;
+const Skt = tofu.@"internal usage".Skt ;
+const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;
 const UDSServerAddress = tofu.address.UDSServerAddress;
@@ -40,8 +40,8 @@ const SpecialMaxChannelNumber = tofu.message.SpecialMaxChannelNumber;
 const pn = @import("posix_net");
 
 test "portable backend: robust registration" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll(); // Calls backend.deinit which frees loop
@@ -75,8 +75,8 @@ test "portable backend: robust registration" {
 }
 
 test "portable backend: wait with data" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -100,7 +100,7 @@ test "portable backend: wait with data" {
             accepted = s;
             break;
         }
-        std.Thread.sleep(1 * std.time.ns_per_ms);
+        tofu.SleepMlsec(1);
     }
     defer accepted.deinit();
 
@@ -138,8 +138,8 @@ test "portable backend: wait with data" {
 }
 
 test "portable backend: timeout" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -152,8 +152,8 @@ test "portable backend: timeout" {
 }
 
 test "portable backend: accept flow" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -206,8 +206,8 @@ test "portable backend: accept flow" {
 }
 
 test "portable backend: full echo" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -230,7 +230,7 @@ test "portable backend: full echo" {
             accepted = s;
             break;
         }
-        std.Thread.sleep(1 * std.time.ns_per_ms);
+        tofu.SleepMlsec(1);
     }
     defer accepted.deinit();
     try testing.expect(accepted.isSet());
@@ -322,8 +322,8 @@ test "portable backend: full echo" {
 test "portable backend: UDS echo" {
     if (builtin.os.tag == .windows) return;
 
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -348,7 +348,7 @@ test "portable backend: UDS echo" {
             accepted = s;
             break;
         }
-        std.Thread.sleep(1 * std.time.ns_per_ms);
+        tofu.SleepMlsec(1);
     }
     defer accepted.deinit();
     try testing.expect(accepted.isSet());
@@ -452,7 +452,7 @@ fn assertNotifierFires(
         }
     }
     if (!fired) {
-        std.debug.print("\nNotifier failed to fire. ntfr_tc.act.notify: {any}\n", .{ntfr_tc.act.notify});
+        std.log.info("\nNotifier failed to fire. ntfr_tc.act.notify: {any}\n", .{ntfr_tc.act.notify});
     }
     try testing.expect(fired);
     _ = try ntfr.recvNotification();
@@ -462,8 +462,8 @@ fn assertNotifierFires(
 //     var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
 //     defer pool.close();
 //
-//     try tofu.initPlatform();
-//     defer tofu.deinitPlatform();
+//      try tofu.@"internal usage".initPlatform();
+//     defer tofu.@"internal usage".deinitPlatform();
 //
 //     var p = try Poller.init(gpa);
 //     defer p.deleteAll();
@@ -563,7 +563,7 @@ fn assertNotifierFires(
 //     var c3 = try sc.fromAddress(.{ .tcp_client_addr = TCPClientAddress.init("127.0.0.1", port3) });
 //     defer c3.deinit();
 //     _ = try c3.connect();
-//     std.Thread.sleep(10 * std.time.ns_per_ms);
+//     tofu.SleepMlsec(10 * std.time.ns_per_ms);
 //
 //     var got3 = false;
 //     for (0..100) |_| {

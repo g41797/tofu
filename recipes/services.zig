@@ -384,7 +384,9 @@ pub const EchoClient = struct {
         byeRequest.?.*.bhdr.proto = .default(.ByeSignal);
 
         byeRequest.?.*.copyBh2Body();
-        _ = self.*.chnls.?.post(&byeRequest) catch unreachable;
+        _ = self.*.chnls.?.post(&byeRequest) catch |err| {
+            log.info("echo client - waitReceive error send byeRequest {s}", .{@errorName(err)});
+        };
 
         // Wait close of the channel
         while (true) {
@@ -494,7 +496,7 @@ pub const EchoClientServer = struct {
     engine: ?*Reactor = null,
     ampe: Ampe = undefined,
     mh: ?*MultiHomed = null,
-    ack: mailbox.MailBoxIntrusive(EchoClient) = .{},
+    ack: mailbox.MailBoxIntrusive(EchoClient) = .init(std.Io.Threaded.global_single_threaded.*.io()),
     echsrv: ?*EchoService = null,
     clcCount: u16 = 0,
     echoes: usize = 0,

@@ -656,3 +656,5 @@ For Zig/mac CI failures specifically, the most common causes I’ve seen are:
 * `std.build` Darwin target branching
 * CLion using bundled CMake instead of system one
 
+Build for linux
+    zig build -Dtarget=x86_64-linux

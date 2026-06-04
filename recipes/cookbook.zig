@@ -720,7 +720,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
 
                 self.*.adr.format(helloRequest.?) catch unreachable;
 
-                _ = self.*.chnls.?.post(&helloRequest)  catch |err| {
+                _ = self.*.chnls.?.post(&helloRequest) catch |err| {
                     log.info("On client thread - post error {s}", .{@errorName(err)});
                     return;
                 };
@@ -762,7 +762,7 @@ pub fn handleReConnectMT(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
             }
 
             while (true) {
-                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT*2) catch |err| {
+                var recvMsg: ?*Message = self.*.chnls.?.waitReceive(tofu.waitReceive_SEC_TIMEOUT * 2) catch |err| {
                     log.info("On client thread - waitReceive error {s}", .{@errorName(err)});
                     return;
                 };
@@ -1295,7 +1295,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                         .recv_failed,
                         => {
                             if (builtin.os.tag == .windows) {
-                                std.Thread.sleep(10 * std.time.ns_per_ms);
+                                tofu.SleepMlsec(10);
                             }
                             break; // connect should be repeated
                         },
@@ -1323,9 +1323,9 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                     }
                 }
                 if (builtin.os.tag == .windows) {
-                    std.Thread.sleep(sleepBetweenNS);
+                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
                 } else if (i != tries) {
-                    std.Thread.sleep(sleepBetweenNS);
+                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
                 }
             }
 
@@ -1662,9 +1662,9 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
                 }
 
                 if (builtin.os.tag == .windows) {
-                    std.Thread.sleep(sleepBetweenNS);
+                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
                 } else if (i != tries) {
-                    std.Thread.sleep(sleepBetweenNS);
+                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
                 }
             }
 
@@ -1894,20 +1894,16 @@ pub const TofuEchoServer = struct {
     }
 };
 
-pub inline fn sleepSec() void {
-    std.Thread.sleep(1_000_000_000);
+pub inline fn sleep1Sec() void {
+    tofu.SleepMlsec(1000);
 }
 
 pub inline fn sleep1MlSec() void {
-    std.Thread.sleep(1_000_000);
+    tofu.SleepMlsec(1);
 }
 
 pub inline fn sleep10MlSec() void {
-    std.Thread.sleep(1_000_000_0);
-}
-
-pub inline fn sleep1Sec() void {
-    std.Thread.sleep(1_000_000_000);
+    tofu.SleepMlsec(10);
 }
 
 pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {

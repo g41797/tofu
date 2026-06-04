@@ -7,16 +7,16 @@ test {
 }
 
 test "TempUdsPath produces unique absolute path" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+    try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const uds_path = try tup.buildPath();
     try testing.expect(uds_path.len > 0);
 }
 
 test "base Notifier" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+    try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var ntfr: Notifier = try Notifier.init(testing.allocator);
     defer ntfr.deinit();
     const notif: Notification = .{ .kind = .message, .oob = .on };

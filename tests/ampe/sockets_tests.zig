@@ -14,12 +14,12 @@ test {
 // ---------------------------------------------------------------------------
 
 const MAX_RETRIES = 10_000;
-const SLEEP_NS = 1 * std.time.ns_per_ms;
+const SLEEP_1MS = 1 * std.time.ns_per_ms;
 
 fn acceptWithRetry(server: *Skt) !Skt {
     for (0..MAX_RETRIES) |_| {
         if (try server.accept()) |accepted| return accepted;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return error.TimeoutAccept;
 }
@@ -27,7 +27,7 @@ fn acceptWithRetry(server: *Skt) !Skt {
 fn connectWithRetry(client: *Skt) !void {
     for (0..MAX_RETRIES) |_| {
         if (try client.connect()) return;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     return error.TimeoutConnect;
 }
@@ -35,14 +35,14 @@ fn connectWithRetry(client: *Skt) !void {
 fn sendAll(skt: *Skt, data: []const u8) !void {
     var sent: usize = 0;
     while (sent < data.len) {
-        if (try skt.sendBuf(data[sent..])) |n| sent += n else std.Thread.sleep(SLEEP_NS);
+        if (try skt.sendBuf(data[sent..])) |n| sent += n else tofu.SleepMlsec(SLEEP_1MS);
     }
 }
 
 fn recvAll(skt: *Skt, buf: []u8) !void {
     var got: usize = 0;
     while (got < buf.len) {
-        if (try skt.recvToBuf(buf[got..])) |n| got += n else std.Thread.sleep(SLEEP_NS);
+        if (try skt.recvToBuf(buf[got..])) |n| got += n else tofu.SleepMlsec(SLEEP_1MS);
     }
 }
 
@@ -51,15 +51,15 @@ fn recvAll(skt: *Skt, buf: []u8) !void {
 // ---------------------------------------------------------------------------
 
 test "SocketCreator wrong address returns InvalidAddress" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var sc = SocketCreator.init(gpa);
     try testing.expectError(AmpeError.InvalidAddress, sc.fromAddress(.{ .wrong = .{} }));
 }
 
 test "SocketCreator parse empty message returns InvalidAddress" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var msg = try Message.create(gpa);
     defer msg.destroy();
     var sc = SocketCreator.init(gpa);
@@ -67,8 +67,8 @@ test "SocketCreator parse empty message returns InvalidAddress" {
 }
 
 test "SocketCreator TCP server socket is set and server-flagged" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var skt = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -78,8 +78,8 @@ test "SocketCreator TCP server socket is set and server-flagged" {
 }
 
 test "SocketCreator UDS server socket is set and server-flagged" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
     var sc = SocketCreator.init(gpa);
@@ -90,8 +90,8 @@ test "SocketCreator UDS server socket is set and server-flagged" {
 }
 
 test "SocketCreator TCP client socket is created" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -103,8 +103,8 @@ test "SocketCreator TCP client socket is created" {
 }
 
 test "SocketCreator UDS client connect to nonexistent path fails" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var sc = SocketCreator.init(gpa);
     // fromAddress only creates the socket — connect() is where the path is resolved
     var skt = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init("/tmp/tofu_no_such_socket_xyz.sock") });
@@ -115,8 +115,8 @@ test "SocketCreator UDS client connect to nonexistent path fails" {
 }
 
 test "SocketCreator findFreeTcpPort returns bindable port" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     try testing.expect(port > 0);
     var sc = SocketCreator.init(gpa);
@@ -126,8 +126,8 @@ test "SocketCreator findFreeTcpPort returns bindable port" {
 }
 
 test "SocketCreator createUdsListener with empty path auto-creates" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var skt = try SocketCreator.createUdsListener("");
     defer skt.deinit();
     try testing.expect(skt.isSet());
@@ -139,15 +139,15 @@ test "SocketCreator createUdsListener with empty path auto-creates" {
 // ---------------------------------------------------------------------------
 
 test "Skt zero-initialized deinit is safe" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var skt: Skt = .{};
     skt.deinit();
 }
 
 test "Skt accept on listener before client returns null" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -157,8 +157,8 @@ test "Skt accept on listener before client returns null" {
 }
 
 test "Skt connect does not error (non-blocking pending or immediate)" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var server = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -220,8 +220,8 @@ fn tcpServerImmediateRecv(ctx: *TcpCtx) void {
 }
 
 test "TCP connect and accept" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var listener = try sc.fromAddress(.{ .tcp_server_addr = TCPServerAddress.init("127.0.0.1", port) });
@@ -235,7 +235,7 @@ test "TCP connect and accept" {
         if (!client_connected) client_connected = try client.connect();
         if (accepted == null) accepted = try listener.accept();
         if (client_connected and accepted != null) break;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     try testing.expect(client_connected);
     try testing.expect(accepted != null);
@@ -244,8 +244,8 @@ test "TCP connect and accept" {
 }
 
 test "TCP sendBuf recvToBuf round-trip" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var ctx: TcpCtx = .{};
@@ -265,8 +265,8 @@ test "TCP sendBuf recvToBuf round-trip" {
 }
 
 test "TCP recvToBuf returns null when no data" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
     var ctx: TcpCtx = .{};
@@ -280,7 +280,7 @@ test "TCP recvToBuf returns null when no data" {
     // Wait for server to complete its recv before we allow it to deinit (via ctx.conn.deinit below).
     for (0..MAX_RETRIES) |_| {
         if (ctx.accepted_set or ctx.err != null) break;
-        std.Thread.sleep(SLEEP_NS);
+        tofu.SleepMlsec(SLEEP_1MS);
     }
     t.join();
     try testing.expect(ctx.err == null);
@@ -349,15 +349,15 @@ fn udsServerDeinit(ctx: *UdsCtx) void {
 }
 
 test "UDS connect and accept" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
     @memcpy(ctx.path[0..path.len], path);
     const t = try std.Thread.spawn(.{}, udsServerAcceptOnly, .{&ctx});
-    std.Thread.sleep(5 * std.time.ns_per_ms);
+    tofu.SleepMlsec(5);
     var sc = SocketCreator.init(gpa);
     var client = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init(ctx.pathSlice()) });
     defer client.deinit();
@@ -368,15 +368,15 @@ test "UDS connect and accept" {
 }
 
 test "UDS sendBuf recvToBuf round-trip" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+     try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
     ctx.path_len = path.len;
     @memcpy(ctx.path[0..path.len], path);
     const t = try std.Thread.spawn(.{}, udsServerRecv, .{&ctx});
-    std.Thread.sleep(5 * std.time.ns_per_ms);
+    tofu.SleepMlsec(5);
     var sc = SocketCreator.init(gpa);
     var client = try sc.fromAddress(.{ .uds_client_addr = UDSClientAddress.init(ctx.pathSlice()) });
     defer client.deinit();
@@ -391,8 +391,8 @@ test "UDS sendBuf recvToBuf round-trip" {
 }
 
 test "UDS server socket file removed after deinit" {
-    try tofu.initPlatform();
-    defer tofu.deinitPlatform();
+    try tofu.@"internal usage".initPlatform();
+    defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
     var ctx: UdsCtx = .{};
@@ -401,11 +401,8 @@ test "UDS server socket file removed after deinit" {
     const t = try std.Thread.spawn(.{}, udsServerDeinit, .{&ctx});
     t.join();
     try testing.expect(ctx.err == null);
-    std.fs.accessAbsolute(ctx.pathSlice(), .{}) catch |e| {
-        try testing.expect(e == error.FileNotFound);
-        return;
-    };
-    try testing.expect(false); // file still exists
+
+    try testing.expectEqual(-1, pn.deleteUnixPath(&ctx.path));
 }
 
 // ---------------------------------------------------------------------------
@@ -413,15 +410,15 @@ test "UDS server socket file removed after deinit" {
 // ---------------------------------------------------------------------------
 
 const tofu = @import("tofu");
-const Skt = tofu.Skt;
-const SocketCreator = tofu.SocketCreator;
+const Skt = tofu.@"internal usage".Skt ;
+const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;
 const UDSServerAddress = tofu.address.UDSServerAddress;
 const UDSClientAddress = tofu.address.UDSClientAddress;
 const AmpeError = tofu.AmpeError;
 const Message = tofu.Message;
-
+const pn = @import("posix_net");
 const std = @import("std");
 const testing = std.testing;
 const gpa = std.testing.allocator;
