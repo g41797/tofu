@@ -1,8 +1,8 @@
 # Agent State & Handover
 
-**Last Updated:** 2026-05-19
+**Last Updated:** 2026-06-04
 **Last Agent:** Claude Code (Sonnet 4.6)
-**Active Phase:** Stage 10 — Doc Site (three sub-stages).
+**Active Phase:** Zig 0.16 Migration — maintenance fixes.
 
 ---
 
@@ -22,10 +22,13 @@
 **Update this section at the start and end of every session.**
 
 - Design complete. `design/transition-2-bun-usockets-plan.md` is the single authoritative implementation plan.
-- Stages 0.5 through 9 complete; cross-platform CI passing for both backends.
-- **Active Task:** Doc Site — three sequential sub-stages (10a, 10b, 10c). See §24, §25, §26.
-- **Current Status:** Plan written. Implementation pending.
+- Stages 0.5 through 9 complete. Project migrated to Zig 0.16.0.
+- **Active Task:** Zig 0.16 migration stabilisation. Doc Site (10a, 10b, 10c) deferred.
+- **Current Status:** Three Zig 0.16 fixes applied. Mac/Windows CI green. Linux CI green after fixes below.
 - **Summary of Findings:**
+  - **FIXED (Zig 0.16):** `EchoClientServer.ack` not initialized — `MailBoxIntrusive` field default changed to `.init(std.Io.Threaded.global_single_threaded.*.io())` in `recipes/services.zig`. Windows/Mac tests now pass. See session 2026-06-04.
+  - **FIXED (Zig 0.16):** `sockets_tests.zig` Linux hang — `SLEEP_1MS` was `1 * std.time.ns_per_ms` (= 1,000,000) passed to `SleepMlsec()` which takes milliseconds. Each retry slept 1000 seconds. Fixed by user to `1`.
+  - **FIXED (Zig 0.16):** `portable_poller_tests.zig` Linux ReleaseSafe hang — `while(true)` accept loop in `wait with data` test had no retry limit. Changed to `for (0..200)` with `testing.expect(accepted.isSet())`. Matches pattern already used in `full echo` / `UDS echo` tests.
   - **DONE (Stage 10a):** Structural Alignment — fixed stale references in docs after Stage 9. Regenerated autodoc artifacts (`zig build docs`). Added local helper scripts. Verified locally. See §24.
   - **DONE (Stage 10b):** Backend Content — added "Two Network Backends" section and Zig 0.16 roadmap note to `platform-support.md`; added `-Dnetwork=` options to `installation.md`. Verified locally. See §25.
   - **DONE (Stage 10c):** CI Deployment — created `.github/workflows/docs.yml` automating `zig build docs` + `mkdocs build` + commit-back to `main`. See §26.
@@ -129,6 +132,37 @@ src/ampe/
 ---
 
 ## Session History
+
+### 2026-06-04: Claude Code (Sonnet 4.6) — Zig 0.16 Migration Fixes
+
+#### Summary
+Project migrated to Zig 0.16.0. Three bugs surfaced. (1) `MailBoxIntrusive` in Zig 0.16
+requires explicit `Io` initialization — uninitialized mailboxes have `closed=true`, causing
+`receive()` to return `error.Closed` immediately. `EchoClientServer.ack` was missing
+`.init(std.Io.Threaded.global_single_threaded.*.io())`. Fixed by changing the field default
+in `recipes/services.zig`. (2) `sockets_tests.zig` (Linux-only) passed `SLEEP_1MS =
+1 * std.time.ns_per_ms` (nanoseconds) to `SleepMlsec()` which takes milliseconds — each
+retry slept 1000 seconds. Fixed by user. (3) `portable_poller_tests.zig` "wait with data"
+test had an unbounded `while(true)` accept loop. On Linux ReleaseSafe, `-O2` speed combined
+with safety-check overhead creates a timing window where the TCP handshake is not yet visible
+in the accept queue on the first poll, causing a permanent hang. Fixed by bounding the loop
+to 200 retries (matching the pattern in the "full echo" and "UDS echo" tests).
+
+#### Changes
+- `recipes/services.zig:499` — `EchoClientServer.ack` field default: `.{}` → `.init(std.Io.Threaded.global_single_threaded.*.io())`
+- `tests/ampe/sockets_tests.zig` — `SLEEP_1MS = 1` (fixed by user; was `1 * std.time.ns_per_ms`)
+- `tests/ampe/portable_poller_tests.zig:97-105` — `while(true)` → `for (0..200)` with `testing.expect(accepted.isSet())`; `accepted` zero-initialized to `.{}`
+
+#### Verification
+
+| Check | Result |
+| :---- | :----- |
+| Mac CI (all modes, posixnet) | ✅ PASS |
+| Windows CI (all modes, posixnet) | ✅ PASS |
+| Linux Debug/ReleaseFast/ReleaseSmall | ✅ PASS |
+| Linux ReleaseSafe | pending after portable_poller_tests fix |
+
+---
 
 ### 2026-05-19: Claude Code (Sonnet 4.6) — Stage 10: Doc Site plan
 

@@ -2447,3 +2447,91 @@ no `.gitignore` change. `docs/` stays in git as it is now.
 Push a trivial change to `docs_site/docs/mds/overview.md`.
 Confirm the Actions run completes and the live site at `https://g41797.github.io/tofu/` reflects the change.
 
+---
+
+## 27. Zig 0.16 Migration — Known Fixes (2026-06-04)
+
+Project migrated from Zig 0.15.2 to Zig 0.16.0. Three bugs surfaced during migration.
+
+### Fix 1 — `EchoClientServer.ack` uninitialised mailbox
+
+**File:** `recipes/services.zig:499`
+
+**Root cause:** `MailBoxIntrusive` in the updated mailbox library (0.0.15) defaults to `closed=true`
+and `io=null`. Any `receive()` call immediately returns `error.Closed`. Before Zig 0.16,
+the mailbox worked without explicit `Io` initialisation. After the library update for Zig 0.16,
+explicit initialisation is mandatory.
+
+**Symptom:** `EchoClientServer.run()` `receive()` loop broke immediately. Server was destroyed
+while clients were still running. Clients got `channel_closed` after only a few echoes.
+16 `MchnGroup` + `EchoClient` allocations leaked (threads still running when GPA checked).
+Test assertion `est == .success` failed.
+
+**Fix:**
+```zig
+// Before
+ack: mailbox.MailBoxIntrusive(EchoClient) = .{},
+
+// After
+ack: mailbox.MailBoxIntrusive(EchoClient) = .init(std.Io.Threaded.global_single_threaded.*.io()),
+```
+
+Same pattern already used in `MultiHomed.ackMbox`.
+
+### Fix 2 — `sockets_tests.zig` SLEEP_1MS unit mismatch (Linux-only)
+
+**File:** `tests/ampe/sockets_tests.zig`
+
+**Root cause:** `SLEEP_1MS = 1 * std.time.ns_per_ms` (= 1,000,000) was passed to
+`SleepMlsec()` which takes milliseconds. Each retry slept 1000 seconds. Tests appeared
+stuck. Only affects Linux because `sockets_tests.zig` is Linux-only.
+
+**Fix:** `const SLEEP_1MS = 1;` (1 millisecond). Fixed by author.
+
+### Fix 3 — `portable_poller_tests.zig` unbounded accept loop (Linux ReleaseSafe)
+
+**File:** `tests/ampe/portable_poller_tests.zig`
+
+**Root cause:** The "wait with data" test used an unbounded `while(true)` accept loop.
+On Linux in ReleaseSafe mode, `-O2` optimisations combined with safety-check overhead
+create a timing window where the TCP handshake is not yet visible in the accept queue
+on the first poll. The loop never exits → permanent hang.
+
+Other optimisation modes do not trigger this:
+- Debug: slower execution, connection ready before first poll.
+- ReleaseFast/ReleaseSmall: different timing due to absent safety checks.
+- Mac/Windows: different OS scheduler behaviour.
+
+**Fix:** Replace `while(true)` with `for (0..200)` + `testing.expect(accepted.isSet())`.
+Same bounded pattern already used in "full echo" (line 228) and "UDS echo" (line 346).
+
+```zig
+// Before
+var accepted: Skt = undefined;
+while (true) {
+    if (try listener.accept()) |s| { accepted = s; break; }
+    tofu.SleepMlsec(1);
+}
+defer accepted.deinit();
+
+// After
+var accepted: Skt = .{};
+for (0..200) |_| {
+    if (try listener.accept()) |s| { accepted = s; break; }
+    tofu.SleepMlsec(1);
+}
+defer accepted.deinit();
+try testing.expect(accepted.isSet());
+```
+
+### Notes on Zig 0.16 `std.Io` system
+
+- `std.Io.Threaded.global_single_threaded` is a global `Threaded` instance for single-threaded use.
+  Its `.io()` method returns an `Io` value with function pointers for futex/mutex/condition operations.
+- On Linux, futex operations use `FUTEX_WAIT_PRIVATE` / `FUTEX_WAKE_PRIVATE` — kernel primitives
+  that work cross-thread within a process.
+- The `MailBoxIntrusive` library requires explicit `Io` initialisation. Uninitialised mailboxes
+  (`closed=true`, `io=null`) return `error.Closed` from both `send()` and `receive()` immediately.
+- `std.Io.Semaphore` and `std.Io.Mutex` are the standard synchronisation primitives. Custom
+  `semaphore_waitTimeout` in `helpers.zig` wraps `Io.Condition` to add deadline support.
+

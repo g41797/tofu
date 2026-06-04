@@ -94,8 +94,8 @@ test "portable backend: wait with data" {
     // Client connect typically EINPROGRESS on TCP, but uSockets handles it.
     _ = try client.connect();
 
-    var accepted: Skt = undefined;
-    while (true) {
+    var accepted: Skt = .{};
+    for (0..200) |_| {
         if (try listener.accept()) |s| {
             accepted = s;
             break;
@@ -103,6 +103,7 @@ test "portable backend: wait with data" {
         tofu.SleepMlsec(1);
     }
     defer accepted.deinit();
+    try testing.expect(accepted.isSet());
 
     var map = SeqnTrcMap.init(gpa);
     defer map.deinit();
