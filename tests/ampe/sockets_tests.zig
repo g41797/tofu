@@ -14,7 +14,7 @@ test {
 // ---------------------------------------------------------------------------
 
 const MAX_RETRIES = 10_000;
-const SLEEP_1MS = 1 * std.time.ns_per_ms;
+const SLEEP_1MS = 1;
 
 fn acceptWithRetry(server: *Skt) !Skt {
     for (0..MAX_RETRIES) |_| {
