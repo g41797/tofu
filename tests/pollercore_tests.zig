@@ -27,7 +27,7 @@ fn connectWithRetry(client: *Skt) !void {
 // ---------------------------------------------------------------------------
 
 test "Notifier wakeup" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var ntfr: Notifier = try Notifier.init(testing.allocator);
@@ -80,7 +80,7 @@ test "Notifier wakeup" {
 // ---------------------------------------------------------------------------
 
 test "Raw TCP connectivity" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var sc: SocketCreator = SocketCreator.init(testing.allocator);
@@ -137,7 +137,7 @@ test "TCP accept recv send via PollerCore" {
     var pool: Pool = try Pool.init(testing.allocator, 10, 1024, null);
     defer pool.close();
 
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var pl = try Poller.init(testing.allocator);

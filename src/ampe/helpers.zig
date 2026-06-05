@@ -83,8 +83,7 @@ inline fn runTask(task: *const fn () void) void {
 pub fn SleepMlsec(mlsec: u64) void {
     if (build_options.network == .posixnet) {
         pn.thread_sleep_ms(mlsec);
-    }
-    else {
+    } else {
         std.Thread.sleep(mlsec * std.time.ns_per_ms);
     }
 }
@@ -144,7 +143,7 @@ pub fn AutoArrayHashMap(comptime K: type, comptime V: type) type {
         }
 
         pub const Iterator = std.array_hash_map.Auto(K, V).Iterator;
-        
+
         pub inline fn iterator(self: *const Self) Iterator {
             return self.map.iterator();
         }
@@ -160,7 +159,6 @@ pub fn AutoArrayHashMap(comptime K: type, comptime V: type) type {
         pub fn fetchSwapRemove(self: *Self, key: K) ?std.array_hash_map.Auto(K, V).KV {
             return self.map.fetchSwapRemove(key);
         }
-
     };
 }
 
@@ -184,7 +182,6 @@ const Allocator = std.mem.Allocator;
 const log = std.log;
 
 const builtin = @import("builtin");
-
 
 const mailbox = @import("mailbox");
 const condition_waitTimeout = mailbox.condition_waitTimeout;
@@ -212,7 +209,7 @@ pub fn semaphore_waitTimeout(s: *Semaphore, io: Io, timeout: Io.Timeout) WaitTim
     try s.mutex.lock(io);
     defer s.mutex.unlock(io);
     while (s.permits == 0) {
-        try condition_waitTimeout(&s.cond,io, &s.mutex, deadline);
+        try condition_waitTimeout(&s.cond, io, &s.mutex, deadline);
     }
     s.permits -= 1;
     if (s.permits > 0) s.cond.signal(io);

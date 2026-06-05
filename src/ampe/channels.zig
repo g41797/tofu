@@ -147,7 +147,7 @@ pub const ActiveChannels = struct {
         defer cns.mutex.unlock(cns.*.io);
 
         while (true) {
-            var rv : ChannelNumber = 0;
+            var rv: ChannelNumber = 0;
             cns.*.io.random(std.mem.asBytes(&rv));
 
             if ((rv == message.SpecialMinChannelNumber) or (rv == message.SpecialMaxChannelNumber)) {

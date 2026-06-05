@@ -164,7 +164,6 @@ pub inline fn setCmdCompleted(grp: *MchnGroup) void {
 }
 
 pub fn waitCmdCompleted(grp: *MchnGroup) void {
-
     const timeout = std.Io.Timeout{
         .duration = .{
             .raw = .{

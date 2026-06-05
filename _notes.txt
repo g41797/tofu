@@ -658,3 +658,12 @@ For Zig/mac CI failures specifically, the most common causes I’ve seen are:
 
 Build for linux
     zig build -Dtarget=x86_64-linux
+
+Replace soft links for new version
+
+    sudo ln -sfn /home/g41797/dev/langs/zls-x86_64-linux-0.16.0/zls /usr/bin/zls
+    sudo ln -sfn /home/g41797/dev/langs/zig-x86_64-linux-0.16.0/zig /usr/bin/zig
+
+    ls -l /usr/bin/zls /usr/bin/zig
+    which zls
+    which zig

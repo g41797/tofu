@@ -11,7 +11,6 @@ test "ampe just create/destroy" {
     try test_ampe_just_create_destroy();
 }
 
-
 test "send illegal messages" {
     try send_illegal_messages();
 }
@@ -31,7 +30,6 @@ test "update receiver" {
     try testing.expect(updateStatus == .receiver_update);
     // }
 }
-
 
 test "connect_disconnect" {
     // if (!isMac) {

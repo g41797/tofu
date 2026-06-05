@@ -16,7 +16,7 @@ const AmpeError = status.AmpeError;
 const AmpeStatus = status.AmpeStatus;
 const Reactor = tofu.Reactor;
 const TriggeredChannel = Reactor.TriggeredChannel;
-const Skt = tofu.@"internal usage".Skt ;
+const Skt = tofu.@"internal usage".Skt;
 const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;
@@ -40,7 +40,7 @@ const SpecialMaxChannelNumber = tofu.message.SpecialMaxChannelNumber;
 const pn = @import("posix_net");
 
 test "portable backend: robust registration" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
@@ -75,7 +75,7 @@ test "portable backend: robust registration" {
 }
 
 test "portable backend: wait with data" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
@@ -139,7 +139,7 @@ test "portable backend: wait with data" {
 }
 
 test "portable backend: timeout" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
@@ -153,7 +153,7 @@ test "portable backend: timeout" {
 }
 
 test "portable backend: accept flow" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
@@ -207,7 +207,7 @@ test "portable backend: accept flow" {
 }
 
 test "portable backend: full echo" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);
@@ -323,7 +323,7 @@ test "portable backend: full echo" {
 test "portable backend: UDS echo" {
     if (builtin.os.tag == .windows) return;
 
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
 
     var p = try Poller.init(gpa);

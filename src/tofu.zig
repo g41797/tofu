@@ -22,7 +22,6 @@ pub const AmpeError = status.AmpeError;
 // Ampe factory/implementation
 pub const Reactor = @import("ampe/Reactor.zig");
 
-
 // Mostly for tests
 pub const TempUdsPath = @import("ampe/helpers.zig").TempUdsPath;
 pub const FindFreeTcpPort = @import("ampe/helpers.zig").FindFreeTcpPort;

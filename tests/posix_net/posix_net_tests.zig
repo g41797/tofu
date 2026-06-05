@@ -7,7 +7,7 @@ test {
 }
 
 test "platform init" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
 }
 
 // ---------------------------------------------------------------------------

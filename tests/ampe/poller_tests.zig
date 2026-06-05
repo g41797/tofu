@@ -64,7 +64,7 @@ fn makeTC(exp: Triggers) *TriggeredChannel {
 // ---------------------------------------------------------------------------
 
 test "backend init and deinit" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     p.deleteAll();
@@ -75,7 +75,7 @@ test "backend init and deinit" {
 // ---------------------------------------------------------------------------
 
 test "timeout when no data" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -110,7 +110,7 @@ test "timeout when no data" {
 // ---------------------------------------------------------------------------
 
 test "readable after write" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -148,7 +148,7 @@ test "readable after write" {
 // ---------------------------------------------------------------------------
 
 test "writable immediately" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -183,7 +183,7 @@ test "writable immediately" {
 // ---------------------------------------------------------------------------
 
 test "unregister prevents event" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -222,7 +222,7 @@ test "unregister prevents event" {
 // ---------------------------------------------------------------------------
 
 test "modify recv to send" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -261,7 +261,7 @@ test "modify recv to send" {
 // ---------------------------------------------------------------------------
 
 test "two fds both readable" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var p = try Poller.init(gpa);
     defer p.deleteAll();
@@ -364,7 +364,7 @@ const SeqN = common.SeqN;
 const toFd = common.toFd;
 const Triggers = internal_mod.triggeredSkts.Triggers;
 const TriggeredChannel = tofu.Reactor.TriggeredChannel;
-const Skt = tofu.@"internal usage".Skt ;
+const Skt = tofu.@"internal usage".Skt;
 const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;

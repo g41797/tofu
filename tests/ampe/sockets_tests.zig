@@ -51,14 +51,14 @@ fn recvAll(skt: *Skt, buf: []u8) !void {
 // ---------------------------------------------------------------------------
 
 test "SocketCreator wrong address returns InvalidAddress" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var sc = SocketCreator.init(gpa);
     try testing.expectError(AmpeError.InvalidAddress, sc.fromAddress(.{ .wrong = .{} }));
 }
 
 test "SocketCreator parse empty message returns InvalidAddress" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var msg = try Message.create(gpa);
     defer msg.destroy();
@@ -67,7 +67,7 @@ test "SocketCreator parse empty message returns InvalidAddress" {
 }
 
 test "SocketCreator TCP server socket is set and server-flagged" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -78,7 +78,7 @@ test "SocketCreator TCP server socket is set and server-flagged" {
 }
 
 test "SocketCreator UDS server socket is set and server-flagged" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
@@ -90,7 +90,7 @@ test "SocketCreator UDS server socket is set and server-flagged" {
 }
 
 test "SocketCreator TCP client socket is created" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -103,7 +103,7 @@ test "SocketCreator TCP client socket is created" {
 }
 
 test "SocketCreator UDS client connect to nonexistent path fails" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var sc = SocketCreator.init(gpa);
     // fromAddress only creates the socket — connect() is where the path is resolved
@@ -115,7 +115,7 @@ test "SocketCreator UDS client connect to nonexistent path fails" {
 }
 
 test "SocketCreator findFreeTcpPort returns bindable port" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     try testing.expect(port > 0);
@@ -126,7 +126,7 @@ test "SocketCreator findFreeTcpPort returns bindable port" {
 }
 
 test "SocketCreator createUdsListener with empty path auto-creates" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var skt = try SocketCreator.createUdsListener("");
     defer skt.deinit();
@@ -139,14 +139,14 @@ test "SocketCreator createUdsListener with empty path auto-creates" {
 // ---------------------------------------------------------------------------
 
 test "Skt zero-initialized deinit is safe" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var skt: Skt = .{};
     skt.deinit();
 }
 
 test "Skt accept on listener before client returns null" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -157,7 +157,7 @@ test "Skt accept on listener before client returns null" {
 }
 
 test "Skt connect does not error (non-blocking pending or immediate)" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -220,7 +220,7 @@ fn tcpServerImmediateRecv(ctx: *TcpCtx) void {
 }
 
 test "TCP connect and accept" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -244,7 +244,7 @@ test "TCP connect and accept" {
 }
 
 test "TCP sendBuf recvToBuf round-trip" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -265,7 +265,7 @@ test "TCP sendBuf recvToBuf round-trip" {
 }
 
 test "TCP recvToBuf returns null when no data" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     const port = try tofu.FindFreeTcpPort();
     var sc = SocketCreator.init(gpa);
@@ -349,7 +349,7 @@ fn udsServerDeinit(ctx: *UdsCtx) void {
 }
 
 test "UDS connect and accept" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
@@ -368,7 +368,7 @@ test "UDS connect and accept" {
 }
 
 test "UDS sendBuf recvToBuf round-trip" {
-     try tofu.@"internal usage".initPlatform();
+    try tofu.@"internal usage".initPlatform();
     defer tofu.@"internal usage".deinitPlatform();
     var tup: tofu.TempUdsPath = .{};
     const path = try tup.buildPath();
@@ -410,7 +410,7 @@ test "UDS server socket file removed after deinit" {
 // ---------------------------------------------------------------------------
 
 const tofu = @import("tofu");
-const Skt = tofu.@"internal usage".Skt ;
+const Skt = tofu.@"internal usage".Skt;
 const SocketCreator = tofu.@"internal usage".SocketCreator;
 const TCPServerAddress = tofu.address.TCPServerAddress;
 const TCPClientAddress = tofu.address.TCPClientAddress;

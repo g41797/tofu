@@ -32,7 +32,7 @@ sndMtx: Mutex = undefined,
 crtMtx: Mutex = undefined,
 shtdwnStrt: bool = undefined,
 allocator: Allocator = undefined,
-io:std.Io = undefined,
+io: std.Io = undefined,
 options: tofu.Options = undefined,
 msgs: [2]MSGMailBox = undefined,
 ntfr: Notifier = undefined,
@@ -396,7 +396,6 @@ fn runEngineOnThread(rtr: *Reactor) !void {
 
 fn waitFinish(rtr: *Reactor) void {
     if (rtr.thread) |t| {
-
         const timeout = std.Io.Timeout{
             .duration = .{
                 .raw = .{
@@ -455,7 +454,6 @@ inline fn ack(rtr: *Reactor) void {
 }
 
 inline fn recv_ack(rtr: *Reactor) !void {
-
     const timeout = std.Io.Timeout{
         .duration = .{
             .raw = .{

@@ -1323,9 +1323,9 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
                     }
                 }
                 if (builtin.os.tag == .windows) {
-                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
+                    tofu.SleepMlsec(sleepBetweenNS / std.time.ns_per_ms);
                 } else if (i != tries) {
-                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
+                    tofu.SleepMlsec(sleepBetweenNS / std.time.ns_per_ms);
                 }
             }
 
@@ -1662,9 +1662,9 @@ pub fn handleReConnectViaConnector(gpa: Allocator, srvCfg: *Address, cltCfg: *Ad
                 }
 
                 if (builtin.os.tag == .windows) {
-                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
+                    tofu.SleepMlsec(sleepBetweenNS / std.time.ns_per_ms);
                 } else if (i != tries) {
-                    tofu.SleepMlsec(sleepBetweenNS/std.time.ns_per_ms);
+                    tofu.SleepMlsec(sleepBetweenNS / std.time.ns_per_ms);
                 }
             }
 

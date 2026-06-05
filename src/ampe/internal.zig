@@ -42,7 +42,6 @@ else switch (builtin.os.tag) {
 pub const SocketCreator = sc_backend.SocketCreator;
 pub const triggeredSkts = @import("triggeredSkts.zig");
 
-
 pub fn initPlatform() AmpeError!void {
     if (!isPosixNet) {
         if (builtin.os.tag == .windows) {
@@ -50,9 +49,8 @@ pub fn initPlatform() AmpeError!void {
             var wsa_data: ws2_32.WSADATA = undefined;
             if (ws2_32.WSAStartup(0x0202, &wsa_data) != 0) return AmpeError.CommunicationFailed;
         }
-    }
-    else {
-        if (pn.startup_sockets() != 0){
+    } else {
+        if (pn.startup_sockets() != 0) {
             return AmpeError.CommunicationFailed;
         }
     }
@@ -63,9 +61,8 @@ pub fn deinitPlatform() void {
         if (builtin.os.tag == .windows) {
             _ = std.os.windows.ws2_32.WSACleanup();
         }
-    }
-    else {
-       pn.cleanup_sockets();
+    } else {
+        pn.cleanup_sockets();
     }
 }
 
