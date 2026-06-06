@@ -1,11 +1,14 @@
 # Cross-Platform Design
 
-Every platform(os+used libs) supports following "objects":
+Every platform(os+used libs) supports following abstract network "objects":
 
-- Skt
-- SocketCreator
-- Triggers
-- PollBackend
+- **_Sockets_**
+  - Skt
+  - SocketCreator
+
+- **_Poll_**
+  - Triggers
+  - PollBackend
 
 Actual implementation is selected via comptime switch.
 
@@ -65,7 +68,9 @@ pub const Triggers = packed struct(u8) {
 };
 ```
 
-Because all Reactor logic speaks only `Triggers`, **the event loop code is identical across all platforms** — there are zero OS-specific branches inside `Reactor.zig` itself. Adding a new OS backend requires implementing one module (`*_backend.zig`) and one translation pair in `triggers.zig`. Nothing else changes.
+Because all Reactor logic speaks only `Triggers`, **the event loop code is identical across all platforms**.
+
+Adding a new OS backend requires implementing one module (`*_backend.zig`) and one 'triggers.zig`. Nothing else changes.
 
 ---
 
@@ -80,6 +85,7 @@ PollBackend supports:
 - unregister
 - wait
 
-First 3 work as "configurators" of internal poll backend (epoll/kqueue/wepoll)
-Last is actual poll operation.
+First 3 work as "configurators" of internal poll backend (epoll/kqueue/wepoll).
+
+Last is actual _**poll**_ operation.
 

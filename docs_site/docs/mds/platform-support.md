@@ -1,6 +1,7 @@
 # Platform Support
 
 Tofu compiles and runs on 
+
 - Linux
 - macOS
 - Windows 10
