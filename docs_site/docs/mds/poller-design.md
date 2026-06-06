@@ -3,12 +3,12 @@
 Every platform(os+used libs) supports following abstract network "objects":
 
 - **_Sockets_**
-  - Skt
-  - SocketCreator
+    - Skt
+    - SocketCreator
 
 - **_Poll_**
-  - Triggers
-  - PollBackend
+    - Triggers
+    - PollBackend
 
 Actual implementation is selected via comptime switch.
 
