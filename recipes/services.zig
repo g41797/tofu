@@ -515,14 +515,10 @@ pub const EchoClientServer = struct {
         // ptr: ?*anyopaque - needs to point to valid
         // memory location is not changed during struct copy etc.
         ecs.echsrv = try ecs.gpa.create(EchoService);
-        // FIX: The optional pointer must be accessed (.?), then dereferenced (.*)
         ecs.echsrv.?.* = .{};
 
-        ecs.engine = try Reactor.create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 64 });
-        // Dereference the optional pointer to engine, then dereference the pointer to call the method
+        ecs.engine = try Reactor.create(ecs.gpa, .{ .initialPoolMsgs = 16, .maxPoolMsgs = 256 });
         ecs.ampe = try ecs.engine.?.*.ampe();
-
-        // Dereference the optional pointer to echsrv, then dereference the pointer to call the method
         ecs.mh = try MultiHomed.run(ecs.ampe, srvcfg, ecs.echsrv.?.*.services());
 
         return ecs;
