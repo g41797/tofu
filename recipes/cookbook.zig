@@ -1173,13 +1173,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         }
 
         pub fn addMessagesToPool(self: *Self, count: u8) !void {
-            const allocator: Allocator = self.*.ampe.getAllocator();
-            var i: usize = 0;
-            while (i < count) : (i += 1) {
-                var newMsg: ?*Message = try Message.create(allocator);
-                self.*.ampe.put(&newMsg);
-            }
-            return;
+            return cookbook.addMessagesToPool(&self.*.ampe, count);
         }
     };
 
@@ -1414,13 +1408,7 @@ pub fn handleReConnectST(gpa: Allocator, srvCfg: *Address, cltCfg: *Address) any
         }
 
         pub fn addMessagesToPool(self: *Self, count: u8) !void {
-            const allocator: Allocator = self.*.ampe.getAllocator();
-            var i: usize = 0;
-            while (i < count) : (i += 1) {
-                var newMsg: ?*Message = try Message.create(allocator);
-                self.*.ampe.put(&newMsg);
-            }
-            return;
+            return cookbook.addMessagesToPool(&self.*.ampe, count);
         }
     };
 
@@ -1940,3 +1928,15 @@ pub fn handleEchoClientServer(allocator: Allocator) !AmpeStatus {
 
     return echoClSrv.run(clntCnfgs[0..]);
 }
+
+// Helper for the case of .pool_empty
+pub fn addMessagesToPool(ampe: *Ampe, count: u8) !void {
+    const allocator: Allocator = ampe.*.getAllocator();
+    var i: usize = 0;
+    while (i < count) : (i += 1) {
+        var newMsg: ?*Message = try Message.create(allocator);
+        ampe.*.put(&newMsg);
+    }
+    return;
+}
+

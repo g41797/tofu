@@ -224,8 +224,6 @@ pub const EchoClient = struct {
             .echoes = if (echoes == 0) 256 else echoes,
         };
 
-        _ = try result.*.connect();
-
         result.*.thread = try std.Thread.spawn(.{}, runOnThread, .{result});
 
         return;
@@ -257,9 +255,14 @@ pub const EchoClient = struct {
         defer self.*.release();
         defer self.*.disconnect();
 
-        _ = self.*.sendRecvEchoes() catch |err| {
+        _ = self.*.connect()  catch |err| {
             // Store error status
             // Error status will be send by destroy()
+            self.*.sts = status.errorToStatus(err);
+            return;
+        };
+
+        _ = self.*.sendRecvEchoes() catch |err| {
             self.*.sts = status.errorToStatus(err);
             return;
         };
