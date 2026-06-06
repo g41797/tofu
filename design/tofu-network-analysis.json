@@ -1,0 +1,923 @@
+[
+  {
+    "symbol": "pn.acceptSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_accept_socket (accept4 SOCK_NONBLOCK|SOCK_CLOEXEC). No stdlib equivalent for non-blocking accept at this abstraction level." },
+      "macos": { "status": "KEEP", "note": "Wraps bsd_accept_socket (accept + fcntl + F_SETNOSIGPIPE). No stdlib equivalent." },
+      "windows": { "status": "KEEP", "note": "Wraps bsd_accept_socket (Winsock accept). No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "pn.connectSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_connect_socket with EINPROGRESS/EALREADY handling. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale as Linux." },
+      "windows": { "status": "KEEP", "note": "Wraps pn_connect_socket with Winsock WSAEINPROGRESS handling. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "pn.connectSocketUnix",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_create_connect_socket_unix. Non-blocking UDS connect. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale as Linux." },
+      "windows": { "status": "KEEP", "note": "Wraps pn_create_connect_socket_unix using AF_UNIX on Windows 10+. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "pn.sendBuf",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_send with MSG_NOSIGNAL and EAGAIN normalisation. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Wraps bsd_send via Winsock send. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "pn.recvToBuf",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_recv with EAGAIN detection. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Wraps bsd_recv via Winsock recv. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "pn.closeSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_close_socket (close with EINTR retry). std.os.linux.close exists (os/linux.zig:1592) but different signature." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Wraps bsd_close_socket (Winsock closesocket). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "pn.nodelay",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_socket_nodelay (setsockopt TCP_NODELAY). No stdlib one-liner." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale. No Winsock setsockopt binding in stdlib." }
+    }
+  },
+  {
+    "symbol": "pn.setLingerAbort",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_set_linger_abort (SO_LINGER with l_linger=0). No stdlib helper." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.keepalive",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_socket_keepalive (setsockopt SO_KEEPALIVE). No stdlib helper." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.localAddr",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_local_addr (getsockname into pn.Addr). No stdlib equivalent for pn.Addr type." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.remoteAddr",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_remote_addr (getpeername into pn.Addr). No stdlib equivalent for pn.Addr type." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.addrPort",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Pure-Zig: reads port bytes from pn.Addr.mem[2..4]. No stdlib dependency." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.addrFamily",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Pure-Zig: reads address family from pn.Addr.mem with platform-aware byte layout. No stdlib dependency." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.getaddrinfo",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getaddrinfo", "stdlib_ref": "c.zig:10925" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getaddrinfo", "stdlib_ref": "c.zig:10925" },
+      "windows": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getaddrinfo", "stdlib_ref": "c.zig:10925" }
+    }
+  },
+  {
+    "symbol": "pn.freeaddrinfo",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.c.freeaddrinfo", "stdlib_ref": "c.zig:10934" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.freeaddrinfo", "stdlib_ref": "c.zig:10934" },
+      "windows": { "status": "REPLACE_WITH_STD", "replacement": "std.c.freeaddrinfo", "stdlib_ref": "c.zig:10934" }
+    }
+  },
+  {
+    "symbol": "pn.createSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_create_socket (non-blocking SOCK_CLOEXEC). No stdlib equivalent at this level." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale. No Winsock socket binding in stdlib." }
+    }
+  },
+  {
+    "symbol": "pn.createClientSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps bsd_create_socket + non-blocking setup. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.createListenSocket",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_create_listen_socket (socket+SO_REUSEADDR+bind+listen). No one-call stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.createListenSocketUnix",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_create_listen_socket_unix. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale. Uses AF_UNIX on Windows 10+." }
+    }
+  },
+  {
+    "symbol": "pn.createListenSocketFromSockaddr",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_create_listen_socket_from_sockaddr (takes pre-built sockaddr). No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.createConnectSocketUnix",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Wraps pn_create_connect_socket_unix. Non-blocking UDS connect. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.initAddrUnix",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Pure-Zig: writes sockaddr_un into pn.Addr with platform-aware layout. No stdlib equivalent for pn.Addr." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.initAddrIp4",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Pure-Zig: writes sockaddr_in into pn.Addr. No stdlib equivalent for pn.Addr." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.Addr",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "128-byte sockaddr_storage equivalent. Custom Tofu type. Stdlib uses std.posix.sockaddr or OS-specific structs. Replacing would cascade through all backends." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn.thread_sleep_ms",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.nanosleep", "stdlib_ref": "os/linux.zig:1999" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.nanosleep", "stdlib_ref": "c.zig:10493" },
+      "windows": { "status": "LACKING", "note": "Calls kernel32 Sleep(ms). No Sleep extern in stdlib. kernel32.zig exists but does not bind Sleep." }
+    }
+  },
+  {
+    "symbol": "pn.startup_sockets",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "No-op on Linux. No action required." },
+      "macos": { "status": "KEEP", "note": "No-op on macOS. No action required." },
+      "windows": { "status": "KEEP", "note": "Calls WSAStartup. No stdlib equivalent for Winsock init." }
+    }
+  },
+  {
+    "symbol": "pn.cleanup_sockets",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "No-op on Linux." },
+      "macos": { "status": "KEEP", "note": "No-op on macOS." },
+      "windows": { "status": "KEEP", "note": "Calls WSACleanup. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "pn.unlink",
+    "layer": "L3",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.unlink", "stdlib_ref": "os/linux.zig:1792" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.unlink", "stdlib_ref": "c.zig:10665" },
+      "windows": { "status": "LACKING", "note": "Calls MSVCRT _unlink. No stdlib binding for _unlink. std.Io.Dir.deleteFile requires async Io context." }
+    }
+  },
+  {
+    "symbol": "us_create_loop",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Combines epoll_create1 + timerfd + eventfd into loop struct. stdlib has individual syscalls but not this compound init." },
+      "macos": { "status": "KEEP", "note": "Combines kqueue() + EVFILT_TIMER + EVFILT_USER kevent setup. stdlib has kqueue/kevent (c.zig:10888-10889) but not this compound init." },
+      "windows": { "status": "KEEP", "note": "Uses wepoll adapter. No stdlib equivalent for wepoll or IOCP-based epoll emulation." }
+    }
+  },
+  {
+    "symbol": "us_loop_free",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Frees loop: closes epoll/timerfd/eventfd fds. Custom lifecycle; no stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Frees kqueue loop. No stdlib equivalent." },
+      "windows": { "status": "KEEP", "note": "Frees wepoll loop. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "us_loop_run_tick",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Calls epoll_wait + dispatches via us_internal_dispatch_ready_poll. Tofu-specific dispatch; no stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Calls kevent (wait) + dispatches. std.c.kevent exists (c.zig:10889) but dispatch pattern is Tofu-specific." },
+      "windows": { "status": "KEEP", "note": "Calls wepoll epoll_wait adapter + dispatches. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "us_create_poll",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Allocates per-fd uSockets poll structure. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "us_poll_free",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Frees per-fd poll structure. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "us_poll_init",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Initializes poll slot with fd and type. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "us_poll_start",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Calls epoll_ctl(EPOLL_CTL_ADD). std.os.linux.epoll_ctl exists (os/linux.zig:2625) but poll wrapping is Tofu-specific." },
+      "macos": { "status": "KEEP", "note": "Calls kevent(EV_ADD+EVFILT_READ/WRITE). std.c.kevent exists (c.zig:10889) but poll wrapping is Tofu-specific." },
+      "windows": { "status": "KEEP", "note": "Calls wepoll epoll_ctl(ADD). No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "us_poll_change",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Calls epoll_ctl(EPOLL_CTL_MOD). Same rationale as us_poll_start." },
+      "macos": { "status": "KEEP", "note": "Calls kevent to modify filters. Same rationale." },
+      "windows": { "status": "KEEP", "note": "Calls wepoll epoll_ctl(MOD). No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "us_poll_stop",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Calls epoll_ctl(EPOLL_CTL_DEL). Same rationale as us_poll_start." },
+      "macos": { "status": "KEEP", "note": "Calls kevent(EV_DELETE). Same rationale." },
+      "windows": { "status": "KEEP", "note": "Calls wepoll epoll_ctl(DEL). No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "us_poll_ext",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Returns per-fd user-data pointer from uSockets poll struct. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "us_internal_poll_type",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Returns uSockets poll type byte. Custom enum; no stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "us_internal_dispatch_ready_poll",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Zig override of uSockets weak C symbol. Tofu-specific dispatch hook. No stdlib concept." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_set_linger_abort",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Sets SO_LINGER l_linger=0. No stdlib helper." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale. No Winsock setsockopt binding." }
+    }
+  },
+  {
+    "symbol": "bsd_create_listen_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Multi-step: socket+REUSEADDR+bind+listen. No stdlib one-liner." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_create_listen_socket_unix",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "UDS listen socket with unlink-first. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale. Uses AF_UNIX on Windows 10+." }
+    }
+  },
+  {
+    "symbol": "bsd_create_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Non-blocking SOCK_CLOEXEC socket creation. No stdlib equivalent at this level." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_connect_socket_unix",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Non-blocking UDS connect with EINPROGRESS handling. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_accept_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "accept4(SOCK_NONBLOCK|SOCK_CLOEXEC) with error normalisation. std.os.linux.accept4 exists (os/linux.zig:2452) but bsd_accept_socket wraps it with additional logic." },
+      "macos": { "status": "KEEP", "note": "accept + fcntl(O_NONBLOCK) + fcntl(F_SETNOSIGPIPE). No stdlib compound equivalent." },
+      "windows": { "status": "KEEP", "note": "Winsock accept. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "bsd_recv",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "recv with MSG_NOSIGNAL and EAGAIN normalisation. No stdlib equivalent at this level." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock recv. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "bsd_send",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "send with MSG_NOSIGNAL and EAGAIN normalisation. No stdlib equivalent at this level." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock send. No stdlib Winsock binding." }
+    }
+  },
+  {
+    "symbol": "bsd_close_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "close with EINTR retry. std.os.linux.close exists (os/linux.zig:1592) but bsd_close_socket adds retry logic." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock closesocket. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "bsd_shutdown_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "shutdown wrapper with error normalisation. std.os.linux.shutdown exists (os/linux.zig:2390) but bsd_shutdown_socket normalises errors." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock shutdown. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "bsd_shutdown_socket_read",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "shutdown(SHUT_RD). Same rationale as bsd_shutdown_socket." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_set_nonblocking",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "fcntl(O_NONBLOCK) convenience wrapper. std.os.linux.fcntl exists (os/linux.zig:1919) but bsd_set_nonblocking is a single-purpose helper." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "ioctlsocket(FIONBIO). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "bsd_socket_nodelay",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "setsockopt(TCP_NODELAY). No stdlib one-liner." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_socket_keepalive",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "setsockopt(SO_KEEPALIVE). No stdlib helper." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "bsd_would_block",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Tests errno for EAGAIN/EWOULDBLOCK. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Tests WSAGetLastError for WSAEWOULDBLOCK. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "bsd_local_addr",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "getsockname into opaque buffer. No stdlib equivalent for pn.Addr type." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock getsockname. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "bsd_remote_addr",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "getpeername into opaque buffer. No stdlib equivalent for pn.Addr type." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock getpeername. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "bsd_addr_get_port",
+    "layer": "L4",
+    "note": "Declared but not called. Pure-Zig addrPort is used instead.",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Unused. addrPort is pure-Zig." },
+      "macos": { "status": "KEEP", "note": "Unused." },
+      "windows": { "status": "KEEP", "note": "Unused." }
+    }
+  },
+  {
+    "symbol": "bsd_addr_get_ip",
+    "layer": "L4",
+    "note": "Declared but not called.",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Unused." },
+      "macos": { "status": "KEEP", "note": "Unused." },
+      "windows": { "status": "KEEP", "note": "Unused." }
+    }
+  },
+  {
+    "symbol": "bsd_addr_get_ip_length",
+    "layer": "L4",
+    "note": "Declared but not called.",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Unused." },
+      "macos": { "status": "KEEP", "note": "Unused." },
+      "windows": { "status": "KEEP", "note": "Unused." }
+    }
+  },
+  {
+    "symbol": "pn_create_listen_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "TCP listen with explicit backlog. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn_create_listen_socket_unix",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "UDS listen with explicit backlog. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn_create_connect_socket_unix",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Non-blocking UDS connect. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "pn_wait_writable",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "select-based wait for connect completion + getsockopt(SO_ERROR). select has no stdlib binding." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock select. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "pn_connect_socket",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "Non-blocking TCP connect with EINPROGRESS/EALREADY/EISCONN handling. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Winsock connect with WSAEINPROGRESS/WSAEALREADY handling. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "pn_create_listen_socket_from_sockaddr",
+    "layer": "L4",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "TCP listen from pre-built sockaddr. No stdlib equivalent." },
+      "macos": { "status": "KEEP", "note": "Same rationale." },
+      "windows": { "status": "KEEP", "note": "Same rationale." }
+    }
+  },
+  {
+    "symbol": "epoll_create1",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.epoll_create1", "stdlib_ref": "os/linux.zig:2621" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS. kqueue is used instead." },
+      "windows": { "status": "LACKING", "note": "wepoll adapter, not a real syscall. No stdlib equivalent for wepoll." }
+    }
+  },
+  {
+    "symbol": "epoll_wait",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.epoll_wait", "stdlib_ref": "os/linux.zig:2629" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "wepoll adapter. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "epoll_ctl",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.epoll_ctl", "stdlib_ref": "os/linux.zig:2625" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "wepoll adapter. No stdlib equivalent." }
+    }
+  },
+  {
+    "symbol": "timerfd_create",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.timerfd_create", "stdlib_ref": "os/linux.zig:2649" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS. kqueue EVFILT_TIMER is used instead." },
+      "windows": { "status": "LACKING", "note": "N/A on Windows. No equivalent mechanism." }
+    }
+  },
+  {
+    "symbol": "timerfd_settime",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.timerfd_settime", "stdlib_ref": "os/linux.zig:2670" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "eventfd",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.eventfd", "stdlib_ref": "os/linux.zig:2645" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS. kqueue EVFILT_USER is used instead." },
+      "windows": { "status": "LACKING", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "kqueue",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux. epoll is used instead." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.kqueue", "stdlib_ref": "c.zig:10888" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "kevent",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.kevent", "stdlib_ref": "c.zig:10889" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "EVFILT_READ/WRITE/TIMER/USER",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.EVFILT", "stdlib_ref": "c.zig:9865" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "EV_EOF/EV_ERROR",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.EV.EOF / std.c.EV.ERROR", "stdlib_ref": "c.zig:9722" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "NOTE_TRIGGER",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.NOTE.TRIGGER", "stdlib_ref": "c.zig:9991" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "socket",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.socket", "stdlib_ref": "os/linux.zig:2305" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.socket", "stdlib_ref": "c.zig:10572" },
+      "windows": { "status": "LACKING", "note": "Winsock socket(). ws2_32.zig has only types/constants. No function binding in stdlib." }
+    }
+  },
+  {
+    "symbol": "bind",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.bind", "stdlib_ref": "os/linux.zig:2397" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.bind", "stdlib_ref": "c.zig:10730" },
+      "windows": { "status": "LACKING", "note": "Winsock bind(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "listen",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.listen", "stdlib_ref": "os/linux.zig:2404" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.listen", "stdlib_ref": "c.zig:10731" },
+      "windows": { "status": "LACKING", "note": "Winsock listen(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "accept4",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.accept4", "stdlib_ref": "os/linux.zig:2452" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.accept + std.c.fcntl", "stdlib_ref": "c.zig:10735 + c.zig:10725" },
+      "windows": { "status": "LACKING", "note": "Winsock accept(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "F_SETNOSIGPIPE",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.F.SETNOSIGPIPE (within F struct, macOS section)", "stdlib_ref": "c.zig:927" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "connect",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.connect", "stdlib_ref": "os/linux.zig:2340" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.connect", "stdlib_ref": "c.zig:10734" },
+      "windows": { "status": "LACKING", "note": "Winsock connect(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "send",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.sendto (with null addr/alen=0)", "stdlib_ref": "os/linux.zig:2411" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.send", "stdlib_ref": "c.zig:10739" },
+      "windows": { "status": "LACKING", "note": "Winsock send(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "recv",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.recvfrom (with null addr)", "stdlib_ref": "os/linux.zig:2371" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.recv", "stdlib_ref": "c.zig:10751" },
+      "windows": { "status": "LACKING", "note": "Winsock recv(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "shutdown",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.shutdown", "stdlib_ref": "os/linux.zig:2390" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.shutdown", "stdlib_ref": "c.zig:10729" },
+      "windows": { "status": "LACKING", "note": "Winsock shutdown(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "close",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.close", "stdlib_ref": "os/linux.zig:1592" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.close", "stdlib_ref": "c.zig:10285" },
+      "windows": { "status": "LACKING", "note": "Winsock closesocket(). Different from POSIX close. No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "fcntl(O_NONBLOCK)",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.fcntl", "stdlib_ref": "os/linux.zig:1919" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.fcntl", "stdlib_ref": "c.zig:10725" },
+      "windows": { "status": "LACKING", "note": "ioctlsocket(FIONBIO). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "setsockopt",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.setsockopt", "stdlib_ref": "os/linux.zig:2312" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.setsockopt", "stdlib_ref": "c.zig:10738" },
+      "windows": { "status": "LACKING", "note": "Winsock setsockopt(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "getsockopt",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.getsockopt", "stdlib_ref": "os/linux.zig:2319" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getsockopt", "stdlib_ref": "c.zig:10737" },
+      "windows": { "status": "LACKING", "note": "Winsock getsockopt(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "getsockname",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.getsockname", "stdlib_ref": "os/linux.zig:2291" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getsockname", "stdlib_ref": "c.zig:10732" },
+      "windows": { "status": "LACKING", "note": "Winsock getsockname(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "getpeername",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.getpeername", "stdlib_ref": "os/linux.zig:2298" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.getpeername", "stdlib_ref": "c.zig:10733" },
+      "windows": { "status": "LACKING", "note": "Winsock getpeername(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "nanosleep",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.nanosleep", "stdlib_ref": "os/linux.zig:1999" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.nanosleep", "stdlib_ref": "c.zig:10493" },
+      "windows": { "status": "KEEP", "note": "N/A on Windows. pn_utils.c uses Sleep(ms) instead." }
+    }
+  },
+  {
+    "symbol": "Sleep",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "kernel32 Sleep(DWORD ms). No stdlib binding in kernel32.zig." }
+    }
+  },
+  {
+    "symbol": "select",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "LACKING", "note": "No select wrapper in std.os.linux. Only poll/ppoll in std.posix (posix.zig:1003). Used by pn_wait_writable." },
+      "macos": { "status": "LACKING", "note": "No select extern in std.c. Used by pn_wait_writable." },
+      "windows": { "status": "LACKING", "note": "Winsock select(). No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "unlink",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.unlink", "stdlib_ref": "os/linux.zig:1792" },
+      "macos": { "status": "REPLACE_WITH_STD", "replacement": "std.c.unlink", "stdlib_ref": "c.zig:10665" },
+      "windows": { "status": "LACKING", "note": "MSVCRT _unlink. No stdlib binding. std.Io.Dir.deleteFile requires async Io context." }
+    }
+  },
+  {
+    "symbol": "WSAStartup",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "No stdlib binding. Zig stdlib hides Winsock init inside Io.Threaded." }
+    }
+  },
+  {
+    "symbol": "WSACleanup",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "WSAGetLastError",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A on Linux." },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "LACKING", "note": "No stdlib binding." }
+    }
+  },
+  {
+    "symbol": "AF_UNIX / sockaddr_un",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "KEEP", "note": "N/A in this context (not a Windows-specific gap)." },
+      "macos": { "status": "KEEP", "note": "N/A in this context." },
+      "windows": { "status": "REPLACE_WITH_STD", "replacement": "std.os.windows.ws2_32.AF.UNIX / std.os.windows.ws2_32.sockaddr.un", "stdlib_ref": "os/windows/ws2_32.zig:43 + ws2_32.zig:231" }
+    }
+  },
+  {
+    "symbol": "write (eventfd/timerfd drain)",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.write", "stdlib_ref": "os/linux.zig:1427" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  },
+  {
+    "symbol": "read (eventfd/timerfd drain)",
+    "layer": "L5",
+    "platforms": {
+      "linux": { "status": "REPLACE_WITH_STD", "replacement": "std.os.linux.read", "stdlib_ref": "os/linux.zig:1267" },
+      "macos": { "status": "KEEP", "note": "N/A on macOS." },
+      "windows": { "status": "KEEP", "note": "N/A on Windows." }
+    }
+  }
+]
