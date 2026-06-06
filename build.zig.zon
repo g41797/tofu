@@ -11,8 +11,8 @@
 
     .dependencies = .{
         .mailbox = .{
-            .url = "git+https://github.com/g41797/mailbox#d30ff69f1fa0288e1a8cb96b24ae3b552739f490",
-            .hash = "mailbox-0.0.15-8ABL0kt8AADKxnp3BayHaNX3niZ0mR3lsHc1R4x6npnn",
+            .url = "git+https://github.com/g41797/mailbox#833c7bca1fadf0ac4259434f6af06832bcdb9281",
+            .hash = "mailbox-0.0.15-8ABL0nx9AAD2urU50SwQOpRgG21IFaGtroImO87TvePD",
         },
         .usockets = .{
             .url = "git+https://github.com/g41797/uSockets.git#master",
